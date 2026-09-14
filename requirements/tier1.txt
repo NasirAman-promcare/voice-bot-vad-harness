@@ -1,4 +1,7 @@
+cat << 'EOF' > requirements/tier1.txt
 webrtcvad-wheels>=2.0.10
-fireredvad>=0.1
+fireredvad>=0.0.2
+git+https://github.com/TEN-framework/ten-vad.git
 soundfile>=0.12
 scipy>=1.11
+EOF
