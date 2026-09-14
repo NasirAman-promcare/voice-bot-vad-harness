@@ -1,0 +1,3255 @@
+[
+  {
+    "clip_id": "clean_speech_dev_short_000.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        57360
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_short_001.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        69920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_short_002.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        166480
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_short_003.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        263680
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_short_004.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        79520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_medium_000.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        76480
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_medium_001.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        80560
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_medium_002.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        173040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_medium_003.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        64400
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_medium_004.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        75040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_long_000.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        42640
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_long_001.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        57280
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_long_002.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        117440
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_long_003.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        176880
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_long_004.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        73840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_test_short_000.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        144000
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_short_001.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        68400
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_short_002.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        49840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_short_003.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        141280
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_short_004.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        54960
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_medium_000.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        44640
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_medium_001.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        128720
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_medium_002.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        102560
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_medium_003.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        60800
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_medium_004.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        177520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_long_000.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        56320
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_long_001.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        58720
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_long_002.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        46240
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_long_003.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        103760
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_test_long_004.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        77360
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+20db_000.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        125440
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+20db_001.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        61200
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+20db_002.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        167040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+20db_003.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        83360
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+20db_004.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        214080
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+10db_000.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        188000
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+10db_001.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        55680
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+10db_002.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        155680
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+10db_003.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        62720
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+10db_004.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        127680
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+00db_000.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        46880
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+00db_001.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        55680
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+00db_002.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        50720
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+00db_003.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        75920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr+00db_004.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        65440
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr-05db_000.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        285600
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr-05db_001.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        64080
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr-05db_002.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        52880
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr-05db_003.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        111520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_dev_snr-05db_004.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        102320
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+20db_000.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        37760
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+20db_001.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        62000
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+20db_002.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        111600
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+20db_003.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        80240
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+20db_004.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        63680
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+10db_000.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        118240
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+10db_001.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        235280
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+10db_002.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        120240
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+10db_003.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        187760
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+10db_004.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        169200
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+00db_000.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        119360
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+00db_001.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        77920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+00db_002.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        143040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+00db_003.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        65280
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr+00db_004.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        169200
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr-05db_000.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        128480
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr-05db_001.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        30320
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr-05db_002.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        307279
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr-05db_003.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        87840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "stationary_noise_test_snr-05db_004.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        47360
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_dev_sparse_000.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        90000
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_dev_sparse_001.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        89600
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_dev_sparse_002.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        52080
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_dev_sparse_003.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        49840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_dev_moderate_000.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        142720
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_dev_moderate_001.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        148800
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_dev_moderate_002.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        120800
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_dev_moderate_003.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        67600
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_dev_dense_000.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        240000
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_dev_dense_001.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        91200
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_dev_dense_002.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        133680
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_dev_dense_003.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        47520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "transient_noise_test_sparse_000.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        87520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_test_sparse_001.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        124080
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_test_sparse_002.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        46800
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_test_sparse_003.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        97040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_test_moderate_000.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        52800
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_test_moderate_001.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        186400
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_test_moderate_002.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        122240
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_test_moderate_003.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        48880
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_test_dense_000.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        57200
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_test_dense_001.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        167680
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_test_dense_002.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        281840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "transient_noise_test_dense_003.wav",
+    "category": "speech + transient noise",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        147840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_dev_snr+20db_000.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        150320
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr+20db_001.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        75200
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr+20db_002.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        108320
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr+20db_003.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        94480
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr+10db_000.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        335040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr+10db_001.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        40000
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr+10db_002.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        77440
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr+10db_003.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        61840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr+00db_000.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        349120
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr+00db_001.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        277520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr+00db_002.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        75840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr+00db_003.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        117920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr-05db_000.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        95840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr-05db_001.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        67600
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr-05db_002.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        43920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_dev_snr-05db_003.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        101040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "babble_test_snr+20db_000.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        136640
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr+20db_001.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        83600
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr+20db_002.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        42880
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr+20db_003.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 20.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        81280
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr+10db_000.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        91280
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr+10db_001.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        101360
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr+10db_002.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        55040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr+10db_003.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        110880
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr+00db_000.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        57121
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr+00db_001.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        179520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr+00db_002.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        49040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr+00db_003.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        123120
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr-05db_000.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        72240
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr-05db_001.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        80880
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr-05db_002.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        72080
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "babble_test_snr-05db_003.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": -5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        79520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-15db_000.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -35.0,
+    "speech_segments": [
+      [
+        3200,
+        115440
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-15db_001.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -35.0,
+    "speech_segments": [
+      [
+        3200,
+        230560
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-15db_002.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -35.0,
+    "speech_segments": [
+      [
+        3200,
+        108640
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-15db_003.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -35.0,
+    "speech_segments": [
+      [
+        3200,
+        121920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-25db_000.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -45.0,
+    "speech_segments": [
+      [
+        3200,
+        149040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-25db_001.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -45.0,
+    "speech_segments": [
+      [
+        3200,
+        154240
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-25db_002.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -45.0,
+    "speech_segments": [
+      [
+        3200,
+        40640
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-25db_003.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -45.0,
+    "speech_segments": [
+      [
+        3200,
+        50560
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-35db_000.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -55.0,
+    "speech_segments": [
+      [
+        3200,
+        58480
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-35db_001.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -55.0,
+    "speech_segments": [
+      [
+        3200,
+        130560
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-35db_002.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -55.0,
+    "speech_segments": [
+      [
+        3200,
+        45520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_dev_-35db_003.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -55.0,
+    "speech_segments": [
+      [
+        3200,
+        48640
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-15db_000.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -35.0,
+    "speech_segments": [
+      [
+        3200,
+        75680
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-15db_001.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -35.0,
+    "speech_segments": [
+      [
+        3200,
+        225120
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-15db_002.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -35.0,
+    "speech_segments": [
+      [
+        3200,
+        259840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-15db_003.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -35.0,
+    "speech_segments": [
+      [
+        3200,
+        246240
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-25db_000.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -45.0,
+    "speech_segments": [
+      [
+        3200,
+        107520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-25db_001.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -45.0,
+    "speech_segments": [
+      [
+        3200,
+        58240
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-25db_002.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -45.0,
+    "speech_segments": [
+      [
+        3200,
+        72080
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-25db_003.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -45.0,
+    "speech_segments": [
+      [
+        3200,
+        83040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-35db_000.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -55.0,
+    "speech_segments": [
+      [
+        3200,
+        156240
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-35db_001.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -55.0,
+    "speech_segments": [
+      [
+        3200,
+        32160
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-35db_002.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -55.0,
+    "speech_segments": [
+      [
+        3200,
+        97920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "quiet_whisper_test_-35db_003.wav",
+    "category": "quiet/whispered speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -55.0,
+    "speech_segments": [
+      [
+        3200,
+        80080
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "loud_clipped_dev_boost10db_000.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -10.0,
+    "speech_segments": [
+      [
+        3200,
+        88320
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "loud_clipped_dev_boost10db_001.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -10.0,
+    "speech_segments": [
+      [
+        3200,
+        280320
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "loud_clipped_dev_boost10db_002.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -10.0,
+    "speech_segments": [
+      [
+        3200,
+        48160
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "loud_clipped_dev_boost18db_000.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -2.0,
+    "speech_segments": [
+      [
+        3200,
+        82880
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "loud_clipped_dev_boost18db_001.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -2.0,
+    "speech_segments": [
+      [
+        3200,
+        241920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "loud_clipped_dev_boost18db_002.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -2.0,
+    "speech_segments": [
+      [
+        3200,
+        169680
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "loud_clipped_dev_boost26db_000.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": 6.0,
+    "speech_segments": [
+      [
+        3200,
+        282000
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "loud_clipped_dev_boost26db_001.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": 6.0,
+    "speech_segments": [
+      [
+        3200,
+        259360
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "loud_clipped_dev_boost26db_002.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": 6.0,
+    "speech_segments": [
+      [
+        3200,
+        44800
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "loud_clipped_test_boost10db_000.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -10.0,
+    "speech_segments": [
+      [
+        3200,
+        25920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "loud_clipped_test_boost10db_001.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -10.0,
+    "speech_segments": [
+      [
+        3200,
+        68640
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "loud_clipped_test_boost10db_002.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -10.0,
+    "speech_segments": [
+      [
+        3200,
+        171440
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "loud_clipped_test_boost18db_000.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -2.0,
+    "speech_segments": [
+      [
+        3200,
+        214640
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "loud_clipped_test_boost18db_001.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -2.0,
+    "speech_segments": [
+      [
+        3200,
+        38720
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "loud_clipped_test_boost18db_002.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -2.0,
+    "speech_segments": [
+      [
+        3200,
+        67520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "loud_clipped_test_boost26db_000.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": 6.0,
+    "speech_segments": [
+      [
+        3200,
+        54320
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "loud_clipped_test_boost26db_001.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": 6.0,
+    "speech_segments": [
+      [
+        3200,
+        58320
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "loud_clipped_test_boost26db_002.wav",
+    "category": "loud/clipped speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": 6.0,
+    "speech_segments": [
+      [
+        3200,
+        103760
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "silence_dev_floor-60db_000.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -60.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "silence_test_floor-60db_001.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -60.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "silence_dev_floor-60db_002.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -60.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "silence_test_floor-45db_000.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -45.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "silence_dev_floor-45db_001.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -45.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "silence_test_floor-45db_002.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -45.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "silence_dev_floor-30db_000.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -30.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "silence_test_floor-30db_001.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -30.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "silence_dev_floor-30db_002.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -30.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "silence_test_floor-20db_000.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "silence_dev_floor-20db_001.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "silence_test_floor-20db_002.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "music_pure_dev_000.wav",
+    "category": "music/singing",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "music_pure_test_001.wav",
+    "category": "music/singing",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "music_pure_dev_002.wav",
+    "category": "music/singing",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "music_pure_test_003.wav",
+    "category": "music/singing",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "music_pure_dev_004.wav",
+    "category": "music/singing",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "music_speech_mix_dev_snr10db_000.wav",
+    "category": "music/singing",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        107440
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "music_speech_mix_dev_snr10db_001.wav",
+    "category": "music/singing",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        250720
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "music_speech_mix_dev_snr0db_000.wav",
+    "category": "music/singing",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        80401
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "music_speech_mix_dev_snr0db_001.wav",
+    "category": "music/singing",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        51600
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "music_speech_mix_test_snr10db_000.wav",
+    "category": "music/singing",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        255520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "music_speech_mix_test_snr10db_001.wav",
+    "category": "music/singing",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        77840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "music_speech_mix_test_snr0db_000.wav",
+    "category": "music/singing",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        35520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "music_speech_mix_test_snr0db_001.wav",
+    "category": "music/singing",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        202240
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "telephony_clean_dev_000.wav",
+    "category": "band-limited/telephony",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        31040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "telephony_clean_dev_001.wav",
+    "category": "band-limited/telephony",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        69920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "telephony_clean_dev_002.wav",
+    "category": "band-limited/telephony",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        65200
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "telephony_noisy_dev_000.wav",
+    "category": "band-limited/telephony",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        49840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "telephony_noisy_dev_001.wav",
+    "category": "band-limited/telephony",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        51120
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "telephony_clean_test_000.wav",
+    "category": "band-limited/telephony",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        79280
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "telephony_clean_test_001.wav",
+    "category": "band-limited/telephony",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        53040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "telephony_clean_test_002.wav",
+    "category": "band-limited/telephony",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        207280
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "telephony_noisy_test_000.wav",
+    "category": "band-limited/telephony",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        149200
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "telephony_noisy_test_001.wav",
+    "category": "band-limited/telephony",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        54320
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "clean_speech_dev_short_000.wav",
+    "category": "packet-loss/jitter",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        57360
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_short_001.wav",
+    "category": "packet-loss/jitter",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        69920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_short_002.wav",
+    "category": "packet-loss/jitter",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        166480
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_short_003.wav",
+    "category": "packet-loss/jitter",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        263680
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_short_004.wav",
+    "category": "packet-loss/jitter",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        79520
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_medium_000.wav",
+    "category": "packet-loss/jitter",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        76480
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_medium_001.wav",
+    "category": "packet-loss/jitter",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        80560
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_medium_002.wav",
+    "category": "packet-loss/jitter",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        173040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_medium_003.wav",
+    "category": "packet-loss/jitter",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        64400
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "clean_speech_dev_medium_004.wav",
+    "category": "packet-loss/jitter",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        75040
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "tier2_seq_clean_dev_000.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        183120
+      ],
+      [
+        187920,
+        248800
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "tier2_seq_clean_test_001.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        91440
+      ],
+      [
+        104240,
+        424400
+      ],
+      [
+        448400,
+        488400
+      ],
+      [
+        536400,
+        599280
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "tier2_seq_clean_dev_002.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        48080
+      ],
+      [
+        72080,
+        223840
+      ],
+      [
+        271840,
+        364800
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "tier2_seq_clean_test_003.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        64080
+      ],
+      [
+        112080,
+        295280
+      ],
+      [
+        300080,
+        371840
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "tier2_seq_stationary_10db_dev_000.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        108720
+      ],
+      [
+        113520,
+        184320
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "tier2_seq_stationary_10db_test_001.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        106160
+      ],
+      [
+        118960,
+        305200
+      ],
+      [
+        329200,
+        393920
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "tier2_seq_stationary_10db_dev_002.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        63360
+      ],
+      [
+        87360,
+        243440
+      ],
+      [
+        291440,
+        461280
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "tier2_seq_stationary_10db_test_003.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        120160
+      ],
+      [
+        168160,
+        252240
+      ],
+      [
+        257040,
+        304720
+      ],
+      [
+        317520,
+        369120
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "tier2_seq_stationary_0db_dev_000.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        144320
+      ],
+      [
+        149120,
+        190640
+      ],
+      [
+        203440,
+        231280
+      ],
+      [
+        255280,
+        308960
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "tier2_seq_stationary_0db_test_001.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        123680
+      ],
+      [
+        136480,
+        180960
+      ],
+      [
+        204960,
+        329200
+      ],
+      [
+        377200,
+        502480
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "tier2_seq_stationary_0db_dev_002.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        133200
+      ],
+      [
+        157200,
+        202400
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "tier2_seq_stationary_0db_test_003.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 0.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        130640
+      ],
+      [
+        178640,
+        300880
+      ],
+      [
+        305680,
+        364080
+      ],
+      [
+        376880,
+        432560
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "tier2_seq_babble_5db_dev_000.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        133120
+      ],
+      [
+        137920,
+        370960
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "tier2_seq_babble_5db_test_001.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        58320
+      ],
+      [
+        71120,
+        230800
+      ],
+      [
+        254800,
+        363200
+      ],
+      [
+        411200,
+        493200
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  },
+  {
+    "clip_id": "tier2_seq_babble_5db_dev_002.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        102640
+      ],
+      [
+        126640,
+        174000
+      ],
+      [
+        222000,
+        476000
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "dev"
+  },
+  {
+    "clip_id": "tier2_seq_babble_5db_test_003.wav",
+    "category": "speech + babble/cross-talk",
+    "target_snr_db": 5.0,
+    "target_loudness_dbfs": -20.0,
+    "speech_segments": [
+      [
+        3200,
+        158320
+      ],
+      [
+        206320,
+        287600
+      ]
+    ],
+    "calibration_marker_offset_samples": 320,
+    "split": "test"
+  }
+]

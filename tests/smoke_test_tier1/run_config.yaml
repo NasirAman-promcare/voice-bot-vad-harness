@@ -1,0 +1,20 @@
+active_adapters:
+- webrtc_vad
+bridge_url: wss://smoke.test/feed
+concurrency_mode: sequential
+corpus_category_filter: []
+corpus_manifest_path: /workspaces/voice-bot-vad-harness/tests/smoke_test_tier1/manifest.json
+hardware_policy: cpu_only
+include_held_out_slice: false
+jitsi_room: smoke-test-room
+results_destination: /workspaces/voice-bot-vad-harness/tests/smoke_test_tier1/results
+run_id: smoke_test_tier1_run
+scoring_grid_ms: 10
+tiers_to_run:
+- tier1
+warmup_clip_count: 0
+webrtc_aggressiveness_modes:
+- 0
+- 1
+- 2
+- 3

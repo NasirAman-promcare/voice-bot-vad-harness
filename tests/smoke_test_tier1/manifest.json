@@ -1,0 +1,42 @@
+[
+  {
+    "clip_id": "smoke_clip_01_clean",
+    "clip_path": "/workspaces/voice-bot-vad-harness/tests/smoke_test_tier1/audio/clip_01_clean.wav",
+    "category": "clean speech",
+    "target_snr_db": null,
+    "target_loudness_lufs": -20.0,
+    "speech_segments": [
+      [
+        8000,
+        24000
+      ]
+    ],
+    "calibration_marker_offset": 0,
+    "is_held_out": false
+  },
+  {
+    "clip_id": "smoke_clip_02_noisy",
+    "clip_path": "/workspaces/voice-bot-vad-harness/tests/smoke_test_tier1/audio/clip_02_noisy.wav",
+    "category": "speech + stationary noise",
+    "target_snr_db": 10.0,
+    "target_loudness_lufs": -20.0,
+    "speech_segments": [
+      [
+        8000,
+        24000
+      ]
+    ],
+    "calibration_marker_offset": 0,
+    "is_held_out": false
+  },
+  {
+    "clip_id": "smoke_clip_03_silence",
+    "clip_path": "/workspaces/voice-bot-vad-harness/tests/smoke_test_tier1/audio/clip_03_silence.wav",
+    "category": "silence-only",
+    "target_snr_db": null,
+    "target_loudness_lufs": null,
+    "speech_segments": [],
+    "calibration_marker_offset": 0,
+    "is_held_out": false
+  }
+]
