@@ -1,0 +1,4 @@
+pyyaml>=6.0
+numpy>=1.24
+jupyter>=1.0
+nbconvert>=7.0

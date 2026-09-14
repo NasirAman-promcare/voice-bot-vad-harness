@@ -1,0 +1,4 @@
+webrtcvad-wheels>=2.0.10
+fireredvad>=0.1
+soundfile>=0.12
+scipy>=1.11

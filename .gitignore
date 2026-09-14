@@ -1,0 +1,16 @@
+# Data — never commit raw 11GB audio or processed audio
+/data/raw/
+/corpus/audio/
+/corpus/build/
+
+# Local results & secrets
+*.env
+.kaggle/
+results/local/
+
+# Python & Jupyter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.egg-info/
+.DS_Store

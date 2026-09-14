@@ -1,0 +1,57 @@
+# ==============================================================================
+# config/run_config.yaml
+#
+# Declarative run configuration for the VAD benchmarking and latency test harness.
+# orchestrator.py is the ONLY file that reads this configuration file directly.
+# All values are flat, literal parameters consumed downstream by specific modules.
+# ==============================================================================
+
+# Unique identifier tag for this execution; attached to all rows in results_store.py and log records.
+run_id: "vad_eval_run_20260913_001"
+
+# Execution tiers to run (allowed: 'tier1', 'tier2', or both); directs orchestrator.py pipeline flow.
+tiers_to_run:
+  - "tier1"
+
+# Active VAD implementations to benchmark; instantiated via vad_adapters/adapter_registry.py.
+active_adapters:
+  - "ten_vad"
+  - "firered_vad"
+  - "webrtc_vad"
+
+# WebRTC VAD aggressiveness modes (0-3) to evaluate as distinct operating points in vad_adapters/webrtc_vad_adapter.py.
+webrtc_aggressiveness_modes:
+  - 0
+  - 1
+  - 2
+  - 3
+
+# File path to the audio corpus manifest dataset; consumed by corpus/manifest.py.
+corpus_manifest_path: "corpus/manifest.json"
+
+# Optional category restriction list (e.g., ['clean_speech', 'noisy_cafe']); empty list evaluates all categories.
+corpus_category_filter: []
+
+# Compute hardware enforcement ('cpu_only' or 'gpu_for_firered'); defends against the Hardware Fairness latency pitfall.
+hardware_policy: "cpu_only"
+
+# Discarded initial audio clips per adapter before scoring; defends against the Cold Start latency measurement pitfall.
+warmup_clip_count: 5
+
+# Master time resolution grid in milliseconds; defends against the Frame-Size Mismatch pitfall in scoring/vad_scorer.py.
+scoring_grid_ms: 10
+
+# Adapter execution model ('sequential' or 'parallel'); 'sequential' defends against Concurrency Contamination during timing.
+concurrency_mode: "sequential"
+
+# Guard flag for the held-out test split; false prevents dataset leakage during tuning, true for final scoring runs only.
+include_held_out_slice: false
+
+# Target directory or storage URI where storage/results_store.py persists metrics, profiles, and score artifacts.
+results_destination: "results/run_output"
+
+# Jitsi room/session identifier for live pipeline testing; passed through to bots/speaker_bot.py and bots/listener_bot.py.
+jitsi_room: "vad-benchmark-eval-room-01"
+
+# Ingress feed endpoint (tunnel URL or Cloudflare Worker); passed through directly to bots/listener_bot.py.
+bridge_url: "wss://bridge.vad-benchmark.internal/audio-feed"

@@ -1,0 +1,75 @@
+# ==============================================================================
+# Voice Bot VAD Test Harness — Corpus Build Configuration
+# File: corpus/corpus_build_config.yaml
+# Stage 1 · Both Tiers
+#
+# Single Reader: corpus/dataset_builder.py (and ONLY dataset_builder.py).
+# Purpose: Declarative recipe parameters and storage paths for generating the
+#          standardized, reproducible 16kHz VAD benchmarking dataset.
+# ==============================================================================
+
+# Global reproducibility seed for deterministic utterance sampling, noise pairing, and 50/50 splits (Blueprint §7)
+seed: 42
+
+# RMS normalization level (in dBFS) applied to every raw utterance before category mixing (Blueprint §5)
+reference_level_dbfs: -20.0
+
+# Shared SNR grid (in dB) for stationary noise, babble, and transient mixes (Blueprint §6)
+snr_levels_db:
+  - 20.0
+  - 10.0
+  - 0.0
+  - -5.0
+
+# Base multiplier controlling Tier 1 clips per condition/split; scale this single integer to resize corpus (Blueprint §8)
+clips_per_condition: 5
+
+# Local filesystem path to extracted LibriSpeech dev-clean raw source files (Blueprint §1)
+librispeech_dev_clean_path: "data/raw/librispeech/LibriSpeech/dev-clean"
+
+# Local filesystem path to extracted LibriSpeech test-clean raw source files for held-out split (Blueprint §1)
+librispeech_test_clean_path: "data/raw/librispeech/LibriSpeech/test-clean"
+
+# Local filesystem root directory to extracted MUSAN raw noise/music/speech sources (Blueprint §1)
+musan_root_path: "data/raw/musan/musan"
+
+# Ephemeral scratch directory for downloaded and extracted raw 11GB archives (Blueprint §2)
+raw_cache_dir: "data/raw"
+
+# Output destination path for the verified canonical manifest JSON consumable by manifest.py (Blueprint §10)
+# NOTE: This path must match run_config.yaml's 'corpus_manifest_path' for orchestrator.py to score against this build.
+output_manifest_path: "corpus/manifest.json"
+
+# Directory where generated 16kHz mono 16-bit PCM WAV audio clips will be written (Blueprint §10)
+output_audio_dir: "corpus/audio"
+
+# Destination path for the detailed, non-manifest provenance and audit log JSON (Blueprint §10)
+recipe_log_path: "corpus/build/recipe_log.json"
+
+# Set to true to force a complete audio mix rebuild even if the manifest SHA-256 hash matches local/remote cache (Blueprint §11)
+force_rebuild: false
+
+# Four silence gap durations (in ms) interleaved between utterances in Tier 2 conversation sequences (Blueprint §9)
+tier2_gap_durations_ms:
+  - 300
+  - 800
+  - 1500
+  - 3000
+
+# Target repository/storage backend for publishing and fetching the processed ~150MB corpus archive (Blueprint §12)
+# Supported options: 'github_release' | 'gdrive' | 'kaggle_dataset'
+publish_target: "github_release"
+
+# Target-specific parameters (populate only the block matching the chosen publish_target above)
+github_release:
+  repo_slug: "your-org/voice-bot-vad-harness"
+  tag_name: "corpus-v1"
+  asset_name: "corpus_processed.zip"
+
+gdrive:
+  drive_folder_path: "/content/drive/MyDrive/vad_corpus_cache"
+  archive_name: "corpus_processed.zip"
+
+kaggle_dataset:
+  dataset_slug: "your-username/vad-benchmark-corpus"
+  archive_name: "corpus_processed.zip"
