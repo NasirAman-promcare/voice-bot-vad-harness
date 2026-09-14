@@ -142,6 +142,9 @@ class FireRedVADAdapter(VADAdapterContract):
         # Enforce hardware execution policy strictly
         self._use_gpu = self._validate_and_resolve_hardware_policy(hardware_policy)
 
+        # Initialize internal sample buffer for 25ms STFT window overlap
+        self._audio_buffer = np.array([], dtype=np.int16)
+
         if engine is not None:
             self._engine = engine
         else:
@@ -234,6 +237,7 @@ class FireRedVADAdapter(VADAdapterContract):
         """
         Resets streaming DFSMN memory buffers, history frames, and segment counters.
         """
+        self._audio_buffer = np.array([], dtype=np.int16)
         try:
             if hasattr(self._engine, "reset"):
                 self._engine.reset()
@@ -289,17 +293,44 @@ class FireRedVADAdapter(VADAdapterContract):
                 np.clip(frame.astype(np.float32), -1.0, 1.0) * 32767.0, dtype=np.int16
             )
 
+        # --- OVERLAP BUFFERING TO PREVENT FRAME 0 WARMUP CRASH ---
+        if self._audio_buffer.size == 0:
+            self._audio_buffer = audio_int16
+        else:
+            self._audio_buffer = np.concatenate([self._audio_buffer, audio_int16])
+
+        # FireRedVAD requires 25ms (400 samples) to emit the first STFT frame
+        if len(self._audio_buffer) < 400:
+            # Emit zeroed unvoiced frame until buffer fills
+            return DecisionRecord(
+                adapter_id=self._adapter_id,
+                sample_offset=sample_offset,
+                frame_index=frame_index,
+                is_speech=False,
+                score=0.0,
+                confidence=None,
+                produced_timestamp_ns=time.perf_counter_ns(),
+                extra={
+                    "acoustic_class_label": "silence",
+                    "acoustic_class_probs": {"speech": 0.0, "singing": 0.0, "music": 0.0}
+                },
+            )
+
         # TIGHT INFERENCE TIMING WINDOW: algorithmic latency measurement bounds
         try:
             t_start_ns = time.perf_counter_ns()
             # Call streaming chunk interface specifically (NOT offline whole-file detect)
             if hasattr(self._engine, "detect_chunk"):
-                frame_results = self._engine.detect_chunk(audio_int16)
+                frame_results = self._engine.detect_chunk(self._audio_buffer)
             elif hasattr(self._engine, "process"):
-                frame_results = self._engine.process(audio_int16)
+                frame_results = self._engine.process(self._audio_buffer)
             else:
                 raise RuntimeError("Engine missing streaming 'detect_chunk' or 'process' method.")
             t_end_ns = time.perf_counter_ns()
+
+            # Slide window: keep trailing 240 samples (400 - 160) for continuous overlapping STFT
+            self._audio_buffer = self._audio_buffer[-240:]
+
         except Exception as exc:
             logger.error(
                 "[%s] Exception during streaming inference at frame %d (offset %d): %s",

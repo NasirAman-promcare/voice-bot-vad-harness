@@ -470,6 +470,7 @@ class CorpusBuilderEngine:
             "target_snr_db": target_snr_db,
             "target_loudness_dbfs": target_loudness_dbfs,
             "speech_segments": speech_segments,
+            "calibration_marker_offset": marker_offset,
             "calibration_marker_offset_samples": marker_offset,
             "split": split,
         }
@@ -845,27 +846,25 @@ class CorpusBuilderEngine:
     # Category 10: Packet-Loss/Jitter (Blueprint §6, Row 10)
     # --------------------------------------------------------------------------
     def tag_packet_loss_jitter(self) -> None:
-        logger.info("Tagging Category 10: Packet-loss/jitter (manifest retagging, no new WAVs)...")
-        # Subsets of clean speech manifest entries retagged with category 'packet-loss/jitter'
+        logger.info("Tagging Category 10: Packet-loss/jitter (manifest retagging)...")
         clean_entries = [e for e in self.manifest_entries if e["category"] == CAT_CLEAN_SPEECH]
         selected_clean = clean_entries[: max(2, len(clean_entries) // 3)]
+        out_dir = Path(self.config.output_audio_dir)
 
         for entry in selected_clean:
+            orig_id = entry["clip_id"]
+            new_id = f"packet_loss_{orig_id}"
+            
+            # Copy audio file to match unique ID
+            src_wav = out_dir / orig_id
+            dst_wav = out_dir / new_id
+            if src_wav.is_file() and not dst_wav.is_file():
+                shutil.copy2(src_wav, dst_wav)
+
             retagged_entry = dict(entry)
+            retagged_entry["clip_id"] = new_id
             retagged_entry["category"] = CAT_PACKET_LOSS
             self.manifest_entries.append(retagged_entry)
-
-            self.recipe_logs.append({
-                "clip_id": entry["clip_id"],
-                "category": CAT_PACKET_LOSS,
-                "split": entry.get("split", "dev"),
-                "measured_rms_dbfs": entry.get("target_loudness_dbfs"),
-                "target_snr_db": None,
-                "achieved_snr_db": None,
-                "provenance_sources": [entry["clip_id"]],
-                "recipe_parameters": {"transport_degradation_target": "runtime_tier2"},
-                "built_timestamp_iso": datetime.now(timezone.utc).isoformat(),
-            })
 
     # --------------------------------------------------------------------------
     # Tier 2 Conversation Sequences (Blueprint §9)

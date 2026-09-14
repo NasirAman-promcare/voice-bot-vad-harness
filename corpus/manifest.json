@@ -11,7 +11,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_short_000.wav"
   },
   {
     "clip_id": "clean_speech_dev_short_001.wav",
@@ -25,7 +27,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_short_001.wav"
   },
   {
     "clip_id": "clean_speech_dev_short_002.wav",
@@ -39,7 +43,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_short_002.wav"
   },
   {
     "clip_id": "clean_speech_dev_short_003.wav",
@@ -53,7 +59,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_short_003.wav"
   },
   {
     "clip_id": "clean_speech_dev_short_004.wav",
@@ -67,7 +75,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_short_004.wav"
   },
   {
     "clip_id": "clean_speech_dev_medium_000.wav",
@@ -81,7 +91,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_medium_000.wav"
   },
   {
     "clip_id": "clean_speech_dev_medium_001.wav",
@@ -95,7 +107,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_medium_001.wav"
   },
   {
     "clip_id": "clean_speech_dev_medium_002.wav",
@@ -109,7 +123,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_medium_002.wav"
   },
   {
     "clip_id": "clean_speech_dev_medium_003.wav",
@@ -123,7 +139,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_medium_003.wav"
   },
   {
     "clip_id": "clean_speech_dev_medium_004.wav",
@@ -137,7 +155,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_medium_004.wav"
   },
   {
     "clip_id": "clean_speech_dev_long_000.wav",
@@ -151,7 +171,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_long_000.wav"
   },
   {
     "clip_id": "clean_speech_dev_long_001.wav",
@@ -165,7 +187,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_long_001.wav"
   },
   {
     "clip_id": "clean_speech_dev_long_002.wav",
@@ -179,7 +203,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_long_002.wav"
   },
   {
     "clip_id": "clean_speech_dev_long_003.wav",
@@ -193,7 +219,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_long_003.wav"
   },
   {
     "clip_id": "clean_speech_dev_long_004.wav",
@@ -207,7 +235,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_dev_long_004.wav"
   },
   {
     "clip_id": "clean_speech_test_short_000.wav",
@@ -221,7 +251,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_short_000.wav"
   },
   {
     "clip_id": "clean_speech_test_short_001.wav",
@@ -235,7 +267,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_short_001.wav"
   },
   {
     "clip_id": "clean_speech_test_short_002.wav",
@@ -249,7 +283,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_short_002.wav"
   },
   {
     "clip_id": "clean_speech_test_short_003.wav",
@@ -263,7 +299,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_short_003.wav"
   },
   {
     "clip_id": "clean_speech_test_short_004.wav",
@@ -277,7 +315,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_short_004.wav"
   },
   {
     "clip_id": "clean_speech_test_medium_000.wav",
@@ -291,7 +331,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_medium_000.wav"
   },
   {
     "clip_id": "clean_speech_test_medium_001.wav",
@@ -305,7 +347,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_medium_001.wav"
   },
   {
     "clip_id": "clean_speech_test_medium_002.wav",
@@ -319,7 +363,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_medium_002.wav"
   },
   {
     "clip_id": "clean_speech_test_medium_003.wav",
@@ -333,7 +379,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_medium_003.wav"
   },
   {
     "clip_id": "clean_speech_test_medium_004.wav",
@@ -347,7 +395,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_medium_004.wav"
   },
   {
     "clip_id": "clean_speech_test_long_000.wav",
@@ -361,7 +411,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_long_000.wav"
   },
   {
     "clip_id": "clean_speech_test_long_001.wav",
@@ -375,7 +427,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_long_001.wav"
   },
   {
     "clip_id": "clean_speech_test_long_002.wav",
@@ -389,7 +443,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_long_002.wav"
   },
   {
     "clip_id": "clean_speech_test_long_003.wav",
@@ -403,7 +459,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_long_003.wav"
   },
   {
     "clip_id": "clean_speech_test_long_004.wav",
@@ -417,7 +475,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/clean_speech_test_long_004.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+20db_000.wav",
@@ -431,7 +491,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+20db_000.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+20db_001.wav",
@@ -445,7 +507,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+20db_001.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+20db_002.wav",
@@ -459,7 +523,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+20db_002.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+20db_003.wav",
@@ -473,7 +539,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+20db_003.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+20db_004.wav",
@@ -487,7 +555,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+20db_004.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+10db_000.wav",
@@ -501,7 +571,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+10db_000.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+10db_001.wav",
@@ -515,7 +587,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+10db_001.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+10db_002.wav",
@@ -529,7 +603,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+10db_002.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+10db_003.wav",
@@ -543,7 +619,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+10db_003.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+10db_004.wav",
@@ -557,7 +635,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+10db_004.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+00db_000.wav",
@@ -571,7 +651,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+00db_000.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+00db_001.wav",
@@ -585,7 +667,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+00db_001.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+00db_002.wav",
@@ -599,7 +683,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+00db_002.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+00db_003.wav",
@@ -613,7 +699,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+00db_003.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr+00db_004.wav",
@@ -627,7 +715,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr+00db_004.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr-05db_000.wav",
@@ -641,7 +731,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr-05db_000.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr-05db_001.wav",
@@ -655,7 +747,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr-05db_001.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr-05db_002.wav",
@@ -669,7 +763,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr-05db_002.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr-05db_003.wav",
@@ -683,7 +779,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr-05db_003.wav"
   },
   {
     "clip_id": "stationary_noise_dev_snr-05db_004.wav",
@@ -697,7 +795,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_dev_snr-05db_004.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+20db_000.wav",
@@ -711,7 +811,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+20db_000.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+20db_001.wav",
@@ -725,7 +827,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+20db_001.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+20db_002.wav",
@@ -739,7 +843,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+20db_002.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+20db_003.wav",
@@ -753,7 +859,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+20db_003.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+20db_004.wav",
@@ -767,7 +875,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+20db_004.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+10db_000.wav",
@@ -781,7 +891,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+10db_000.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+10db_001.wav",
@@ -795,7 +907,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+10db_001.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+10db_002.wav",
@@ -809,7 +923,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+10db_002.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+10db_003.wav",
@@ -823,7 +939,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+10db_003.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+10db_004.wav",
@@ -837,7 +955,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+10db_004.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+00db_000.wav",
@@ -851,7 +971,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+00db_000.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+00db_001.wav",
@@ -865,7 +987,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+00db_001.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+00db_002.wav",
@@ -879,7 +1003,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+00db_002.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+00db_003.wav",
@@ -893,7 +1019,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+00db_003.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr+00db_004.wav",
@@ -907,7 +1035,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr+00db_004.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr-05db_000.wav",
@@ -921,7 +1051,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr-05db_000.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr-05db_001.wav",
@@ -935,7 +1067,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr-05db_001.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr-05db_002.wav",
@@ -949,7 +1083,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr-05db_002.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr-05db_003.wav",
@@ -963,7 +1099,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr-05db_003.wav"
   },
   {
     "clip_id": "stationary_noise_test_snr-05db_004.wav",
@@ -977,7 +1115,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/stationary_noise_test_snr-05db_004.wav"
   },
   {
     "clip_id": "transient_noise_dev_sparse_000.wav",
@@ -991,7 +1131,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_sparse_000.wav"
   },
   {
     "clip_id": "transient_noise_dev_sparse_001.wav",
@@ -1005,7 +1147,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_sparse_001.wav"
   },
   {
     "clip_id": "transient_noise_dev_sparse_002.wav",
@@ -1019,7 +1163,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_sparse_002.wav"
   },
   {
     "clip_id": "transient_noise_dev_sparse_003.wav",
@@ -1033,7 +1179,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_sparse_003.wav"
   },
   {
     "clip_id": "transient_noise_dev_moderate_000.wav",
@@ -1047,7 +1195,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_moderate_000.wav"
   },
   {
     "clip_id": "transient_noise_dev_moderate_001.wav",
@@ -1061,7 +1211,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_moderate_001.wav"
   },
   {
     "clip_id": "transient_noise_dev_moderate_002.wav",
@@ -1075,7 +1227,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_moderate_002.wav"
   },
   {
     "clip_id": "transient_noise_dev_moderate_003.wav",
@@ -1089,7 +1243,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_moderate_003.wav"
   },
   {
     "clip_id": "transient_noise_dev_dense_000.wav",
@@ -1103,7 +1259,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_dense_000.wav"
   },
   {
     "clip_id": "transient_noise_dev_dense_001.wav",
@@ -1117,7 +1275,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_dense_001.wav"
   },
   {
     "clip_id": "transient_noise_dev_dense_002.wav",
@@ -1131,7 +1291,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_dense_002.wav"
   },
   {
     "clip_id": "transient_noise_dev_dense_003.wav",
@@ -1145,7 +1307,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_dev_dense_003.wav"
   },
   {
     "clip_id": "transient_noise_test_sparse_000.wav",
@@ -1159,7 +1323,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_sparse_000.wav"
   },
   {
     "clip_id": "transient_noise_test_sparse_001.wav",
@@ -1173,7 +1339,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_sparse_001.wav"
   },
   {
     "clip_id": "transient_noise_test_sparse_002.wav",
@@ -1187,7 +1355,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_sparse_002.wav"
   },
   {
     "clip_id": "transient_noise_test_sparse_003.wav",
@@ -1201,7 +1371,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_sparse_003.wav"
   },
   {
     "clip_id": "transient_noise_test_moderate_000.wav",
@@ -1215,7 +1387,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_moderate_000.wav"
   },
   {
     "clip_id": "transient_noise_test_moderate_001.wav",
@@ -1229,7 +1403,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_moderate_001.wav"
   },
   {
     "clip_id": "transient_noise_test_moderate_002.wav",
@@ -1243,7 +1419,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_moderate_002.wav"
   },
   {
     "clip_id": "transient_noise_test_moderate_003.wav",
@@ -1257,7 +1435,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_moderate_003.wav"
   },
   {
     "clip_id": "transient_noise_test_dense_000.wav",
@@ -1271,7 +1451,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_dense_000.wav"
   },
   {
     "clip_id": "transient_noise_test_dense_001.wav",
@@ -1285,7 +1467,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_dense_001.wav"
   },
   {
     "clip_id": "transient_noise_test_dense_002.wav",
@@ -1299,7 +1483,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_dense_002.wav"
   },
   {
     "clip_id": "transient_noise_test_dense_003.wav",
@@ -1313,7 +1499,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/transient_noise_test_dense_003.wav"
   },
   {
     "clip_id": "babble_dev_snr+20db_000.wav",
@@ -1327,7 +1515,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+20db_000.wav"
   },
   {
     "clip_id": "babble_dev_snr+20db_001.wav",
@@ -1341,7 +1531,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+20db_001.wav"
   },
   {
     "clip_id": "babble_dev_snr+20db_002.wav",
@@ -1355,7 +1547,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+20db_002.wav"
   },
   {
     "clip_id": "babble_dev_snr+20db_003.wav",
@@ -1369,7 +1563,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+20db_003.wav"
   },
   {
     "clip_id": "babble_dev_snr+10db_000.wav",
@@ -1383,7 +1579,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+10db_000.wav"
   },
   {
     "clip_id": "babble_dev_snr+10db_001.wav",
@@ -1397,7 +1595,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+10db_001.wav"
   },
   {
     "clip_id": "babble_dev_snr+10db_002.wav",
@@ -1411,7 +1611,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+10db_002.wav"
   },
   {
     "clip_id": "babble_dev_snr+10db_003.wav",
@@ -1425,7 +1627,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+10db_003.wav"
   },
   {
     "clip_id": "babble_dev_snr+00db_000.wav",
@@ -1439,7 +1643,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+00db_000.wav"
   },
   {
     "clip_id": "babble_dev_snr+00db_001.wav",
@@ -1453,7 +1659,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+00db_001.wav"
   },
   {
     "clip_id": "babble_dev_snr+00db_002.wav",
@@ -1467,7 +1675,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+00db_002.wav"
   },
   {
     "clip_id": "babble_dev_snr+00db_003.wav",
@@ -1481,7 +1691,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr+00db_003.wav"
   },
   {
     "clip_id": "babble_dev_snr-05db_000.wav",
@@ -1495,7 +1707,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr-05db_000.wav"
   },
   {
     "clip_id": "babble_dev_snr-05db_001.wav",
@@ -1509,7 +1723,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr-05db_001.wav"
   },
   {
     "clip_id": "babble_dev_snr-05db_002.wav",
@@ -1523,7 +1739,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr-05db_002.wav"
   },
   {
     "clip_id": "babble_dev_snr-05db_003.wav",
@@ -1537,7 +1755,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_dev_snr-05db_003.wav"
   },
   {
     "clip_id": "babble_test_snr+20db_000.wav",
@@ -1551,7 +1771,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+20db_000.wav"
   },
   {
     "clip_id": "babble_test_snr+20db_001.wav",
@@ -1565,7 +1787,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+20db_001.wav"
   },
   {
     "clip_id": "babble_test_snr+20db_002.wav",
@@ -1579,7 +1803,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+20db_002.wav"
   },
   {
     "clip_id": "babble_test_snr+20db_003.wav",
@@ -1593,7 +1819,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+20db_003.wav"
   },
   {
     "clip_id": "babble_test_snr+10db_000.wav",
@@ -1607,7 +1835,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+10db_000.wav"
   },
   {
     "clip_id": "babble_test_snr+10db_001.wav",
@@ -1621,7 +1851,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+10db_001.wav"
   },
   {
     "clip_id": "babble_test_snr+10db_002.wav",
@@ -1635,7 +1867,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+10db_002.wav"
   },
   {
     "clip_id": "babble_test_snr+10db_003.wav",
@@ -1649,7 +1883,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+10db_003.wav"
   },
   {
     "clip_id": "babble_test_snr+00db_000.wav",
@@ -1663,7 +1899,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+00db_000.wav"
   },
   {
     "clip_id": "babble_test_snr+00db_001.wav",
@@ -1677,7 +1915,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+00db_001.wav"
   },
   {
     "clip_id": "babble_test_snr+00db_002.wav",
@@ -1691,7 +1931,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+00db_002.wav"
   },
   {
     "clip_id": "babble_test_snr+00db_003.wav",
@@ -1705,7 +1947,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr+00db_003.wav"
   },
   {
     "clip_id": "babble_test_snr-05db_000.wav",
@@ -1719,7 +1963,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr-05db_000.wav"
   },
   {
     "clip_id": "babble_test_snr-05db_001.wav",
@@ -1733,7 +1979,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr-05db_001.wav"
   },
   {
     "clip_id": "babble_test_snr-05db_002.wav",
@@ -1747,7 +1995,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr-05db_002.wav"
   },
   {
     "clip_id": "babble_test_snr-05db_003.wav",
@@ -1761,7 +2011,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/babble_test_snr-05db_003.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-15db_000.wav",
@@ -1775,7 +2027,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-15db_000.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-15db_001.wav",
@@ -1789,7 +2043,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-15db_001.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-15db_002.wav",
@@ -1803,7 +2059,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-15db_002.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-15db_003.wav",
@@ -1817,7 +2075,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-15db_003.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-25db_000.wav",
@@ -1831,7 +2091,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-25db_000.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-25db_001.wav",
@@ -1845,7 +2107,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-25db_001.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-25db_002.wav",
@@ -1859,7 +2123,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-25db_002.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-25db_003.wav",
@@ -1873,7 +2139,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-25db_003.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-35db_000.wav",
@@ -1887,7 +2155,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-35db_000.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-35db_001.wav",
@@ -1901,7 +2171,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-35db_001.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-35db_002.wav",
@@ -1915,7 +2187,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-35db_002.wav"
   },
   {
     "clip_id": "quiet_whisper_dev_-35db_003.wav",
@@ -1929,7 +2203,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_dev_-35db_003.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-15db_000.wav",
@@ -1943,7 +2219,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-15db_000.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-15db_001.wav",
@@ -1957,7 +2235,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-15db_001.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-15db_002.wav",
@@ -1971,7 +2251,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-15db_002.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-15db_003.wav",
@@ -1985,7 +2267,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-15db_003.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-25db_000.wav",
@@ -1999,7 +2283,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-25db_000.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-25db_001.wav",
@@ -2013,7 +2299,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-25db_001.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-25db_002.wav",
@@ -2027,7 +2315,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-25db_002.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-25db_003.wav",
@@ -2041,7 +2331,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-25db_003.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-35db_000.wav",
@@ -2055,7 +2347,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-35db_000.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-35db_001.wav",
@@ -2069,7 +2363,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-35db_001.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-35db_002.wav",
@@ -2083,7 +2379,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-35db_002.wav"
   },
   {
     "clip_id": "quiet_whisper_test_-35db_003.wav",
@@ -2097,7 +2395,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/quiet_whisper_test_-35db_003.wav"
   },
   {
     "clip_id": "loud_clipped_dev_boost10db_000.wav",
@@ -2111,7 +2411,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_dev_boost10db_000.wav"
   },
   {
     "clip_id": "loud_clipped_dev_boost10db_001.wav",
@@ -2125,7 +2427,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_dev_boost10db_001.wav"
   },
   {
     "clip_id": "loud_clipped_dev_boost10db_002.wav",
@@ -2139,7 +2443,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_dev_boost10db_002.wav"
   },
   {
     "clip_id": "loud_clipped_dev_boost18db_000.wav",
@@ -2153,7 +2459,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_dev_boost18db_000.wav"
   },
   {
     "clip_id": "loud_clipped_dev_boost18db_001.wav",
@@ -2167,7 +2475,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_dev_boost18db_001.wav"
   },
   {
     "clip_id": "loud_clipped_dev_boost18db_002.wav",
@@ -2181,7 +2491,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_dev_boost18db_002.wav"
   },
   {
     "clip_id": "loud_clipped_dev_boost26db_000.wav",
@@ -2195,7 +2507,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_dev_boost26db_000.wav"
   },
   {
     "clip_id": "loud_clipped_dev_boost26db_001.wav",
@@ -2209,7 +2523,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_dev_boost26db_001.wav"
   },
   {
     "clip_id": "loud_clipped_dev_boost26db_002.wav",
@@ -2223,7 +2539,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_dev_boost26db_002.wav"
   },
   {
     "clip_id": "loud_clipped_test_boost10db_000.wav",
@@ -2237,7 +2555,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_test_boost10db_000.wav"
   },
   {
     "clip_id": "loud_clipped_test_boost10db_001.wav",
@@ -2251,7 +2571,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_test_boost10db_001.wav"
   },
   {
     "clip_id": "loud_clipped_test_boost10db_002.wav",
@@ -2265,7 +2587,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_test_boost10db_002.wav"
   },
   {
     "clip_id": "loud_clipped_test_boost18db_000.wav",
@@ -2279,7 +2603,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_test_boost18db_000.wav"
   },
   {
     "clip_id": "loud_clipped_test_boost18db_001.wav",
@@ -2293,7 +2619,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_test_boost18db_001.wav"
   },
   {
     "clip_id": "loud_clipped_test_boost18db_002.wav",
@@ -2307,7 +2635,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_test_boost18db_002.wav"
   },
   {
     "clip_id": "loud_clipped_test_boost26db_000.wav",
@@ -2321,7 +2651,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_test_boost26db_000.wav"
   },
   {
     "clip_id": "loud_clipped_test_boost26db_001.wav",
@@ -2335,7 +2667,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_test_boost26db_001.wav"
   },
   {
     "clip_id": "loud_clipped_test_boost26db_002.wav",
@@ -2349,7 +2683,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/loud_clipped_test_boost26db_002.wav"
   },
   {
     "clip_id": "silence_dev_floor-60db_000.wav",
@@ -2358,7 +2694,9 @@
     "target_loudness_dbfs": -60.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_dev_floor-60db_000.wav"
   },
   {
     "clip_id": "silence_test_floor-60db_001.wav",
@@ -2367,7 +2705,9 @@
     "target_loudness_dbfs": -60.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_test_floor-60db_001.wav"
   },
   {
     "clip_id": "silence_dev_floor-60db_002.wav",
@@ -2376,7 +2716,9 @@
     "target_loudness_dbfs": -60.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_dev_floor-60db_002.wav"
   },
   {
     "clip_id": "silence_test_floor-45db_000.wav",
@@ -2385,7 +2727,9 @@
     "target_loudness_dbfs": -45.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_test_floor-45db_000.wav"
   },
   {
     "clip_id": "silence_dev_floor-45db_001.wav",
@@ -2394,7 +2738,9 @@
     "target_loudness_dbfs": -45.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_dev_floor-45db_001.wav"
   },
   {
     "clip_id": "silence_test_floor-45db_002.wav",
@@ -2403,7 +2749,9 @@
     "target_loudness_dbfs": -45.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_test_floor-45db_002.wav"
   },
   {
     "clip_id": "silence_dev_floor-30db_000.wav",
@@ -2412,7 +2760,9 @@
     "target_loudness_dbfs": -30.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_dev_floor-30db_000.wav"
   },
   {
     "clip_id": "silence_test_floor-30db_001.wav",
@@ -2421,7 +2771,9 @@
     "target_loudness_dbfs": -30.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_test_floor-30db_001.wav"
   },
   {
     "clip_id": "silence_dev_floor-30db_002.wav",
@@ -2430,7 +2782,9 @@
     "target_loudness_dbfs": -30.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_dev_floor-30db_002.wav"
   },
   {
     "clip_id": "silence_test_floor-20db_000.wav",
@@ -2439,7 +2793,9 @@
     "target_loudness_dbfs": -20.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_test_floor-20db_000.wav"
   },
   {
     "clip_id": "silence_dev_floor-20db_001.wav",
@@ -2448,7 +2804,9 @@
     "target_loudness_dbfs": -20.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_dev_floor-20db_001.wav"
   },
   {
     "clip_id": "silence_test_floor-20db_002.wav",
@@ -2457,7 +2815,9 @@
     "target_loudness_dbfs": -20.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/silence_test_floor-20db_002.wav"
   },
   {
     "clip_id": "music_pure_dev_000.wav",
@@ -2466,7 +2826,9 @@
     "target_loudness_dbfs": -20.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_pure_dev_000.wav"
   },
   {
     "clip_id": "music_pure_test_001.wav",
@@ -2475,7 +2837,9 @@
     "target_loudness_dbfs": -20.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_pure_test_001.wav"
   },
   {
     "clip_id": "music_pure_dev_002.wav",
@@ -2484,7 +2848,9 @@
     "target_loudness_dbfs": -20.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_pure_dev_002.wav"
   },
   {
     "clip_id": "music_pure_test_003.wav",
@@ -2493,7 +2859,9 @@
     "target_loudness_dbfs": -20.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_pure_test_003.wav"
   },
   {
     "clip_id": "music_pure_dev_004.wav",
@@ -2502,7 +2870,9 @@
     "target_loudness_dbfs": -20.0,
     "speech_segments": [],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_pure_dev_004.wav"
   },
   {
     "clip_id": "music_speech_mix_dev_snr10db_000.wav",
@@ -2516,7 +2886,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_speech_mix_dev_snr10db_000.wav"
   },
   {
     "clip_id": "music_speech_mix_dev_snr10db_001.wav",
@@ -2530,7 +2902,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_speech_mix_dev_snr10db_001.wav"
   },
   {
     "clip_id": "music_speech_mix_dev_snr0db_000.wav",
@@ -2544,7 +2918,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_speech_mix_dev_snr0db_000.wav"
   },
   {
     "clip_id": "music_speech_mix_dev_snr0db_001.wav",
@@ -2558,7 +2934,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_speech_mix_dev_snr0db_001.wav"
   },
   {
     "clip_id": "music_speech_mix_test_snr10db_000.wav",
@@ -2572,7 +2950,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_speech_mix_test_snr10db_000.wav"
   },
   {
     "clip_id": "music_speech_mix_test_snr10db_001.wav",
@@ -2586,7 +2966,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_speech_mix_test_snr10db_001.wav"
   },
   {
     "clip_id": "music_speech_mix_test_snr0db_000.wav",
@@ -2600,7 +2982,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_speech_mix_test_snr0db_000.wav"
   },
   {
     "clip_id": "music_speech_mix_test_snr0db_001.wav",
@@ -2614,7 +2998,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/music_speech_mix_test_snr0db_001.wav"
   },
   {
     "clip_id": "telephony_clean_dev_000.wav",
@@ -2628,7 +3014,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/telephony_clean_dev_000.wav"
   },
   {
     "clip_id": "telephony_clean_dev_001.wav",
@@ -2642,7 +3030,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/telephony_clean_dev_001.wav"
   },
   {
     "clip_id": "telephony_clean_dev_002.wav",
@@ -2656,7 +3046,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/telephony_clean_dev_002.wav"
   },
   {
     "clip_id": "telephony_noisy_dev_000.wav",
@@ -2670,7 +3062,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/telephony_noisy_dev_000.wav"
   },
   {
     "clip_id": "telephony_noisy_dev_001.wav",
@@ -2684,7 +3078,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/telephony_noisy_dev_001.wav"
   },
   {
     "clip_id": "telephony_clean_test_000.wav",
@@ -2698,7 +3094,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/telephony_clean_test_000.wav"
   },
   {
     "clip_id": "telephony_clean_test_001.wav",
@@ -2712,7 +3110,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/telephony_clean_test_001.wav"
   },
   {
     "clip_id": "telephony_clean_test_002.wav",
@@ -2726,7 +3126,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/telephony_clean_test_002.wav"
   },
   {
     "clip_id": "telephony_noisy_test_000.wav",
@@ -2740,7 +3142,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/telephony_noisy_test_000.wav"
   },
   {
     "clip_id": "telephony_noisy_test_001.wav",
@@ -2754,10 +3158,12 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/telephony_noisy_test_001.wav"
   },
   {
-    "clip_id": "clean_speech_dev_short_000.wav",
+    "clip_id": "packet_loss_clean_speech_dev_short_000.wav",
     "category": "packet-loss/jitter",
     "target_snr_db": null,
     "target_loudness_dbfs": -20.0,
@@ -2768,10 +3174,12 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/packet_loss_clean_speech_dev_short_000.wav"
   },
   {
-    "clip_id": "clean_speech_dev_short_001.wav",
+    "clip_id": "packet_loss_clean_speech_dev_short_001.wav",
     "category": "packet-loss/jitter",
     "target_snr_db": null,
     "target_loudness_dbfs": -20.0,
@@ -2782,10 +3190,12 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/packet_loss_clean_speech_dev_short_001.wav"
   },
   {
-    "clip_id": "clean_speech_dev_short_002.wav",
+    "clip_id": "packet_loss_clean_speech_dev_short_002.wav",
     "category": "packet-loss/jitter",
     "target_snr_db": null,
     "target_loudness_dbfs": -20.0,
@@ -2796,10 +3206,12 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/packet_loss_clean_speech_dev_short_002.wav"
   },
   {
-    "clip_id": "clean_speech_dev_short_003.wav",
+    "clip_id": "packet_loss_clean_speech_dev_short_003.wav",
     "category": "packet-loss/jitter",
     "target_snr_db": null,
     "target_loudness_dbfs": -20.0,
@@ -2810,10 +3222,12 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/packet_loss_clean_speech_dev_short_003.wav"
   },
   {
-    "clip_id": "clean_speech_dev_short_004.wav",
+    "clip_id": "packet_loss_clean_speech_dev_short_004.wav",
     "category": "packet-loss/jitter",
     "target_snr_db": null,
     "target_loudness_dbfs": -20.0,
@@ -2824,10 +3238,12 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/packet_loss_clean_speech_dev_short_004.wav"
   },
   {
-    "clip_id": "clean_speech_dev_medium_000.wav",
+    "clip_id": "packet_loss_clean_speech_dev_medium_000.wav",
     "category": "packet-loss/jitter",
     "target_snr_db": null,
     "target_loudness_dbfs": -20.0,
@@ -2838,10 +3254,12 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/packet_loss_clean_speech_dev_medium_000.wav"
   },
   {
-    "clip_id": "clean_speech_dev_medium_001.wav",
+    "clip_id": "packet_loss_clean_speech_dev_medium_001.wav",
     "category": "packet-loss/jitter",
     "target_snr_db": null,
     "target_loudness_dbfs": -20.0,
@@ -2852,10 +3270,12 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/packet_loss_clean_speech_dev_medium_001.wav"
   },
   {
-    "clip_id": "clean_speech_dev_medium_002.wav",
+    "clip_id": "packet_loss_clean_speech_dev_medium_002.wav",
     "category": "packet-loss/jitter",
     "target_snr_db": null,
     "target_loudness_dbfs": -20.0,
@@ -2866,10 +3286,12 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/packet_loss_clean_speech_dev_medium_002.wav"
   },
   {
-    "clip_id": "clean_speech_dev_medium_003.wav",
+    "clip_id": "packet_loss_clean_speech_dev_medium_003.wav",
     "category": "packet-loss/jitter",
     "target_snr_db": null,
     "target_loudness_dbfs": -20.0,
@@ -2880,10 +3302,12 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/packet_loss_clean_speech_dev_medium_003.wav"
   },
   {
-    "clip_id": "clean_speech_dev_medium_004.wav",
+    "clip_id": "packet_loss_clean_speech_dev_medium_004.wav",
     "category": "packet-loss/jitter",
     "target_snr_db": null,
     "target_loudness_dbfs": -20.0,
@@ -2894,7 +3318,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/packet_loss_clean_speech_dev_medium_004.wav"
   },
   {
     "clip_id": "tier2_seq_clean_dev_000.wav",
@@ -2912,7 +3338,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_clean_dev_000.wav"
   },
   {
     "clip_id": "tier2_seq_clean_test_001.wav",
@@ -2938,7 +3366,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_clean_test_001.wav"
   },
   {
     "clip_id": "tier2_seq_clean_dev_002.wav",
@@ -2960,7 +3390,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_clean_dev_002.wav"
   },
   {
     "clip_id": "tier2_seq_clean_test_003.wav",
@@ -2982,7 +3414,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_clean_test_003.wav"
   },
   {
     "clip_id": "tier2_seq_stationary_10db_dev_000.wav",
@@ -3000,7 +3434,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_stationary_10db_dev_000.wav"
   },
   {
     "clip_id": "tier2_seq_stationary_10db_test_001.wav",
@@ -3022,7 +3458,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_stationary_10db_test_001.wav"
   },
   {
     "clip_id": "tier2_seq_stationary_10db_dev_002.wav",
@@ -3044,7 +3482,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_stationary_10db_dev_002.wav"
   },
   {
     "clip_id": "tier2_seq_stationary_10db_test_003.wav",
@@ -3070,7 +3510,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_stationary_10db_test_003.wav"
   },
   {
     "clip_id": "tier2_seq_stationary_0db_dev_000.wav",
@@ -3096,7 +3538,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_stationary_0db_dev_000.wav"
   },
   {
     "clip_id": "tier2_seq_stationary_0db_test_001.wav",
@@ -3122,7 +3566,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_stationary_0db_test_001.wav"
   },
   {
     "clip_id": "tier2_seq_stationary_0db_dev_002.wav",
@@ -3140,7 +3586,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_stationary_0db_dev_002.wav"
   },
   {
     "clip_id": "tier2_seq_stationary_0db_test_003.wav",
@@ -3166,7 +3614,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_stationary_0db_test_003.wav"
   },
   {
     "clip_id": "tier2_seq_babble_5db_dev_000.wav",
@@ -3184,7 +3634,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_babble_5db_dev_000.wav"
   },
   {
     "clip_id": "tier2_seq_babble_5db_test_001.wav",
@@ -3210,7 +3662,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_babble_5db_test_001.wav"
   },
   {
     "clip_id": "tier2_seq_babble_5db_dev_002.wav",
@@ -3232,7 +3686,9 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "dev"
+    "split": "dev",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_babble_5db_dev_002.wav"
   },
   {
     "clip_id": "tier2_seq_babble_5db_test_003.wav",
@@ -3250,6 +3706,8 @@
       ]
     ],
     "calibration_marker_offset_samples": 320,
-    "split": "test"
+    "split": "test",
+    "calibration_marker_offset": 320,
+    "clip_path": "corpus/audio/tier2_seq_babble_5db_test_003.wav"
   }
 ]
