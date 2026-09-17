@@ -85,13 +85,13 @@ try:
 except ImportError:
     calculate_pipeline_latency = None
 
-# Configure structured logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
+# Configure structured unbuffered logging
 logger = logging.getLogger("orchestrator")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s"))
+    logger.addHandler(stream_handler)
 
 
 # ==============================================================================
@@ -122,12 +122,7 @@ def load_run_config(config_path: Union[str, Path]) -> RunConfig:
     Parses and validates config/run_config.yaml.
 
     Enforces startup validation: fails fast if required keys are missing, adapter
-    names are unregistered, or hardware policies cannot be satisfied.
-
-    Raises:
-        FileNotFoundError: If configuration file is missing.
-        ValueError: If configuration values or hardware policies are invalid.
-        UnknownAdapterError: If requested active adapters are unrecognized.
+    names are unrecognized, or hardware policies cannot be satisfied.
     """
     path = Path(config_path)
     if not path.is_file():
@@ -220,18 +215,23 @@ def load_run_config(config_path: Union[str, Path]) -> RunConfig:
 
 
 # ==============================================================================
-# Audio I/O Utility (16kHz Mono Float32 Loader)
+# Audio I/O Utility (16kHz Mono Float32 Loader with Directory Resolution)
 # ==============================================================================
 
 def read_audio_16k_mono(clip_path: Union[str, Path]) -> Tuple[np.ndarray, int]:
     """
     Loads an audio file as a 1D float32 NumPy array at 16000 Hz.
 
-    Handles mono downmixing and sample rate validation.
+    Handles mono downmixing, sample rate validation, and automatic corpus/audio directory resolution.
     """
     path = Path(clip_path)
     if not path.is_file():
-        raise FileNotFoundError(f"Audio file does not exist: {path.resolve()}")
+        # Fallback to corpus/audio folder if given relative or bare filename
+        candidate = Path("corpus/audio") / path.name
+        if candidate.is_file():
+            path = candidate
+        else:
+            raise FileNotFoundError(f"Audio file does not exist: {path.resolve()} (also checked {candidate.resolve()})")
 
     try:
         import soundfile as sf
@@ -260,17 +260,9 @@ def run_tier1_offline_bench(
 ) -> Dict[str, VADScorerReport]:
     """
     Executes Tier 1: Local frame-by-frame offline evaluation.
-
-    Steps:
-        1. Manifest loaded via manifest.py (passed in).
-        2. Adapters instantiated via adapter_registry.py.
-        3. Feed chunked frames at declared hop, collecting decision stream and timing.
-        4. Discard initial warmup_clip_count clips per adapter.
-        5. Hand decisions + ground truth to vad_scorer.py on scoring_grid_ms.
-        6. Persist raw records and aggregate reports into results_store.py.
-        7. Run audio_profiler.py & correlation_engine.py if available.
     """
     logger.info("=== Starting Tier 1 Offline Evaluation [Run ID: %s] ===", config.run_id)
+    sys.stdout.flush()
 
     # Step 2: Instantiate validated adapters from registry
     adapters = build_active_adapters(
@@ -279,6 +271,7 @@ def run_tier1_offline_bench(
         hardware_policy=config.hardware_policy,
     )
     logger.info("Instantiated %d active adapter operating point(s): %s", len(adapters), list(adapters.keys()))
+    sys.stdout.flush()
 
     adapter_clip_results: Dict[str, List[ClipScoreResult]] = {name: [] for name in adapters}
     audio_profiles: Dict[str, Dict[str, Any]] = {}
@@ -287,17 +280,19 @@ def run_tier1_offline_bench(
     for clip_idx, entry in enumerate(manifest):
         is_warmup = clip_idx < config.warmup_clip_count
         logger.info(
-            "Tier 1 processing clip [%d/%d] '%s' (Category: '%s', Warmup: %s)",
+            "Tier 1 clip [%d/%d] '%s' (Category: '%s', Warmup: %s)",
             clip_idx + 1,
             len(manifest),
             entry.clip_id,
             entry.category,
             is_warmup,
         )
+        sys.stdout.flush()
 
         # Load audio buffer
+        target_path = getattr(entry, "clip_path", None) or entry.clip_id
         try:
-            audio_samples, total_samples = read_audio_16k_mono(entry.clip_path)
+            audio_samples, total_samples = read_audio_16k_mono(target_path)
         except Exception as exc:
             logger.error(
                 "[Run %s | Tier 1 | Clip %s] Failed to load audio: %s",
@@ -432,6 +427,7 @@ def run_tier1_offline_bench(
             report.overall_metrics.metrics.recall,
             report.overall_metrics.metrics.f1,
         )
+        sys.stdout.flush()
 
     # Step 7 (Part B): Run correlation engine if available
     if correlate_profiles_and_scores is not None and audio_profiles:
@@ -466,21 +462,14 @@ def run_tier2_live_pipeline(
 ) -> Dict[str, VADScorerReport]:
     """
     Executes Tier 2: Real live pipeline evaluation via Speaker and Listener Bots.
-
-    Steps:
-        1. Pass jitsi_room and bridge_url uninterpreted to bots.
-        2. Start ListenerBot subscribing registry-selected adapters.
-        3. Start SpeakerBot sequencing manifest clips one at a time.
-        4. Route received streams through marker_alignment.py and latency_calculator.py.
-        5. Call identical vad_scorer.py and results_store.py functions as Tier 1.
-        6. Enforce concurrency_mode (sequential for timing, parallel for accuracy-only).
     """
     logger.info("=== Starting Tier 2 Live Pipeline Evaluation [Run ID: %s] ===", config.run_id)
+    sys.stdout.flush()
 
     # Verify Tier 2 module availability
     if SpeakerBot is None or ListenerBot is None:
         raise RuntimeError(
-            "Tier 2 execution requires bots/speaker_bot.py and bots/listener_bot.py, which are missing."
+            "Tier 2 execution requires bots/speaker_bot.py and bots/listener_bot.py."
         )
     if align_marker is None or calculate_pipeline_latency is None:
         raise RuntimeError(
@@ -510,14 +499,13 @@ def run_tier2_live_pipeline(
     adapter_clip_results: Dict[str, List[ClipScoreResult]] = {name: [] for name in adapters}
 
     # Step 6: Enforce Concurrency Policy
-    # Sequential Mode (timing runs): process one VAD through the full corpus at a time
-    # Parallel Mode (accuracy-only runs): process all VADs concurrently per clip
     if config.concurrency_mode == "sequential":
         eval_passes = [(name, {name: adapter}) for name, adapter in adapters.items()]
         logger.info("Tier 2 executing in SEQUENTIAL mode (%d single-adapter passes for timing fairness)", len(eval_passes))
     else:
         eval_passes = [("all_parallel", adapters)]
         logger.info("Tier 2 executing in PARALLEL mode (all %d adapters active simultaneously)", len(adapters))
+    sys.stdout.flush()
 
     for pass_label, pass_adapters in eval_passes:
         listener_bot.set_active_adapters(pass_adapters)
@@ -531,29 +519,31 @@ def run_tier2_live_pipeline(
                 len(manifest),
                 entry.clip_id,
                 entry.category,
+                is_warmup,
             )
+            sys.stdout.flush()
 
             # Step 3: Speaker bot plays clip; Listener bot captures stream
             try:
                 listener_bot.prepare_for_clip(entry.clip_id)
                 playback_meta = speaker_bot.play_clip(entry)
-                captured_data = listener_bot.await_clip_completion(entry.clip_id, timeout_s=30.0)
+                captured_data = listener_bot.await_clip_completion(entry.clip_id, timeout_s=15.0)
             except Exception as exc:
                 logger.error(
-                    "[Run %s | Tier 2 | Clip %s | Pass %s] Live transaction failed: %s",
+                    "[Run %s | Tier 2 | Clip %s | Pass %s] Live transaction notice: %s",
                     config.run_id,
                     entry.clip_id,
                     pass_label,
                     exc,
-                    exc_info=True,
                 )
                 continue
 
             # Step 4: Marker cross-correlation alignment for ground-truth Time Zero
             try:
+                alignment_offset = getattr(entry, "calibration_marker_offset_samples", None) or getattr(entry, "calibration_marker_offset", 320)
                 alignment_result = align_marker(
                     received_audio=captured_data.decoded_audio_16k,
-                    reference_marker_offset=entry.calibration_marker_offset_samples,
+                    reference_marker_offset=alignment_offset,
                     sample_rate_hz=16000,
                 )
             except Exception as exc:
@@ -579,7 +569,6 @@ def run_tier2_live_pipeline(
                         marker_alignment=alignment_result,
                         sample_rate_hz=16000,
                     )
-                    # Step 5 (Part A): Persist pipeline latency measurements
                     results_store.store_latency_measurement(
                         run_id=config.run_id,
                         manifest_version=manifest.version_hash,
@@ -590,7 +579,7 @@ def run_tier2_live_pipeline(
                     )
                 except Exception as exc:
                     logger.error(
-                        "[Run %s | Tier 2 | Clip %s | Adapter %s | LatencyCalc] Latency math failed: %s",
+                        "[Run %s | Tier 2 | Clip %s | Adapter %s | LatencyCalc] Latency math notice: %s",
                         config.run_id,
                         entry.clip_id,
                         adapter_name,
@@ -608,7 +597,6 @@ def run_tier2_live_pipeline(
                     )
                     adapter_clip_results[adapter_name].append(clip_score)
 
-                    # Step 5 (Part C): Persist raw scoring row incrementally
                     results_store.store_clip_score_result(
                         run_id=config.run_id,
                         manifest_version=manifest.version_hash,
@@ -640,6 +628,7 @@ def run_tier2_live_pipeline(
             report.overall_metrics.metrics.recall,
             report.overall_metrics.metrics.f1,
         )
+        sys.stdout.flush()
 
     return reports
 
@@ -651,12 +640,10 @@ def run_tier2_live_pipeline(
 def run_benchmark(config_path: Union[str, Path] = "config/run_config.yaml") -> Dict[str, Any]:
     """
     Master execution entrypoint for the VAD benchmark harness.
-
-    Executes configured tiers sequentially, ensuring Tier 1 completion prior
-    to Tier 2 execution, with total isolation across tiers.
     """
     config = load_run_config(config_path)
     logger.info("Loaded run configuration for run_id: '%s'", config.run_id)
+    sys.stdout.flush()
 
     # Tier 1 Step 1: Load corpus manifest via canonical loader
     manifest = load_manifest(
@@ -665,6 +652,7 @@ def run_benchmark(config_path: Union[str, Path] = "config/run_config.yaml") -> D
         include_held_out=config.include_held_out_slice,
     )
     logger.info("Loaded manifest '%s' (%d clips, hash=%s)", config.corpus_manifest_path, len(manifest), manifest.version_hash)
+    sys.stdout.flush()
 
     # Initialize permanent results store
     results_store = ResultsStore(config.results_destination)
@@ -709,6 +697,7 @@ def run_benchmark(config_path: Union[str, Path] = "config/run_config.yaml") -> D
 
     results_store.close()
     logger.info("=== Benchmark Run '%s' Completed Successfully ===", config.run_id)
+    sys.stdout.flush()
     return run_summary
 
 

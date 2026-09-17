@@ -213,7 +213,7 @@ def cmd_run(phase_name: str) -> int:
             "notebook",
             "--execute",
             "--inplace",
-            str(nb_path),
+                                    str(nb_path),
         ]
 
         print(f"--> Executing Notebook in-place: {nb_path.relative_to(REPO_ROOT)}")

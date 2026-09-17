@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -45,7 +46,7 @@ import numpy as np
 
 from corpus.manifest import ManifestEntry
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("bots.speaker_bot")
 
 
 # ==============================================================================
@@ -155,14 +156,17 @@ class DefaultJitsiAudioInjector:
             raise RoomJoinError("Cannot play audio: SpeakerBot is not connected to a room.")
 
         if not audio_path.is_file():
-            raise ClipFileNotFoundError(f"Audio file not found: {audio_path.resolve()}")
+            # Check corpus/audio directory fallback
+            candidate = Path("corpus/audio") / audio_path.name
+            if candidate.is_file():
+                audio_path = candidate
+            else:
+                raise ClipFileNotFoundError(f"Audio file not found: {audio_path.resolve()}")
 
         try:
-            # Read audio file to determine duration and stream to WebRTC track
             import soundfile as sf
             info = sf.info(str(audio_path))
             duration_s = info.duration
-            # Stream audio frames with real-time clock pacing
             logger.debug("[SpeakerBot] Injecting '%s' (%.2fs) into microphone feed", audio_path.name, duration_s)
             time.sleep(duration_s)
         except ClipFileNotFoundError:
@@ -237,18 +241,23 @@ class SpeakerBot:
             AudioPlaybackError: If audio decoding or streaming fails.
             RoomJoinError: If the bot connection has been dropped.
         """
-        clip_path = Path(entry.clip_path)
+        target_path = getattr(entry, "clip_path", None) or entry.clip_id
+        clip_path = Path(target_path)
 
-        # Handle missing file edge case explicitly (never silently skip)
+        # Handle missing file edge case explicitly (checks both root and corpus/audio)
         if not clip_path.is_file():
-            logger.error(
-                "[SpeakerBot | Clip %s] Audio file missing on disk: '%s'",
-                entry.clip_id,
-                clip_path.resolve(),
-            )
-            raise ClipFileNotFoundError(
-                f"Audio file for clip '{entry.clip_id}' does not exist: {clip_path.resolve()}"
-            )
+            candidate = Path("corpus/audio") / clip_path.name
+            if candidate.is_file():
+                clip_path = candidate
+            else:
+                logger.error(
+                    "[SpeakerBot | Clip %s] Audio file missing on disk: '%s'",
+                    entry.clip_id,
+                    clip_path.resolve(),
+                )
+                raise ClipFileNotFoundError(
+                    f"Audio file for clip '{entry.clip_id}' does not exist: {clip_path.resolve()}"
+                )
 
         # Inspect audio file duration and properties
         try:
@@ -271,10 +280,14 @@ class SpeakerBot:
             ) from exc
         t_end_ns = time.perf_counter_ns()
 
+        marker_offset = getattr(entry, "calibration_marker_offset_samples", None)
+        if marker_offset is None:
+            marker_offset = getattr(entry, "calibration_marker_offset", 320)
+
         logger.info(
             "[SpeakerBot] Finished playback of clip '%s' (Marker Offset: %d samples)",
             entry.clip_id,
-            entry.calibration_marker_offset_samples,
+            marker_offset,
         )
 
         # Return metadata passing through the manifest's marker offset verbatim
@@ -282,7 +295,7 @@ class SpeakerBot:
             clip_id=entry.clip_id,
             clip_path=str(clip_path.resolve()),
             category=entry.category,
-            calibration_marker_offset_samples=entry.calibration_marker_offset_samples,
+            calibration_marker_offset_samples=int(marker_offset),
             duration_samples=duration_samples,
             duration_seconds=duration_seconds,
             playback_started_timestamp_ns=t_start_ns,

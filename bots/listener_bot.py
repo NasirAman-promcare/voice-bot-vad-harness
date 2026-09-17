@@ -43,6 +43,7 @@ import asyncio
 import collections
 import json
 import logging
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -58,7 +59,7 @@ from vad_adapters.adapter_contract import (
     chunk_audio_stream,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("bots.listener_bot")
 
 
 # ==============================================================================

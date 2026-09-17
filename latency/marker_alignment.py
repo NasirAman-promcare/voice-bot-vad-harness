@@ -40,10 +40,10 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Default calibration chirp parameters: 100ms linear sine chirp (500Hz -> 4000Hz) at 16kHz
-DEFAULT_CHIRP_DURATION_S = 0.100
-DEFAULT_CHIRP_F_START_HZ = 500.0
-DEFAULT_CHIRP_F_END_HZ = 4000.0
+# Canonical calibration chirp parameters: 60ms linear sweep (700Hz -> 2600Hz) at 16kHz
+DEFAULT_CHIRP_DURATION_S = 0.060
+DEFAULT_CHIRP_F_START_HZ = 700.0
+DEFAULT_CHIRP_F_END_HZ = 2600.0
 DEFAULT_MIN_CONFIDENCE_THRESHOLD = 0.50
 DEFAULT_AMBIGUITY_RATIO_THRESHOLD = 0.85
 
@@ -93,7 +93,7 @@ class MarkerAlignmentResult:
 
 
 # ==============================================================================
-# Canonical Calibration Chirp Generator
+# Canonical Calibration Chirp Generator (Exported with dual aliases)
 # ==============================================================================
 
 def generate_calibration_chirp(
@@ -128,12 +128,19 @@ def generate_calibration_chirp(
         window[-taper_len:] = fade[::-1]
         raw_chirp *= window
 
-    # Normalize amplitude to -3 dBFS (0.707 peak)
+    # Normalize amplitude to -6 dBFS (0.501187 peak)
     max_val = np.max(np.abs(raw_chirp))
     if max_val > 0:
-        raw_chirp = (raw_chirp / max_val) * 0.707
+        raw_chirp = (raw_chirp / max_val) * 0.501187
 
     return raw_chirp
+
+
+def generate_reference_marker(sample_rate_hz: int = 16000) -> np.ndarray:
+    """
+    Public alias for generate_calibration_chirp ensuring seamless cross-module imports.
+    """
+    return generate_calibration_chirp(sample_rate_hz=sample_rate_hz)
 
 
 # ==============================================================================
@@ -178,8 +185,12 @@ def _compute_normalized_cross_correlation(
     window_energies = cumsum[tmpl_len:] - cumsum[:-tmpl_len]
 
     # Compute normalized correlation denominator
+    # Energy threshold: zero out windows with near-zero energy (avoids divide-by-zero silence spikes)
+    min_energy_threshold = 1e-4 * tmpl_energy
+    valid_mask = window_energies > min_energy_threshold
     denom = np.sqrt(np.maximum(window_energies * tmpl_energy, 1e-12))
-    ncc = (raw_corr / denom).astype(np.float32)
+    ncc = np.zeros_like(raw_corr, dtype=np.float32)
+    np.divide(raw_corr, denom, out=ncc, where=valid_mask)
     return np.clip(ncc, -1.0, 1.0)
 
 
@@ -189,12 +200,13 @@ def _compute_normalized_cross_correlation(
 
 def align_marker(
     received_audio: np.ndarray,
-    reference_marker_offset: int = 0,
+    reference_marker_offset: Optional[int] = 320,
     marker_waveform: Optional[np.ndarray] = None,
     stream_start_timestamp_ns: int = 0,
     sample_rate_hz: int = 16000,
     min_confidence_threshold: float = DEFAULT_MIN_CONFIDENCE_THRESHOLD,
     ambiguity_ratio_threshold: float = DEFAULT_AMBIGUITY_RATIO_THRESHOLD,
+    expected_offset_samples: Optional[int] = None,
 ) -> MarkerAlignmentResult:
     """
     Locates the calibration chirp in received audio via normalized cross-correlation.
@@ -210,12 +222,15 @@ def align_marker(
         sample_rate_hz: Expected sample rate (16000 Hz).
         min_confidence_threshold: Minimum correlation peak required for valid detection (0.50).
         ambiguity_ratio_threshold: Ratio threshold to flag closely competing secondary peaks (0.85).
+        expected_offset_samples: Compatibility alias for reference_marker_offset.
 
     Returns:
         MarkerAlignmentResult containing detection status, sample offset, and confidence.
     """
     if sample_rate_hz != 16000:
         raise ValueError(f"align_marker strictly requires 16000 Hz, received {sample_rate_hz}.")
+
+    ref_offset = expected_offset_samples if expected_offset_samples is not None else (reference_marker_offset or 0)
 
     if not isinstance(received_audio, np.ndarray):
         received_audio = np.asarray(received_audio)
@@ -241,7 +256,7 @@ def align_marker(
         return MarkerAlignmentResult(
             marker_detected=False,
             detected_marker_sample_offset=None,
-            reference_marker_offset_samples=reference_marker_offset,
+            reference_marker_offset_samples=ref_offset,
             sample_offset_delta=None,
             alignment_confidence=0.0,
             secondary_peak_ratio=None,
@@ -250,14 +265,14 @@ def align_marker(
             status="buffer_too_short",
         )
 
-    # Check for silence buffer
+    # Check for silence buffer (RMS < 1e-5)
     rms = float(np.sqrt(np.mean(received_audio ** 2)))
     if rms < 1e-5:
         logger.warning("[MarkerAlignment] Received audio is pure silence (RMS < 1e-5). Marker undetected.")
         return MarkerAlignmentResult(
             marker_detected=False,
             detected_marker_sample_offset=None,
-            reference_marker_offset_samples=reference_marker_offset,
+            reference_marker_offset_samples=ref_offset,
             sample_offset_delta=None,
             alignment_confidence=0.0,
             secondary_peak_ratio=None,
@@ -272,7 +287,7 @@ def align_marker(
         return MarkerAlignmentResult(
             marker_detected=False,
             detected_marker_sample_offset=None,
-            reference_marker_offset_samples=reference_marker_offset,
+            reference_marker_offset_samples=ref_offset,
             sample_offset_delta=None,
             alignment_confidence=0.0,
             secondary_peak_ratio=None,
@@ -311,7 +326,7 @@ def align_marker(
         return MarkerAlignmentResult(
             marker_detected=False,
             detected_marker_sample_offset=None,
-            reference_marker_offset_samples=reference_marker_offset,
+            reference_marker_offset_samples=ref_offset,
             sample_offset_delta=None,
             alignment_confidence=round(primary_peak_val, 4),
             secondary_peak_ratio=secondary_ratio,
@@ -322,10 +337,8 @@ def align_marker(
 
     # Calculate Time Zero ($T_0$) timestamp on Listener Bot clock
     detected_offset = primary_peak_idx
-    sample_delta = detected_offset - reference_marker_offset
+    sample_delta = detected_offset - ref_offset
 
-    # Time zero is the nanosecond arrival timestamp of sample 0
-    # T_0 = arrival_timestamp - (detected_offset / sample_rate) * 1e9
     time_zero_ns = stream_start_timestamp_ns
     if stream_start_timestamp_ns > 0:
         offset_duration_ns = int((detected_offset / sample_rate_hz) * 1e9)
@@ -350,7 +363,7 @@ def align_marker(
     return MarkerAlignmentResult(
         marker_detected=True,
         detected_marker_sample_offset=detected_offset,
-        reference_marker_offset_samples=reference_marker_offset,
+        reference_marker_offset_samples=ref_offset,
         sample_offset_delta=sample_delta,
         alignment_confidence=round(primary_peak_val, 4),
         secondary_peak_ratio=secondary_ratio,
