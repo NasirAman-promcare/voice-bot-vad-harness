@@ -10,8 +10,8 @@ One Job:
 
 The Single Deliberate Boundary Exception:
     This is the ONLY file in the entire project permitted to import across multiple
-    subsystems (corpus, vad_adapters, scoring, storage, latency, bots, audio_profiler).
-    Every other module remains strictly unaware of sibling internals.
+    subsystems (corpus, vad_adapters, scoring, storage, latency, bots, audio_profiler,
+    webrtc_bridge). Every other module remains strictly unaware of sibling internals.
 
 What this module must NEVER do:
     - Never perform mathematical scoring, resampling, profiling, or latency calculations
@@ -23,6 +23,7 @@ What this module must NEVER do:
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import os
 import sys
@@ -54,7 +55,7 @@ from vad_adapters.adapter_registry import (
     resolve_active_adapter_names,
 )
 
-# Optional / Downstream Modules (Loaded with contract integrity checks)
+# Optional / Downstream Modules
 try:
     from audio_profiler import profile_audio_clip
 except ImportError:
@@ -84,6 +85,17 @@ try:
     from latency.latency_calculator import calculate_pipeline_latency
 except ImportError:
     calculate_pipeline_latency = None
+
+# WebRTC Bridge Subsystem for Tier 2 Live WebRTC Pipeline
+try:
+    from webrtc_bridge.injector import WebRTCJitsiAudioInjector
+except ImportError:
+    WebRTCJitsiAudioInjector = None
+
+try:
+    from webrtc_bridge.listener_bridge import JitsiListenerBridge
+except ImportError:
+    JitsiListenerBridge = None
 
 # Configure structured unbuffered logging
 logger = logging.getLogger("orchestrator")
@@ -226,7 +238,6 @@ def read_audio_16k_mono(clip_path: Union[str, Path]) -> Tuple[np.ndarray, int]:
     """
     path = Path(clip_path)
     if not path.is_file():
-        # Fallback to corpus/audio folder if given relative or bare filename
         candidate = Path("corpus/audio") / path.name
         if candidate.is_file():
             path = candidate
@@ -240,7 +251,6 @@ def read_audio_16k_mono(clip_path: Union[str, Path]) -> Tuple[np.ndarray, int]:
         raise RuntimeError(f"Failed to read audio file '{path}': {exc}") from exc
 
     if audio_data.ndim > 1:
-        # Downmix multi-channel to mono
         audio_data = np.mean(audio_data, axis=1, dtype=np.float32)
 
     if sr != 16000:
@@ -264,7 +274,6 @@ def run_tier1_offline_bench(
     logger.info("=== Starting Tier 1 Offline Evaluation [Run ID: %s] ===", config.run_id)
     sys.stdout.flush()
 
-    # Step 2: Instantiate validated adapters from registry
     adapters = build_active_adapters(
         active_adapters=config.active_adapters,
         webrtc_modes=config.webrtc_aggressiveness_modes,
@@ -276,7 +285,6 @@ def run_tier1_offline_bench(
     adapter_clip_results: Dict[str, List[ClipScoreResult]] = {name: [] for name in adapters}
     audio_profiles: Dict[str, Dict[str, Any]] = {}
 
-    # Step 3: Process clips sequentially across active adapters
     for clip_idx, entry in enumerate(manifest):
         is_warmup = clip_idx < config.warmup_clip_count
         logger.info(
@@ -289,7 +297,6 @@ def run_tier1_offline_bench(
         )
         sys.stdout.flush()
 
-        # Load audio buffer
         target_path = getattr(entry, "clip_path", None) or entry.clip_id
         try:
             audio_samples, total_samples = read_audio_16k_mono(target_path)
@@ -302,7 +309,6 @@ def run_tier1_offline_bench(
             )
             continue
 
-        # Step 7 (Part A): Optional audio profiling per clip
         if profile_audio_clip is not None and entry.clip_id not in audio_profiles:
             try:
                 profile_data = profile_audio_clip(audio_samples, sample_rate_hz=16000)
@@ -321,12 +327,10 @@ def run_tier1_offline_bench(
                     exc,
                 )
 
-        # Evaluate each active adapter on this clip
         for adapter_name, adapter in adapters.items():
             adapter_records: List[DecisionRecord] = []
             frame_compute_times_ns: List[int] = []
 
-            # Step 3: Chunk stream at adapter's declared hop and process
             try:
                 adapter.reset()
                 chunks = list(chunk_audio_stream(audio_samples, adapter.frame_size_samples, 16000))
@@ -354,7 +358,6 @@ def run_tier1_offline_bench(
                 )
                 continue
 
-            # Step 4: Discard warm-up clips before scoring
             if is_warmup:
                 logger.debug(
                     "Discarded warm-up clip '%s' for adapter '%s' (absorbs cold-start).",
@@ -363,7 +366,6 @@ def run_tier1_offline_bench(
                 )
                 continue
 
-            # Step 5: Score single clip on common scoring grid
             try:
                 clip_score = score_single_clip(
                     decision_records=adapter_records,
@@ -374,14 +376,12 @@ def run_tier1_offline_bench(
                 )
                 adapter_clip_results[adapter_name].append(clip_score)
 
-                # Step 6 (Part A): Persist raw scoring row incrementally
                 results_store.store_clip_score_result(
                     run_id=config.run_id,
                     manifest_version=manifest.version_hash,
                     clip_score_result=clip_score,
                 )
 
-                # Step 6 (Part B): Persist raw algorithmic latency measurements
                 if frame_compute_times_ns:
                     timings_ms = [t / 1e6 for t in frame_compute_times_ns]
                     latency_payload = {
@@ -411,7 +411,6 @@ def run_tier1_offline_bench(
                 )
                 continue
 
-    # Step 6 (Part C): Build aggregated adapter reports
     reports: Dict[str, VADScorerReport] = {}
     for adapter_name, scored_clips in adapter_clip_results.items():
         report = score_adapter_evaluation(
@@ -429,7 +428,6 @@ def run_tier1_offline_bench(
         )
         sys.stdout.flush()
 
-    # Step 7 (Part B): Run correlation engine if available
     if correlate_profiles_and_scores is not None and audio_profiles:
         try:
             for adapter_name, scored_clips in adapter_clip_results.items():
@@ -452,7 +450,7 @@ def run_tier1_offline_bench(
 
 
 # ==============================================================================
-# Tier 2 Control Flow: Live Pipeline (Jitsi Bridge)
+# Tier 2 Control Flow: Live Pipeline (Jitsi WebRTC Bridge)
 # ==============================================================================
 
 def run_tier2_live_pipeline(
@@ -466,7 +464,6 @@ def run_tier2_live_pipeline(
     logger.info("=== Starting Tier 2 Live Pipeline Evaluation [Run ID: %s] ===", config.run_id)
     sys.stdout.flush()
 
-    # Verify Tier 2 module availability
     if SpeakerBot is None or ListenerBot is None:
         raise RuntimeError(
             "Tier 2 execution requires bots/speaker_bot.py and bots/listener_bot.py."
@@ -476,18 +473,29 @@ def run_tier2_live_pipeline(
             "Tier 2 execution requires latency/marker_alignment.py and latency/latency_calculator.py."
         )
 
-    # Step 2: Instantiate adapters from registry
     adapters = build_active_adapters(
         active_adapters=config.active_adapters,
         webrtc_modes=config.webrtc_aggressiveness_modes,
         hardware_policy=config.hardware_policy,
     )
 
-    # Step 1 & 2: Initialize bots with uninterpreted room/bridge configurations
-    speaker_bot = SpeakerBot(
-        room_id=config.jitsi_room,
-        bridge_url=config.bridge_url,
-    )
+    # 1. Initialize SpeakerBot with WebRTC Injector (File 31)
+    if WebRTCJitsiAudioInjector is not None:
+        logger.info("Using WebRTCJitsiAudioInjector for live WebRTC microphone injection.")
+        injector = WebRTCJitsiAudioInjector()
+        speaker_bot = SpeakerBot(
+            room_id=config.jitsi_room,
+            bridge_url=config.bridge_url,
+            injector=injector,
+        )
+    else:
+        logger.warning("WebRTCJitsiAudioInjector not available; using default injector.")
+        speaker_bot = SpeakerBot(
+            room_id=config.jitsi_room,
+            bridge_url=config.bridge_url,
+        )
+
+    # 2. Initialize ListenerBot and connect JitsiListenerBridge (File 32)
     listener_bot = ListenerBot(
         room_id=config.jitsi_room,
         bridge_url=config.bridge_url,
@@ -496,9 +504,18 @@ def run_tier2_live_pipeline(
         concurrency_mode=config.concurrency_mode,
     )
 
+    listener_bridge = None
+    if JitsiListenerBridge is not None:
+        logger.info("Using JitsiListenerBridge for live WebRTC stream reception.")
+        listener_bridge = JitsiListenerBridge(listener_bot=listener_bot)
+        listener_bridge.connect_and_join(
+            room_id=config.jitsi_room,
+            bridge_url=config.bridge_url,
+        )
+
     adapter_clip_results: Dict[str, List[ClipScoreResult]] = {name: [] for name in adapters}
 
-    # Step 6: Enforce Concurrency Policy
+    # 3. Enforce Concurrency Policy
     if config.concurrency_mode == "sequential":
         eval_passes = [(name, {name: adapter}) for name, adapter in adapters.items()]
         logger.info("Tier 2 executing in SEQUENTIAL mode (%d single-adapter passes for timing fairness)", len(eval_passes))
@@ -507,110 +524,128 @@ def run_tier2_live_pipeline(
         logger.info("Tier 2 executing in PARALLEL mode (all %d adapters active simultaneously)", len(adapters))
     sys.stdout.flush()
 
-    for pass_label, pass_adapters in eval_passes:
-        listener_bot.set_active_adapters(pass_adapters)
+    try:
+        for pass_label, pass_adapters in eval_passes:
+            listener_bot.set_active_adapters(pass_adapters)
 
-        for clip_idx, entry in enumerate(manifest):
-            is_warmup = clip_idx < config.warmup_clip_count
-            logger.info(
-                "Tier 2 [%s] clip [%d/%d] '%s' (Category: '%s', Warmup: %s)",
-                pass_label,
-                clip_idx + 1,
-                len(manifest),
-                entry.clip_id,
-                entry.category,
-                is_warmup,
-            )
-            sys.stdout.flush()
-
-            # Step 3: Speaker bot plays clip; Listener bot captures stream
-            try:
-                listener_bot.prepare_for_clip(entry.clip_id)
-                playback_meta = speaker_bot.play_clip(entry)
-                captured_data = listener_bot.await_clip_completion(entry.clip_id, timeout_s=15.0)
-            except Exception as exc:
-                logger.error(
-                    "[Run %s | Tier 2 | Clip %s | Pass %s] Live transaction notice: %s",
-                    config.run_id,
-                    entry.clip_id,
+            for clip_idx, entry in enumerate(manifest):
+                is_warmup = clip_idx < config.warmup_clip_count
+                logger.info(
+                    "Tier 2 [%s] clip [%d/%d] '%s' (Category: '%s', Warmup: %s)",
                     pass_label,
-                    exc,
-                )
-                continue
-
-            # Step 4: Marker cross-correlation alignment for ground-truth Time Zero
-            try:
-                alignment_offset = getattr(entry, "calibration_marker_offset_samples", None) or getattr(entry, "calibration_marker_offset", 320)
-                alignment_result = align_marker(
-                    received_audio=captured_data.decoded_audio_16k,
-                    reference_marker_offset=alignment_offset,
-                    sample_rate_hz=16000,
-                )
-            except Exception as exc:
-                logger.error(
-                    "[Run %s | Tier 2 | Clip %s | MarkerAlignment] Alignment failed: %s",
-                    config.run_id,
+                    clip_idx + 1,
+                    len(manifest),
                     entry.clip_id,
-                    exc,
+                    entry.category,
+                    is_warmup,
                 )
-                continue
+                sys.stdout.flush()
 
-            # Step 4 & 5: Evaluate each adapter in this pass
-            for adapter_name, adapter_records in captured_data.adapter_decisions.items():
-                if is_warmup:
-                    continue
-
-                # Step 4: Calculate pipeline onset and offset/hangover latencies
+                # Step 3: Stream clip via SpeakerBot & capture via ListenerBridge concurrently
                 try:
-                    latency_metrics = calculate_pipeline_latency(
-                        decision_records=adapter_records,
-                        speech_segments=entry.speech_segments,
-                        time_zero_ns=alignment_result.time_zero_timestamp_ns,
-                        marker_alignment=alignment_result,
-                        sample_rate_hz=16000,
-                    )
-                    results_store.store_latency_measurement(
-                        run_id=config.run_id,
-                        manifest_version=manifest.version_hash,
-                        adapter_id=adapter_name,
-                        clip_id=entry.clip_id,
-                        latency_data=latency_metrics,
-                        record_type="tier2_pipeline_latency",
-                    )
+                    if listener_bridge is not None:
+                        # Concurrent playback & capture: Speaker injects audio while ListenerBridge receives
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                            play_future = executor.submit(speaker_bot.play_clip, entry)
+                            captured_data = listener_bridge.run_clip(entry, timeout_s=30.0)
+                            playback_meta = play_future.result()
+                    else:
+                        listener_bot.prepare_for_clip(entry.clip_id)
+                        playback_meta = speaker_bot.play_clip(entry)
+                        captured_data = listener_bot.await_clip_completion(entry.clip_id, timeout_s=15.0)
                 except Exception as exc:
                     logger.error(
-                        "[Run %s | Tier 2 | Clip %s | Adapter %s | LatencyCalc] Latency math notice: %s",
+                        "[Run %s | Tier 2 | Clip %s | Pass %s] Live transaction notice: %s",
                         config.run_id,
                         entry.clip_id,
-                        adapter_name,
-                        exc,
-                    )
-
-                # Step 5 (Part B): Score single clip using identical vad_scorer logic
-                try:
-                    clip_score = score_single_clip(
-                        decision_records=adapter_records,
-                        manifest_entry=entry,
-                        total_clip_samples=len(captured_data.decoded_audio_16k),
-                        scoring_grid_ms=config.scoring_grid_ms,
-                        sample_rate_hz=16000,
-                    )
-                    adapter_clip_results[adapter_name].append(clip_score)
-
-                    results_store.store_clip_score_result(
-                        run_id=config.run_id,
-                        manifest_version=manifest.version_hash,
-                        clip_score_result=clip_score,
-                    )
-                except Exception as exc:
-                    logger.error(
-                        "[Run %s | Tier 2 | Clip %s | Adapter %s | Scorer] Scoring failed: %s",
-                        config.run_id,
-                        entry.clip_id,
-                        adapter_name,
+                        pass_label,
                         exc,
                     )
                     continue
+
+                # Step 4: Marker cross-correlation alignment for ground-truth Time Zero
+                try:
+                    alignment_offset = getattr(entry, "calibration_marker_offset_samples", None) or getattr(entry, "calibration_marker_offset", 320)
+                    alignment_result = align_marker(
+                        received_audio=captured_data.decoded_audio_16k,
+                        reference_marker_offset=alignment_offset,
+                        sample_rate_hz=16000,
+                    )
+                except Exception as exc:
+                    logger.error(
+                        "[Run %s | Tier 2 | Clip %s | MarkerAlignment] Alignment failed: %s",
+                        config.run_id,
+                        entry.clip_id,
+                        exc,
+                    )
+                    continue
+
+                # Step 4 & 5: Evaluate each adapter in this pass
+                for adapter_name, adapter_records in captured_data.adapter_decisions.items():
+                    if is_warmup:
+                        continue
+
+                    # Step 4: Calculate pipeline onset and offset/hangover latencies
+                    try:
+                        latency_metrics = calculate_pipeline_latency(
+                            decision_records=adapter_records,
+                            speech_segments=entry.speech_segments,
+                            time_zero_ns=alignment_result.time_zero_timestamp_ns,
+                            marker_alignment=alignment_result,
+                            sample_rate_hz=16000,
+                        )
+                        results_store.store_latency_measurement(
+                            run_id=config.run_id,
+                            manifest_version=manifest.version_hash,
+                            adapter_id=adapter_name,
+                            clip_id=entry.clip_id,
+                            latency_data=latency_metrics,
+                            record_type="tier2_pipeline_latency",
+                        )
+                    except Exception as exc:
+                        logger.error(
+                            "[Run %s | Tier 2 | Clip %s | Adapter %s | LatencyCalc] Latency math notice: %s",
+                            config.run_id,
+                            entry.clip_id,
+                            adapter_name,
+                            exc,
+                        )
+
+                    # Step 5 (Part B): Score single clip using identical vad_scorer logic
+                    try:
+                        clip_score = score_single_clip(
+                            decision_records=adapter_records,
+                            manifest_entry=entry,
+                            total_clip_samples=len(captured_data.decoded_audio_16k),
+                            scoring_grid_ms=config.scoring_grid_ms,
+                            sample_rate_hz=16000,
+                        )
+                        adapter_clip_results[adapter_name].append(clip_score)
+
+                        results_store.store_clip_score_result(
+                            run_id=config.run_id,
+                            manifest_version=manifest.version_hash,
+                            clip_score_result=clip_score,
+                        )
+                    except Exception as exc:
+                        logger.error(
+                            "[Run %s | Tier 2 | Clip %s | Adapter %s | Scorer] Scoring failed: %s",
+                            config.run_id,
+                            entry.clip_id,
+                            adapter_name,
+                            exc,
+                        )
+                        continue
+
+    finally:
+        # Step 7: Cleanly disconnect both WebRTC participants at the end of the run
+        if listener_bridge is not None:
+            try:
+                listener_bridge.disconnect()
+            except Exception as exc:
+                logger.debug("Notice disconnecting listener bridge: %s", exc)
+
+        speaker_bot.close()
 
     # Step 5 (Part D): Build aggregated adapter reports
     reports: Dict[str, VADScorerReport] = {}
