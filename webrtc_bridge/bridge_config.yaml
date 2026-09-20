@@ -1,67 +1,25 @@
 # ==============================================================================
 # Voice Bot VAD Test Harness — Direct WebRTC Participant Bridge Configuration
 # File: webrtc_bridge/bridge_config.yaml
-# Stage 4–5 · Tier 2 Live Jitsi WebRTC Pipeline
-#
-# Single Readers: webrtc_bridge/injector.py (File 31) and 
-#                 webrtc_bridge/listener_bridge.py (File 32) ONLY.
-#
-# Design Invariants:
-#   - Declarative parameters only: no dynamic runtime logic or computed values.
-#   - Room identifier ('jitsi_room') and WebSocket endpoint ('bridge_url') are 
-#     strictly owned by 'config/run_config.yaml' and passed into bridge constructors;
-#     they are NEVER duplicated here.
 # ==============================================================================
 
-# ------------------------------------------------------------------------------
-# 1. Multi-User Chat (MUC) Identity & Display Names (Blueprint §4 Step 3, §5 File 25)
-# ------------------------------------------------------------------------------
-# Distinct participant nicks visible in Jitsi Meet React UI for manual verification / debugging oracle.
 speaker_display_name: "VAD-Harness-SpeakerBot"
 listener_display_name: "VAD-Harness-ListenerBot"
 
-# ------------------------------------------------------------------------------
-# 2. XMPP & Jingle Signaling Domains (Blueprint §4 Steps 1–3, §9)
-# ------------------------------------------------------------------------------
-# Domain for SASL ANONYMOUS auth; confirmed from docker-jitsi-meet PUBLIC_URL / XMPP_DOMAIN mapping in Prosody.
 xmpp_client_domain: "vad-jitsi-nasir.duckdns.org"
-
-# Prefix prepended to xmpp_client_domain to form the Multi-User Chat (MUC) conference component JID.
 muc_room_domain_prefix: "conference."
 
-# ------------------------------------------------------------------------------
-# 3. Connection & Media Plane Negotiation Timeouts (Blueprint §5 File 25, §5 File 28)
-# ------------------------------------------------------------------------------
-# Hard timeout ceiling in seconds for ICE host candidate gathering against JVB (150.136.154.245:10000/UDP).
 ice_gather_timeout_s: 10.0
-
-# Hard timeout ceiling in seconds for DTLS handshake and SRTP key derivation to fail loud instead of hanging.
 dtls_handshake_timeout_s: 15.0
 
-# ------------------------------------------------------------------------------
-# 4. Connect-Time Retry Policy (Blueprint §5 File 25, §7)
-# ------------------------------------------------------------------------------
-# Maximum reconnection attempts allowed strictly during initial room join; NEVER consulted or retried mid-clip.
 xmpp_reconnect_attempts: 3
-
-# Spacing in seconds between initial connection retry attempts.
 xmpp_reconnect_backoff_s: 2.0
 
-# ------------------------------------------------------------------------------
-# 5. Opus Audio Codec Configuration (Blueprint §5 File 25, §6)
-# ------------------------------------------------------------------------------
-# Target encoder bitrate in bits per second for 48kHz mono Opus stream (32 kbps nominal voice standard).
 opus_bitrate_bps: 32000
-
-# MUST be false: Discontinuous Transmission (DTX) ceases packet transmission during audio silence,
-# which would starve ListenerBot of arrival packets and corrupt live offset/hangover latency measurements.
 opus_dtx_enabled: false
-
-# In-band Forward Error Correction (FEC) enabled to evaluate packet loss resilience over live WebRTC transport.
 opus_fec_enabled: true
 
-# ------------------------------------------------------------------------------
-# 6. Diagnostic Stanza Logging (Blueprint §5 File 25, §5 File 26, §9)
-# ------------------------------------------------------------------------------
-# File destination where raw incoming/outgoing XMPP stanzas and Jingle IQs are dumped verbatim for troubleshooting.
+# Set to false to allow self-signed / staging certificates on the OCI Jitsi instance
+ssl_verify: false
+
 jingle_debug_log_path: "results/run_output/jingle_stanzas_debug.log"
