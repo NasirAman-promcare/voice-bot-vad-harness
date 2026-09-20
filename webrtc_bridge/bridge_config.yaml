@@ -6,8 +6,9 @@
 speaker_display_name: "VAD-Harness-SpeakerBot"
 listener_display_name: "VAD-Harness-ListenerBot"
 
-xmpp_client_domain: "vad-jitsi-nasir.duckdns.org"
-muc_room_domain_prefix: "conference."
+# Verified live server domains from curl https://localhost/config.js
+xmpp_client_domain: "meet.jitsi"
+muc_room_domain_prefix: "muc."
 
 ice_gather_timeout_s: 10.0
 dtls_handshake_timeout_s: 15.0
