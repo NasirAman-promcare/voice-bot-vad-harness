@@ -4,9 +4,10 @@ webrtc_bridge/jitsi_signaling.py
 One Job:
     Own the XMPP signaling session lifecycle for a direct WebRTC participant in Jitsi Meet:
     manage RFC 7395 XMPP-over-WebSocket transport, SSL context verification, SASL ANONYMOUS
-    authentication, request Jicofo conference focus creation, join MUC room, respond to Jicofo's
-    `disco#info` query, recognize Jicofo's `session-initiate` Jingle IQ, and transmit answers
-    (`session-accept`), source declarations (`source-add`), and teardown stanzas (`session-terminate`).
+    authentication, request Jicofo conference focus creation, join MUC room with matching
+    participant ID resource, respond to Jicofo's `disco#info` query, recognize Jicofo's
+    `session-initiate` Jingle IQ, and transmit answers (`session-accept`), source declarations
+    (`source-add`), and teardown stanzas (`session-terminate`).
 """
 
 from __future__ import annotations
@@ -116,6 +117,7 @@ class JitsiSignalingSession:
         self.bound_jid: Optional[str] = None
         self.room_jid: Optional[str] = None
         self.display_name: Optional[str] = None
+        self.participant_id: Optional[str] = None
         self.jicofo_jid: Optional[str] = None
         self.jingle_sid: Optional[str] = None
 
@@ -273,8 +275,14 @@ class JitsiSignalingSession:
                         if self._presence_future and not self._presence_future.done():
                             self._presence_future.set_exception(MUCConflictError(err_msg))
                         return
+                    else:
+                        err_detail = ET.tostring(error_elem, encoding="unicode") if error_elem is not None else "Unknown presence error"
+                        if self._presence_future and not self._presence_future.done():
+                            self._presence_future.set_exception(MUCJoinError(f"MUC presence rejected: {err_detail}"))
+                        return
 
-                expected_muc_jid = f"{self.room_jid}/{self.display_name}"
+                # Confirm join when presence reflects from our room JID with matching participant ID
+                expected_muc_jid = f"{self.room_jid}/{self.participant_id}"
                 if pres_from == expected_muc_jid or (self.room_jid and pres_from.startswith(self.room_jid)):
                     self._is_muc_joined = True
                     logger.info("Successfully joined MUC room as '%s' (From: %s)", self.display_name, pres_from)
@@ -293,16 +301,17 @@ class JitsiSignalingSession:
         timeout_s: float = 15.0,
     ) -> None:
         self.display_name = display_name
+        self.participant_id = uuid.uuid4().hex[:8]
         muc_domain = f"{self.muc_room_domain_prefix}{self.xmpp_client_domain}"
         self.room_jid = f"{room_id}@{muc_domain}"
 
         logger.info(
-            "Connecting signaling to '%s' (Domain: %s, Room: %s, Nick: %s, SSL Verify: %s)",
+            "Connecting signaling to '%s' (Domain: %s, Room: %s, Participant ID: %s, Nick: %s)",
             bridge_url,
             self.xmpp_client_domain,
             self.room_jid,
+            self.participant_id,
             self.display_name,
-            self.ssl_verify,
         )
 
         ssl_context = None
@@ -340,12 +349,11 @@ class JitsiSignalingSession:
                 # 3. Stream Restart after Auth
                 await self._send_raw(open_stream)
 
-                # 4. Resource Binding
+                # 4. Resource Binding using participant ID
                 self._bind_future = asyncio.get_running_loop().create_future()
-                resource_suffix = f"vad-bot-{uuid.uuid4().hex[:8]}"
                 bind_iq = (
                     f'<iq xmlns="{NS_CLIENT}" type="set" id="_bind_1">'
-                    f'<bind xmlns="{NS_BIND}"><resource>{resource_suffix}</resource></bind>'
+                    f'<bind xmlns="{NS_BIND}"><resource>{self.participant_id}</resource></bind>'
                     f'</iq>'
                 )
                 await self._send_raw(bind_iq)
@@ -353,7 +361,7 @@ class JitsiSignalingSession:
                 logger.info("XMPP Resource bound: Full JID = '%s'", self.bound_jid)
 
                 # 5. Request Jicofo to create/open conference room FIRST
-                stats_id = f"vad_harness_{uuid.uuid4().hex[:6]}"
+                stats_id = f"vad_harness_{self.participant_id}"
                 conf_req_id = f"_conf_{uuid.uuid4().hex[:8]}"
                 focus_target = f"focus.{self.xmpp_client_domain}"
                 
@@ -371,10 +379,10 @@ class JitsiSignalingSession:
                 await self._iq_futures[conf_req_id]
                 logger.info("Jicofo confirmed room is ready.")
 
-                # 6. Now join the MUC Room (Allowed because Jicofo created it)
+                # 6. Now join MUC Room using participant_id as MUC occupant resource
                 self._presence_future = asyncio.get_running_loop().create_future()
                 muc_presence = (
-                    f'<presence xmlns="{NS_CLIENT}" to="{self.room_jid}/{self.display_name}">'
+                    f'<presence xmlns="{NS_CLIENT}" to="{self.room_jid}/{self.participant_id}">'
                     f'<x xmlns="{NS_MUC}"/>'
                     f'<nick xmlns="{NS_NICK}">{self.display_name}</nick>'
                     f'<stats-id xmlns="{NS_STATS}">{stats_id}</stats-id>'
@@ -428,10 +436,10 @@ class JitsiSignalingSession:
         source_name: Optional[str] = None,
         muted: bool = False,
     ) -> None:
-        if not self._is_connected or not self.room_jid or not self.display_name:
+        if not self._is_connected or not self.room_jid or not self.participant_id:
             raise SignalingConnectionError("Cannot announce source: Session not connected.")
 
-        src_name = source_name or f"{self.display_name}-a0"
+        src_name = source_name or f"{self.participant_id}-a0"
         try:
             from webrtc_bridge.jingle_sdp_translator import build_source_add_stanza
             presence_xml = build_source_add_stanza(
@@ -444,7 +452,7 @@ class JitsiSignalingSession:
             )
         except (ImportError, AttributeError):
             presence_xml = (
-                f'<presence xmlns="{NS_CLIENT}" to="{self.room_jid}/{self.display_name}">'
+                f'<presence xmlns="{NS_CLIENT}" to="{self.room_jid}/{self.participant_id}">'
                 f'<nick xmlns="{NS_NICK}">{self.display_name}</nick>'
                 f'<audiomuted xmlns="{NS_AUDIO_MUTED}">{"true" if muted else "false"}</audiomuted>'
                 f'<videomuted xmlns="{NS_VIDEO_MUTED}">true</videomuted>'
@@ -472,10 +480,10 @@ class JitsiSignalingSession:
             except Exception as exc:
                 logger.debug("Notice sending session-terminate on disconnect: %s", exc)
 
-        if self._is_connected and self.room_jid and self.display_name:
+        if self._is_connected and self.room_jid and self.participant_id:
             try:
                 unavail_pres = (
-                    f'<presence xmlns="{NS_CLIENT}" type="unavailable" to="{self.room_jid}/{self.display_name}"/>'
+                    f'<presence xmlns="{NS_CLIENT}" type="unavailable" to="{self.room_jid}/{self.participant_id}"/>'
                 )
                 await self._send_raw(unavail_pres)
             except Exception as exc:
