@@ -4,10 +4,10 @@ webrtc_bridge/jitsi_signaling.py
 One Job:
     Own the XMPP signaling session lifecycle for a direct WebRTC participant in Jitsi Meet:
     manage RFC 7395 XMPP-over-WebSocket transport, SSL context verification, SASL ANONYMOUS
-    authentication, MUC room join/leave with Jitsi presence extensions, respond to Jicofo's
-    `disco#info` feature discovery query, recognize Jicofo's `session-initiate` Jingle IQ,
-    and transmit answers (`session-accept`), source declarations (`source-add`), and teardown
-    stanzas (`session-terminate`).
+    authentication, MUC room join/leave with Jitsi presence extensions, request conference focus
+    from Jicofo, respond to Jicofo's `disco#info` query, recognize Jicofo's `session-initiate`
+    Jingle IQ, and transmit answers (`session-accept`), source declarations (`source-add`),
+    and teardown stanzas (`session-terminate`).
 """
 
 from __future__ import annotations
@@ -93,7 +93,7 @@ class JingleOfferTimeoutError(SignalingError, asyncio.TimeoutError):
 class JitsiSignalingSession:
     """
     Manages RFC 7395 XMPP-over-WebSocket signaling, SSL context, SASL ANONYMOUS auth,
-    MUC lifecycle, and raw Jingle IQ routing.
+    MUC lifecycle, Jicofo conference focus allocation, and raw Jingle IQ routing.
     """
 
     def __init__(
@@ -328,9 +328,11 @@ class JitsiSignalingSession:
             self._listener_task = asyncio.create_task(self._read_loop())
 
             async with asyncio.timeout(timeout_s):
+                # 1. Open XMPP Stream (RFC 7395)
                 open_stream = f'<open xmlns="{NS_FRAMING}" to="{self.xmpp_client_domain}" version="1.0"/>'
                 await self._send_raw(open_stream)
 
+                # 2. SASL ANONYMOUS Auth
                 self._sasl_future = asyncio.get_running_loop().create_future()
                 sasl_auth = f'<auth xmlns="{NS_SASL}" mechanism="ANONYMOUS"/>'
                 await self._send_raw(sasl_auth)
@@ -338,8 +340,10 @@ class JitsiSignalingSession:
                 self._is_authenticated = True
                 logger.info("SASL ANONYMOUS authentication successful.")
 
+                # 3. Stream Restart after Auth
                 await self._send_raw(open_stream)
 
+                # 4. Resource Binding
                 self._bind_future = asyncio.get_running_loop().create_future()
                 resource_suffix = f"vad-bot-{uuid.uuid4().hex[:8]}"
                 bind_iq = (
@@ -351,6 +355,7 @@ class JitsiSignalingSession:
                 self.bound_jid = await self._bind_future
                 logger.info("XMPP Resource bound: Full JID = '%s'", self.bound_jid)
 
+                # 5. Join MUC Room with Jitsi Presence Extensions
                 self._presence_future = asyncio.get_running_loop().create_future()
                 stats_id = f"vad_harness_{uuid.uuid4().hex[:6]}"
                 muc_presence = (
@@ -366,6 +371,20 @@ class JitsiSignalingSession:
                 await self._send_raw(muc_presence)
                 await self._presence_future
                 logger.info("MUC room join confirmed by server reflection.")
+
+                # 6. Request Conference Focus from Jicofo (Triggers JVB Allocation & session-initiate offer)
+                conf_req_id = f"_conf_{uuid.uuid4().hex[:8]}"
+                focus_target = f"focus.{self.xmpp_client_domain}"
+                conf_req_iq = (
+                    f'<iq xmlns="{NS_CLIENT}" type="set" to="{focus_target}" id="{conf_req_id}">'
+                    f'<conference xmlns="http://jitsi.org/protocol/focus" '
+                    f'room="{self.room_jid}" machine-uid="{stats_id}">'
+                    f'<property name="bridge" value="true"/>'
+                    f'</conference>'
+                    f'</iq>'
+                )
+                logger.info("Requesting conference focus from Jicofo (%s for room %s)...", focus_target, self.room_jid)
+                await self._send_raw(conf_req_iq)
 
         except SASLAuthenticationError:
             await self.disconnect()
