@@ -307,8 +307,7 @@ def jingle_offer_to_sdp(session_initiate_iq: str) -> str:
         "s=-",
         "t=0 0",
         f"a=group:BUNDLE {' '.join(mids)}",
-        "a=msid-semantic: WMS",
-        "a=ice-lite", 
+        "a=msid-semantic: WMS", 
     ]
 
     for content in contents:
@@ -389,6 +388,7 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
     """
     Constructs a Jingle `session-accept` IQ XML string from an SDP answer and the original offer.
     Includes BUNDLE grouping, <rtcp-mux/>, initiator echo, and fallback candidate resolution.
+    Forces SHA-256 fingerprint for Jicofo compatibility.
     """
     if not sdp_answer_str or not sdp_answer_str.strip():
         raise JingleTranslationError("sdp_answer_str cannot be empty.")
@@ -454,8 +454,12 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
 
         m = re_fp.match(line)
         if m:
-            sdp_fingerprint_hash = m.group(1).strip()
-            sdp_fingerprint = m.group(2).strip()
+            hash_algo = m.group(1).strip().lower()
+            fp_val = m.group(2).strip()
+            # Force SHA-256 as it is the only universally trusted hash by Jicofo
+            if hash_algo == "sha-256" or not sdp_fingerprint:
+                sdp_fingerprint_hash = hash_algo
+                sdp_fingerprint = fp_val
             continue
 
         m = re_setup.match(line)
@@ -578,6 +582,7 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
         xml_lines.append(
             f'      <transport xmlns="{NS_ICE_UDP}" ufrag="{sdp_ufrag}" pwd="{sdp_pwd}">'
         )
+        xml_lines.append("        <rtcp-mux/>")
         if sdp_fingerprint:
             xml_lines.append(
                 f'        <fingerprint xmlns="{NS_DTLS}" hash="{sdp_fingerprint_hash}" setup="{sdp_setup}">'
@@ -607,7 +612,7 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
     xml_lines.append("  </jingle>")
     xml_lines.append("</iq>")
 
-    session_accept_iq = "\n".join(xml_lines)
+    session_accept_iq = "".join(line.strip() for line in xml_lines)
     logger.debug("Constructed Jingle session-accept IQ (%d bytes, sid=%s)", len(session_accept_iq), sid)
     return session_accept_iq
 

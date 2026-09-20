@@ -234,15 +234,7 @@ class BridgeMediaSession:
                 while not self._ice_completed_event.is_set():
                     if self._failed_event.is_set():
                         raise ICEConnectionFailedError(f"ICE connectivity failed: {self._failure_reason}")
-                    
-                    # If ICE is checking and a pair has already succeeded, notify end of candidates
-                    if self._pc.iceConnectionState == "checking":
-                        try:
-                            await self._pc.addIceCandidate(None)
-                        except Exception:
-                            pass
-                            
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.05)
         except (TimeoutError, asyncio.TimeoutError) as exc:
             raise ICEConnectionTimeoutError(
                 f"ICE connectivity checks timed out after {timeout_s}s (Current: {self._pc.iceConnectionState})"
