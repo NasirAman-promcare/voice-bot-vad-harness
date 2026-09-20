@@ -4,9 +4,10 @@ webrtc_bridge/jitsi_signaling.py
 One Job:
     Own the XMPP signaling session lifecycle for a direct WebRTC participant in Jitsi Meet:
     manage RFC 7395 XMPP-over-WebSocket transport, SSL context verification, SASL ANONYMOUS
-    authentication, MUC room join/leave with Jitsi presence extensions, recognize Jicofo's
-    `session-initiate` Jingle IQ, and transmit answers (`session-accept`), source declarations
-    (`source-add`), and teardown stanzas (`session-terminate`).
+    authentication, MUC room join/leave with Jitsi presence extensions, respond to Jicofo's
+    `disco#info` feature discovery query, recognize Jicofo's `session-initiate` Jingle IQ,
+    and transmit answers (`session-accept`), source declarations (`source-add`), and teardown
+    stanzas (`session-terminate`).
 """
 
 from __future__ import annotations
@@ -42,6 +43,23 @@ NS_AUDIO_MUTED = "http://jitsi.org/jitmeet/audio"
 NS_VIDEO_MUTED = "http://jitsi.org/jitmeet/video"
 
 
+def _is_ws_open(ws: Any) -> bool:
+    """Universally checks if WebSocket is open across websockets v10–v15+."""
+    if ws is None:
+        return False
+    if hasattr(ws, "state"):
+        try:
+            from websockets.protocol import State
+            return ws.state == State.OPEN
+        except ImportError:
+            return str(ws.state).upper().endswith("OPEN")
+    if hasattr(ws, "open"):
+        return bool(ws.open)
+    if hasattr(ws, "closed"):
+        return not bool(ws.closed)
+    return True
+
+
 class SignalingError(Exception):
     """Base exception for all Jitsi signaling failures."""
     pass
@@ -72,27 +90,6 @@ class JingleOfferTimeoutError(SignalingError, asyncio.TimeoutError):
     pass
 
 
-# ==============================================================================
-# Multi-Version WebSocket State Helper (websockets v10–v15+)
-# ==============================================================================
-
-def _is_ws_open(ws: Any) -> bool:
-    """Universally checks if WebSocket is open across websockets v10–v15+."""
-    if ws is None:
-        return False
-    if hasattr(ws, "state"):
-        try:
-            from websockets.protocol import State
-            return ws.state == State.OPEN
-        except ImportError:
-            return str(ws.state).upper().endswith("OPEN")
-    if hasattr(ws, "open"):
-        return bool(ws.open)
-    if hasattr(ws, "closed"):
-        return not bool(ws.closed)
-    return True
-
-
 class JitsiSignalingSession:
     """
     Manages RFC 7395 XMPP-over-WebSocket signaling, SSL context, SASL ANONYMOUS auth,
@@ -101,9 +98,9 @@ class JitsiSignalingSession:
 
     def __init__(
         self,
-        xmpp_client_domain: str = "vad-jitsi-nasir.duckdns.org",
-        muc_room_domain_prefix: str = "conference.",
-        ssl_verify: bool = True,
+        xmpp_client_domain: str = "meet.jitsi",
+        muc_room_domain_prefix: str = "muc.",
+        ssl_verify: bool = False,
         jingle_debug_log_path: Optional[Union[str, Path]] = None,
     ) -> None:
         self.xmpp_client_domain = xmpp_client_domain
@@ -204,6 +201,7 @@ class JitsiSignalingSession:
                 iq_id = root.attrib.get("id", "")
                 iq_type = root.attrib.get("type", "")
 
+                # 1. Jingle session-initiate from Jicofo
                 jingle_elem = root.find(f".//{{{NS_JINGLE}}}jingle")
                 if jingle_elem is None:
                     for child in root:
@@ -218,17 +216,18 @@ class JitsiSignalingSession:
                     await self._offer_queue.put(trimmed)
                     return
 
+                # 2. Handle GET IQs (Ping and Jicofo Feature Discovery - XEP-0030 disco#info)
                 if iq_type == "get":
                     sender = root.attrib.get("from")
 
-                    # 1. Reply to Ping Keep-Alive
+                    # Reply to Ping
                     ping_elem = root.find(".//{urn:xmpp:ping}ping")
                     if ping_elem is not None or "ping" in trimmed:
                         pong = f'<iq type="result" to="{sender}" id="{iq_id}"/>'
                         await self._send_raw(pong)
                         return
 
-                    # 2. Reply to Jicofo Feature Discovery (disco#info)
+                    # Reply to Jicofo Service Discovery (disco#info)
                     disco_elem = root.find(".//{http://jabber.org/protocol/disco#info}query")
                     if disco_elem is not None or "disco#info" in trimmed:
                         disco_reply = (
@@ -247,6 +246,7 @@ class JitsiSignalingSession:
                         await self._send_raw(disco_reply)
                         return
 
+                # 3. Resource Bind Result
                 if iq_id == "_bind_1" and iq_type == "result":
                     jid_elem = root.find(f".//{{{NS_BIND}}}jid")
                     if jid_elem is not None and jid_elem.text:
@@ -255,6 +255,7 @@ class JitsiSignalingSession:
                             self._bind_future.set_result(self.bound_jid)
                     return
 
+                # 4. Resolve generic tracked IQ futures
                 if iq_id in self._iq_futures:
                     fut = self._iq_futures.pop(iq_id)
                     if not fut.done():
@@ -307,7 +308,6 @@ class JitsiSignalingSession:
             self.ssl_verify,
         )
 
-        # Configure SSL context for secure WebSocket
         ssl_context = None
         if bridge_url.startswith("wss://"):
             ssl_context = ssl.create_default_context()
@@ -461,7 +461,6 @@ class JitsiSignalingSession:
             except Exception as exc:
                 logger.debug("Notice sending unavailable presence on disconnect: %s", exc)
 
-        # Send RFC 7395 Stream Close frame
         if _is_ws_open(self._ws):
             try:
                 close_frame = f'<close xmlns="{NS_FRAMING}"/>'
@@ -469,7 +468,6 @@ class JitsiSignalingSession:
             except Exception:
                 pass
 
-        # Cancel and await reader task
         if self._listener_task and not self._listener_task.done():
             self._listener_task.cancel()
             try:
@@ -478,7 +476,6 @@ class JitsiSignalingSession:
                 pass
             self._listener_task = None
 
-        # Close WebSocket connection cleanly
         if self._ws is not None:
             try:
                 await self._ws.close()
