@@ -72,6 +72,27 @@ class JingleOfferTimeoutError(SignalingError, asyncio.TimeoutError):
     pass
 
 
+# ==============================================================================
+# Multi-Version WebSocket State Helper (websockets v10–v15+)
+# ==============================================================================
+
+def _is_ws_open(ws: Any) -> bool:
+    """Universally checks if WebSocket is open across websockets v10–v15+."""
+    if ws is None:
+        return False
+    if hasattr(ws, "state"):
+        try:
+            from websockets.protocol import State
+            return ws.state == State.OPEN
+        except ImportError:
+            return str(ws.state).upper().endswith("OPEN")
+    if hasattr(ws, "open"):
+        return bool(ws.open)
+    if hasattr(ws, "closed"):
+        return not bool(ws.closed)
+    return True
+
+
 class JitsiSignalingSession:
     """
     Manages RFC 7395 XMPP-over-WebSocket signaling, SSL context, SASL ANONYMOUS auth,
@@ -124,7 +145,7 @@ class JitsiSignalingSession:
                 logger.warning("Failed writing to stanza debug log: %s", exc)
 
     async def _send_raw(self, stanza: str) -> None:
-        if not self._ws or self._ws.closed:
+        if not _is_ws_open(self._ws):
             raise SignalingConnectionError("Cannot send stanza: WebSocket is not open.")
         self._log_stanza("SENT", stanza)
         await self._ws.send(stanza)
@@ -419,28 +440,32 @@ class JitsiSignalingSession:
             except Exception as exc:
                 logger.debug("Notice sending unavailable presence on disconnect: %s", exc)
 
-        if self._is_connected and self._ws and not self._ws.closed:
+        # Send RFC 7395 Stream Close frame
+        if _is_ws_open(self._ws):
             try:
                 close_frame = f'<close xmlns="{NS_FRAMING}"/>'
                 await self._send_raw(close_frame)
             except Exception:
                 pass
 
+        # Cancel and await reader task
         if self._listener_task and not self._listener_task.done():
             self._listener_task.cancel()
             try:
                 await self._listener_task
-            except asyncio.CancelledError:
+            except (asyncio.CancelledError, Exception):
                 pass
+            self._listener_task = None
 
-        if self._ws and not self._ws.closed:
+        # Close WebSocket connection cleanly
+        if self._ws is not None:
             try:
                 await self._ws.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Notice closing websocket: %s", exc)
+            self._ws = None
 
         self._is_connected = False
         self._is_authenticated = False
         self._is_muc_joined = False
-        self._ws = None
         logger.info("Jitsi signaling session disconnected cleanly.")

@@ -132,9 +132,10 @@ class BridgeMediaSession:
 
     def _run_sync(self, coro: Any, timeout: Optional[float] = None) -> Any:
         if self._is_closed or not self._loop.is_running():
+            # Close un-dispatched coroutine to prevent RuntimeWarning
             if asyncio.iscoroutine(coro):
                 coro.close()
-            raise MediaSessionStateError("Cannot execute operation: BridgeMediaSession is closed.")
+            raise MediaSessionStateError("Cannot execute operation: BridgeMediaSession is closed or loop stopped.")
 
         future = asyncio.run_coroutine_threadsafe(coro, self._loop)
         try:
@@ -277,6 +278,7 @@ class BridgeMediaSession:
         return self._transceiver.receiver
 
     def close(self) -> None:
+        """Closes the peer connection and terminates the background event loop thread cleanly."""
         if self._is_closed:
             return
         self._is_closed = True
