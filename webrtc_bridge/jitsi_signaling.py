@@ -221,17 +221,23 @@ class JitsiSignalingSession:
                 if iq_type == "get":
                     sender = root.attrib.get("from")
 
+                    # Reply to Ping (with explicit jabber:client namespace)
                     ping_elem = root.find(".//{urn:xmpp:ping}ping")
                     if ping_elem is not None or "ping" in trimmed:
-                        pong = f'<iq type="result" to="{sender}" id="{iq_id}"/>'
+                        pong = f'<iq xmlns="{NS_CLIENT}" type="result" to="{sender}" id="{iq_id}"/>'
                         await self._send_raw(pong)
                         return
 
+                    # Reply to Jicofo Service Discovery (disco#info with explicit jabber:client namespace)
                     disco_elem = root.find(".//{http://jabber.org/protocol/disco#info}query")
                     if disco_elem is not None or "disco#info" in trimmed:
+                        node_attr = ""
+                        if disco_elem is not None and "node" in disco_elem.attrib:
+                            node_attr = f' node="{disco_elem.attrib["node"]}"'
+
                         disco_reply = (
-                            f'<iq type="result" to="{sender}" id="{iq_id}">'
-                            f'<query xmlns="http://jabber.org/protocol/disco#info">'
+                            f'<iq xmlns="{NS_CLIENT}" type="result" to="{sender}" id="{iq_id}">'
+                            f'<query xmlns="http://jabber.org/protocol/disco#info"{node_attr}>'
                             f'<identity category="client" type="bot" name="{self.display_name or "vad-bot"}"/>'
                             f'<feature var="urn:xmpp:jingle:1"/>'
                             f'<feature var="urn:xmpp:jingle:apps:rtp:1"/>'
