@@ -4,10 +4,9 @@ webrtc_bridge/jitsi_signaling.py
 One Job:
     Own the XMPP signaling session lifecycle for a direct WebRTC participant in Jitsi Meet:
     manage RFC 7395 XMPP-over-WebSocket transport, SSL context verification, SASL ANONYMOUS
-    authentication, MUC room join/leave with Jitsi presence extensions, request conference focus
-    from Jicofo, respond to Jicofo's `disco#info` query, recognize Jicofo's `session-initiate`
-    Jingle IQ, and transmit answers (`session-accept`), source declarations (`source-add`),
-    and teardown stanzas (`session-terminate`).
+    authentication, request Jicofo conference focus creation, join MUC room, respond to Jicofo's
+    `disco#info` query, recognize Jicofo's `session-initiate` Jingle IQ, and transmit answers
+    (`session-accept`), source declarations (`source-add`), and teardown stanzas (`session-terminate`).
 """
 
 from __future__ import annotations
@@ -93,7 +92,7 @@ class JingleOfferTimeoutError(SignalingError, asyncio.TimeoutError):
 class JitsiSignalingSession:
     """
     Manages RFC 7395 XMPP-over-WebSocket signaling, SSL context, SASL ANONYMOUS auth,
-    MUC lifecycle, Jicofo conference focus allocation, and raw Jingle IQ routing.
+    Jicofo conference creation, MUC lifecycle, and raw Jingle IQ routing.
     """
 
     def __init__(
@@ -220,14 +219,12 @@ class JitsiSignalingSession:
                 if iq_type == "get":
                     sender = root.attrib.get("from")
 
-                    # Reply to Ping
                     ping_elem = root.find(".//{urn:xmpp:ping}ping")
                     if ping_elem is not None or "ping" in trimmed:
                         pong = f'<iq type="result" to="{sender}" id="{iq_id}"/>'
                         await self._send_raw(pong)
                         return
 
-                    # Reply to Jicofo Service Discovery (disco#info)
                     disco_elem = root.find(".//{http://jabber.org/protocol/disco#info}query")
                     if disco_elem is not None or "disco#info" in trimmed:
                         disco_reply = (
@@ -255,7 +252,7 @@ class JitsiSignalingSession:
                             self._bind_future.set_result(self.bound_jid)
                     return
 
-                # 4. Resolve generic tracked IQ futures
+                # 4. Resolve generic tracked IQ futures (including Jicofo Conference ready result)
                 if iq_id in self._iq_futures:
                     fut = self._iq_futures.pop(iq_id)
                     if not fut.done():
@@ -355,9 +352,27 @@ class JitsiSignalingSession:
                 self.bound_jid = await self._bind_future
                 logger.info("XMPP Resource bound: Full JID = '%s'", self.bound_jid)
 
-                # 5. Join MUC Room with Jitsi Presence Extensions
-                self._presence_future = asyncio.get_running_loop().create_future()
+                # 5. Request Jicofo to create/open conference room FIRST
                 stats_id = f"vad_harness_{uuid.uuid4().hex[:6]}"
+                conf_req_id = f"_conf_{uuid.uuid4().hex[:8]}"
+                focus_target = f"focus.{self.xmpp_client_domain}"
+                
+                self._iq_futures[conf_req_id] = asyncio.get_running_loop().create_future()
+                conf_req_iq = (
+                    f'<iq xmlns="{NS_CLIENT}" type="set" to="{focus_target}" id="{conf_req_id}">'
+                    f'<conference xmlns="http://jitsi.org/protocol/focus" '
+                    f'room="{self.room_jid}" machine-uid="{stats_id}">'
+                    f'<property name="bridge" value="true"/>'
+                    f'</conference>'
+                    f'</iq>'
+                )
+                logger.info("Requesting conference focus from Jicofo (%s for room %s)...", focus_target, self.room_jid)
+                await self._send_raw(conf_req_iq)
+                await self._iq_futures[conf_req_id]
+                logger.info("Jicofo confirmed room is ready.")
+
+                # 6. Now join the MUC Room (Allowed because Jicofo created it)
+                self._presence_future = asyncio.get_running_loop().create_future()
                 muc_presence = (
                     f'<presence xmlns="{NS_CLIENT}" to="{self.room_jid}/{self.display_name}">'
                     f'<x xmlns="{NS_MUC}"/>'
@@ -371,20 +386,6 @@ class JitsiSignalingSession:
                 await self._send_raw(muc_presence)
                 await self._presence_future
                 logger.info("MUC room join confirmed by server reflection.")
-
-                # 6. Request Conference Focus from Jicofo (Triggers JVB Allocation & session-initiate offer)
-                conf_req_id = f"_conf_{uuid.uuid4().hex[:8]}"
-                focus_target = f"focus.{self.xmpp_client_domain}"
-                conf_req_iq = (
-                    f'<iq xmlns="{NS_CLIENT}" type="set" to="{focus_target}" id="{conf_req_id}">'
-                    f'<conference xmlns="http://jitsi.org/protocol/focus" '
-                    f'room="{self.room_jid}" machine-uid="{stats_id}">'
-                    f'<property name="bridge" value="true"/>'
-                    f'</conference>'
-                    f'</iq>'
-                )
-                logger.info("Requesting conference focus from Jicofo (%s for room %s)...", focus_target, self.room_jid)
-                await self._send_raw(conf_req_iq)
 
         except SASLAuthenticationError:
             await self.disconnect()
