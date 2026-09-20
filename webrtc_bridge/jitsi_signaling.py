@@ -5,9 +5,9 @@ One Job:
     Own the XMPP signaling session lifecycle for a direct WebRTC participant in Jitsi Meet:
     manage RFC 7395 XMPP-over-WebSocket transport, SSL context verification, SASL ANONYMOUS
     authentication, request Jicofo conference focus creation, join MUC room with matching
-    participant ID resource, respond to Jicofo's `disco#info` query, recognize Jicofo's
-    `session-initiate` Jingle IQ, and transmit answers (`session-accept`), source declarations
-    (`source-add`), and teardown stanzas (`session-terminate`).
+    participant ID resource, respond to Jicofo's `disco#info` query with full WebRTC and BUNDLE
+    capabilities, recognize Jicofo's `session-initiate` Jingle IQ, and transmit answers
+    (`session-accept`), source declarations (`source-add`), and teardown stanzas (`session-terminate`).
 """
 
 from __future__ import annotations
@@ -221,14 +221,14 @@ class JitsiSignalingSession:
                 if iq_type == "get":
                     sender = root.attrib.get("from")
 
-                    # Reply to Ping (with explicit jabber:client namespace)
+                    # Reply to Ping
                     ping_elem = root.find(".//{urn:xmpp:ping}ping")
                     if ping_elem is not None or "ping" in trimmed:
                         pong = f'<iq xmlns="{NS_CLIENT}" type="result" to="{sender}" id="{iq_id}"/>'
                         await self._send_raw(pong)
                         return
 
-                    # Reply to Jicofo Service Discovery (disco#info with explicit jabber:client namespace)
+                    # Reply to Jicofo Service Discovery (disco#info with full WebRTC + BUNDLE feature set)
                     disco_elem = root.find(".//{http://jabber.org/protocol/disco#info}query")
                     if disco_elem is not None or "disco#info" in trimmed:
                         node_attr = ""
@@ -242,9 +242,13 @@ class JitsiSignalingSession:
                             f'<feature var="urn:xmpp:jingle:1"/>'
                             f'<feature var="urn:xmpp:jingle:apps:rtp:1"/>'
                             f'<feature var="urn:xmpp:jingle:apps:rtp:audio"/>'
-                            f'<feature var="urn:xmpp:jingle:transports:ice-udp:1"/>'
+                            f'<feature var="urn:xmpp:jingle:apps:rtp:video"/>'
+                            f'<feature var="urn:xmpp:jingle:apps:rtp:rtcp-fb:0"/>'
+                            f'<feature var="urn:xmpp:jingle:apps:rtp:rtp-hdrext:0"/>'
+                            f'<feature var="urn:xmpp:jingle:apps:rtp:ssma:0"/>'
                             f'<feature var="urn:xmpp:jingle:apps:dtls:0"/>'
-                            f'<feature var="http://jabber.org/protocol/disco#info"/>'
+                            f'<feature var="urn:xmpp:jingle:apps:grouping:0"/>'
+                            f'<feature var="urn:xmpp:jingle:transports:ice-udp:1"/>'
                             f'</query>'
                             f'</iq>'
                         )
@@ -287,7 +291,6 @@ class JitsiSignalingSession:
                             self._presence_future.set_exception(MUCJoinError(f"MUC presence rejected: {err_detail}"))
                         return
 
-                # Confirm join when presence reflects from our room JID with matching participant ID
                 expected_muc_jid = f"{self.room_jid}/{self.participant_id}"
                 if pres_from == expected_muc_jid or (self.room_jid and pres_from.startswith(self.room_jid)):
                     self._is_muc_joined = True
