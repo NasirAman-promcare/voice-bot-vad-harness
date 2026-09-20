@@ -219,11 +219,32 @@ class JitsiSignalingSession:
                     return
 
                 if iq_type == "get":
-                    ping_elem = root.find(f".//{{urn:xmpp:ping}}ping")
+                    sender = root.attrib.get("from")
+
+                    # 1. Reply to Ping Keep-Alive
+                    ping_elem = root.find(".//{urn:xmpp:ping}ping")
                     if ping_elem is not None or "ping" in trimmed:
-                        sender = root.attrib.get("from")
                         pong = f'<iq type="result" to="{sender}" id="{iq_id}"/>'
                         await self._send_raw(pong)
+                        return
+
+                    # 2. Reply to Jicofo Feature Discovery (disco#info)
+                    disco_elem = root.find(".//{http://jabber.org/protocol/disco#info}query")
+                    if disco_elem is not None or "disco#info" in trimmed:
+                        disco_reply = (
+                            f'<iq type="result" to="{sender}" id="{iq_id}">'
+                            f'<query xmlns="http://jabber.org/protocol/disco#info">'
+                            f'<identity category="client" type="bot" name="{self.display_name or "vad-bot"}"/>'
+                            f'<feature var="urn:xmpp:jingle:1"/>'
+                            f'<feature var="urn:xmpp:jingle:apps:rtp:1"/>'
+                            f'<feature var="urn:xmpp:jingle:apps:rtp:audio"/>'
+                            f'<feature var="urn:xmpp:jingle:transports:ice-udp:1"/>'
+                            f'<feature var="urn:xmpp:jingle:apps:dtls:0"/>'
+                            f'<feature var="http://jabber.org/protocol/disco#info"/>'
+                            f'</query>'
+                            f'</iq>'
+                        )
+                        await self._send_raw(disco_reply)
                         return
 
                 if iq_id == "_bind_1" and iq_type == "result":
