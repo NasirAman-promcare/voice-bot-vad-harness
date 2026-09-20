@@ -16,3 +16,11 @@ __pycache__/
 .DS_Store
 # Model Weights
 pretrained_models/
+
+# Ignore model weights and caches
+pretrained_models/
+*.pt
+*.bin
+*.onnx
+__pycache__/
+*.pyc

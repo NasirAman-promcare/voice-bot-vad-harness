@@ -8,6 +8,8 @@ One Job:
 
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
 import logging
 import time
 from dataclasses import dataclass
@@ -18,6 +20,7 @@ import yaml
 
 from webrtc_bridge.jingle_sdp_translator import (
     jingle_offer_to_sdp,
+    parse_transport_info_candidates,
     sdp_answer_to_jingle_accept,
 )
 from webrtc_bridge.jitsi_signaling import JitsiSignalingSession
@@ -121,6 +124,46 @@ class WebRTCJitsiAudioInjector:
 
         self._signaling: Optional[JitsiSignalingSession] = None
         self._media_session: Optional[BridgeMediaSession] = None
+        self._ready_future: Optional[concurrent.futures.Future[None]] = None
+
+    async def _negotiate_media(self) -> None:
+        """Asynchronous background worker executing Jingle offer/answer & source announcement."""
+        assert self._signaling is not None
+        assert self._media_session is not None
+
+        logger.info("[WebRTCInjector] Awaiting Jingle offer from Jicofo...")
+        raw_offer_xml = await self._signaling.wait_for_offer(timeout_s=self.config.dtls_handshake_timeout_s)
+
+        logger.info("[WebRTCInjector] Translating Jingle offer to SDP and generating answer...")
+        sdp_offer = jingle_offer_to_sdp(raw_offer_xml)
+        
+        # 1. Generate answer without blocking on ICE/DTLS yet
+        sdp_answer = await self._media_session.async_answer_offer(sdp_offer)
+
+        # 2. Transmit session-accept so JVB receives our ICE/DTLS credentials
+        session_accept_xml = sdp_answer_to_jingle_accept(
+            sdp_answer_str=sdp_answer,
+            session_initiate_iq=raw_offer_xml,
+        )
+        logger.info("[WebRTCInjector] Transmitting session-accept IQ to Jicofo...")
+        await self._signaling.send_answer(session_accept_xml)
+
+        # 3. Await ICE connectivity & DTLS handshake
+        logger.info("[WebRTCInjector] Awaiting ICE & DTLS handshake completion...")
+        await self._media_session.async_wait_for_connection()
+
+        # 4. Announce source to MUC
+        ssrc = self._media_session.outgoing_ssrc
+        source_name = f"{self.config.speaker_display_name}-a0"
+        await self._signaling.announce_source(
+            ssrc=ssrc,
+            media_type=self._media_session.outgoing_media_type,
+            source_name=source_name,
+            muted=False,
+        )
+
+        self.is_connected = True
+        logger.info("WebRTCJitsiAudioInjector media negotiation complete (SSRC: %d)", ssrc)
 
     def connect_and_join(self, room_id: str, bridge_url: str) -> None:
         if not room_id or not room_id.strip():
@@ -153,16 +196,30 @@ class WebRTCJitsiAudioInjector:
                 dtls_handshake_timeout_s=self.config.dtls_handshake_timeout_s,
             )
 
+            # Separate speaker debug log to avoid overwriting listener
+            base_log_path = Path(self.config.jingle_debug_log_path)
+            speaker_log = base_log_path.with_name(f"{base_log_path.stem}_speaker{base_log_path.suffix}")
+
             self._signaling = JitsiSignalingSession(
                 xmpp_client_domain=self.config.xmpp_client_domain,
                 muc_room_domain_prefix=self.config.muc_room_domain_prefix,
                 ssl_verify=self.config.ssl_verify,
-                jingle_debug_log_path=self.config.jingle_debug_log_path,
+                jingle_debug_log_path=speaker_log,
             )
+
+            # Hook trickle ICE candidate delivery
+            def _handle_transport_info(raw_xml: str) -> None:
+                if self._media_session is not None:
+                    candidates = parse_transport_info_candidates(raw_xml)
+                    for mid, cand in candidates:
+                        self._media_session.add_remote_candidate(mid, cand)
+
+            self._signaling.set_transport_info_callback(_handle_transport_info)
 
             connect_timeout = (
                 self.config.ice_gather_timeout_s + self.config.dtls_handshake_timeout_s + 10.0
             )
+            # 1. Join MUC synchronously
             self._media_session._run_sync(
                 self._signaling.connect(
                     bridge_url=self.bridge_url,
@@ -173,38 +230,12 @@ class WebRTCJitsiAudioInjector:
                 timeout=connect_timeout + 2.0,
             )
 
-            raw_offer_xml = self._media_session._run_sync(
-                self._signaling.wait_for_offer(timeout_s=self.config.dtls_handshake_timeout_s),
-                timeout=self.config.dtls_handshake_timeout_s + 2.0,
+            # 2. Dispatch offer/answer negotiation to background event loop
+            self._ready_future = asyncio.run_coroutine_threadsafe(
+                self._negotiate_media(),
+                self._media_session._loop,
             )
-
-            sdp_offer = jingle_offer_to_sdp(raw_offer_xml)
-            sdp_answer = self._media_session.answer_offer(sdp_offer)
-
-            session_accept_xml = sdp_answer_to_jingle_accept(
-                sdp_answer_str=sdp_answer,
-                session_initiate_iq=raw_offer_xml,
-            )
-
-            self._media_session._run_sync(
-                self._signaling.send_answer(session_accept_xml),
-                timeout=5.0,
-            )
-
-            ssrc = self._media_session.outgoing_ssrc
-            source_name = f"{self.config.speaker_display_name}-a0"
-            self._media_session._run_sync(
-                self._signaling.announce_source(
-                    ssrc=ssrc,
-                    media_type=self._media_session.outgoing_media_type,
-                    source_name=source_name,
-                    muted=False,
-                ),
-                timeout=5.0,
-            )
-
-            self.is_connected = True
-            logger.info("WebRTCJitsiAudioInjector joined room '%s' (SSRC: %d)", self.current_room, ssrc)
+            logger.info("WebRTCJitsiAudioInjector joined MUC; background media negotiation dispatched.")
 
         except Exception as exc:
             logger.error("Failed to connect and join Jitsi conference: %s", exc, exc_info=True)
@@ -213,7 +244,25 @@ class WebRTCJitsiAudioInjector:
                 f"Failed to join Jitsi room '{target_room}': {exc}"
             ) from exc
 
+    def wait_until_ready(self, timeout_s: float = 30.0) -> None:
+        """Blocks until the background WebRTC negotiation completes."""
+        if self._ready_future is None:
+            raise InjectorStateError("Injector is not connecting or connected.")
+
+        try:
+            self._ready_future.result(timeout=timeout_s)
+        except concurrent.futures.TimeoutError as exc:
+            raise InjectorConnectionError(
+                f"WebRTC media negotiation timed out after {timeout_s}s in room '{self.current_room}'"
+            ) from exc
+        except Exception as exc:
+            raise InjectorConnectionError(
+                f"WebRTC media negotiation failed in room '{self.current_room}': {exc}"
+            ) from exc
+
     def play_audio_file(self, audio_path: Union[str, Path], sample_rate_hz: int = 16000) -> None:
+        self.wait_until_ready()
+
         if not self.is_connected or self._media_session is None:
             raise InjectorStateError(
                 "Cannot play audio file: WebRTCJitsiAudioInjector is not connected to a room. "
@@ -248,6 +297,10 @@ class WebRTCJitsiAudioInjector:
             return
 
         logger.info("Disconnecting WebRTCJitsiAudioInjector...")
+
+        if self._ready_future and not self._ready_future.done():
+            self._ready_future.cancel()
+        self._ready_future = None
 
         if self._signaling is not None:
             try:

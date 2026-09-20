@@ -3,13 +3,14 @@ webrtc_bridge/media_session.py
 
 One Job:
     Own the `aiortc.RTCPeerConnection` media-plane lifecycle and manage a dedicated
-    background asyncio event loop thread, exposing clean, synchronous methods for
-    `speaker_bot.py` and `listener_bridge.py`.
+    background asyncio event loop thread, exposing clean, synchronous and asynchronous
+    methods for `speaker_bot.py` and `listener_bridge.py`.
 """
 
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import logging
 import re
 import sys
@@ -21,6 +22,8 @@ import aiortc
 from aiortc import (
     MediaStreamTrack,
     RTCConfiguration,
+    RTCIceCandidate,      
+    RTCIceServer,
     RTCPeerConnection,
     RTCRtpReceiver,
     RTCRtpSender,
@@ -81,7 +84,7 @@ def check_aiortc_conformance() -> None:
 
 
 class BridgeMediaSession:
-    """Synchronous manager for the underlying asynchronous aiortc RTCPeerConnection."""
+    """Synchronous & asynchronous manager for the underlying aiortc RTCPeerConnection."""
 
     def __init__(
         self,
@@ -132,7 +135,6 @@ class BridgeMediaSession:
 
     def _run_sync(self, coro: Any, timeout: Optional[float] = None) -> Any:
         if self._is_closed or not self._loop.is_running():
-            # Close un-dispatched coroutine to prevent RuntimeWarning
             if asyncio.iscoroutine(coro):
                 coro.close()
             raise MediaSessionStateError("Cannot execute operation: BridgeMediaSession is closed or loop stopped.")
@@ -140,14 +142,21 @@ class BridgeMediaSession:
         future = asyncio.run_coroutine_threadsafe(coro, self._loop)
         try:
             return future.result(timeout=timeout)
-        except TimeoutError as exc:
-            future.cancel()
-            raise TimeoutError(f"Media session operation timed out after {timeout}s.") from exc
+        except concurrent.futures.TimeoutError as exc:
+            if not future.done():
+                future.cancel()
+                raise TimeoutError(f"Media session operation timed out after {timeout}s.") from exc
+            raise
         except Exception:
             raise
 
     async def _async_init_pc(self) -> None:
-        config = RTCConfiguration(iceServers=[])
+        config = RTCConfiguration(
+          iceServers=[
+              RTCIceServer(urls=["stun:stun.l.google.com:19302"]),
+              RTCIceServer(urls=["stun:stun1.l.google.com:19302"]),
+          ]
+        )
         self._pc = RTCPeerConnection(configuration=config)
 
         @self._pc.on("connectionstatechange")
@@ -186,31 +195,57 @@ class BridgeMediaSession:
         else:
             self._transceiver = self._pc.addTransceiver("audio", direction="recvonly")
 
-    def answer_offer(self, sdp_offer_str: str) -> str:
-        return self._run_sync(
-            self._async_answer_offer(sdp_offer_str),
-            timeout=self.dtls_handshake_timeout_s + self.ice_gather_timeout_s + 5.0,
-        )
-
-    async def _async_answer_offer(self, sdp_offer_str: str) -> str:
+    async def async_answer_offer(self, sdp_offer_str: str) -> str:
+        """Sets remote offer, creates answer, sets local description, and returns local SDP string."""
         assert self._pc is not None
         try:
             offer_desc = RTCSessionDescription(sdp=sdp_offer_str, type="offer")
             await self._pc.setRemoteDescription(offer_desc)
             answer_desc = await self._pc.createAnswer()
             await self._pc.setLocalDescription(answer_desc)
+
+            # Wait up to 3s for ICE gathering to complete
+            try:
+                async with asyncio.timeout(3.0):
+                    while self._pc.iceGatheringState != "complete":
+                        await asyncio.sleep(0.05)
+            except (TimeoutError, asyncio.TimeoutError):
+                logger.debug("[%s] ICE gathering completed with available candidates", self.role)
+
+            # Signal end of remote candidates so aioice immediately binds the succeeded public candidate pair
+            try:
+                await self._pc.addIceCandidate(None)
+            except Exception:
+                pass
+
         except Exception as exc:
             raise MediaSessionNegotiationError(f"SDP offer/answer generation failed: {exc}") from exc
 
+        local_sdp = self._pc.localDescription.sdp if self._pc.localDescription else ""
+        return local_sdp
+
+    async def async_wait_for_connection(self) -> None:
+        """Waits for ICE connectivity and DTLS-SRTP handshake to establish after session-accept."""
+        assert self._pc is not None
+        timeout_s = self.ice_gather_timeout_s
+
         try:
-            async with asyncio.timeout(self.ice_gather_timeout_s):
+            async with asyncio.timeout(timeout_s):
                 while not self._ice_completed_event.is_set():
                     if self._failed_event.is_set():
                         raise ICEConnectionFailedError(f"ICE connectivity failed: {self._failure_reason}")
-                    await asyncio.sleep(0.05)
+                    
+                    # If ICE is checking and a pair has already succeeded, notify end of candidates
+                    if self._pc.iceConnectionState == "checking":
+                        try:
+                            await self._pc.addIceCandidate(None)
+                        except Exception:
+                            pass
+                            
+                    await asyncio.sleep(0.1)
         except (TimeoutError, asyncio.TimeoutError) as exc:
             raise ICEConnectionTimeoutError(
-                f"ICE connectivity checks timed out after {self.ice_gather_timeout_s}s (Current: {self._pc.iceConnectionState})"
+                f"ICE connectivity checks timed out after {timeout_s}s (Current: {self._pc.iceConnectionState})"
             ) from exc
 
         try:
@@ -228,9 +263,14 @@ class BridgeMediaSession:
             self._outgoing_ssrc = self._extract_outgoing_ssrc()
 
         self._is_answered = True
-        local_sdp = self._pc.localDescription.sdp if self._pc.localDescription else ""
         logger.info("[%s] Media session established (ICE & DTLS Connected)", self.role)
-        return local_sdp
+
+    def wait_for_connection(self) -> None:
+        """Synchronous wrapper for async_wait_for_connection."""
+        return self._run_sync(
+            self.async_wait_for_connection(),
+            timeout=self.dtls_handshake_timeout_s + self.ice_gather_timeout_s + 10.0,
+        )
 
     def _extract_outgoing_ssrc(self) -> int:
         if self._sender and hasattr(self._sender, "_ssrc") and self._sender._ssrc:
@@ -277,8 +317,36 @@ class BridgeMediaSession:
             raise MediaSessionStateError("Receiver is uninitialized.")
         return self._transceiver.receiver
 
+    async def async_add_remote_candidate(self, mid: str, cand: Any) -> None:
+        """Adds a remote trickle ICE candidate to the underlying PeerConnection."""
+        if self._pc is None:
+            return
+        try:
+            rtc_candidate = RTCIceCandidate(
+                component=int(cand.component),
+                foundation=cand.foundation,
+                ip=cand.ip,
+                port=int(cand.port),
+                priority=int(cand.priority),
+                protocol=cand.protocol.lower(),
+                type=cand.type,
+                relatedAddress=cand.rel_addr if cand.rel_addr else None,
+                relatedPort=int(cand.rel_port) if cand.rel_port else None,
+                sdpMid=mid,
+                sdpMLineIndex=0 if mid in ("audio", "0") else 1,
+                tcpType=cand.tcptype if cand.tcptype else None,
+            )
+            await self._pc.addIceCandidate(rtc_candidate)
+            logger.debug("[%s] Applied remote ICE candidate %s:%s (%s)", self.role, cand.ip, cand.port, cand.type)
+        except Exception as exc:
+            logger.warning("[%s] Notice applying remote candidate: %s", self.role, exc)
+
+    def add_remote_candidate(self, mid: str, cand: Any) -> None:
+        """Synchronous wrapper to apply a remote candidate."""
+        if self._loop and self._loop.is_running():
+            asyncio.run_coroutine_threadsafe(self.async_add_remote_candidate(mid, cand), self._loop)
+
     def close(self) -> None:
-        """Closes the peer connection and terminates the background event loop thread cleanly."""
         if self._is_closed:
             return
         self._is_closed = True
@@ -297,7 +365,10 @@ class BridgeMediaSession:
 
     async def _async_close(self) -> None:
         if self._pc is not None:
-            await self._pc.close()
+            try:
+                await self._pc.close()
+            except Exception:
+                pass
             self._pc = None
 
     def __enter__(self) -> BridgeMediaSession:

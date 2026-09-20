@@ -10,6 +10,8 @@ One Job:
 
 from __future__ import annotations
 
+import asyncio
+import concurrent.futures
 import logging
 import math
 import time
@@ -19,6 +21,7 @@ from typing import Any, Optional, Union
 from webrtc_bridge.injector import BridgeConfig, load_bridge_config
 from webrtc_bridge.jingle_sdp_translator import (
     jingle_offer_to_sdp,
+    parse_transport_info_candidates,
     sdp_answer_to_jingle_accept,
 )
 from webrtc_bridge.jitsi_signaling import JitsiSignalingSession
@@ -66,6 +69,38 @@ class JitsiListenerBridge:
 
         self._signaling: Optional[JitsiSignalingSession] = None
         self._media_session: Optional[BridgeMediaSession] = None
+        self._ready_future: Optional[concurrent.futures.Future[None]] = None
+        self._current_tap: Optional[RawRtpTap] = None
+        self._active_clip_id: Optional[str] = None
+
+    async def _negotiate_media(self) -> None:
+        """Asynchronous background worker executing Jingle offer/answer for recvonly session."""
+        assert self._signaling is not None
+        assert self._media_session is not None
+
+        logger.info("[ListenerBridge] Awaiting Jingle offer from Jicofo...")
+        raw_offer_xml = await self._signaling.wait_for_offer(timeout_s=self.config.dtls_handshake_timeout_s)
+
+        logger.info("[ListenerBridge] Translating Jingle offer to SDP and generating answer...")
+        sdp_offer = jingle_offer_to_sdp(raw_offer_xml)
+        
+        # 1. Generate answer without blocking on ICE/DTLS yet
+        sdp_answer = await self._media_session.async_answer_offer(sdp_offer)
+
+        # 2. Transmit session-accept so JVB receives our ICE/DTLS credentials
+        session_accept_xml = sdp_answer_to_jingle_accept(
+            sdp_answer_str=sdp_answer,
+            session_initiate_iq=raw_offer_xml,
+        )
+        logger.info("[ListenerBridge] Transmitting session-accept IQ to Jicofo...")
+        await self._signaling.send_answer(session_accept_xml)
+
+        # 3. Await ICE connectivity & DTLS handshake
+        logger.info("[ListenerBridge] Awaiting ICE & DTLS handshake completion...")
+        await self._media_session.async_wait_for_connection()
+
+        self.is_connected = True
+        logger.info("JitsiListenerBridge media negotiation complete (recvonly)")
 
     def connect_and_join(self, room_id: str, bridge_url: str) -> None:
         if not room_id or not room_id.strip():
@@ -98,16 +133,30 @@ class JitsiListenerBridge:
                 dtls_handshake_timeout_s=self.config.dtls_handshake_timeout_s,
             )
 
+            # Separate listener debug log to avoid overwriting speaker
+            base_log_path = Path(self.config.jingle_debug_log_path)
+            listener_log = base_log_path.with_name(f"{base_log_path.stem}_listener{base_log_path.suffix}")
+
             self._signaling = JitsiSignalingSession(
                 xmpp_client_domain=self.config.xmpp_client_domain,
                 muc_room_domain_prefix=self.config.muc_room_domain_prefix,
                 ssl_verify=self.config.ssl_verify,
-                jingle_debug_log_path=self.config.jingle_debug_log_path,
+                jingle_debug_log_path=listener_log,
             )
+
+            # Hook trickle ICE candidate delivery
+            def _handle_transport_info(raw_xml: str) -> None:
+                if self._media_session is not None:
+                    candidates = parse_transport_info_candidates(raw_xml)
+                    for mid, cand in candidates:
+                        self._media_session.add_remote_candidate(mid, cand)
+
+            self._signaling.set_transport_info_callback(_handle_transport_info)
 
             connect_timeout = (
                 self.config.ice_gather_timeout_s + self.config.dtls_handshake_timeout_s + 10.0
             )
+            # 1. Join MUC synchronously
             self._media_session._run_sync(
                 self._signaling.connect(
                     bridge_url=self.bridge_url,
@@ -118,26 +167,12 @@ class JitsiListenerBridge:
                 timeout=connect_timeout + 2.0,
             )
 
-            raw_offer_xml = self._media_session._run_sync(
-                self._signaling.wait_for_offer(timeout_s=self.config.dtls_handshake_timeout_s),
-                timeout=self.config.dtls_handshake_timeout_s + 2.0,
+            # 2. Dispatch offer/answer negotiation to background event loop
+            self._ready_future = asyncio.run_coroutine_threadsafe(
+                self._negotiate_media(),
+                self._media_session._loop,
             )
-
-            sdp_offer = jingle_offer_to_sdp(raw_offer_xml)
-            sdp_answer = self._media_session.answer_offer(sdp_offer)
-
-            session_accept_xml = sdp_answer_to_jingle_accept(
-                sdp_answer_str=sdp_answer,
-                session_initiate_iq=raw_offer_xml,
-            )
-
-            self._media_session._run_sync(
-                self._signaling.send_answer(session_accept_xml),
-                timeout=5.0,
-            )
-
-            self.is_connected = True
-            logger.info("JitsiListenerBridge joined room '%s' (recvonly)", self.current_room)
+            logger.info("JitsiListenerBridge joined MUC; background media negotiation dispatched.")
 
         except Exception as exc:
             logger.error("Failed to connect JitsiListenerBridge: %s", exc, exc_info=True)
@@ -146,15 +181,36 @@ class JitsiListenerBridge:
                 f"Failed to join Jitsi room '{target_room}': {exc}"
             ) from exc
 
-    def run_clip(self, manifest_entry: Any, timeout_s: float = 30.0) -> Any:
-        if not self.is_connected or self._media_session is None:
-            raise ListenerBridgeStateError(
-                "Cannot run clip: JitsiListenerBridge is not connected to a room. "
-                "Call connect_and_join() first."
-            )
+    def wait_until_ready(self, timeout_s: float = 30.0) -> None:
+        """Blocks until the background WebRTC negotiation completes."""
+        if self._ready_future is None:
+            raise ListenerBridgeStateError("ListenerBridge is not connecting or connected.")
+
+        try:
+            self._ready_future.result(timeout=timeout_s)
+        except concurrent.futures.TimeoutError as exc:
+            raise ListenerBridgeConnectionError(
+                f"WebRTC media negotiation timed out after {timeout_s}s in room '{self.current_room}'"
+            ) from exc
+        except Exception as exc:
+            raise ListenerBridgeConnectionError(
+                f"WebRTC media negotiation failed in room '{self.current_room}': {exc}"
+            ) from exc
+
+    def arm_clip(self, manifest_entry: Any) -> None:
+        """
+        Arms the listener tap BEFORE audio playback begins.
+
+        Guarantees that no leading packets or calibration chirps are missed.
+        """
+        self.wait_until_ready()
+
+        if self._media_session is None:
+            raise ListenerBridgeStateError("Media session is not initialized.")
 
         clip_id = str(manifest_entry.clip_id)
-        logger.debug("[ListenerBridge] Preparing stream capture for clip '%s'", clip_id)
+        self._active_clip_id = clip_id
+        logger.debug("[ListenerBridge] Arming stream capture tap for clip '%s'", clip_id)
 
         expected_samples_16k = 0
         if getattr(manifest_entry, "speech_segments", None):
@@ -170,7 +226,6 @@ class JitsiListenerBridge:
 
         received_samples_16k = 0
         is_clip_end_signaled = False
-        tap: Optional[RawRtpTap] = None
 
         def on_packet_arrived(sequence_id: int, payload_bytes: bytes, arrival_timestamp_ns: int) -> None:
             nonlocal received_samples_16k, is_clip_end_signaled
@@ -186,35 +241,69 @@ class JitsiListenerBridge:
                 timestamp_ns=arrival_timestamp_ns,
                 is_clip_end=is_end,
             )
-            if is_end and tap is not None:
-                tap.stop()
+            if is_end and self._current_tap is not None:
+                self._current_tap.stop()
+
+        if self._current_tap is not None:
+            self._current_tap.close()
+            self._current_tap = None
 
         try:
             receiver = self._media_session.get_incoming_receiver()
-            tap = RawRtpTap(rtp_receiver=receiver, on_packet=on_packet_arrived)
-            tap.start()
+            self._current_tap = RawRtpTap(rtp_receiver=receiver, on_packet=on_packet_arrived)
+            self._current_tap.start()
+            logger.debug("[ListenerBridge] Tap armed and listening for clip '%s'", clip_id)
+        except Exception as exc:
+            logger.error("[ListenerBridge] Failed to arm tap for '%s': %s", clip_id, exc)
+            raise ListenerBridgeExecutionError(f"Failed to arm tap for clip '{clip_id}': {exc}") from exc
 
+    def await_clip(self, manifest_entry: Any, timeout_s: float = 30.0) -> Any:
+        """Awaits clip stream completion and tears down the active tap."""
+        clip_id = str(manifest_entry.clip_id)
+        if self._active_clip_id != clip_id:
+            raise ListenerBridgeStateError(
+                f"Active armed clip '{self._active_clip_id}' does not match await request '{clip_id}'"
+            )
+
+        try:
             captured_data = self.listener_bot.await_clip_completion(clip_id=clip_id, timeout_s=timeout_s)
             logger.debug(
                 "[ListenerBridge] Successfully captured stream for '%s' (%d samples, %d packets)",
                 clip_id,
                 len(captured_data.decoded_audio_16k),
-                tap.packet_count,
+                self._current_tap.packet_count if self._current_tap else 0,
             )
             return captured_data
-
         except Exception as exc:
             logger.error("[ListenerBridge] Stream capture failed for '%s': %s", clip_id, exc)
             raise ListenerBridgeExecutionError(f"Failed to capture stream for clip '{clip_id}': {exc}") from exc
         finally:
-            if tap is not None:
-                tap.close()
+            if self._current_tap is not None:
+                self._current_tap.close()
+                self._current_tap = None
+            self._active_clip_id = None
+
+    def run_clip(self, manifest_entry: Any, timeout_s: float = 30.0) -> Any:
+        """Convenience method combining arming and awaiting."""
+        self.arm_clip(manifest_entry)
+        return self.await_clip(manifest_entry, timeout_s=timeout_s)
 
     def disconnect(self) -> None:
         if not self.is_connected and self._signaling is None and self._media_session is None:
             return
 
         logger.info("Disconnecting JitsiListenerBridge...")
+
+        if self._current_tap is not None:
+            try:
+                self._current_tap.close()
+            except Exception:
+                pass
+            self._current_tap = None
+
+        if self._ready_future and not self._ready_future.done():
+            self._ready_future.cancel()
+        self._ready_future = None
 
         if self._signaling is not None:
             try:
@@ -236,6 +325,7 @@ class JitsiListenerBridge:
         self.is_connected = False
         self.current_room = None
         self.bridge_url = None
+        self._active_clip_id = None
         logger.info("JitsiListenerBridge disconnected cleanly.")
 
     def __enter__(self) -> JitsiListenerBridge:

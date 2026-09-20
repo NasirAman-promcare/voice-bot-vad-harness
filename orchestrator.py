@@ -479,7 +479,7 @@ def run_tier2_live_pipeline(
         hardware_policy=config.hardware_policy,
     )
 
-    # 1. Initialize SpeakerBot with WebRTC Injector (File 31)
+    # 1. Initialize SpeakerBot with WebRTC Injector
     if WebRTCJitsiAudioInjector is not None:
         logger.info("Using WebRTCJitsiAudioInjector for live WebRTC microphone injection.")
         injector = WebRTCJitsiAudioInjector()
@@ -495,7 +495,7 @@ def run_tier2_live_pipeline(
             bridge_url=config.bridge_url,
         )
 
-    # 2. Initialize ListenerBot and connect JitsiListenerBridge (File 32)
+    # 2. Initialize ListenerBot and connect JitsiListenerBridge
     listener_bot = ListenerBot(
         room_id=config.jitsi_room,
         bridge_url=config.bridge_url,
@@ -544,10 +544,11 @@ def run_tier2_live_pipeline(
                 # Step 3: Stream clip via SpeakerBot & capture via ListenerBridge concurrently
                 try:
                     if listener_bridge is not None:
-                        # Concurrent playback & capture: Speaker injects audio while ListenerBridge receives
+                        # Arm the receiver tap FIRST to guarantee 0 lost leading packets / chirp
+                        listener_bridge.arm_clip(entry)
                         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                             play_future = executor.submit(speaker_bot.play_clip, entry)
-                            captured_data = listener_bridge.run_clip(entry, timeout_s=30.0)
+                            captured_data = listener_bridge.await_clip(entry, timeout_s=30.0)
                             playback_meta = play_future.result()
                     else:
                         listener_bot.prepare_for_clip(entry.clip_id)
@@ -555,7 +556,7 @@ def run_tier2_live_pipeline(
                         captured_data = listener_bot.await_clip_completion(entry.clip_id, timeout_s=15.0)
                 except Exception as exc:
                     logger.error(
-                        "[Run %s | Tier 2 | Clip %s | Pass %s] Live transaction notice: %s",
+                        "[Run %s | Tier 2 | Clip %s | Pass %s] Live transaction failed: %s",
                         config.run_id,
                         entry.clip_id,
                         pass_label,
@@ -585,7 +586,7 @@ def run_tier2_live_pipeline(
                     if is_warmup:
                         continue
 
-                    # Step 4: Calculate pipeline onset and offset/hangover latencies
+                    # Calculate pipeline onset and offset/hangover latencies
                     try:
                         latency_metrics = calculate_pipeline_latency(
                             decision_records=adapter_records,
@@ -604,14 +605,14 @@ def run_tier2_live_pipeline(
                         )
                     except Exception as exc:
                         logger.error(
-                            "[Run %s | Tier 2 | Clip %s | Adapter %s | LatencyCalc] Latency math notice: %s",
+                            "[Run %s | Tier 2 | Clip %s | Adapter %s | LatencyCalc] Latency notice: %s",
                             config.run_id,
                             entry.clip_id,
                             adapter_name,
                             exc,
                         )
 
-                    # Step 5 (Part B): Score single clip using identical vad_scorer logic
+                    # Score single clip using vad_scorer
                     try:
                         clip_score = score_single_clip(
                             decision_records=adapter_records,
@@ -647,9 +648,19 @@ def run_tier2_live_pipeline(
 
         speaker_bot.close()
 
+    # Verify that at least one clip was successfully evaluated
+    total_successful = sum(len(clips) for clips in adapter_clip_results.values())
+    if total_successful == 0:
+        raise RuntimeError(
+            f"Tier 2 Live Pipeline Failed: 0 clips were captured across all {len(adapters)} adapters. "
+            "The WebRTC media connection failed to connect."
+        )
+
     # Step 5 (Part D): Build aggregated adapter reports
     reports: Dict[str, VADScorerReport] = {}
     for adapter_name, scored_clips in adapter_clip_results.items():
+        if not scored_clips:
+            continue
         report = score_adapter_evaluation(
             clip_results=scored_clips,
             scoring_grid_ms=config.scoring_grid_ms,
@@ -731,7 +742,13 @@ def run_benchmark(config_path: Union[str, Path] = "config/run_config.yaml") -> D
             run_summary["tiers_executed"]["tier2"] = {"status": "failed", "error": str(exc)}
 
     results_store.close()
-    logger.info("=== Benchmark Run '%s' Completed Successfully ===", config.run_id)
+    has_fatal_failure = any(
+        res.get("status") == "failed" for res in run_summary["tiers_executed"].values()
+    )
+    if has_fatal_failure:
+        logger.error("=== Benchmark Run '%s' Completed With Failures ===", config.run_id)
+    else:
+        logger.info("=== Benchmark Run '%s' Completed Successfully ===", config.run_id)
     sys.stdout.flush()
     return run_summary
 

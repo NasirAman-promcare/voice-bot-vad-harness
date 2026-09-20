@@ -5,31 +5,6 @@ One Job:
     Provide pure, deterministic, network-free translation functions between Jitsi's
     Jingle XML protocol stanzas (XEP-0166, XEP-0167, XEP-0176, XEP-0320) and standard
     SDP offer/answer strings (RFC 4566, RFC 8866), plus source-declaration stanza generation.
-
-Why this module has ZERO Network I/O:
-    This is the highest-protocol-risk component in the WebRTC bridge layer. Keeping it
-    strictly synchronous, pure, and free of transport/connection dependencies ensures
-    that every codec mapping, ICE candidate translation, and DTLS fingerprint conversion
-    can be unit-tested against captured XML fixtures independently of a live Jitsi server.
-
-Protocol Transformations:
-    1. Jingle `session-initiate` IQ -> SDP Offer String:
-       Extracts RTP codecs, payload types, fmtp parameters, RTCP feedback, ICE ufrag/pwd,
-       DTLS fingerprint/setup, and ALL transport candidates (host, srflx, relay, TCP),
-       formatting them into a valid WebRTC SDP offer string.
-    2. SDP Answer String -> Jingle `session-accept` IQ:
-       Parses the answering SDP, binds the local ICE credentials and DTLS fingerprint,
-       echoes the offer's exact `sid`, `initiator`, and `content` names, and constructs
-       the conformant Jingle `<session-accept>` IQ.
-    3. Source Announcement Stanza (`build_source_add_stanza`):
-       Constructs Jitsi-specific source presence / IQ elements declaring the outgoing SSRC,
-       media type, and source name matching Colibri2 / Jicofo requirements.
-
-What this module must NEVER do:
-    - Never open a socket, import `websockets`, or perform any asynchronous I/O.
-    - Never import or reference `RTCPeerConnection` from `aiortc` (pure string/data transforms only).
-    - Never drop secondary or fallback ICE candidates from an incoming offer.
-    - Never silently answer an IQ with missing, mismatched, or stale session identifiers.
 """
 
 from __future__ import annotations
@@ -164,21 +139,6 @@ def _find_all_elems(parent: ET.Element, tag_name: str) -> List[ET.Element]:
 def jingle_offer_to_sdp(session_initiate_iq: str) -> str:
     """
     Translates a raw Jicofo `session-initiate` Jingle IQ XML string into a standard SDP offer.
-
-    Translates:
-      - All audio/video content blocks
-      - Full codec tables, fmtp parameters, and rtcp-fb attributes
-      - ICE ufrag, pwd, and ALL offered candidates (host, srflx, relay, TCP)
-      - DTLS fingerprint, algorithm, and actpass setup attribute
-
-    Args:
-        session_initiate_iq: Complete XML string of the Jingle IQ stanza.
-
-    Returns:
-        Standard WebRTC SDP offer string ready for `aiortc.RTCSessionDescription(sdp, 'offer')`.
-
-    Raises:
-        JingleXMLMalformedError: If XML parsing fails or required Jingle elements are missing.
     """
     if not session_initiate_iq or not session_initiate_iq.strip():
         raise JingleXMLMalformedError("Cannot parse empty or null session_initiate_iq.")
@@ -188,7 +148,6 @@ def jingle_offer_to_sdp(session_initiate_iq: str) -> str:
     except ET.ParseError as exc:
         raise JingleXMLMalformedError(f"XML parse error in session-initiate IQ: {exc}") from exc
 
-    # Locate <jingle> element
     jingle_elem = _find_elem(root, "jingle")
     if jingle_elem is None:
         if _strip_ns(root.tag) == "jingle":
@@ -204,7 +163,6 @@ def jingle_offer_to_sdp(session_initiate_iq: str) -> str:
 
     sid = jingle_elem.attrib.get("sid", uuid.uuid4().hex[:16])
 
-    # Parse all <content> elements
     content_elems = _find_all_elems(jingle_elem, "content")
     if not content_elems:
         raise JingleXMLMalformedError("session-initiate IQ contains no <content> elements.")
@@ -291,7 +249,7 @@ def jingle_offer_to_sdp(session_initiate_iq: str) -> str:
             fp_setup = "actpass"
             fp_val = ""
 
-        # Candidates (Translate ALL candidates without dropping secondary/fallback)
+        # Candidates
         candidates: List[IceCandidate] = []
         for cand_elem in _find_all_elems(trans_elem, "candidate"):
             c_ip = cand_elem.attrib.get("ip")
@@ -339,9 +297,7 @@ def jingle_offer_to_sdp(session_initiate_iq: str) -> str:
             )
         )
 
-    # --------------------------------------------------------------------------
     # Format Standard SDP Offer
-    # --------------------------------------------------------------------------
     session_numeric_id = int(uuid.uuid4().int & 0x7FFFFFFF)
     mids = [c.name for c in contents]
 
@@ -352,6 +308,7 @@ def jingle_offer_to_sdp(session_initiate_iq: str) -> str:
         "t=0 0",
         f"a=group:BUNDLE {' '.join(mids)}",
         "a=msid-semantic: WMS",
+        "a=ice-lite", 
     ]
 
     for content in contents:
@@ -379,7 +336,6 @@ def jingle_offer_to_sdp(session_initiate_iq: str) -> str:
             if t.setup:
                 sdp_lines.append(f"a=setup:{t.setup}")
 
-        # Media Direction
         if content.senders == "both":
             sdp_lines.append("a=sendrecv")
         elif content.senders == "initiator":
@@ -389,7 +345,6 @@ def jingle_offer_to_sdp(session_initiate_iq: str) -> str:
         else:
             sdp_lines.append("a=inactive")
 
-        # RTP Codec Definitions
         for c in content.codecs:
             ch_str = f"/{c.channels}" if c.channels and c.channels != "1" else (
                 "/2" if c.name.lower() == "opus" else ""
@@ -404,11 +359,9 @@ def jingle_offer_to_sdp(session_initiate_iq: str) -> str:
                 sub = f" {fb_subtype}" if fb_subtype else ""
                 sdp_lines.append(f"a=rtcp-fb:{c.id} {fb_type}{sub}")
 
-        # Header Extensions
         for ext in content.header_extensions:
             sdp_lines.append(f"a=extmap:{ext.id} {ext.uri}")
 
-        # Candidates (RFC 5245 format)
         if t and t.candidates:
             for cand in t.candidates:
                 cand_line = (
@@ -435,22 +388,7 @@ def jingle_offer_to_sdp(session_initiate_iq: str) -> str:
 def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -> str:
     """
     Constructs a Jingle `session-accept` IQ XML string from an SDP answer and the original offer.
-
-    Validates and preserves:
-      - Offer `sid` and `initiator` (echoed exactly)
-      - Content `name` and `creator`
-      - Answering ICE credentials, DTLS fingerprint, setup ('active'/'passive'), and codecs.
-
-    Args:
-        sdp_answer_str: Raw SDP answer string generated by aiortc.
-        session_initiate_iq: The original `session-initiate` Jingle IQ XML string.
-
-    Returns:
-        Complete `<iq type="set">...<jingle action="session-accept">...</iq>` XML string.
-
-    Raises:
-        JingleXMLMalformedError: If input XML or SDP is unparseable.
-        JingleSessionMismatchError: If required session parameters cannot be validated.
+    Includes BUNDLE grouping, <rtcp-mux/>, initiator echo, and fallback candidate resolution.
     """
     if not sdp_answer_str or not sdp_answer_str.strip():
         raise JingleTranslationError("sdp_answer_str cannot be empty.")
@@ -475,6 +413,7 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
 
     jicofo_jid = initiate_root.attrib.get("from")
     client_jid = initiate_root.attrib.get("to")
+    initiator_jid = jingle_offer.attrib.get("initiator") or jicofo_jid
 
     # Parse SDP answer blocks
     sdp_ufrag: str = ""
@@ -487,7 +426,6 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
     direction_by_mid: Dict[str, str] = {}
     current_mid: str = "0"
 
-    # Regex patterns for SDP parsing
     re_ufrag = re.compile(r"^a=ice-ufrag:(.+)$")
     re_pwd = re.compile(r"^a=ice-pwd:(.+)$")
     re_fp = re.compile(r"^a=fingerprint:(\S+)\s+(.+)$")
@@ -571,26 +509,39 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
             )
             continue
 
-    # --------------------------------------------------------------------------
     # Build <jingle action="session-accept"> XML
-    # --------------------------------------------------------------------------
     accept_iq_id = f"_accept_{uuid.uuid4().hex[:8]}"
     to_attr = f' to="{jicofo_jid}"' if jicofo_jid else ""
     from_attr = f' from="{client_jid}"' if client_jid else ""
+    responder_attr = f' responder="{client_jid}"' if client_jid else ""
+    initiator_attr = f' initiator="{initiator_jid}"' if initiator_jid else ""
 
     xml_lines: List[str] = [
         f'<iq xmlns="{NS_CLIENT}" type="set"{to_attr}{from_attr} id="{accept_iq_id}">',
-        f'  <jingle xmlns="{NS_JINGLE}" action="session-accept" sid="{sid}" responder="{client_jid or ""}">',
+        f'  <jingle xmlns="{NS_JINGLE}" action="session-accept" sid="{sid}"{initiator_attr}{responder_attr}>',
     ]
 
     offer_contents = _find_all_elems(jingle_offer, "content")
+    content_names = [oc.attrib.get("name", "0") for oc in offer_contents]
+
+    # BUNDLE group declaration
+    if len(content_names) > 0:
+        xml_lines.append('    <group xmlns="urn:xmpp:jingle:apps:grouping:0" semantics="BUNDLE">')
+        for c_name in content_names:
+            xml_lines.append(f'      <content name="{c_name}"/>')
+        xml_lines.append('    </group>')
+
     for oc in offer_contents:
         c_name = oc.attrib.get("name", "0")
         c_creator = oc.attrib.get("creator", "initiator")
         
-        # Map media direction from answer
         direction = direction_by_mid.get(c_name, "both")
-        senders_map = {"sendrecv": "both", "sendonly": "initiator", "recvonly": "responder", "inactive": "none"}
+        senders_map = {
+            "sendrecv": "both",
+            "sendonly": "responder",
+            "recvonly": "initiator",
+            "inactive": "none",
+        }
         senders_attr = senders_map.get(direction, "both")
 
         desc_elem = _find_elem(oc, "description")
@@ -598,11 +549,17 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
 
         xml_lines.append(f'    <content name="{c_name}" creator="{c_creator}" senders="{senders_attr}">')
         xml_lines.append(f'      <description xmlns="{NS_RTP}" media="{media_type}">')
+        xml_lines.append('        <rtcp-mux/>')
 
-        # Codecs in answer
+        # Codec resolution with fallback
         ans_codecs = codecs_by_mid.get(c_name, [])
         if not ans_codecs and "0" in codecs_by_mid:
             ans_codecs = codecs_by_mid["0"]
+        if not ans_codecs:
+            for codec_list in codecs_by_mid.values():
+                if codec_list:
+                    ans_codecs = codec_list
+                    break
 
         for codec in ans_codecs:
             ch_attr = f' channels="{codec.channels}"' if codec.channels else (
@@ -627,7 +584,17 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
                 f'{sdp_fingerprint}</fingerprint>'
             )
 
-        for cand in candidates_by_mid.get(c_name, []):
+        # Candidate resolution with fallback across mid keys
+        ans_candidates = candidates_by_mid.get(c_name, [])
+        if not ans_candidates and "0" in candidates_by_mid:
+            ans_candidates = candidates_by_mid["0"]
+        if not ans_candidates:
+            for cand_list in candidates_by_mid.values():
+                if cand_list:
+                    ans_candidates = cand_list
+                    break
+
+        for cand in ans_candidates:
             xml_lines.append(
                 f'        <candidate component="{cand.component}" foundation="{cand.foundation}" '
                 f'ip="{cand.ip}" port="{cand.port}" priority="{cand.priority}" '
@@ -659,20 +626,6 @@ def build_source_add_stanza(
 ) -> str:
     """
     Builds the Jitsi Colibri2 / MUC source-declaration presence update stanza.
-
-    Declares the outgoing audio track SSRC, media type, and mute state per
-    lib-gst-meet / Jitsi WebRTC participant specification.
-
-    Args:
-        ssrc: 32-bit Synchronization Source ID.
-        media_type: Media type ('audio' or 'video').
-        source_name: Unique source name identifier (defaults to '{display_name}-a0').
-        muted: Audio mute flag.
-        room_jid: Target MUC conference room JID.
-        display_name: MUC participant display nick.
-
-    Returns:
-        XML string ready for transmission over XMPP signaling.
     """
     nick = display_name or "VAD-Harness-SpeakerBot"
     src_name = source_name or f"{nick}-a0"
@@ -690,3 +643,57 @@ def build_source_add_stanza(
     ]
 
     return "\n".join(stanza_lines)
+
+
+# ==============================================================================
+# Trickle ICE Candidate Parser (transport-info)
+# ==============================================================================
+
+def parse_transport_info_candidates(transport_info_xml: str) -> List[Tuple[str, IceCandidate]]:
+    """
+    Parses <candidate> elements from a Jingle transport-info XML string.
+    Returns list of (mid, IceCandidate) tuples.
+    """
+    if not transport_info_xml or not transport_info_xml.strip():
+        return []
+    try:
+        root = ET.fromstring(transport_info_xml.strip())
+    except ET.ParseError:
+        return []
+
+    jingle_elem = _find_elem(root, "jingle")
+    if jingle_elem is None:
+        if _strip_ns(root.tag) == "jingle":
+            jingle_elem = root
+        else:
+            return []
+
+    results: List[Tuple[str, IceCandidate]] = []
+    content_elems = _find_all_elems(jingle_elem, "content")
+    for c_elem in content_elems:
+        c_name = c_elem.attrib.get("name", "0")
+        trans_elem = _find_elem(c_elem, "transport")
+        if trans_elem is None:
+            continue
+        for cand_elem in _find_all_elems(trans_elem, "candidate"):
+            c_ip = cand_elem.attrib.get("ip")
+            c_port = cand_elem.attrib.get("port")
+            if not c_ip or not c_port:
+                continue
+            cand = IceCandidate(
+                foundation=cand_elem.attrib.get("foundation", "1"),
+                component=cand_elem.attrib.get("component", "1"),
+                protocol=cand_elem.attrib.get("protocol", "udp").lower(),
+                priority=cand_elem.attrib.get("priority", "2130706431"),
+                ip=c_ip,
+                port=c_port,
+                type=cand_elem.attrib.get("type", "host"),
+                rel_addr=cand_elem.attrib.get("rel-addr"),
+                rel_port=cand_elem.attrib.get("rel-port"),
+                tcptype=cand_elem.attrib.get("tcptype"),
+                generation=cand_elem.attrib.get("generation"),
+                network=cand_elem.attrib.get("network"),
+                id=cand_elem.attrib.get("id"),
+            )
+            results.append((c_name, cand))
+    return results

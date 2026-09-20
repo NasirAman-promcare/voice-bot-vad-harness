@@ -10,7 +10,7 @@ listener_display_name: "VAD-Harness-ListenerBot"
 xmpp_client_domain: "meet.jitsi"
 muc_room_domain_prefix: "muc."
 
-ice_gather_timeout_s: 10.0
+ice_gather_timeout_s: 25.0
 dtls_handshake_timeout_s: 15.0
 
 xmpp_reconnect_attempts: 3

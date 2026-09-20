@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import websockets
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger("webrtc_bridge.jitsi_signaling")
 
@@ -127,8 +128,14 @@ class JitsiSignalingSession:
         self._bind_future: Optional[asyncio.Future[str]] = None
         self._iq_futures: Dict[str, asyncio.Future[str]] = {}
 
+        self._on_transport_info_callback: Optional[Callable[[str], None]] = None
+
         if self.jingle_debug_log_path:
             self.jingle_debug_log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def set_transport_info_callback(self, callback: Callable[[str], None]) -> None:
+        """Registers a callback to receive incoming trickle ICE transport-info stanzas."""
+        self._on_transport_info_callback = callback
 
     def _log_stanza(self, direction: str, stanza: str) -> None:
         ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -202,7 +209,18 @@ class JitsiSignalingSession:
                 iq_id = root.attrib.get("id", "")
                 iq_type = root.attrib.get("type", "")
 
-                # 1. Jingle session-initiate from Jicofo
+                # Detect and raise errors returned by Jicofo
+                if iq_type == "error":
+                    error_elem = root.find(".//error")
+                    err_text = ET.tostring(error_elem, encoding="unicode") if error_elem is not None else trimmed
+                    logger.error("[Signaling] Server returned IQ error for id '%s': %s", iq_id, err_text)
+                    if iq_id in self._iq_futures:
+                        fut = self._iq_futures.pop(iq_id)
+                        if not fut.done():
+                            fut.set_exception(SignalingError(f"Jicofo rejected stanza (id={iq_id}): {err_text}"))
+                    return
+
+                # 1. Jingle messages from Jicofo (session-initiate OR transport-info)
                 jingle_elem = root.find(f".//{{{NS_JINGLE}}}jingle")
                 if jingle_elem is None:
                     for child in root:
@@ -210,14 +228,39 @@ class JitsiSignalingSession:
                             jingle_elem = child
                             break
 
-                if jingle_elem is not None and jingle_elem.attrib.get("action") == "session-initiate":
-                    self.jicofo_jid = root.attrib.get("from")
-                    self.jingle_sid = jingle_elem.attrib.get("sid")
-                    logger.info("Received Jingle session-initiate from Jicofo (%s, sid=%s)", self.jicofo_jid, self.jingle_sid)
-                    await self._offer_queue.put(trimmed)
-                    return
+                if jingle_elem is not None:
+                    action = jingle_elem.attrib.get("action")
+                    sender = root.attrib.get("from")
 
-                # 2. Handle GET IQs (Ping and Jicofo Feature Discovery - XEP-0030 disco#info)
+                    if action == "session-initiate":
+                        self.jicofo_jid = sender
+                        self.jingle_sid = jingle_elem.attrib.get("sid")
+                        logger.info("Received Jingle session-initiate from Jicofo (%s, sid=%s)", self.jicofo_jid, self.jingle_sid)
+
+                        # Immediate XMPP IQ result ACK back to Jicofo
+                        if iq_id and self.jicofo_jid:
+                            ack_stanza = f'<iq xmlns="{NS_CLIENT}" type="result" to="{self.jicofo_jid}" id="{iq_id}"/>'
+                            await self._send_raw(ack_stanza)
+
+                        await self._offer_queue.put(trimmed)
+                        return
+
+                    elif action == "transport-info":
+                        logger.info("Received Jingle transport-info (candidates) from %s", sender)
+                        # Acknowledge the stanza immediately
+                        if iq_id and sender:
+                            ack_stanza = f'<iq xmlns="{NS_CLIENT}" type="result" to="{sender}" id="{iq_id}"/>'
+                            await self._send_raw(ack_stanza)
+
+                        # Deliver candidates to media player
+                        if self._on_transport_info_callback:
+                            try:
+                                self._on_transport_info_callback(trimmed)
+                            except Exception as exc:
+                                logger.warning("Error in transport_info callback: %s", exc)
+                        return
+
+                # 2. Handle GET IQs (Ping and Jicofo Feature Discovery)
                 if iq_type == "get":
                     sender = root.attrib.get("from")
 
@@ -228,7 +271,7 @@ class JitsiSignalingSession:
                         await self._send_raw(pong)
                         return
 
-                    # Reply to Jicofo Service Discovery (disco#info with full WebRTC + BUNDLE feature set)
+                    # Reply to Jicofo Service Discovery
                     disco_elem = root.find(".//{http://jabber.org/protocol/disco#info}query")
                     if disco_elem is not None or "disco#info" in trimmed:
                         node_attr = ""
@@ -264,7 +307,7 @@ class JitsiSignalingSession:
                             self._bind_future.set_result(self.bound_jid)
                     return
 
-                # 4. Resolve generic tracked IQ futures (including Jicofo Conference ready result)
+                # 4. Resolve generic tracked IQ futures
                 if iq_id in self._iq_futures:
                     fut = self._iq_futures.pop(iq_id)
                     if not fut.done():
@@ -436,6 +479,16 @@ class JitsiSignalingSession:
         if not self._is_connected:
             raise SignalingConnectionError("Cannot send answer: Transport is closed.")
         logger.info("Transmitting Jingle session-accept IQ to Jicofo.")
+        
+        # Track the accept IQ to confirm Jicofo does not return <iq type="error">
+        try:
+            root = ET.fromstring(session_accept_iq)
+            iq_id = root.attrib.get("id")
+            if iq_id:
+                self._iq_futures[iq_id] = asyncio.get_running_loop().create_future()
+        except Exception:
+            iq_id = None
+
         await self._send_raw(session_accept_iq)
 
     async def announce_source(
