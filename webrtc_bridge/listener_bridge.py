@@ -27,6 +27,7 @@ from webrtc_bridge.jingle_sdp_translator import (
 from webrtc_bridge.jitsi_signaling import JitsiSignalingSession
 from webrtc_bridge.media_session import BridgeMediaSession
 from webrtc_bridge.raw_rtp_tap import RawRtpTap
+from webrtc_bridge.rtp_sequence import RtpSequenceUnwrapper
 
 logger = logging.getLogger("webrtc_bridge.listener_bridge")
 
@@ -72,6 +73,8 @@ class JitsiListenerBridge:
         self._ready_future: Optional[concurrent.futures.Future[None]] = None
         self._current_tap: Optional[RawRtpTap] = None
         self._active_clip_id: Optional[str] = None
+        # One continuous RTP stream spans all clips, so unwrap state persists across clips.
+        self._seq_unwrapper = RtpSequenceUnwrapper()
 
     async def _negotiate_media(self) -> None:
         """Asynchronous background worker executing Jingle offer/answer for recvonly session."""
@@ -226,9 +229,18 @@ class JitsiListenerBridge:
 
         received_samples_16k = 0
         is_clip_end_signaled = False
+        clip_base_seq = None
 
         def on_packet_arrived(sequence_id: int, payload_bytes: bytes, arrival_timestamp_ns: int) -> None:
-            nonlocal received_samples_16k, is_clip_end_signaled
+            nonlocal received_samples_16k, is_clip_end_signaled, clip_base_seq
+            # RTP sequence numbers start at a random value and wrap at 65535, but
+            # ListenerBot expects each clip to start at 0: unwrap, then rebase per clip.
+            ext_seq = self._seq_unwrapper.unwrap(sequence_id)
+            if clip_base_seq is None:
+                clip_base_seq = ext_seq
+            sequence_id = ext_seq - clip_base_seq
+            if sequence_id < 0:
+                return  # late packet from before this clip's capture window
             received_samples_16k += 320
             is_end = False
             if received_samples_16k >= threshold_samples_16k and not is_clip_end_signaled:

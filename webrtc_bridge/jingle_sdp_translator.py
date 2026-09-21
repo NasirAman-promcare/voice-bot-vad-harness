@@ -424,6 +424,9 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
     codecs_by_mid: Dict[str, List[CodecPayload]] = {}
     candidates_by_mid: Dict[str, List[IceCandidate]] = {}
     direction_by_mid: Dict[str, str] = {}
+    ssrc_by_mid: Dict[str, str] = {}
+    section_mid: Optional[str] = None
+    section_direction: Optional[str] = None
     current_mid: str = "0"
 
     re_ufrag = re.compile(r"^a=ice-ufrag:(.+)$")
@@ -431,6 +434,7 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
     re_fp = re.compile(r"^a=fingerprint:(\S+)\s+(.+)$")
     re_setup = re.compile(r"^a=setup:(\S+)$")
     re_mid = re.compile(r"^a=mid:(\S+)$")
+    re_ssrc = re.compile(r"^a=ssrc:(\d+)\s")
     re_rtpmap = re.compile(r"^a=rtpmap:(\d+)\s+([^/]+)/(\d+)(?:/(\d+))?$")
     re_fmtp = re.compile(r"^a=fmtp:(\d+)\s+(.+)$")
     re_cand = re.compile(
@@ -467,15 +471,30 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
             sdp_setup = m.group(1).strip()
             continue
 
+        if line.startswith("m="):
+            section_mid = None
+            section_direction = None
+            continue
+
         m = re_mid.match(line)
         if m:
             current_mid = m.group(1).strip()
+            section_mid = current_mid
             codecs_by_mid.setdefault(current_mid, [])
             candidates_by_mid.setdefault(current_mid, [])
+            if section_direction is not None:
+                direction_by_mid[current_mid] = section_direction
             continue
 
         if line in ("a=sendrecv", "a=sendonly", "a=recvonly", "a=inactive"):
-            direction_by_mid[current_mid] = line.replace("a=", "")
+            section_direction = line[2:]
+            if section_mid is not None:
+                direction_by_mid[section_mid] = section_direction
+            continue
+
+        m = re_ssrc.match(line)
+        if m:
+            ssrc_by_mid.setdefault(current_mid, m.group(1))
             continue
 
         m = re_rtpmap.match(line)
@@ -575,6 +594,16 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
             for pk, pv in codec.parameters.items():
                 xml_lines.append(f'          <parameter name="{pk}" value="{pv}"/>')
             xml_lines.append("        </payload-type>")
+
+        ssrc = ssrc_by_mid.get(c_name)
+        if ssrc and direction in ("sendonly", "sendrecv"):
+            endpoint_id = client_jid.split("/")[-1] if client_jid else "bot"
+            tag = "a0" if media_type == "audio" else "v0"
+            xml_lines.append(
+                f'        <source xmlns="{NS_SSMA}" ssrc="{ssrc}" name="{endpoint_id}-{tag}">'
+                f'<parameter name="msid" value="{endpoint_id}-{media_type}-0 {endpoint_id}-{media_type}-0"/>'
+                f'</source>'
+            )
 
         xml_lines.append("      </description>")
 

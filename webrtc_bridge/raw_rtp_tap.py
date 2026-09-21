@@ -153,7 +153,7 @@ class RawRtpTap:
     # --------------------------------------------------------------------------
     # Private Interception Handler
     # --------------------------------------------------------------------------
-    def _tap_handle_rtp_packet(self, packet: Any, arrival_time_ms: Optional[float] = None) -> None:
+    async def _tap_handle_rtp_packet(self, packet: Any, arrival_time_ms: Optional[float] = None) -> None:
         """
         Custom packet handler replacing `RTCRtpReceiver._handle_rtp_packet`.
 
