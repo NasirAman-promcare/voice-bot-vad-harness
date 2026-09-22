@@ -4,7 +4,9 @@ active_adapters:
 - webrtc_vad
 bridge_url: wss://vad-jitsi-nasir.duckdns.org/xmpp-websocket
 concurrency_mode: sequential
-corpus_category_filter: []
+corpus_category_filter:
+- clean speech
+- packet-loss/jitter
 corpus_manifest_path: corpus/manifest.json
 hardware_policy: cpu_only
 include_held_out_slice: false
