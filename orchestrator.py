@@ -35,7 +35,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import yaml
 
-import aiortc
+
 
 # Core Contracts & Subsystems
 from corpus.manifest import Manifest, ManifestEntry, load_manifest
@@ -814,8 +814,11 @@ def run_benchmark(config_path: Union[str, Path] = "config/run_config.yaml") -> D
     logger.info("Loaded manifest '%s' (%d clips, hash=%s)", config.corpus_manifest_path, len(manifest), manifest.version_hash)
     sys.stdout.flush()
 
-    # Capture runtime environment & codec properties for reproducibility (A23)
-    aiortc_ver = getattr(aiortc, "__version__", "unknown")
+    try:
+        from importlib.metadata import version as _pkg_version
+        aiortc_ver = _pkg_version("aiortc")
+    except Exception:
+        aiortc_ver = "not installed"
 
     # Initialize permanent results store
     results_store = ResultsStore(config.results_destination)

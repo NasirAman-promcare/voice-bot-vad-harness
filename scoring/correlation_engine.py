@@ -365,7 +365,7 @@ def build_weakness_heatmap(
                 f1=round(float(sum(f1_scores) / len(f1_scores)), 4) if f1_scores else None,
                 precision=round(float(sum(precisions) / len(precisions)), 4) if precisions else None,
                 recall=round(float(sum(recalls) / len(recalls)), 4) if recalls else None,
-                false_positive_rate=round(float(sum(fprs) / len(fprs)), 4) if fprs else 0.0,
+                false_positive_rate=round(float(sum(fprs) / len(fprs)), 4) if fprs else None,
                 false_negative_rate=round(float(sum(fnrs) / len(fnrs)), 4) if fnrs else None,
                 onset_latency_ms=round(float(sum(onset_latencies) / len(onset_latencies)), 2) if onset_latencies else None,
                 offset_hangover_latency_ms=round(float(sum(offset_latencies) / len(offset_latencies)), 2) if offset_latencies else None,

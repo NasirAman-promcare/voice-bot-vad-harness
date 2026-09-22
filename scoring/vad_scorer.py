@@ -207,11 +207,11 @@ def compute_metrics_bundle(
     else:
         recall = None
 
-    # 3. F1 Score: Defined only when both precision and recall are valid numbers
-    if precision is not None and recall is not None and (precision + recall) > 0.0:
-        f1 = float(2.0 * (precision * recall) / (precision + recall))
+    # 3. F1 Score: 
+    if total_gt_positives > 0:
+       f1 = float(2 * tp / (2 * tp + fp + fn))
     else:
-        f1 = None
+       f1 = None
 
     # 4. Accuracy
     accuracy = float((tp + tn) / total_frames) if total_frames > 0 else 1.0
