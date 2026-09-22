@@ -312,12 +312,12 @@ def build_weakness_heatmap(
                 )
                 continue
 
-            # Pass-through aggregated metrics for populated cell
-            f1_scores = [c.metrics.f1 for c in clips]
-            precisions = [c.metrics.precision for c in clips]
-            recalls = [c.metrics.recall for c in clips]
-            fprs = [c.metrics.false_positive_rate for c in clips]
-            fnrs = [c.metrics.false_negative_rate for c in clips]
+            # Pass-through aggregated metrics for populated cell (filtering out None values)
+            f1_scores = [c.metrics.f1 for c in clips if c.metrics.f1 is not None]
+            precisions = [c.metrics.precision for c in clips if c.metrics.precision is not None]
+            recalls = [c.metrics.recall for c in clips if c.metrics.recall is not None]
+            fprs = [c.metrics.false_positive_rate for c in clips if c.metrics.false_positive_rate is not None]
+            fnrs = [c.metrics.false_negative_rate for c in clips if c.metrics.false_negative_rate is not None]
 
             # Collect latency metrics associated with these clips
             onset_latencies: List[float] = []
@@ -365,7 +365,7 @@ def build_weakness_heatmap(
                 f1=round(float(sum(f1_scores) / len(f1_scores)), 4) if f1_scores else None,
                 precision=round(float(sum(precisions) / len(precisions)), 4) if precisions else None,
                 recall=round(float(sum(recalls) / len(recalls)), 4) if recalls else None,
-                false_positive_rate=round(float(sum(fprs) / len(fprs)), 4) if fprs else None,
+                false_positive_rate=round(float(sum(fprs) / len(fprs)), 4) if fprs else 0.0,
                 false_negative_rate=round(float(sum(fnrs) / len(fnrs)), 4) if fnrs else None,
                 onset_latency_ms=round(float(sum(onset_latencies) / len(onset_latencies)), 2) if onset_latencies else None,
                 offset_hangover_latency_ms=round(float(sum(offset_latencies) / len(offset_latencies)), 2) if offset_latencies else None,

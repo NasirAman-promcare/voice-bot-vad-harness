@@ -45,6 +45,47 @@ def test_empty_adapter_evaluation_returns_none():
     assert report.overall_metrics.metrics.recall is None
     assert report.overall_metrics.metrics.f1 is None
 
+def test_correlation_engine_handles_silence_clips_without_type_error():
+    from scoring.vad_scorer import score_single_clip
+    from scoring.correlation_engine import build_weakness_heatmap
+    from corpus.manifest import ManifestEntry
+    from vad_adapters.adapter_contract import DecisionRecord
+
+    # Create a silence clip score result with None precision/recall/f1
+    entry = ManifestEntry(
+        clip_id="silence_test_01.wav",
+        clip_path="corpus/audio/silence_test_01.wav",
+        category="silence-only",
+        target_snr_db=None,
+        target_loudness_lufs=-60.0,
+        speech_segments=(),
+        calibration_marker_offset_samples=320,
+    )
+    records = [
+        DecisionRecord(adapter_id="vad_a", sample_offset=0, frame_index=0, is_speech=False, score=0.0)
+    ]
+    clip_res = score_single_clip(
+        decision_records=records,
+        manifest_entry=entry,
+        total_clip_samples=16000,
+        scoring_grid_ms=10,
+        sample_rate_hz=16000,
+    )
+
+    assert clip_res.metrics.f1 is None
+    assert clip_res.metrics.precision is None
+
+    # Must build weakness heatmap without TypeError
+    report = build_weakness_heatmap(
+        scores=[clip_res],
+        run_id="silence_run",
+        manifest_version="v1_hash",
+    )
+    cell = report.get_cell("vad_a", "silence-only")
+    assert cell.is_empty is False
+    assert cell.f1 is None
+    assert cell.false_positive_rate == 0.0
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

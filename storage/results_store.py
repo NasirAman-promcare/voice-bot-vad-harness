@@ -255,6 +255,7 @@ class ResultsStore:
         clip_score_result: Any,
         vad_library_version: Optional[str] = None,
         tier: str = "tier1",
+        diagnostics: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         Persists a single clip's raw scoring metrics without any aggregation.
@@ -278,6 +279,7 @@ class ResultsStore:
             "metrics": metrics_dict,
             "alignment_status": alignment_status,
             "stream_length_discrepancy_ms": discrepancy_ms,
+            "diagnostics": diagnostics or {},
         }
 
         record = RawEvaluationRecord(

@@ -341,7 +341,7 @@ def align_marker(
 
     time_zero_ns = stream_start_timestamp_ns
     if stream_start_timestamp_ns > 0:
-        offset_duration_ns = int((detected_offset / sample_rate_hz) * 1e9)
+        offset_duration_ns = int((sample_delta / sample_rate_hz) * 1e9)
         time_zero_ns = stream_start_timestamp_ns + offset_duration_ns
 
     status = "ambiguous_peaks" if is_ambiguous else "detected"

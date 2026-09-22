@@ -35,6 +35,8 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import yaml
 
+import aiortc
+
 # Core Contracts & Subsystems
 from corpus.manifest import Manifest, ManifestEntry, load_manifest
 from scoring.vad_scorer import (
@@ -210,8 +212,13 @@ def load_run_config(config_path: Union[str, Path]) -> RunConfig:
     except UnknownAdapterError as exc:
         raise ValueError(f"Configuration specifies unrecognized active adapter: {exc}") from exc
 
+    base_run_id = str(raw["run_id"]).strip()
+    # Append unique UTC timestamp to prevent log collision across attempts (K14)
+    timestamp_suffix = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
+    run_id = f"{base_run_id}_{timestamp_suffix}" if not base_run_id.endswith(timestamp_suffix) else base_run_id
+
     return RunConfig(
-        run_id=str(raw["run_id"]).strip(),
+        run_id=run_id,
         tiers_to_run=tiers,
         active_adapters=raw_adapters,
         webrtc_aggressiveness_modes=webrtc_modes,
@@ -397,6 +404,8 @@ def run_tier1_offline_bench(
                     decision_threshold=config.decision_threshold,
                 )
                 adapter_clip_results[adapter_name].append(clip_score)
+
+                
 
                 results_store.store_clip_score_result(
                     run_id=config.run_id,
@@ -710,12 +719,18 @@ def run_tier2_live_pipeline(
                             decision_threshold=config.decision_threshold,
                         )
                         adapter_clip_results[adapter_name].append(clip_score)
-
+                        diag_summary = {
+                            "packet_count": len(captured_data.arrival_timestamps_ns),
+                            "gap_count": sum(1 for d in captured_data.packet_diagnostics if d.is_gap),
+                            "missing_packets": sum(d.missing_count for d in captured_data.packet_diagnostics),
+                        }
                         results_store.store_clip_score_result(
                             run_id=config.run_id,
                             manifest_version=manifest.version_hash,
                             clip_score_result=clip_score,
                             tier="tier2",
+                            diagnostics=diag_summary,
+
                         )
                     except Exception as exc:
                         logger.error(
@@ -799,6 +814,9 @@ def run_benchmark(config_path: Union[str, Path] = "config/run_config.yaml") -> D
     logger.info("Loaded manifest '%s' (%d clips, hash=%s)", config.corpus_manifest_path, len(manifest), manifest.version_hash)
     sys.stdout.flush()
 
+    # Capture runtime environment & codec properties for reproducibility (A23)
+    aiortc_ver = getattr(aiortc, "__version__", "unknown")
+
     # Initialize permanent results store
     results_store = ResultsStore(config.results_destination)
     results_store.store_run_context(
@@ -810,6 +828,8 @@ def run_benchmark(config_path: Union[str, Path] = "config/run_config.yaml") -> D
             "scoring_grid_ms": config.scoring_grid_ms,
             "active_adapters": list(config.active_adapters),
             "tiers_to_run": list(config.tiers_to_run),
+            "aiortc_version": aiortc_ver,
+            "python_version": sys.version.split()[0],
         },
     )
 
