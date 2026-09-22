@@ -591,7 +591,14 @@ def sdp_answer_to_jingle_accept(sdp_answer_str: str, session_initiate_iq: str) -
             xml_lines.append(
                 f'        <payload-type id="{codec.id}" name="{codec.name}" clockrate="{codec.clockrate}"{ch_attr}>'
             )
-            for pk, pv in codec.parameters.items():
+            # A10 Fix: Ensure negotiated Opus transport settings match bridge configuration
+            params = dict(codec.parameters)
+            if codec.name.lower() == "opus":
+                params.setdefault("maxaveragebitrate", "32000")
+                params.setdefault("useinbandfec", "1")
+                params.setdefault("usedtx", "0")
+
+            for pk, pv in params.items():
                 xml_lines.append(f'          <parameter name="{pk}" value="{pv}"/>')
             xml_lines.append("        </payload-type>")
 

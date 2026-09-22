@@ -195,6 +195,7 @@ class JitsiSignalingSession:
                     self._sasl_future.set_result(True)
                 return
 
+
             if tag == "failure" and (NS_SASL in root.tag or root.attrib.get("xmlns") == NS_SASL):
                 error_detail = ET.tostring(root, encoding="unicode")
                 if self._sasl_future and not self._sasl_future.done():
@@ -220,6 +221,7 @@ class JitsiSignalingSession:
                             fut.set_exception(SignalingError(f"Jicofo rejected stanza (id={iq_id}): {err_text}"))
                     return
 
+                 
                 # 1. Jingle messages from Jicofo (session-initiate OR transport-info)
                 jingle_elem = root.find(f".//{{{NS_JINGLE}}}jingle")
                 if jingle_elem is None:
@@ -230,14 +232,21 @@ class JitsiSignalingSession:
 
                 if jingle_elem is not None:
                     action = jingle_elem.attrib.get("action")
-                    sender = root.attrib.get("from")
+                    sender = root.attrib.get("from", "")
 
                     if action == "session-initiate":
+                        # A16: Accept session-initiate ONLY from Jicofo / focus to prevent P2P overwrites
+                        if "focus" not in sender and not sender.endswith("/focus") and not sender.startswith("focus@"):
+                            logger.warning("[Signaling] Ignoring P2P session-initiate from non-focus sender: %s", sender)
+                            if iq_id:
+                                err_ack = f'<iq xmlns="{NS_CLIENT}" type="error" to="{sender}" id="{iq_id}"><error type="cancel"><service-unavailable xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/></error></iq>'
+                                await self._send_raw(err_ack)
+                            return
+
                         self.jicofo_jid = sender
                         self.jingle_sid = jingle_elem.attrib.get("sid")
                         logger.info("Received Jingle session-initiate from Jicofo (%s, sid=%s)", self.jicofo_jid, self.jingle_sid)
 
-                        # Immediate XMPP IQ result ACK back to Jicofo
                         if iq_id and self.jicofo_jid:
                             ack_stanza = f'<iq xmlns="{NS_CLIENT}" type="result" to="{self.jicofo_jid}" id="{iq_id}"/>'
                             await self._send_raw(ack_stanza)
@@ -247,18 +256,33 @@ class JitsiSignalingSession:
 
                     elif action == "transport-info":
                         logger.info("Received Jingle transport-info (candidates) from %s", sender)
-                        # Acknowledge the stanza immediately
                         if iq_id and sender:
                             ack_stanza = f'<iq xmlns="{NS_CLIENT}" type="result" to="{sender}" id="{iq_id}"/>'
                             await self._send_raw(ack_stanza)
 
-                        # Deliver candidates to media player
                         if self._on_transport_info_callback:
                             try:
                                 self._on_transport_info_callback(trimmed)
                             except Exception as exc:
                                 logger.warning("Error in transport_info callback: %s", exc)
                         return
+
+                    elif action == "session-terminate":
+                        logger.info("[Signaling] Received Jingle session-terminate from %s", sender)
+                        if iq_id and sender:
+                            ack_stanza = f'<iq xmlns="{NS_CLIENT}" type="result" to="{sender}" id="{iq_id}"/>'
+                            await self._send_raw(ack_stanza)
+                        self._is_connected = False
+                        return
+
+                    elif action in ("source-add", "source-remove"):
+                        logger.info("[Signaling] Received Jingle %s from %s (acknowledged)", action, sender)
+                        if iq_id and sender:
+                            ack_stanza = f'<iq xmlns="{NS_CLIENT}" type="result" to="{sender}" id="{iq_id}"/>'
+                            await self._send_raw(ack_stanza)
+                        return
+                
+
 
                 # 2. Handle GET IQs (Ping and Jicofo Feature Discovery)
                 if iq_type == "get":

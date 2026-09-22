@@ -38,7 +38,7 @@ import logging
 import os
 from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterator, Optional, Sequence, Union
+from typing import Any, Dict, Iterator, Optional, Sequence, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -254,21 +254,15 @@ class ResultsStore:
         manifest_version: str,
         clip_score_result: Any,
         vad_library_version: Optional[str] = None,
+        tier: str = "tier1",
     ) -> None:
         """
         Persists a single clip's raw scoring metrics without any aggregation.
-
-        Args:
-            run_id: Unique run ID.
-            manifest_version: Hash tag of the manifest.
-            clip_score_result: ClipScoreResult instance from scoring/vad_scorer.py.
-            vad_library_version: Optional explicit library version (queried dynamically if None).
         """
         adapter_id = getattr(clip_score_result, "adapter_id", "unknown_adapter")
         clip_id = getattr(clip_score_result, "clip_id", "unknown_clip")
         lib_ver = vad_library_version or get_vad_library_version(adapter_id)
 
-        # Convert MetricBundle to raw dict
         metrics_obj = getattr(clip_score_result, "metrics", None)
         metrics_dict = asdict(metrics_obj) if metrics_obj is not None else {}
 
@@ -277,6 +271,7 @@ class ResultsStore:
         discrepancy_ms = getattr(resampled_obj, "stream_length_discrepancy_ms", 0.0)
 
         payload = {
+            "tier": tier,
             "category": getattr(clip_score_result, "category", None),
             "target_snr_db": getattr(clip_score_result, "target_snr_db", None),
             "target_loudness_lufs": getattr(clip_score_result, "target_loudness_lufs", None),
@@ -303,14 +298,18 @@ class ResultsStore:
         manifest_version: str,
         adapter_id: str,
         clip_id: str,
-        latency_data: Dict[str, Any],
+        latency_data: Any,
         record_type: str = "latency_measurement",
         vad_library_version: Optional[str] = None,
+        tier: Optional[str] = None,
     ) -> None:
         """
         Persists a single raw latency measurement (algorithmic, onset, or hangover).
         """
         lib_ver = vad_library_version or get_vad_library_version(adapter_id)
+        payload_data = asdict(latency_data) if is_dataclass(latency_data) and not isinstance(latency_data, type) else (latency_data if isinstance(latency_data, dict) else {"data": latency_data})
+        if tier is not None and "tier" not in payload_data:
+            payload_data["tier"] = tier
         record = RawEvaluationRecord(
             run_id=run_id,
             manifest_version=manifest_version,
@@ -319,7 +318,7 @@ class ResultsStore:
             clip_id=clip_id,
             record_type=record_type,
             timestamp_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            payload=latency_data,
+            payload=payload_data,
         )
         self.append_raw_record(record)
 
@@ -342,6 +341,60 @@ class ResultsStore:
             record_type="audio_profile",
             timestamp_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
             payload=profile_data,
+        )
+        self.append_raw_record(record)
+
+    def store_clip_failure(
+        self,
+        run_id: str,
+        manifest_version: str,
+        adapter_id: str,
+        clip_id: str,
+        tier: str,
+        stage: str,
+        error: str,
+        diagnostics: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """
+        Persists a clip-level failure record whenever processing or transport fails (A12).
+        """
+        lib_ver = get_vad_library_version(adapter_id)
+        payload = {
+            "tier": tier,
+            "stage": stage,
+            "error": str(error),
+            "diagnostics": diagnostics or {},
+        }
+        record = RawEvaluationRecord(
+            run_id=run_id,
+            manifest_version=manifest_version,
+            vad_library_version=lib_ver,
+            adapter_id=adapter_id,
+            clip_id=clip_id,
+            record_type="clip_failure",
+            timestamp_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            payload=payload,
+        )
+        self.append_raw_record(record)
+
+    def store_run_context(
+        self,
+        run_id: str,
+        manifest_version: str,
+        context_data: Dict[str, Any],
+    ) -> None:
+        """
+        Persists environmental, codec, hardware, and runtime context for the run (A23).
+        """
+        record = RawEvaluationRecord(
+            run_id=run_id,
+            manifest_version=manifest_version,
+            vad_library_version="harness==1.0.0",
+            adapter_id="orchestrator",
+            clip_id="run_context",
+            record_type="run_context",
+            timestamp_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            payload=context_data,
         )
         self.append_raw_record(record)
 

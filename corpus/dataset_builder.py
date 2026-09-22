@@ -53,11 +53,8 @@ import soundfile as sf
 import yaml
 from scipy import signal
 
-# Optional import from latency.marker_alignment to maintain bit-level single-source-of-truth
-try:
-    from latency.marker_alignment import generate_reference_marker as imported_marker_gen
-except (ImportError, AttributeError):
-    imported_marker_gen = None
+#Mandatory import: guarantee bit-identical chirp across dataset builder and latency alignment (A24)
+from latency.marker_alignment import generate_reference_marker
 
 # Configure structured logging
 logger = logging.getLogger("corpus.dataset_builder")
@@ -176,39 +173,6 @@ class CorpusBuildConfig:
 # ==============================================================================
 # Audio Signal Processing Utilities
 # ==============================================================================
-def generate_reference_marker(sample_rate: int = SAMPLE_RATE) -> np.ndarray:
-    """
-    Generates or imports the canonical reference calibration chirp.
-    Linear frequency sweep from 700 Hz to 2600 Hz over 60 ms at -6.0 dBFS peak.
-    """
-    if imported_marker_gen is not None:
-        marker = imported_marker_gen(sample_rate)
-        if isinstance(marker, np.ndarray) and len(marker) > 0:
-            return marker.astype(np.float32)
-
-    duration_sec = MARKER_DURATION_MS / 1000.0
-    num_samples = int(sample_rate * duration_sec)
-    t = np.linspace(0.0, duration_sec, num_samples, endpoint=False, dtype=np.float64)
-    # Linear sweep: f(t) = f0 + (f1 - f0) * (t / T)
-    f0, f1 = 700.0, 2600.0
-    phase = 2.0 * np.pi * (f0 * t + 0.5 * (f1 - f0) * (t**2 / duration_sec))
-    chirp = np.sin(phase)
-
-    # Apply 5ms Tukey/Hann fade-in/out to prevent boundary transients
-    fade_len = int(sample_rate * 0.005)
-    if fade_len > 0 and len(chirp) > 2 * fade_len:
-        fade_in = 0.5 * (1.0 - np.cos(np.pi * np.arange(fade_len) / fade_len))
-        fade_out = fade_in[::-1]
-        chirp[:fade_len] *= fade_in
-        chirp[-fade_len:] *= fade_out
-
-    # Scale to exact peak amplitude (-6.0 dBFS)
-    peak_amp = 10.0 ** (MARKER_PEAK_DBFS / 20.0)
-    max_val = np.max(np.abs(chirp))
-    if max_val > 1e-9:
-        chirp = (chirp / max_val) * peak_amp
-
-    return chirp.astype(np.float32)
 
 
 def compute_rms(audio: np.ndarray) -> float:

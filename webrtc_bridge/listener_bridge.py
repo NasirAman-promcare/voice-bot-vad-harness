@@ -14,6 +14,8 @@ import asyncio
 import concurrent.futures
 import logging
 import math
+import queue
+import threading
 import time
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -75,6 +77,8 @@ class JitsiListenerBridge:
         self._active_clip_id: Optional[str] = None
         # One continuous RTP stream spans all clips, so unwrap state persists across clips.
         self._seq_unwrapper = RtpSequenceUnwrapper()
+        self._worker_queue: Optional[queue.Queue[Any]] = None
+        self._worker_thread: Optional[threading.Thread] = None
 
     async def _negotiate_media(self) -> None:
         """Asynchronous background worker executing Jingle offer/answer for recvonly session."""
@@ -215,21 +219,52 @@ class JitsiListenerBridge:
         self._active_clip_id = clip_id
         logger.debug("[ListenerBridge] Arming stream capture tap for clip '%s'", clip_id)
 
-        expected_samples_16k = 0
-        if getattr(manifest_entry, "speech_segments", None):
+        # Dynamic capture window sizing based on manifest content & segments (A18)
+        if getattr(manifest_entry, "speech_segments", None) and len(manifest_entry.speech_segments) > 0:
             last_segment_end = max(seg[1] for seg in manifest_entry.speech_segments)
-            expected_samples_16k = last_segment_end + 4800
+            # Allow 1.2s tail after speech end to capture full VAD hangover resolution
+            expected_samples_16k = last_segment_end + 19200
         else:
-            expected_samples_16k = 48000
+            # For silence-only or non-speech clips, allow up to 8.0s (128,000 samples at 16kHz)
+            expected_samples_16k = 128000
 
-        margin_samples_16k = 6400
-        threshold_samples_16k = expected_samples_16k + margin_samples_16k
+        threshold_samples_16k = expected_samples_16k
 
         self.listener_bot.prepare_for_clip(clip_id)
 
         received_samples_16k = 0
         is_clip_end_signaled = False
         clip_base_seq = None
+
+        # A17 Fix: Dedicated worker queue to decouple decoding/inference from aiortc network event loop
+        self._worker_queue = queue.Queue()
+
+        def _bot_ingest_worker() -> None:
+            assert self._worker_queue is not None
+            while True:
+                item = self._worker_queue.get()
+                if item is None:
+                    self._worker_queue.task_done()
+                    break
+                seq_id, p_bytes, arr_ns, is_end = item
+                try:
+                    self.listener_bot.ingest_packet(
+                        sequence_id=seq_id,
+                        payload=p_bytes,
+                        timestamp_ns=arr_ns,
+                        is_clip_end=is_end,
+                    )
+                except Exception as exc:
+                    logger.error("[ListenerBridgeWorker] Ingest error: %s", exc)
+                finally:
+                    self._worker_queue.task_done()
+
+        self._worker_thread = threading.Thread(
+            target=_bot_ingest_worker,
+            daemon=True,
+            name=f"ListenerBotWorker-{clip_id}",
+        )
+        self._worker_thread.start()
 
         def on_packet_arrived(sequence_id: int, payload_bytes: bytes, arrival_timestamp_ns: int) -> None:
             nonlocal received_samples_16k, is_clip_end_signaled, clip_base_seq
@@ -241,18 +276,25 @@ class JitsiListenerBridge:
             sequence_id = ext_seq - clip_base_seq
             if sequence_id < 0:
                 return  # late packet from before this clip's capture window
+
+            # A09 Fix: Apply deterministic 10% packet loss impairment for packet-loss/jitter category
+            is_loss_category = (
+                getattr(manifest_entry, "category", "") == "packet-loss/jitter"
+                or "packet_loss" in clip_id
+            )
+            if is_loss_category and sequence_id > 10 and (sequence_id % 10 == 0):
+                return
+
             received_samples_16k += 320
             is_end = False
             if received_samples_16k >= threshold_samples_16k and not is_clip_end_signaled:
                 is_end = True
                 is_clip_end_signaled = True
 
-            self.listener_bot.ingest_packet(
-                sequence_id=sequence_id,
-                payload=payload_bytes,
-                timestamp_ns=arrival_timestamp_ns,
-                is_clip_end=is_end,
-            )
+            # Enqueue immediately onto worker thread; network event loop remains non-blocking (A17)
+            if self._worker_queue is not None:
+                self._worker_queue.put((sequence_id, payload_bytes, arrival_timestamp_ns, is_end))
+
             if is_end and self._current_tap is not None:
                 self._current_tap.stop()
 
@@ -290,6 +332,12 @@ class JitsiListenerBridge:
             logger.error("[ListenerBridge] Stream capture failed for '%s': %s", clip_id, exc)
             raise ListenerBridgeExecutionError(f"Failed to capture stream for clip '{clip_id}': {exc}") from exc
         finally:
+            if self._worker_queue is not None:
+                self._worker_queue.put(None)
+                if self._worker_thread is not None:
+                    self._worker_thread.join(timeout=2.0)
+                self._worker_queue = None
+                self._worker_thread = None
             if self._current_tap is not None:
                 self._current_tap.close()
                 self._current_tap = None

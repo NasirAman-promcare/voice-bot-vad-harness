@@ -20,7 +20,7 @@ opus_bitrate_bps: 32000
 opus_dtx_enabled: false
 opus_fec_enabled: true
 
-# Set to false to allow self-signed / staging certificates on the OCI Jitsi instance
-ssl_verify: false
+# Production Let's Encrypt certificates verified
+ssl_verify: true
 
 jingle_debug_log_path: "results/run_output/jingle_stanzas_debug.log"

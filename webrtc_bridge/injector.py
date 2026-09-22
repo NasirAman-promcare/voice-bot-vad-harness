@@ -152,15 +152,8 @@ class WebRTCJitsiAudioInjector:
         logger.info("[WebRTCInjector] Awaiting ICE & DTLS handshake completion...")
         await self._media_session.async_wait_for_connection()
 
-        # 4. Announce source to MUC
+        # Source SSRC is already signaled in session-accept (F3); avoid redundant presence nick update (A26)
         ssrc = self._media_session.outgoing_ssrc
-        source_name = f"{self.config.speaker_display_name}-a0"
-        await self._signaling.announce_source(
-            ssrc=ssrc,
-            media_type=self._media_session.outgoing_media_type,
-            source_name=source_name,
-            muted=False,
-        )
 
         self.is_connected = True
         logger.info("WebRTCJitsiAudioInjector media negotiation complete (SSRC: %d)", ssrc)

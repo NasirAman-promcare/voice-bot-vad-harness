@@ -44,6 +44,7 @@ from scoring.vad_scorer import (
     score_single_clip,
 )
 from storage.results_store import ResultsStore, get_vad_library_version
+import dataclasses
 from vad_adapters.adapter_contract import (
     DecisionRecord,
     VADAdapterContract,
@@ -122,6 +123,7 @@ class RunConfig:
     hardware_policy: str
     warmup_clip_count: int
     scoring_grid_ms: int
+    decision_threshold: float
     concurrency_mode: str
     include_held_out_slice: bool
     results_destination: str
@@ -218,6 +220,7 @@ def load_run_config(config_path: Union[str, Path]) -> RunConfig:
         hardware_policy=hardware_policy,
         warmup_clip_count=max(0, int(raw.get("warmup_clip_count", 5))),
         scoring_grid_ms=max(1, int(raw.get("scoring_grid_ms", 10))),
+        decision_threshold=float(raw.get("decision_threshold", 0.5)),
         concurrency_mode=concurrency_mode,
         include_held_out_slice=bool(raw.get("include_held_out_slice", False)),
         results_destination=str(raw["results_destination"]).strip(),
@@ -307,6 +310,15 @@ def run_tier1_offline_bench(
                 entry.clip_id,
                 exc,
             )
+            results_store.store_clip_failure(
+                run_id=config.run_id,
+                manifest_version=manifest.version_hash,
+                adapter_id="all",
+                clip_id=entry.clip_id,
+                tier="tier1",
+                stage="audio_load",
+                error=str(exc),
+            )
             continue
 
         if profile_audio_clip is not None and entry.clip_id not in audio_profiles:
@@ -356,6 +368,15 @@ def run_tier1_offline_bench(
                     exc,
                     exc_info=True,
                 )
+                results_store.store_clip_failure(
+                    run_id=config.run_id,
+                    manifest_version=manifest.version_hash,
+                    adapter_id=adapter_name,
+                    clip_id=entry.clip_id,
+                    tier="tier1",
+                    stage="frame_processing",
+                    error=str(exc),
+                )
                 continue
 
             if is_warmup:
@@ -373,6 +394,7 @@ def run_tier1_offline_bench(
                     total_clip_samples=total_samples,
                     scoring_grid_ms=config.scoring_grid_ms,
                     sample_rate_hz=16000,
+                    decision_threshold=config.decision_threshold,
                 )
                 adapter_clip_results[adapter_name].append(clip_score)
 
@@ -380,6 +402,7 @@ def run_tier1_offline_bench(
                     run_id=config.run_id,
                     manifest_version=manifest.version_hash,
                     clip_score_result=clip_score,
+                    tier="tier1",
                 )
 
                 if frame_compute_times_ns:
@@ -399,6 +422,7 @@ def run_tier1_offline_bench(
                         clip_id=entry.clip_id,
                         latency_data=latency_payload,
                         record_type="tier1_algorithmic_latency",
+                        tier="tier1",
                     )
 
             except Exception as exc:
@@ -408,6 +432,15 @@ def run_tier1_offline_bench(
                     entry.clip_id,
                     adapter_name,
                     exc,
+                )
+                results_store.store_clip_failure(
+                    run_id=config.run_id,
+                    manifest_version=manifest.version_hash,
+                    adapter_id=adapter_name,
+                    clip_id=entry.clip_id,
+                    tier="tier1",
+                    stage="scoring",
+                    error=str(exc),
                 )
                 continue
 
@@ -562,14 +595,25 @@ def run_tier2_live_pipeline(
                         pass_label,
                         exc,
                     )
+                    results_store.store_clip_failure(
+                        run_id=config.run_id,
+                        manifest_version=manifest.version_hash,
+                        adapter_id=pass_label,
+                        clip_id=entry.clip_id,
+                        tier="tier2",
+                        stage="transport",
+                        error=str(exc),
+                    )
                     continue
 
                 # Step 4: Marker cross-correlation alignment for ground-truth Time Zero
                 try:
-                    alignment_offset = getattr(entry, "calibration_marker_offset_samples", None) or getattr(entry, "calibration_marker_offset", 320)
+                    alignment_offset = getattr(playback_meta, "calibration_marker_offset_samples", None) or getattr(entry, "calibration_marker_offset_samples", 320)
+                    stream_t0_ns = captured_data.arrival_timestamps_ns[0] if captured_data.arrival_timestamps_ns else 0
                     alignment_result = align_marker(
                         received_audio=captured_data.decoded_audio_16k,
                         reference_marker_offset=alignment_offset,
+                        stream_start_timestamp_ns=stream_t0_ns,
                         sample_rate_hz=16000,
                     )
                 except Exception as exc:
@@ -579,21 +623,63 @@ def run_tier2_live_pipeline(
                         entry.clip_id,
                         exc,
                     )
+                    results_store.store_clip_failure(
+                        run_id=config.run_id,
+                        manifest_version=manifest.version_hash,
+                        adapter_id=pass_label,
+                        clip_id=entry.clip_id,
+                        tier="tier2",
+                        stage="marker_alignment",
+                        error=str(exc),
+                    )
                     continue
 
-                # Step 4 & 5: Evaluate each adapter in this pass
+                # A03 Fix: Gate on successful marker detection (do not store corrupted/undetected markers as good runs)
+                if not alignment_result.marker_detected or alignment_result.status != "detected":
+                    logger.warning(
+                        "[Run %s | Tier 2 | Clip %s] Marker not detected (status=%s, conf=%.3f). Gating clip.",
+                        config.run_id,
+                        entry.clip_id,
+                        alignment_result.status,
+                        alignment_result.alignment_confidence,
+                    )
+                    results_store.store_clip_failure(
+                        run_id=config.run_id,
+                        manifest_version=manifest.version_hash,
+                        adapter_id=pass_label,
+                        clip_id=entry.clip_id,
+                        tier="tier2",
+                        stage="marker_gating",
+                        error=f"Marker alignment failed with status: '{alignment_result.status}' (confidence: {alignment_result.alignment_confidence})",
+                    )
+                    continue
+
+                # A01 & A21 Fix: Realign timeline by subtracting delta, using speaker's reported clip duration
+                delta = alignment_result.sample_offset_delta or 0
+                clip_len = getattr(playback_meta, "duration_samples", len(captured_data.decoded_audio_16k))
+
+                # Step 5: Evaluate each adapter with realigned decision records
                 for adapter_name, adapter_records in captured_data.adapter_decisions.items():
                     if is_warmup:
                         continue
 
+                    # Shift adapter sample offsets to clip coordinates (A01)
+                    aligned_records = [
+                        dataclasses.replace(r, sample_offset=r.sample_offset - delta)
+                        for r in adapter_records
+                        if 0 <= (r.sample_offset - delta) < clip_len
+                    ]
+
                     # Calculate pipeline onset and offset/hangover latencies
                     try:
                         latency_metrics = calculate_pipeline_latency(
-                            decision_records=adapter_records,
+                            decision_records=aligned_records,
                             speech_segments=entry.speech_segments,
                             time_zero_ns=alignment_result.time_zero_timestamp_ns,
                             marker_alignment=alignment_result,
                             sample_rate_hz=16000,
+                            decision_threshold=config.decision_threshold,
+                            clip_id=entry.clip_id,
                         )
                         results_store.store_latency_measurement(
                             run_id=config.run_id,
@@ -602,24 +688,26 @@ def run_tier2_live_pipeline(
                             clip_id=entry.clip_id,
                             latency_data=latency_metrics,
                             record_type="tier2_pipeline_latency",
+                            tier="tier2",
                         )
                     except Exception as exc:
                         logger.error(
-                            "[Run %s | Tier 2 | Clip %s | Adapter %s | LatencyCalc] Latency notice: %s",
+                            "[Run %s | Tier 2 | Clip %s | Adapter %s | LatencyCalc] Latency error: %s",
                             config.run_id,
                             entry.clip_id,
                             adapter_name,
                             exc,
                         )
 
-                    # Score single clip using vad_scorer
+                    # Score single clip using vad_scorer in clip coordinates
                     try:
                         clip_score = score_single_clip(
-                            decision_records=adapter_records,
+                            decision_records=aligned_records,
                             manifest_entry=entry,
-                            total_clip_samples=len(captured_data.decoded_audio_16k),
+                            total_clip_samples=clip_len,
                             scoring_grid_ms=config.scoring_grid_ms,
                             sample_rate_hz=16000,
+                            decision_threshold=config.decision_threshold,
                         )
                         adapter_clip_results[adapter_name].append(clip_score)
 
@@ -627,6 +715,7 @@ def run_tier2_live_pipeline(
                             run_id=config.run_id,
                             manifest_version=manifest.version_hash,
                             clip_score_result=clip_score,
+                            tier="tier2",
                         )
                     except Exception as exc:
                         logger.error(
@@ -635,6 +724,15 @@ def run_tier2_live_pipeline(
                             entry.clip_id,
                             adapter_name,
                             exc,
+                        )
+                        results_store.store_clip_failure(
+                            run_id=config.run_id,
+                            manifest_version=manifest.version_hash,
+                            adapter_id=adapter_name,
+                            clip_id=entry.clip_id,
+                            tier="tier2",
+                            stage="scoring",
+                            error=str(exc),
                         )
                         continue
 
@@ -660,6 +758,7 @@ def run_tier2_live_pipeline(
     reports: Dict[str, VADScorerReport] = {}
     for adapter_name, scored_clips in adapter_clip_results.items():
         if not scored_clips:
+            logger.warning("[Tier 1] Adapter '%s' scored 0 clips.", adapter_name)
             continue
         report = score_adapter_evaluation(
             clip_results=scored_clips,
@@ -702,6 +801,17 @@ def run_benchmark(config_path: Union[str, Path] = "config/run_config.yaml") -> D
 
     # Initialize permanent results store
     results_store = ResultsStore(config.results_destination)
+    results_store.store_run_context(
+        run_id=config.run_id,
+        manifest_version=manifest.version_hash,
+        context_data={
+            "hardware_policy": config.hardware_policy,
+            "concurrency_mode": config.concurrency_mode,
+            "scoring_grid_ms": config.scoring_grid_ms,
+            "active_adapters": list(config.active_adapters),
+            "tiers_to_run": list(config.tiers_to_run),
+        },
+    )
 
     run_summary: Dict[str, Any] = {
         "run_id": config.run_id,

@@ -126,11 +126,7 @@ class IJitsiAudioInjector(Protocol):
 
 class DefaultJitsiAudioInjector:
     """
-    Standard media injection driver interfacing with the external Jitsi infrastructure.
-
-    Note on Implementation:
-        Streams audio frames over the established bridge feed (WebSocket/RTP) to the room.
-        In simulation/test harnesses, emits audio frames with strict wall-clock pacing.
+    Fallback dummy injector that raises an error if live WebRTC driver is not configured (A20).
     """
 
     def __init__(self) -> None:
@@ -138,41 +134,13 @@ class DefaultJitsiAudioInjector:
         self.current_room: Optional[str] = None
 
     def connect_and_join(self, room_id: str, bridge_url: str) -> None:
-        if not room_id or not room_id.strip():
-            raise RoomJoinError("Cannot join Jitsi room: room_id is empty.")
-        if not bridge_url or not bridge_url.strip():
-            raise RoomJoinError("Cannot join Jitsi room: bridge_url is empty.")
-
-        try:
-            logger.info("[SpeakerBot] Connecting to Jitsi room '%s' via bridge '%s'", room_id, bridge_url)
-            # External bridge handshake occurs here
-            self.current_room = room_id
-            self.is_connected = True
-        except Exception as exc:
-            raise RoomJoinError(f"Failed to join Jitsi room '{room_id}': {exc}") from exc
+        raise RoomJoinError(
+            "DefaultJitsiAudioInjector cannot connect to live WebRTC sessions. "
+            "Use WebRTCJitsiAudioInjector from webrtc_bridge.injector."
+        )
 
     def play_audio_file(self, audio_path: Path, sample_rate_hz: int = 16000) -> None:
-        if not self.is_connected:
-            raise RoomJoinError("Cannot play audio: SpeakerBot is not connected to a room.")
-
-        if not audio_path.is_file():
-            # Check corpus/audio directory fallback
-            candidate = Path("corpus/audio") / audio_path.name
-            if candidate.is_file():
-                audio_path = candidate
-            else:
-                raise ClipFileNotFoundError(f"Audio file not found: {audio_path.resolve()}")
-
-        try:
-            import soundfile as sf
-            info = sf.info(str(audio_path))
-            duration_s = info.duration
-            logger.debug("[SpeakerBot] Injecting '%s' (%.2fs) into microphone feed", audio_path.name, duration_s)
-            time.sleep(duration_s)
-        except ClipFileNotFoundError:
-            raise
-        except Exception as exc:
-            raise AudioPlaybackError(f"Playback failed for '{audio_path}': {exc}") from exc
+        raise AudioPlaybackError("DefaultJitsiAudioInjector cannot play audio without a WebRTC driver.")
 
     def disconnect(self) -> None:
         if self.is_connected:
@@ -280,9 +248,13 @@ class SpeakerBot:
             ) from exc
         t_end_ns = time.perf_counter_ns()
 
-        marker_offset = getattr(entry, "calibration_marker_offset_samples", None)
-        if marker_offset is None:
-            marker_offset = getattr(entry, "calibration_marker_offset", 320)
+
+        if hasattr(entry, "calibration_marker_offset_samples") and entry.calibration_marker_offset_samples is not None:
+            marker_offset = int(entry.calibration_marker_offset_samples)
+        elif hasattr(entry, "calibration_marker_offset") and entry.calibration_marker_offset is not None:
+            marker_offset = int(entry.calibration_marker_offset)
+        else:
+            raise SpeakerBotError(f"ManifestEntry '{entry.clip_id}' is missing required 'calibration_marker_offset_samples'")
 
         logger.info(
             "[SpeakerBot] Finished playback of clip '%s' (Marker Offset: %d samples)",

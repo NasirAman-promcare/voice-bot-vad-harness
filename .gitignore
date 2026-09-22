@@ -1,38 +1,29 @@
-# Data — never commit raw 11GB audio or processed audio
+
+# Data — never commit raw 11GB audio or generated audio
 /data/raw/
 /corpus/audio/
 /corpus/build/
 
-# Local results & secrets
+# Local results & generated run artifacts
 *.env
 .kaggle/
 results/local/
+results/run_output/
+*.jsonl
 
 # Python & Jupyter
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 .ipynb_checkpoints/
 *.egg-info/
 .DS_Store
-# Model Weights
-pretrained_models/
 
-# Ignore model weights and caches
+# Model Weights & Caches
 pretrained_models/
 *.pt
 *.bin
 *.onnx
-__pycache__/
-*.pyc
-
-# Ignore model weights and caches
-pretrained_models/
-*.pt
-*.bin
-*.onnx
-__pycache__/
-*.pyc
-
 # Ignore model weights and caches
 pretrained_models/
 *.pt

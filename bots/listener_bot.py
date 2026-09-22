@@ -156,57 +156,58 @@ def resample_48k_to_16k(audio_48k: np.ndarray) -> np.ndarray:
 # ==============================================================================
 
 class OpusPCMDecoder:
-    """
-    Decodes inbound Opus byte packets or raw 48kHz PCM buffers to normalized 16kHz mono.
-    """
+     """
+     Decodes inbound Opus byte packets directly to 16kHz mono float32 (A14 & A05).
+     Fails loudly if opuslib/libopus is missing, eliminating silent raw PCM fallback.
+     """
+ 
+     def __init__(self, target_sample_rate: int = 16000) -> None:
+         self.target_sample_rate = target_sample_rate
+         self._opus_decoder = None
+         self._init_opus()
+ 
+     def _init_opus(self) -> None:
+         try:
+             import opuslib  # type: ignore
+             # Direct 16kHz decoding: libopus handles stateful resampling internally (A14)
+             self._opus_decoder = opuslib.Decoder(self.target_sample_rate, 1)
+         except Exception as exc:
+             raise ListenerBotError(
+                 f"Failed to initialize Opus decoder at {self.target_sample_rate}Hz: {exc}. "
+                 "Ensure 'opuslib' and system library 'libopus0' are installed."
+             ) from exc
+ 
+     def decode_chunk_to_16k(self, payload: Union[bytes, np.ndarray]) -> Tuple[np.ndarray, bool]:
+         """
+         Decodes payload to 16kHz mono float32.
+         Returns (samples_16k, is_decode_error).
+         """
+         if isinstance(payload, np.ndarray):
+             if payload.dtype == np.int16:
+                 float_audio = payload.astype(np.float32) / 32768.0
+             else:
+                 float_audio = payload.astype(np.float32)
 
-    def __init__(self, source_sample_rate: int = 48000) -> None:
-        self.source_sample_rate = source_sample_rate
-        self._opus_decoder = None
-        self._init_opus()
+             return float_audio, False
+ 
+         elif isinstance(payload, bytes):
 
-    def _init_opus(self) -> None:
-        try:
-            import opuslib  # type: ignore
-            self._opus_decoder = opuslib.Decoder(self.source_sample_rate, 1)
-        except (ImportError, Exception):
-            self._opus_decoder = None
+             if self._opus_decoder is None:
+                 raise ListenerBotError("Opus decoder is not available.")
+             try:
+                 # 320 samples per 20ms frame at 16kHz
+                 pcm_bytes = self._opus_decoder.decode(payload, frame_size=320)
+                 pcm_int16 = np.frombuffer(pcm_bytes, dtype=np.int16)
+                 pcm_float = pcm_int16.astype(np.float32) / 32768.0
 
-    def decode_chunk_to_16k(self, payload: Union[bytes, np.ndarray]) -> np.ndarray:
-        """
-        Decodes a binary or array chunk and converts to 16kHz mono float32.
-        """
-        if isinstance(payload, np.ndarray):
-            if payload.dtype == np.int16:
-                float_audio = payload.astype(np.float32) / 32768.0
-            else:
-                float_audio = payload.astype(np.float32)
+                 return pcm_float, False
+             except Exception as exc:
+                 logger.warning("[ListenerBot] Opus decode failure on %d byte payload: %s", len(payload), exc)
+                 # Conceal with 320 samples of silence (A05)
+                 return np.zeros(320, dtype=np.float32), True
+ 
 
-            if self.source_sample_rate == 48000:
-                return resample_48k_to_16k(float_audio)
-            return float_audio
-
-        elif isinstance(payload, bytes):
-            # If native Opus decoder is available and payload is Opus-encoded
-            if self._opus_decoder is not None:
-                try:
-                    # 960 samples per 20ms frame at 48kHz
-                    pcm_bytes = self._opus_decoder.decode(payload, frame_size=960)
-                    pcm_int16 = np.frombuffer(pcm_bytes, dtype=np.int16)
-                    pcm_float = pcm_int16.astype(np.float32) / 32768.0
-                    return resample_48k_to_16k(pcm_float)
-                except Exception:
-                    pass
-
-            # Fallback: treat as raw 16-bit PCM (48kHz)
-            if len(payload) % 2 == 0:
-                pcm_int16 = np.frombuffer(payload, dtype=np.int16)
-                pcm_float = pcm_int16.astype(np.float32) / 32768.0
-                if self.source_sample_rate == 48000:
-                    return resample_48k_to_16k(pcm_float)
-                return pcm_float
-
-        return np.empty(0, dtype=np.float32)
+         return np.empty(0, dtype=np.float32), False
 
 
 # ==============================================================================
@@ -245,16 +246,18 @@ class ListenerBot:
         self.jitter_buffer_window_ms = jitter_buffer_window_ms
 
         self._active_adapters: Dict[str, VADAdapterContract] = adapters or {}
-        self._decoder = OpusPCMDecoder(source_sample_rate=48000)
-
+        self._decoder = OpusPCMDecoder(target_sample_rate=16000)
+ 
         # Sequence tracking state
         self._expected_sequence_id: int = 0
         self._current_clip_id: Optional[str] = None
         self._current_capture: Optional[CapturedStreamData] = None
-
+           
         # Jitter reordering buffer: sequence_id -> (timestamp_ns, raw_payload)
         self._jitter_buffer: Dict[int, Tuple[int, Union[bytes, np.ndarray]]] = {}
         self._captured_audio_buffer: List[np.ndarray] = []
+        # Per-adapter leftover sample buffer for frame-size mismatch (A04): adapter_name -> (leftover_samples, sample_offset, frame_index)
+        self._adapter_carry: Dict[str, Tuple[np.ndarray, int, int]] = {}
         self._lock = threading.Lock()
         self._completion_event = threading.Event()
 
@@ -274,6 +277,7 @@ class ListenerBot:
             self._jitter_buffer.clear()
             self._captured_audio_buffer.clear()
             self._completion_event.clear()
+            self._adapter_carry.clear()
 
             self._current_capture = CapturedStreamData(
                 clip_id=clip_id,
@@ -312,8 +316,8 @@ class ListenerBot:
             # Store into jitter buffer
             self._jitter_buffer[sequence_id] = (arrival_ns, payload)
 
-            # Process contiguous ready sequences from jitter buffer
-            self._flush_jitter_buffer()
+            # Process contiguous ready sequences from jitter buffer and check loss timeout (A13)
+            self._flush_jitter_buffer(current_arrival_ns=arrival_ns)
 
             if is_clip_end:
                 # Flush any remaining packets in jitter buffer on clip completion
@@ -321,20 +325,49 @@ class ListenerBot:
                 if self._captured_audio_buffer:
                     self._current_capture.decoded_audio_16k = np.concatenate(self._captured_audio_buffer)
                 self._completion_event.set()
+    
+    def _flush_jitter_buffer(self, current_arrival_ns: Optional[int] = None) -> None:
+        """
+        Extracts contiguous sequences. If missing packets exceed jitter_buffer_window_ms,
+        declares them lost, inserts concealment to preserve timeline (A06, A13), and continues.
+        """
+        window_ns = int(self.jitter_buffer_window_ms * 1_000_000)
 
-    def _flush_jitter_buffer(self) -> None:
-        """Extracts and processes contiguous sequences in order, detecting gaps."""
-        while self._expected_sequence_id in self._jitter_buffer:
-            seq_id = self._expected_sequence_id
-            arrival_ns, raw_payload = self._jitter_buffer.pop(seq_id)
-            self._process_single_ordered_packet(seq_id, arrival_ns, raw_payload, is_gap=False)
-            self._expected_sequence_id += 1
+        while self._jitter_buffer:
+            # 1. Process contiguous sequence packets
+            if self._expected_sequence_id in self._jitter_buffer:
+                seq_id = self._expected_sequence_id
+                arrival_ns, raw_payload = self._jitter_buffer.pop(seq_id)
+                self._process_single_ordered_packet(seq_id, arrival_ns, raw_payload, is_gap=False)
+                self._expected_sequence_id += 1
+                continue
+
+            # 2. Check jitter buffer loss timeout (A13)
+            if current_arrival_ns is not None:
+                min_buffered_seq = min(self._jitter_buffer.keys())
+                oldest_arrival_ns, _ = self._jitter_buffer[min_buffered_seq]
+
+                if (current_arrival_ns - oldest_arrival_ns) >= window_ns:
+                    # Window elapsed: declare skipped packets lost
+                    missing_count = min_buffered_seq - self._expected_sequence_id
+                    arrival_ns, raw_payload = self._jitter_buffer.pop(min_buffered_seq)
+                    self._process_single_ordered_packet(
+                        seq_id=min_buffered_seq,
+                        arrival_ns=arrival_ns,
+                        raw_payload=raw_payload,
+                        is_gap=(missing_count > 0),
+                        missing_count=max(0, missing_count),
+                    )
+                    self._expected_sequence_id = min_buffered_seq + 1
+                    continue
+
+            # Neither contiguous nor timed out: wait for next packet
+            break
 
     def _flush_remaining_jitter(self) -> None:
-        """Flushes non-contiguous packets remaining in buffer, flagging gaps."""
+        """Flushes all non-contiguous packets remaining in buffer on clip end, flagging gaps."""
         for seq_id in sorted(self._jitter_buffer.keys()):
             arrival_ns, raw_payload = self._jitter_buffer.pop(seq_id)
-
             is_gap = False
             missing_count = 0
             if seq_id > self._expected_sequence_id:
@@ -358,14 +391,20 @@ class ListenerBot:
         is_gap: bool = False,
         missing_count: int = 0,
     ) -> None:
-        """Decodes, logs diagnostics, resamples to 16kHz, and dispatches to adapters."""
+        """
+        Preserves timeline upon packet loss (A06), decodes to 16kHz (A14),
+        and feeds adapters statefully without dropping leftover samples (A04).
+        """
         if self._current_capture is None:
             return
 
         current_sample_offset = sum(len(b) for b in self._captured_audio_buffer)
 
-        # 1. First-class Packet Diagnostic generation
-        if is_gap:
+        # 1. Timeline Loss Compensation (A06): Insert 320 zero samples per lost packet
+        if is_gap and missing_count > 0:
+            lost_samples_count = missing_count * 320
+            concealment_samples = np.zeros(lost_samples_count, dtype=np.float32)
+
             diag = PacketDiagnostic(
                 sequence_id=seq_id,
                 arrival_timestamp_ns=arrival_ns,
@@ -373,31 +412,69 @@ class ListenerBot:
                 is_gap=True,
                 is_reordered=True,
                 missing_count=missing_count,
-                message=f"Sequence gap detected: missing {missing_count} packet(s) before sequence {seq_id}",
+                message=f"Sequence gap detected: missing {missing_count} packet(s) before sequence {seq_id}. Inserted {lost_samples_count} concealment samples.",
             )
             self._current_capture.packet_diagnostics.append(diag)
             logger.warning("[ListenerBot] %s (Offset: %d samples)", diag.message, current_sample_offset)
 
-        # 2. Decode and Resample exactly once to 16kHz mono float32
-        samples_16k = self._decoder.decode_chunk_to_16k(raw_payload)
+            self._captured_audio_buffer.append(concealment_samples)
+            # Dispatch loss concealment to adapters to prevent sample-clock drift
+            self._dispatch_audio_to_adapters(concealment_samples, current_sample_offset)
+            current_sample_offset += lost_samples_count
+
+        # 2. Decode packet directly to 16kHz
+        samples_16k, is_decode_error = self._decoder.decode_chunk_to_16k(raw_payload)
         if len(samples_16k) == 0:
             return
+
+        if is_decode_error:
+            diag = PacketDiagnostic(
+                sequence_id=seq_id,
+                arrival_timestamp_ns=arrival_ns,
+                sample_offset_16k=current_sample_offset,
+                is_gap=False,
+                is_reordered=False,
+                missing_count=0,
+                message=f"Corrupt packet at sequence {seq_id}; substituted silence frame.",
+            )
+            self._current_capture.packet_diagnostics.append(diag)
 
         self._captured_audio_buffer.append(samples_16k)
         self._current_capture.arrival_timestamps_ns.append(arrival_ns)
 
-        # 3. Publish to subscribed VAD adapters (chunking at each adapter's declared hop)
+        # 3. Dispatch to subscribed VAD adapters with leftover carry preservation (A04)
+        self._dispatch_audio_to_adapters(samples_16k, current_sample_offset)
+
+    def _dispatch_audio_to_adapters(self, new_samples: np.ndarray, current_sample_offset: int) -> None:
+        """
+        Carries leftover samples per adapter across packet boundaries (A04).
+        Guarantees TEN VAD (256-sample hop) receives 100% of the audio stream without dropping remainder.
+        """
         for adapter_name, adapter in self._active_adapters.items():
             try:
-                chunks = chunk_audio_stream(samples_16k, adapter.frame_size_samples, 16000)
-                for chunk in chunks:
-                    global_sample_offset = current_sample_offset + chunk.sample_offset
+                leftover, base_offset, frame_idx = self._adapter_carry.get(
+                    adapter_name,
+                    (np.empty(0, dtype=np.float32), current_sample_offset, 0),
+                )
+                combined = np.concatenate([leftover, new_samples]) if leftover.size > 0 else new_samples
+                frame_size = adapter.frame_size_samples
+                num_frames = len(combined) // frame_size
+                consumed = num_frames * frame_size
+
+                for i in range(0, consumed, frame_size):
+                    chunk = combined[i : i + frame_size]
                     record = adapter.process_frame(
-                        frame=chunk.samples,
-                        sample_offset=global_sample_offset,
-                        frame_index=chunk.frame_index,
+                        frame=chunk,
+                        sample_offset=base_offset + i,
+                        frame_index=frame_idx,
                     )
                     self._current_capture.adapter_decisions[adapter_name].append(record)
+                    frame_idx += 1
+
+                # Carry remainder to next packet
+                remainder = combined[consumed:]
+                self._adapter_carry[adapter_name] = (remainder, base_offset + consumed, frame_idx)
+
             except Exception as exc:
                 logger.error(
                     "[ListenerBot | Adapter %s] Error processing stream chunk: %s",

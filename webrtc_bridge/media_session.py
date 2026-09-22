@@ -17,6 +17,7 @@ import sys
 import threading
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
+import inspect
 
 import aiortc
 from aiortc import (
@@ -75,6 +76,10 @@ def check_aiortc_conformance() -> None:
         raise AIORTCConformanceError(
             f"Installed aiortc=={version_str} is missing private method "
             "'RTCRtpReceiver._handle_rtp_packet' required by raw_rtp_tap.py."
+        )
+    if not inspect.iscoroutinefunction(RTCRtpReceiver._handle_rtp_packet):
+        raise AIORTCConformanceError(
+            f"Installed aiortc=={version_str} RTCRtpReceiver._handle_rtp_packet is not an async coroutine function."
         )
     if not hasattr(RTCRtpSender, "replaceTrack") and not hasattr(RTCRtpSender, "_track"):
         raise AIORTCConformanceError(

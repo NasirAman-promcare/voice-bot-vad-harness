@@ -54,30 +54,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class AdapterAggregateMetrics:
-    """Aggregated performance metrics for one discovered adapter operating point."""
-    adapter_id: str
-    library_version: str
-    total_clips: int
-    # Classification metrics
-    total_frames: int
-    precision: float
-    recall: float
-    f1: float
-    accuracy: float
-    specificity: float
-    false_positive_rate: float
-    false_negative_rate: float
-    # Highlighted category rates
-    silence_fpr: Optional[float]
-    quiet_fnr: Optional[float]
-    # Latency Triplet (Three strictly separate numbers)
-    algorithmic_p95_ms: Optional[float]
-    live_onset_mean_ms: Optional[float]
-    live_onset_median_ms: Optional[float]
-    live_offset_mean_ms: Optional[float]
-    live_offset_median_ms: Optional[float]
-    false_negative_clips_count: int
-    unresolved_hangover_clips_count: int
+     """Aggregated performance metrics for one discovered adapter operating point."""
+     adapter_id: str
+     library_version: str
+     total_clips: int
+     # Classification metrics
+     total_frames: int
+     precision: Optional[float]
+     recall: Optional[float]
+     f1: Optional[float]
+     accuracy: float
+     specificity: float
+     false_positive_rate: float
+     false_negative_rate: Optional[float]
 
 
 @dataclass(frozen=True)
@@ -116,10 +105,10 @@ class BenchmarkReport:
 # Metric Aggregation Helpers
 # ==============================================================================
 
-def _aggregate_confusion_counts(raw_metrics_list: Sequence[Dict[str, Any]]) -> Tuple[float, float, float, float, float, float, float, int]:
-    """Computes precision, recall, f1, accuracy, specificity, fpr, fnr from raw counts."""
+def _aggregate_confusion_counts(raw_metrics_list: Sequence[Dict[str, Any]]) -> Tuple[Optional[float], Optional[float], Optional[float], float, float, float, Optional[float], int]:
+    """Computes precision, recall, f1, accuracy, specificity, fpr, fnr from raw counts with None for undefined."""
     if not raw_metrics_list:
-        return 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0
+        return None, None, None, 1.0, 1.0, 0.0, None, 0
 
     tp = sum(int(m.get("tp", 0)) for m in raw_metrics_list)
     fp = sum(int(m.get("fp", 0)) for m in raw_metrics_list)
@@ -131,13 +120,20 @@ def _aggregate_confusion_counts(raw_metrics_list: Sequence[Dict[str, Any]]) -> T
     gt_neg = tn + fp
     pred_pos = tp + fp
 
-    precision = float(tp / pred_pos) if pred_pos > 0 else (1.0 if gt_pos == 0 else 0.0)
-    recall = float(tp / gt_pos) if gt_pos > 0 else 1.0
-    f1 = float(2.0 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+    if gt_pos == 0:
+        precision = None
+        recall = None
+        f1 = None
+        fnr = None
+    else:
+        precision = float(tp / pred_pos) if pred_pos > 0 else 0.0
+        recall = float(tp / gt_pos)
+        f1 = float(2.0 * precision * recall / (precision + recall)) if (precision + recall) > 0.0 else 0.0
+        fnr = float(fn / gt_pos)
+
     accuracy = float((tp + tn) / total_frames) if total_frames > 0 else 1.0
     specificity = float(tn / gt_neg) if gt_neg > 0 else 1.0
     fpr = float(fp / gt_neg) if gt_neg > 0 else 0.0
-    fnr = float(fn / gt_pos) if gt_pos > 0 else 0.0
 
     return precision, recall, f1, accuracy, specificity, fpr, fnr, total_frames
 
@@ -220,9 +216,12 @@ def _generate_skeleton_writeup(
         onset_lat_str = f"{m.live_onset_mean_ms:.1f} ms" if m.live_onset_mean_ms is not None else "N/A (Live tier not run)"
         offset_lat_str = f"{m.live_offset_mean_ms:.1f} ms" if m.live_offset_mean_ms is not None else "N/A (Live tier not run)"
 
+        f1_label = f"{m.f1:.3f}" if m.f1 is not None else "N/A"
+        prec_label = f"{m.precision:.3f}" if m.precision is not None else "N/A"
+        rec_label = f"{m.recall:.3f}" if m.recall is not None else "N/A"
         lines.extend([
             f"\n### Operating Point: `{adapter_id}` (`{m.library_version}`)",
-            f"- **Overall Accuracy**: F1 = **{m.f1:.3f}** | Precision = **{m.precision:.3f}** | Recall = **{m.recall:.3f}**",
+            f"- **Overall Accuracy**: F1 = **{f1_label}** | Precision = **{prec_label}** | Recall = **{rec_label}**",
             "- **Latency Triplet**:",
             f"  - *Algorithmic Compute (p95)*: {algo_lat_str}",
             f"  - *Pipeline Onset Latency (mean)*: {onset_lat_str}",
@@ -259,25 +258,29 @@ def _generate_skeleton_writeup(
 # ==============================================================================
 
 def generate_report(
-    results_store: ResultsStore,
-    run_id: Optional[str] = None,
-    manifest_version: Optional[str] = None,
-) -> BenchmarkReport:
+     results_store: ResultsStore,
+     run_id: Optional[str] = None,
+     manifest_version: Optional[str] = None,
+     tier: Optional[str] = None,
+ ) -> BenchmarkReport:
     """
     Generates a full BenchmarkReport from raw records in the ResultsStore.
-
+ 
     Args:
-        results_store: Instance of ResultsStore to read raw records from.
-        run_id: Optional run ID filter.
-        manifest_version: Optional manifest version filter.
-
-    Returns:
-        BenchmarkReport containing structured metric tables, curves, and skeleton text.
+         results_store: Instance of ResultsStore to read raw records from.
+         run_id: Optional run ID filter.
+         manifest_version: Optional manifest version filter.
+         tier: Optional tier filter ('tier1' or 'tier2').
     """
     raw_records = list(results_store.read_raw_records(run_id=run_id))
     if manifest_version is not None:
         raw_records = [r for r in raw_records if r.get("manifest_version") == manifest_version]
-
+    if tier is not None:
+        raw_records = [
+            r for r in raw_records
+            if r.get("payload", {}).get("tier") == tier or tier in r.get("record_type", "")
+        ]
+     
     # 1. Discover distinct metadata dimensions
     discovered_runs = sorted(list({r.get("run_id") for r in raw_records if r.get("run_id")}))
     discovered_versions = sorted(list({r.get("manifest_version") for r in raw_records if r.get("manifest_version")}))
@@ -361,13 +364,13 @@ def generate_report(
             library_version=adapter_library_versions[aid],
             total_clips=len(scoring_list),
             total_frames=tot_frames,
-            precision=round(prec, 3),
-            recall=round(rec, 3),
-            f1=round(f1, 3),
+            precision=round(prec, 3) if prec is not None else None,
+            recall=round(rec, 3) if rec is not None else None,
+            f1=round(f1, 3) if f1 is not None else None,
             accuracy=round(acc, 3),
             specificity=round(spec, 3),
             false_positive_rate=round(fpr, 3),
-            false_negative_rate=round(fnr, 3),
+            false_negative_rate=round(fnr, 3) if fnr is not None else None,
             silence_fpr=round(silence_fpr, 3) if silence_fpr is not None else None,
             quiet_fnr=round(quiet_fnr, 3) if quiet_fnr is not None else None,
             algorithmic_p95_ms=round(algo_lat_p95, 2) if algo_lat_p95 is not None else None,
@@ -473,18 +476,21 @@ def render_overall_summary_table(report: BenchmarkReport) -> str:
         silence_str = f"{m.silence_fpr:.3f}" if m.silence_fpr is not None else "—"
         quiet_str = f"{m.quiet_fnr:.3f}" if m.quiet_fnr is not None else "—"
 
+        f1_str = f"{m.f1:.3f}" if m.f1 is not None else "—"
+        prec_str = f"{m.precision:.3f}" if m.precision is not None else "—"
+        rec_str = f"{m.recall:.3f}" if m.recall is not None else "—"
         rows.append([
-            aid,
-            m.library_version,
-            f"{m.f1:.3f}",
-            f"{m.precision:.3f}",
-            f"{m.recall:.3f}",
-            silence_str,
-            quiet_str,
-            algo_str,
-            onset_str,
-            offset_str,
-        ])
+             aid,
+             m.library_version,
+             f1_str,
+             prec_str,
+             rec_str,
+             silence_str,
+             quiet_str,
+             algo_str,
+             onset_str,
+             offset_str,
+         ])
 
     return _format_markdown_table(headers, rows)
 

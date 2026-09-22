@@ -64,17 +64,6 @@ class LatencyCalculationError(Exception):
 class SegmentLatency:
     """
     Latency measurements for a single ground-truth speech segment.
-
-    Attributes:
-        segment_index: 0-indexed sequential index of the speech segment in the clip.
-        gt_start_sample: Ground-truth speech onset sample index (16kHz).
-        gt_end_sample: Ground-truth speech offset sample index (16kHz).
-        onset_detected: True if the adapter produced a positive speech decision for this segment.
-        onset_latency_ms: Time in ms from ground-truth start to first speech decision (None if missed).
-        hangover_resolved: True if the adapter transitioned back to non-speech after segment end.
-        offset_hangover_latency_ms: Time in ms from ground-truth end to first non-speech decision (None if unresolved).
-        first_speech_sample_offset: Sample offset where the first speech decision occurred.
-        first_non_speech_sample_offset: Sample offset where non-speech resumed after speech end.
     """
     segment_index: int
     gt_start_sample: int
@@ -85,6 +74,9 @@ class SegmentLatency:
     offset_hangover_latency_ms: Optional[float]
     first_speech_sample_offset: Optional[int]
     first_non_speech_sample_offset: Optional[int]
+    triggered_early: bool = False
+    cut_off_early: bool = False
+    wallclock_pipeline_latency_ms: Optional[float] = None
 
 
 @dataclass(frozen=True)
@@ -107,6 +99,8 @@ class PipelineLatencyResult:
     median_onset_latency_ms: Optional[float]
     mean_offset_hangover_latency_ms: Optional[float]
     median_offset_hangover_latency_ms: Optional[float]
+    mean_wallclock_pipeline_latency_ms: Optional[float] = None
+    median_wallclock_pipeline_latency_ms: Optional[float] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Serializes the result into a JSON-compatible dictionary."""
@@ -209,10 +203,10 @@ def calculate_pipeline_latency(
     segment_latencies: List[SegmentLatency] = []
     valid_onset_latencies: List[float] = []
     valid_offset_latencies: List[float] = []
+    valid_wallclock_latencies: List[float] = []
 
     for seg_idx, (gt_start, gt_end) in enumerate(speech_segments):
-        # Determine search window bounds for this segment
-        # Next segment start (or infinity) limits the hangover search region
+        prev_seg_end = speech_segments[seg_idx - 1][1] if seg_idx > 0 else 0
         next_seg_start = (
             speech_segments[seg_idx + 1][0]
             if seg_idx + 1 < len(speech_segments)
@@ -220,75 +214,76 @@ def calculate_pipeline_latency(
         )
 
         # ----------------------------------------------------------------------
-        # 1. Onset Latency: Speech Start -> First "Speech" Decision
+        # 1. Onset Latency (Decision Delay & True Wall-Clock Transit)
         # ----------------------------------------------------------------------
-        # Search for first positive speech decision starting around gt_start up to gt_end
         first_speech_record: Optional[DecisionRecord] = None
 
-        # Look for the first speech trigger at or after ground-truth start
+        search_onset_start = (prev_seg_end + gt_start) // 2
         for rec in records:
-            if rec.sample_offset + 160 >= gt_start and rec.sample_offset <= gt_end:
+            if search_onset_start <= rec.sample_offset <= gt_end:
                 if is_speech_active(rec):
                     first_speech_record = rec
                     break
 
-        if first_speech_record is not None:
-            # Onset Latency (ms): Delta between physical speech start and decision frame
-            delta_samples = max(0, first_speech_record.sample_offset - gt_start)
-            onset_latency_ms = round((delta_samples / 16000.0) * 1000.0, 2)
+        triggered_early = False
+        wallclock_latency_ms: Optional[float] = None
 
-            # Cross-verify using single-clock timestamp delta if valid
-            if first_speech_record.produced_timestamp_ns > time_zero_ns > 0:
-                expected_speech_start_ns = time_zero_ns + int((gt_start / 16000.0) * 1e9)
-                clock_delta_ms = (first_speech_record.produced_timestamp_ns - expected_speech_start_ns) / 1e6
-                if clock_delta_ms >= 0:
-                    onset_latency_ms = round(clock_delta_ms, 2)
+        if first_speech_record is not None:
+            # Sample-domain decision delay (A01: signed, unclamped)
+            delta_samples = first_speech_record.sample_offset - gt_start
+            onset_latency_ms = round((delta_samples / 16000.0) * 1000.0, 2)
+            if delta_samples < 0:
+                triggered_early = True
+
+            # Wall-clock pipeline latency (A02): production timestamp minus physical arrival time of speech start
+            if time_zero_ns > 0 and first_speech_record.produced_timestamp_ns > 0:
+                expected_speech_arrival_ns = time_zero_ns + int((gt_start / 16000.0) * 1_000_000_000)
+                wc_delta = (first_speech_record.produced_timestamp_ns - expected_speech_arrival_ns) / 1_000_000.0
+                wallclock_latency_ms = round(wc_delta, 2)
+                valid_wallclock_latencies.append(wallclock_latency_ms)
 
             onset_detected = True
             first_speech_offset = first_speech_record.sample_offset
             valid_onset_latencies.append(onset_latency_ms)
         else:
-            # Explicit False Negative: onset latency is undefined
             onset_detected = False
             onset_latency_ms = None
             first_speech_offset = None
 
         # ----------------------------------------------------------------------
-        # 2. Offset / Hangover Latency: Speech End -> First "Non-Speech" Decision
+        # 2. Offset / Hangover Latency: Speech End -> First "Non-Speech" Transition
         # ----------------------------------------------------------------------
-        # Search starting at gt_end forward until the adapter returns to False
-        first_non_speech_record: Optional[DecisionRecord] = None
+        last_speech_record: Optional[DecisionRecord] = None
+        for rec in records:
+            if rec.sample_offset < next_seg_start and is_speech_active(rec):
+                if rec.sample_offset >= (gt_start - 320):
+                    last_speech_record = rec
 
-        # Filter records occurring strictly after ground-truth speech end
-        post_speech_records = [
-            r for r in records if r.sample_offset >= gt_end and r.sample_offset < next_seg_start
-        ]
+        hangover_resolved = False
+        hangover_latency_ms = None
+        first_non_speech_offset = None
+        cut_off_early = False
 
-        for rec in post_speech_records:
-            if not is_speech_active(rec):
-                first_non_speech_record = rec
-                break
+        if last_speech_record is not None:
+            following_non_speech = [
+                r for r in records
+                if r.sample_offset > last_speech_record.sample_offset and r.sample_offset < next_seg_start and not is_speech_active(r)
+            ]
 
-        if first_non_speech_record is not None:
-            # Hangover Latency (ms): Delta between physical speech end and non-speech recovery
-            delta_samples = max(0, first_non_speech_record.sample_offset - gt_end)
-            hangover_latency_ms = round((delta_samples / 16000.0) * 1000.0, 2)
+            if following_non_speech:
+                first_non_speech_record = following_non_speech[0]
+                delta_samples = first_non_speech_record.sample_offset - gt_end
+                hangover_latency_ms = round((delta_samples / 16000.0) * 1000.0, 2)
+                if last_speech_record.sample_offset < gt_end - 160:
+                    cut_off_early = True
 
-            # Cross-verify using single-clock timestamp delta if valid
-            if first_non_speech_record.produced_timestamp_ns > time_zero_ns > 0:
-                expected_speech_end_ns = time_zero_ns + int((gt_end / 16000.0) * 1e9)
-                clock_delta_ms = (first_non_speech_record.produced_timestamp_ns - expected_speech_end_ns) / 1e6
-                if clock_delta_ms >= 0:
-                    hangover_latency_ms = round(clock_delta_ms, 2)
-
-            hangover_resolved = True
-            first_non_speech_offset = first_non_speech_record.sample_offset
-            valid_offset_latencies.append(hangover_latency_ms)
+                hangover_resolved = True
+                first_non_speech_offset = first_non_speech_record.sample_offset
+                valid_offset_latencies.append(hangover_latency_ms)
+            else:
+                hangover_resolved = False
         else:
-            # Explicit Unresolved Hangover: offset latency is undefined
             hangover_resolved = False
-            hangover_latency_ms = None
-            first_non_speech_offset = None
 
         segment_latencies.append(
             SegmentLatency(
@@ -301,22 +296,19 @@ def calculate_pipeline_latency(
                 offset_hangover_latency_ms=hangover_latency_ms,
                 first_speech_sample_offset=first_speech_offset,
                 first_non_speech_sample_offset=first_non_speech_offset,
+                triggered_early=triggered_early,
+                cut_off_early=cut_off_early,
+                wallclock_pipeline_latency_ms=wallclock_latency_ms,
             )
         )
 
-    # Compute aggregate statistics independently (NEVER blending onset and offset)
-    mean_onset = (
-        round(float(np.mean(valid_onset_latencies)), 2) if valid_onset_latencies else None
-    )
-    median_onset = (
-        round(float(np.median(valid_onset_latencies)), 2) if valid_onset_latencies else None
-    )
-    mean_offset = (
-        round(float(np.mean(valid_offset_latencies)), 2) if valid_offset_latencies else None
-    )
-    median_offset = (
-        round(float(np.median(valid_offset_latencies)), 2) if valid_offset_latencies else None
-    )
+    # Compute aggregate statistics independently
+    mean_onset = round(float(np.mean(valid_onset_latencies)), 2) if valid_onset_latencies else None
+    median_onset = round(float(np.median(valid_onset_latencies)), 2) if valid_onset_latencies else None
+    mean_offset = round(float(np.mean(valid_offset_latencies)), 2) if valid_offset_latencies else None
+    median_offset = round(float(np.median(valid_offset_latencies)), 2) if valid_offset_latencies else None
+    mean_wallclock = round(float(np.mean(valid_wallclock_latencies)), 2) if valid_wallclock_latencies else None
+    median_wallclock = round(float(np.median(valid_wallclock_latencies)), 2) if valid_wallclock_latencies else None
 
     return PipelineLatencyResult(
         clip_id=clip_id,
@@ -330,4 +322,6 @@ def calculate_pipeline_latency(
         median_onset_latency_ms=median_onset,
         mean_offset_hangover_latency_ms=mean_offset,
         median_offset_hangover_latency_ms=median_offset,
+        mean_wallclock_pipeline_latency_ms=mean_wallclock,
+        median_wallclock_pipeline_latency_ms=median_wallclock,
     )

@@ -15,6 +15,7 @@ scoring_grid_ms: 10
 tiers_to_run:
 - tier2
 warmup_clip_count: 5
+decision_threshold: 0.5
 webrtc_aggressiveness_modes:
 - 0
 - 1

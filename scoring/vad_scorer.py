@@ -53,21 +53,21 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class MetricBundle:
-    """
-    Immutable bundle of frame-level classification counts and derived rates.
-    """
-    tp: int
-    fp: int
-    tn: int
-    fn: int
-    total_frames: int
-    precision: float
-    recall: float
-    f1: float
-    accuracy: float
-    specificity: float
-    false_positive_rate: float
-    false_negative_rate: float
+     """
+     Immutable bundle of frame-level classification counts and derived rates.
+     """
+     tp: int
+     fp: int
+     tn: int
+     fn: int
+     total_frames: int
+     precision: Optional[float]
+     recall: Optional[float]
+     f1: Optional[float]
+     accuracy: float
+     specificity: float
+     false_positive_rate: float
+     false_negative_rate: Optional[float]
 
 
 @dataclass(frozen=True)
@@ -193,25 +193,25 @@ def compute_metrics_bundle(
     total_gt_negatives = tn + fp
     total_pred_positives = tp + fp
 
-    # 1. Precision
-    if total_pred_positives > 0:
+    # 1. Precision: Undefined (None) if total_gt_positives == 0 or no positives predicted without ground truth
+    if total_gt_positives == 0:
+        precision = None
+    elif total_pred_positives > 0:
         precision = float(tp / total_pred_positives)
     else:
-        # If no positive predictions were made, precision is 1.0 if there were no speech frames, else 0.0
-        precision = 1.0 if total_gt_positives == 0 else 0.0
+        precision = 0.0
 
-    # 2. Recall (Sensitivity / True Positive Rate)
+    # 2. Recall: Undefined (None) if no ground truth speech exists
     if total_gt_positives > 0:
         recall = float(tp / total_gt_positives)
     else:
-        # When ground-truth speech is absent, 100% of the (zero) speech frames were retained
-        recall = 1.0
+        recall = None
 
-    # 3. F1 Score
-    if (precision + recall) > 0.0:
+    # 3. F1 Score: Defined only when both precision and recall are valid numbers
+    if precision is not None and recall is not None and (precision + recall) > 0.0:
         f1 = float(2.0 * (precision * recall) / (precision + recall))
     else:
-        f1 = 0.0
+        f1 = None
 
     # 4. Accuracy
     accuracy = float((tp + tn) / total_frames) if total_frames > 0 else 1.0
@@ -219,11 +219,11 @@ def compute_metrics_bundle(
     # 5. Specificity (True Negative Rate)
     specificity = float(tn / total_gt_negatives) if total_gt_negatives > 0 else 1.0
 
-    # 6. False Positive Rate (FPR / Fall-out)
+    # 6. False Positive Rate (FPR) - Primary metric for non-speech/silence clips
     false_positive_rate = float(fp / total_gt_negatives) if total_gt_negatives > 0 else 0.0
 
-    # 7. False Negative Rate (FNR / Miss Rate)
-    false_negative_rate = float(fn / total_gt_positives) if total_gt_positives > 0 else 0.0
+    # 7. False Negative Rate (FNR)
+    false_negative_rate = float(fn / total_gt_positives) if total_gt_positives > 0 else None
 
     return MetricBundle(
         tp=tp,
@@ -429,9 +429,9 @@ def score_single_clip(
 # ==============================================================================
 
 def _aggregate_metric_bundles(clip_results: Sequence[ClipScoreResult]) -> MetricBundle:
-    """Aggregates raw confusion matrix counts across clips and computes unified metrics."""
+    """Aggregates raw confusion matrix counts across clips without fabricating 1.0 on empty/silence sets."""
     if not clip_results:
-        return MetricBundle(0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0)
+        return MetricBundle(0, 0, 0, 0, 0, None, None, None, 1.0, 1.0, 0.0, None)
 
     total_tp = sum(cr.metrics.tp for cr in clip_results)
     total_fp = sum(cr.metrics.fp for cr in clip_results)
@@ -443,13 +443,20 @@ def _aggregate_metric_bundles(clip_results: Sequence[ClipScoreResult]) -> Metric
     total_gt_negatives = total_tn + total_fp
     total_pred_positives = total_tp + total_fp
 
-    precision = float(total_tp / total_pred_positives) if total_pred_positives > 0 else (1.0 if total_gt_positives == 0 else 0.0)
-    recall = float(total_tp / total_gt_positives) if total_gt_positives > 0 else 1.0
-    f1 = float(2.0 * (precision * recall) / (precision + recall)) if (precision + recall) > 0.0 else 0.0
+    if total_gt_positives == 0:
+        precision = None
+        recall = None
+        f1 = None
+        fnr = None
+    else:
+        precision = float(total_tp / total_pred_positives) if total_pred_positives > 0 else 0.0
+        recall = float(total_tp / total_gt_positives)
+        f1 = float(2.0 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+        fnr = float(total_fn / total_gt_positives)
+
     accuracy = float((total_tp + total_tn) / total_frames) if total_frames > 0 else 1.0
     specificity = float(total_tn / total_gt_negatives) if total_gt_negatives > 0 else 1.0
     fpr = float(total_fp / total_gt_negatives) if total_gt_negatives > 0 else 0.0
-    fnr = float(total_fn / total_gt_positives) if total_gt_positives > 0 else 0.0
 
     return MetricBundle(
         tp=total_tp,
@@ -489,7 +496,7 @@ def score_adapter_evaluation(
         A VADScorerReport with complete bucketed metrics.
     """
     if not clip_results:
-        empty_bundle = MetricBundle(0, 0, 0, 0, 0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0)
+        empty_bundle = MetricBundle(0, 0, 0, 0, 0, None, None, None, 1.0, 1.0, 0.0, None)
         empty_summary = BucketScoreSummary("overall", "overall", 0, empty_bundle)
         return VADScorerReport(
             adapter_id="empty",
