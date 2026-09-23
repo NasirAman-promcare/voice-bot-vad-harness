@@ -364,6 +364,11 @@ class BridgeMediaSession:
         if self._pc is not None:
             try:
                 await self._pc.close()
+                await asyncio.sleep(0.25)
+                pending = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+                for t in pending:
+                    t.cancel()
+                await asyncio.gather(*pending, return_exceptions=True)
             except Exception:
                 pass
             self._pc = None

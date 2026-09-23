@@ -590,7 +590,7 @@ def run_tier2_live_pipeline(
                         listener_bridge.arm_clip(entry)
                         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                             play_future = executor.submit(speaker_bot.play_clip, entry)
-                            captured_data = listener_bridge.await_clip(entry, timeout_s=30.0)
+                            captured_data = listener_bridge.await_clip(entry, timeout_s=75.0)
                             playback_meta = play_future.result()
                     else:
                         listener_bot.prepare_for_clip(entry.clip_id)

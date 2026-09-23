@@ -67,6 +67,15 @@ class AdapterAggregateMetrics:
      specificity: float
      false_positive_rate: float
      false_negative_rate: Optional[float]
+     silence_fpr: Optional[float] = None
+     quiet_fnr: Optional[float] = None
+     live_onset_mean_ms: Optional[float] = None
+     live_onset_median_ms: Optional[float] = None
+     live_offset_mean_ms: Optional[float] = None
+     live_offset_median_ms: Optional[float] = None
+     algorithmic_p95_ms: Optional[float] = None
+     false_negative_clips_count: int = 0
+     unresolved_hangover_clips_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -391,7 +400,7 @@ def generate_report(
             cat_clips = [c.get("metrics", {}) for c in adapter_scoring_records[aid] if c.get("category") == cat]
             if cat_clips:
                 cat_f1 = _aggregate_confusion_counts(cat_clips)[2]
-                category_matrix[cat][aid] = round(cat_f1, 3)
+                category_matrix[cat][aid] = round(cat_f1, 3) if cat_f1 is not None else None
             else:
                 category_matrix[cat][aid] = None  # Explicit untested state
 

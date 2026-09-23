@@ -505,9 +505,7 @@ class ListenerBot:
         finished = self._completion_event.wait(timeout=timeout_s)
         if not finished:
             logger.error("[ListenerBot] Timeout waiting for clip '%s' completion after %.1fs", clip_id, timeout_s)
-            with self._lock:
-                if self._captured_audio_buffer and self._current_capture:
-                    self._current_capture.decoded_audio_16k = np.concatenate(self._captured_audio_buffer)
+            raise TimeoutError(f"Clip '{clip_id}' did not complete within {timeout_s}s")
 
         with self._lock:
             if self._current_capture is None:
