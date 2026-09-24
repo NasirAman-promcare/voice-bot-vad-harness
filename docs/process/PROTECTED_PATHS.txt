@@ -1,0 +1,47 @@
+# AQIS lab protected paths. Owner-owned: only the owner edits this file (via GitHub).
+# Patterns are relative to the repository root. "**" matches any depth, "*" matches within one folder.
+# Order of checks: NEVER, then LAB-OWNED exceptions, then GUARDED.
+
+[NEVER]
+# Claude can never change these. Approvals cannot unlock them. The owner edits them directly.
+CLAUDE.md
+.claude/**
+docs/specs/**
+docs/process/**
+docs/approvals/**
+
+[GUARDED]
+# Existing VAD harness and repository-wide files. Claude may change a path only when an
+# approved file in docs/approvals/ contains the line:  ALLOW-EDIT: <path or pattern>
+bots/**
+config/**
+corpus/**
+latency/**
+notebooks/**
+requirements/**
+results/**
+scoring/**
+scripts/**
+storage/**
+tests/**
+vad_adapters/**
+webrtc_bridge/**
+orchestrator.py
+reporting.py
+audio_profiler.py
+probe_ice.py
+check_annotation_tails.py
+corpus-v1.tar.gz
+run.log
+README.md
+.gitignore
+.github/**
+
+[LAB-OWNED]
+# Lab areas inside guarded folders. Claude may create and edit files here
+# (existing lab tests still need approval to be modified or deleted; see the stop gate).
+config/aqis_lab/**
+notebooks/aqis_lab/**
+requirements/aqis_lab/**
+tests/aqis_lab/**
+.github/workflows/aqis-lab-*.yml
