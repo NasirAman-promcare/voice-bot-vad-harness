@@ -186,5 +186,12 @@ The Module column of each row is a file path.
    - (f) "Changes since `<ref>`", including the registry's "rows present at `<ref>`", mean since `git merge-base <ref> HEAD`, which is what the Stop hook and a GitHub PR diff use.
    - (g) Line-number conventions for file-level findings, as in "Gate rules" above.
 
+## Owner decisions (2026-09-25, in session chat)
+1. Traceability: `FR-`/`NFR-` IDs in PLAN.md, a test function name and EVIDENCE.md; `AT-`/`OC-` IDs in PLAN.md and EVIDENCE.md only; only the WP's own IDs count. **Agreed.**
+2. The gate reads approvals from `origin/main`, as the spec says; the Stop-hook difference on a branch that has not merged the latest `main` is accepted. **Agreed.**
+3. Harness baseline setup as proposed (Python 3.13, throwaway venv outside the repo, base/corpus/tier2 plus pytest and pytest-asyncio, no tier1, `tests/smoke_test_tier1` recorded as not run with reasons). **Agreed.**
+4. CI actions pinned by version tag: `actions/checkout@v4`, `astral-sh/setup-uv@v6`, uv 0.8.17. **Agreed.**
+5. Defaults (a) to (g) in question 5. **Agreed.**
+
 ## Deviations
 None. The interpretations I need you to confirm are questions 1 to 5 above; nothing will be built differently from the spec without your answer.
