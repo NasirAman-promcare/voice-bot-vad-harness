@@ -2,29 +2,38 @@
 
 Run through aqis_lab/deploy/harness_provision.sh (the first step everywhere the harness runs:
 cloud VM, CI, Colab, Oracle). Standard library only; runs on any Python 3.10+ before a venv exists.
+The harness needs Linux x86_64: the pinned TEN VAD ships a native library for no other Linux machine, so on
+Arm (aarch64) or any other machine provisioning fails at once, before any step (owner decision, audit F16).
 
 CAPABILITIES:
-  CAP-ENV-003: provisions the harness idempotently: apt packages, .venv-harness on the Colab Python with the harness's own install command plus the hash-checked extras and the commit-pinned TEN VAD, the corpus from git at its pinned commit and the FireRedVAD weights into a cache outside the tree, verified by SHA-256 (no Git LFS pointer files), exposed only through git-ignored paths; prints a PASS/FAIL table and exits 1 on any failure [tests: test_FR_0_0_12_places_data_only_in_ignored_paths, test_FR_0_0_12_second_data_run_downloads_nothing, test_FR_0_0_12_reads_corpus_at_pinned_commit, test_FR_0_0_12_fails_on_asset_checksum_mismatch, test_FR_0_0_12_rejects_lfs_pointer_file, test_FR_0_0_12_manifest_mismatch_is_an_error, test_FR_0_0_12_refuses_target_that_git_does_not_ignore, test_FR_0_0_12_never_writes_token, test_FR_0_0_12_rejects_unknown_step, test_FR_0_0_12_provisions_harness_end_to_end, test_FR_0_0_12_second_run_downloads_nothing_within_60s]
+  CAP-ENV-003: provisions the harness idempotently: apt packages, .venv-harness on the Colab Python with the harness's own install command plus the hash-checked extras and the commit-pinned TEN VAD, the corpus from git at its pinned commit and the FireRedVAD weights into a cache outside the tree, verified by SHA-256 (no Git LFS pointer files), exposed only through git-ignored paths; fails fast on a machine other than Linux x86_64 (no TEN VAD binary); skips the install only when the stamp matches and pip check passes; verifies the installed TEN VAD commit; rejects an assets config with a missing key (exit 2); prints a PASS/FAIL table and exits 1 on any failure, including a git status that is not empty [tests: test_FR_0_0_12_places_data_only_in_ignored_paths, test_FR_0_0_12_second_data_run_downloads_nothing, test_FR_0_0_12_reads_corpus_at_pinned_commit, test_FR_0_0_12_fails_on_asset_checksum_mismatch, test_FR_0_0_12_rejects_lfs_pointer_file, test_FR_0_0_12_manifest_mismatch_is_an_error, test_FR_0_0_12_refuses_target_that_git_does_not_ignore, test_FR_0_0_12_never_writes_token, test_FR_0_0_12_rejects_unknown_step, test_FR_0_0_12_fails_when_tree_was_dirty_before, test_FR_0_0_12_fails_when_provisioning_dirties_tree, test_FR_0_0_12_platform_pin_is_linux_x86_64, test_FR_0_0_12_fails_fast_on_machine_without_ten_vad_binary, test_FR_0_0_12_rejects_config_missing_required_key, test_FR_0_0_12_reports_lfs_pull_failure_detail, test_FR_0_0_12_rejects_ten_vad_at_other_commit, test_FR_0_0_12_reinstalls_when_pip_check_fails, test_FR_0_0_12_provisions_harness_end_to_end, test_FR_0_0_12_second_run_downloads_nothing_within_60s]
 INPUTS AND OUTPUTS: config/aqis_lab/harness_assets.json (or $AQIS_HARNESS_ASSETS), docs/environment/colab_probe.txt,
   the harness requirement files; writes .venv-harness/, ${AQIS_CACHE:-$HOME/.cache/aqis}, symlinks under
   corpus/audio/ and pretrained_models/FireRedVAD/ (both git-ignored). Options: --steps system,python,corpus,weights,verify.
-CONTRACTS: harness_assets.json keys as in config/aqis_lab/harness_assets.json.
+CONTRACTS: harness_assets.json keys as in config/aqis_lab/harness_assets.json; every key in REQUIRED_KEYS must be
+  present (a missing key is a config error, exit 2).
 INVARIANTS:
   - Never creates tracked or un-ignored files: every target is checked with git check-ignore first, and
     git status --porcelain is compared before and after.
   - Never reads, writes or logs a GitHub token; the corpus comes from local git objects, not the network.
   - Every network action is counted and reported ("Downloads this run"); a repeat run with nothing changed makes none.
   - Existing user files are never overwritten: an occupied target is a FAIL.
+  - Runs only where platform.system() and platform.machine() match the "platform" pin (Linux x86_64).
 NOT IN SCOPE:
   - torch (owner decision R2-3), GPU packages, running the harness tests (CI job harness-regression does).
+  - Machines without a TEN VAD native library, such as an Arm Oracle VM (owner decision, audit F16).
 CHANGE LOG:
   2026-09-25 WP-0.0 round 2 FR-0.0-12 created.
   2026-09-25 WP-0.0 round 2 BLK-005 option 1: corpus pinned to a commit (the tag lacks the archive).
+  2026-09-25 WP-0.0 audit round 2 fixes: F16 platform check before any step; F18 pip check in the install skip
+    (reinstall_reason); F21 required config keys, git lfs pull result kept in the FAIL detail, timeout on
+    git cat-file.
 """
 import argparse
 import hashlib
 import json
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -37,6 +46,8 @@ STEPS = ("system", "python", "corpus", "weights", "verify")
 PROBE_REL = "docs/environment/colab_probe.txt"
 LFS_POINTER_PREFIX = b"version https://git-lfs"
 STAMP_NAME = ".aqis-harness-stamp"
+REQUIRED_KEYS = ("platform", "system_packages", "harness_requirements", "extras_lock", "vcs_lock", "ten_vad",
+                 "import_check", "not_installed", "corpus", "firered")
 
 
 class StepFailed(Exception):
@@ -52,6 +63,11 @@ class Provisioner:
             self.cfg = json.loads(self.config_path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
             raise StepFailed(f"cannot read assets config {self.config_path}: {exc}") from exc
+        if not isinstance(self.cfg, dict):
+            raise StepFailed(f"assets config {self.config_path} is not a JSON object")
+        missing = [key for key in REQUIRED_KEYS if key not in self.cfg]
+        if missing:
+            raise StepFailed(f"assets config {self.config_path} has no {', '.join(repr(k) for k in missing)} key")
         self.rows = []
         self.downloads = 0
 
@@ -92,9 +108,18 @@ class Provisioner:
     def status(self):
         return self.git("status", "--porcelain", "--untracked-files=all").stdout
 
+    # -- platform ---------------------------------------------------------------------------
+    def check_platform(self):
+        pin = self.cfg["platform"]
+        system, machine = platform.system(), platform.machine()
+        if system != pin["system"] or machine not in pin["machines"]:
+            raise StepFailed(f"harness provisioning needs {pin['system']} {' or '.join(pin['machines'])}; this machine "
+                             f"is {system} {machine or 'unknown'}. {pin['reason']}")
+        self.row("platform", "PASS", f"{system} {machine}")
+
     # -- step: system packages -------------------------------------------------------------
     def step_system(self):
-        wanted = list(self.cfg.get("system_packages", []))
+        wanted = list(self.cfg["system_packages"])
         if not wanted:
             self.row("system", "PASS", "no system packages requested")
             return
@@ -170,27 +195,41 @@ class Provisioner:
                 raise StepFailed(f".venv-harness does not run Python {version}")
         stamp_file = venv / STAMP_NAME
         stamp = self.stamp_value(version)
-        try:
-            previous = stamp_file.read_text(encoding="utf-8").strip()
-        except FileNotFoundError:
-            previous = ""
-        except OSError as exc:
-            raise StepFailed(f"cannot read {stamp_file}: {exc}") from exc
-        if previous == stamp:
-            self.row("python", "PASS", f".venv-harness Python {version}; requirements unchanged, nothing installed")
+        reason = self.reinstall_reason(python, stamp)
+        if reason is None:
+            self.row("python", "PASS", f".venv-harness Python {version}; requirements unchanged and pip check "
+                     "passes, nothing installed")
         else:
+            print(f"installing into .venv-harness: {reason}", flush=True)
             self.run([python, "scripts/run_phase.py", "install", "all"], network=True)
             self.run([python, "-m", "pip", "install", "--no-input", "--require-hashes", "-r",
                       self.cfg["extras_lock"]], network=True)
             self.run([python, "-m", "pip", "install", "--no-input", "--no-deps", "--force-reinstall", "-r",
                       self.cfg["vcs_lock"]], network=True)
             stamp_file.write_text(stamp + "\n", encoding="utf-8")
-            self.row("python", "PASS", f".venv-harness Python {version}; installed run_phase.py install all, "
-                     f"{self.cfg['extras_lock']} (hash-checked), {self.cfg['vcs_lock']}")
+            self.row("python", "PASS", f".venv-harness Python {version}; installed ({reason}) run_phase.py install "
+                     f"all, {self.cfg['extras_lock']} (hash-checked), {self.cfg['vcs_lock']}")
         self.check_ten_vad(python)
         self.check_imports(python)
-        for item in self.cfg.get("not_installed", []):
+        for item in self.cfg["not_installed"]:
             self.row(item["name"], "INFO", f"not installed, {item['reason']}")
+
+    def reinstall_reason(self, python, stamp):
+        """None when the environment already holds exactly these requirements (same stamp and pip check passes),
+        otherwise why the harness requirements must be installed."""
+        stamp_file = python.parent.parent / STAMP_NAME
+        try:
+            previous = stamp_file.read_text(encoding="utf-8").strip()
+        except FileNotFoundError:
+            return "first install"
+        except OSError as exc:
+            raise StepFailed(f"cannot read {stamp_file}: {exc}") from exc
+        if previous != stamp:
+            return "harness requirement files changed"
+        proc = self.run([python, "-m", "pip", "check", "--disable-pip-version-check"], check=False, timeout=600)
+        if proc.returncode != 0:
+            return "pip check failed: " + " / ".join((proc.stdout + proc.stderr).strip().splitlines()[:3])
+        return None
 
     def check_ten_vad(self, python):
         pin = self.cfg["ten_vad"]
@@ -207,7 +246,7 @@ class Provisioner:
         self.row("ten-vad", "PASS", f"{pin['distribution']} {info['version']} at commit {commit[:12]} (pinned)")
 
     def check_imports(self, python):
-        modules = list(self.cfg.get("import_check", []))
+        modules = list(self.cfg["import_check"])
         code = ("import importlib, sys\n"
                 "for name in sys.argv[1:]:\n"
                 "    importlib.import_module(name)\n"
@@ -243,8 +282,12 @@ class Provisioner:
             base.mkdir(parents=True, exist_ok=True)
             part = archive.with_name(archive.name + ".part")
             with open(part, "wb") as handle:
-                proc = subprocess.run(["git", "cat-file", "blob", f"{commit}:{c['path']}"], cwd=self.root,
-                                      stdout=handle, stderr=subprocess.PIPE)
+                try:
+                    proc = subprocess.run(["git", "cat-file", "blob", f"{commit}:{c['path']}"], cwd=self.root,
+                                          stdout=handle, stderr=subprocess.PIPE, timeout=3600)
+                except (OSError, subprocess.TimeoutExpired) as exc:
+                    part.unlink()
+                    raise StepFailed(f"cannot read {c['path']} at commit {commit[:12]}: {exc}") from exc
             if proc.returncode != 0:
                 part.unlink()
                 raise StepFailed(f"cannot read {c['path']} at commit {commit[:12]}: {proc.stderr.decode(errors='replace').strip()}")
@@ -346,9 +389,12 @@ class Provisioner:
                     raise StepFailed("git-lfs is not installed, so these stay Git LFS pointer files: "
                                      + ", ".join(pointers))
                 include = ",".join(pointers)
-                self.git("lfs", "pull", "--include", include, cwd=repo, network=True, check=False)
+                lfs = self.git("lfs", "pull", "--include", include, cwd=repo, network=True, check=False)
             problems = self.weights_ok(repo, w["files"])
             if problems:
+                if pointers and lfs.returncode != 0:
+                    tail = " / ".join((lfs.stderr or lfs.stdout).strip().splitlines()[-3:])
+                    problems.append(f"git lfs pull failed (exit {lfs.returncode}): {tail}")
                 raise StepFailed("; ".join(problems))
         link = self.root / link_rel
         target = repo / w["subdir"]
@@ -376,6 +422,11 @@ class Provisioner:
 
     # -- driver ----------------------------------------------------------------------------
     def provision(self, steps):
+        try:
+            self.check_platform()
+        except (StepFailed, KeyError, TypeError) as exc:
+            self.row("platform", "FAIL", str(exc) if isinstance(exc, StepFailed) else f"{type(exc).__name__}: {exc}")
+            return self.report(failed=True)
         status_before = self.status()
         failed = False
         for step in STEPS:
@@ -390,6 +441,9 @@ class Provisioner:
                 failed = True
                 name = {"python": "python", "verify": "git-status"}.get(step, step)
                 self.row(name, "FAIL", f"{type(exc).__name__}: {exc}" if not isinstance(exc, StepFailed) else str(exc))
+        return self.report(failed)
+
+    def report(self, failed):
         print()
         print("| Step | Result | Detail |")
         print("| --- | --- | --- |")

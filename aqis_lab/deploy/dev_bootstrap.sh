@@ -18,6 +18,7 @@
 #   - Installing uv itself, GPU packages, or setting up Colab or Oracle (WP-0.5, WP-0.6).
 # CHANGE LOG:
 #   2026-09-25 WP-0.0 FR-0.0-02 created.
+#   2026-09-25 WP-0.0 round 2 F06: header test list names test_FR_0_0_02_uses_version_named_by_probe (header only).
 set -euo pipefail
 
 fail() {

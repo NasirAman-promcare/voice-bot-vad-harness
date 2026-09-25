@@ -52,6 +52,17 @@ def test_FR_0_0_11_regression_check_flags_newly_failing_baseline_pass(tmp_path):
                            f"REGRESSION: {C} (baseline passed, now error)"]
 
 
+def test_FR_0_0_11_regression_check_flags_newly_skipped_baseline_pass(tmp_path):
+    # A skip hides a test that used to pass, so it counts as a regression (audit F13); a test that was already
+    # skipped in the baseline and is still skipped is not one.
+    base = baseline(tmp_path, {A: "passed", B: "skipped"})
+    proc = check(junit(tmp_path, {A: "skipped", B: "skipped"}), base)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    regressions = [line for line in proc.stdout.splitlines() if line.startswith("REGRESSION: ")]
+    assert regressions == [f"REGRESSION: {A} (baseline passed, now skipped)"]
+    assert proc.stdout.splitlines()[-1] == "RESULT: FAIL"
+
+
 def test_FR_0_0_11_regression_check_flags_missing_baseline_pass(tmp_path):
     base = baseline(tmp_path, {A: "passed", B: "passed"})
     proc = check(junit(tmp_path, {A: "passed"}), base)

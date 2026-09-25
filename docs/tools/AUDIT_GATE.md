@@ -25,6 +25,7 @@ git fetch origin main                                   # approvals are read fro
 - **Added then removed.** A file added on the branch and later removed again is ignored.
 - **Approvals.** Approvals are read from `docs/approvals/*.md` as committed on **`origin/main`**, never from the working tree or the branch.
   - A file counts only if it has a line `STATUS: APPROVED` and no past `EXPIRES: YYYY-MM-DD`. `README.md` is ignored.
+  - An approval file that `git show` cannot read at that commit does not count, and neither does the whole folder if `git ls-tree` cannot list it. The gate does not stop with exit 2 here, unlike the reads in "Fail closed" below. A missing approval can only add A2, B1 or C findings, never hide one, so the result still errs toward failing.
   - If `origin/main` is missing, the gate fetches it once. If it still cannot be verified, **no approval counts**: the report says `approvals: none (origin/main not verifiable)` and JSON has `approvals_commit: null`. This can only add findings, never remove them. A stale local `origin/main` hides newer approvals, so run `git fetch origin main` first.
   - **Difference G1 (accepted, owner decisions 2 and R2-2):** the Stop hook reads approvals at the merge-base instead. The two agree whenever the branch contains the latest `main`, which is what `/wp-build` does first, and in every CI pull-request run. They differ only on a branch that has not merged a change to approvals from `main`. An approval added on `main` after the branch point counts for the gate but not for the hook, and an approval withdrawn there counts for the hook but not for the gate. Tests: `test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point`, `test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point`.
 - **Protected paths.** `docs/process/PROTECTED_PATHS.txt` is read from the working tree, as the hooks do. The built-in NEVER list always applies. Changing the file is itself an A1 finding. If the file is missing or unreadable the gate exits 2 (difference G2 below).
@@ -69,7 +70,7 @@ Every finding is printed as `path:line: [RULE] SEVERITY: message` (NFR-0.0-02).
 **Fail closed, and difference G2 (accepted, owner decision R2-2).** The gate exits 2 when:
 - `PROTECTED_PATHS.txt` is missing or unreadable (the hook then uses only its built-in NEVER list);
 - a changed file in the scan scope exists but is not a regular file, such as a dangling symlink, or cannot be read (the hook skips such a file silently);
-- any `git diff` or `git show` it needs fails (the hook reports a `GATE ERROR` line too).
+- any `git diff` it needs fails, or the `git show` of `docs/capabilities/REGISTRY.md` at the base fails (the hook reports a `GATE ERROR` line too). An approval that cannot be read is the one exception: it simply does not count (see Approvals above).
 
 A changed path that no longer exists at all (staged, then removed from the working tree) has nothing to scan, as in the hook. The parity tests compare findings on readable repositories and assert that the gate exits 2 in the error cases. Tests: `test_FR_0_0_06_fails_closed_*`, `test_FR_0_0_06_decodes_non_utf8_with_replacement`.
 

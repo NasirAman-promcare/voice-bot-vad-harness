@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Provision the existing VAD harness: system packages, .venv-harness, corpus-v1 and FireRedVAD weights.
+# Needs Linux x86_64 (Debian or Ubuntu for the system packages): TEN VAD has no Arm binary, so on Arm or any
+# other machine provisioning fails at once with that reason (owner decision, audit F16).
 #
 # CAPABILITIES:
 #   CAP-ENV-005: entry point for harness provisioning; runs aqis_lab/deploy/harness_provision.py with the system
@@ -15,6 +17,7 @@
 #   - The provisioning logic itself (harness_provision.py).
 # CHANGE LOG:
 #   2026-09-25 WP-0.0 round 2 FR-0.0-12 created.
+#   2026-09-25 WP-0.0 audit round 2 F16: header documents the Linux x86_64 requirement (checked in the .py).
 set -euo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"

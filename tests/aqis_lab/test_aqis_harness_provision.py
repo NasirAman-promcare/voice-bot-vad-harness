@@ -1,16 +1,21 @@
 """FR-0.0-12: aqis_lab/deploy/harness_provision.sh provisions the harness (system packages, .venv-harness,
-corpus from git tag corpus-v1, FireRedVAD weights) idempotently, only into ignored paths, and never writes a token.
+corpus-v1 from git at its pinned commit, FireRedVAD weights) idempotently, only into ignored paths, and never
+writes a token. It runs only on Linux x86_64, the one platform TEN VAD ships a native library for (owner
+decision on audit finding F16).
 
 Fast tests run the real script in a throwaway git repository whose assets config points at small local
-sources (a tagged corpus archive and a local weights repository) and select the data steps with --steps.
-Slow tests provision this repository for real (AT-0.0-05)."""
+sources (a corpus archive committed at a pinned commit and a local weights repository) and select the data
+steps with --steps. The TEN VAD commit and pip check tests install a small local git package with pip into a
+scratch virtual environment, offline. Slow tests provision this repository for real (AT-0.0-05)."""
 import hashlib
+import importlib.util
 import io
 import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 import tarfile
 import time
 
@@ -24,6 +29,7 @@ WAV_A = b"RIFF" + b"\x00" * 60
 WAV_B = b"RIFF" + b"\x01" * 60
 MODEL = b"\x80\x02model-weights-for-a-test" * 40
 CMVN = b"cmvn-stats-for-a-test\n"
+REAL_CONFIG = json.loads((ROOT / "config" / "aqis_lab" / "harness_assets.json").read_text(encoding="utf-8"))
 POINTER = (b"version https://git-lfs.github.com/spec/v1\n"
            b"oid sha256:" + hashlib.sha256(MODEL).hexdigest().encode() + b"\nsize " + str(len(MODEL)).encode() + b"\n")
 
@@ -89,6 +95,7 @@ def make_tree(tmp_path, *, model_blob=MODEL, tracked_manifest=None, corpus_sha=N
         "ten_vad": {"distribution": "ten_vad", "commit": "0" * 40},
         "not_installed": [{"name": "torch", "reason": "decision R2-3"}],
         "import_check": [],
+        "platform": REAL_CONFIG["platform"],
     }
     cfg = tmp_path / "assets.json"
     cfg.write_text(json.dumps(config, indent=1), encoding="utf-8")
@@ -215,6 +222,191 @@ def test_FR_0_0_12_rejects_unknown_step(tmp_path):
     tree, cfg = make_tree(tmp_path)
     proc = run(tree, cfg, tmp_path / "cache", "--steps", "corpus,bogus")
     assert proc.returncode == 2 and "bogus" in proc.stderr
+
+
+def test_FR_0_0_12_fails_when_tree_was_dirty_before(tmp_path):
+    # FR-0.0-12(f): provisioning must leave `git status --porcelain` empty; a tree that is already dirty is a
+    # FAIL even though provisioning itself changed nothing (audit F12).
+    tree, cfg = make_tree(tmp_path)
+    (tree / "notes.txt").write_text("an untracked file\n", encoding="utf-8")
+    proc = run(tree, cfg, tmp_path / "cache", *DATA)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    rows = table(proc.stdout)
+    assert rows["corpus"][0] == "PASS" and rows["weights"][0] == "PASS"
+    assert rows["git-status"][0] == "FAIL" and "?? notes.txt" in rows["git-status"][1]
+    assert proc.stdout.splitlines()[-1] == "RESULT: FAIL"
+
+
+def test_FR_0_0_12_fails_when_provisioning_dirties_tree(tmp_path):
+    # A cache inside the working tree makes provisioning itself create untracked files (audit F12).
+    tree, cfg = make_tree(tmp_path)
+    proc = run(tree, cfg, tree / "cache-in-tree", *DATA)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    rows = table(proc.stdout)
+    assert rows["corpus"][0] == "PASS" and rows["weights"][0] == "PASS"
+    assert rows["git-status"][0] == "FAIL" and "changed during provisioning" in rows["git-status"][1]
+    assert "?? cache-in-tree/" in rows["git-status"][1]
+    assert proc.stdout.splitlines()[-1] == "RESULT: FAIL"
+
+
+def test_FR_0_0_12_platform_pin_is_linux_x86_64():
+    # Owner decision on audit F16: the harness and TEN VAD need Linux x86_64.
+    pin = REAL_CONFIG["platform"]
+    assert pin["system"] == "Linux" and pin["machines"] == ["x86_64"]
+    assert "lib/Linux/x64/libten_vad.so" in pin["reason"] and "no Arm" in pin["reason"]
+    assert REAL_CONFIG["ten_vad"]["commit"][:12] in pin["reason"]
+
+
+def test_FR_0_0_12_fails_fast_on_machine_without_ten_vad_binary(tmp_path):
+    # `setarch linux32` makes the kernel report i686: a real machine type TEN VAD has no library for, the same
+    # situation as Arm (aarch64). Provisioning must stop before any step, download or file change.
+    setarch = shutil.which("setarch")
+    assert setarch, "setarch (util-linux) is needed for this test"
+    tree, cfg = make_tree(tmp_path)
+    cache = tmp_path / "cache"
+    env = hermetic_git_env({"AQIS_HARNESS_ASSETS": str(cfg), "AQIS_CACHE": str(cache)})
+    proc = subprocess.run([setarch, "linux32", "bash", str(tree / "aqis_lab" / "deploy" / SCRIPT_SH.name), *DATA],
+                          cwd=tree, capture_output=True, text=True, env=env, timeout=120)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    rows = table(proc.stdout)
+    assert list(rows) == ["platform"], rows
+    result, detail = rows["platform"]
+    assert result == "FAIL"
+    assert "Linux i686" in detail and "x86_64" in detail and "no Arm" in detail
+    assert downloads(proc.stdout) == 0 and proc.stdout.splitlines()[-1] == "RESULT: FAIL"
+    assert not cache.exists() and not (tree / "corpus" / "audio").exists() and not (tree / "pretrained_models").exists()
+
+
+def test_FR_0_0_12_rejects_config_missing_required_key(tmp_path):
+    # A missing key is an error, never an empty default that turns into a PASS row (audit F21).
+    tree, cfg = make_tree(tmp_path)
+    full = json.loads(cfg.read_text(encoding="utf-8"))
+    for key in ("system_packages", "import_check", "not_installed", "platform", "corpus", "firered", "ten_vad"):
+        partial = {k: v for k, v in full.items() if k != key}
+        cfg.write_text(json.dumps(partial), encoding="utf-8")
+        proc = run(tree, cfg, tmp_path / "cache", "--steps", "verify")
+        assert proc.returncode == 2, (key, proc.stdout, proc.stderr)
+        assert proc.stderr.startswith("ERROR:") and repr(key) in proc.stderr, (key, proc.stderr)
+        assert "RESULT:" not in proc.stdout
+
+
+def test_FR_0_0_12_reports_lfs_pull_failure_detail(tmp_path):
+    # When `git lfs pull` fails, its exit code and the source it failed on are in the FAIL row (audit F21).
+    assert shutil.which("git-lfs"), "git-lfs is needed for this test (a system package the harness also needs)"
+    tree, cfg = make_tree(tmp_path, model_blob=POINTER)
+    proc = run(tree, cfg, tmp_path / "cache", *DATA)
+    assert proc.returncode == 1
+    result, detail = table(proc.stdout)["weights"]
+    assert result == "FAIL" and "pointer" in detail
+    assert re.search(r"git lfs pull failed \(exit [1-9]\d*\)", detail), detail
+    assert str(tmp_path / "weights-src") in detail, detail
+
+
+# ---- TEN VAD commit and pip check, against a real pip install (audit F13, F18) ---------------
+BACKEND = """import base64, hashlib, zipfile
+NAME, VERSION, REQUIRES = {name!r}, "1.0.6.8", {requires!r}
+def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
+    info = NAME + "-" + VERSION + ".dist-info"
+    meta = "Metadata-Version: 2.1\\nName: " + NAME + "\\nVersion: " + VERSION + "\\n"
+    meta += "".join("Requires-Dist: " + r + "\\n" for r in REQUIRES)
+    files = {{NAME + "/__init__.py": b"", info + "/METADATA": meta.encode(),
+             info + "/WHEEL": b"Wheel-Version: 1.0\\nGenerator: aqis-test\\nRoot-Is-Purelib: true\\nTag: py3-none-any\\n"}}
+    wheel = NAME + "-" + VERSION + "-py3-none-any.whl"
+    with zipfile.ZipFile(wheel_directory + "/" + wheel, "w") as archive:
+        record = []
+        for path, data in files.items():
+            archive.writestr(path, data)
+            digest = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode()
+            record.append(path + ",sha256=" + digest + "," + str(len(data)))
+        record.append(info + "/RECORD,,")
+        archive.writestr(info + "/RECORD", "\\n".join(record) + "\\n")
+    return wheel
+"""
+
+
+def local_package(path, name, requires=()):
+    """A git repository holding a pip-installable package (in-tree PEP 517 backend, so no download is needed).
+    Returns the commits (first, second) of two different revisions."""
+    path.mkdir(parents=True)
+    (path / "pyproject.toml").write_text('[build-system]\nrequires = []\nbuild-backend = "backend"\n'
+                                         'backend-path = ["."]\n', encoding="utf-8")
+    (path / "backend.py").write_text(BACKEND.format(name=name, requires=list(requires)), encoding="utf-8")
+    git(path, "init", "-q")
+    git(path, "add", "-A")
+    git(path, "commit", "-q", "-m", "first")
+    first = git(path, "rev-parse", "HEAD").strip()
+    (path / "README").write_text("second revision\n", encoding="utf-8")
+    git(path, "add", "-A")
+    git(path, "commit", "-q", "-m", "second")
+    return first, git(path, "rev-parse", "HEAD").strip()
+
+
+def scratch_venv(path):
+    subprocess.run([sys.executable, "-m", "venv", str(path)], check=True, capture_output=True, timeout=300)
+    return path / "bin" / "python"
+
+
+def pip_install(python, *args):
+    proc = subprocess.run([str(python), "-m", "pip", "install", "--no-index", "--no-input", "--disable-pip-version-check",
+                           "-q", *args], capture_output=True, text=True, env=hermetic_git_env(), timeout=300)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def load_provision_module():
+    spec = importlib.util.spec_from_file_location("aqis_harness_provision_under_test", SCRIPT_PY)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_FR_0_0_12_rejects_ten_vad_at_other_commit(tmp_path):
+    # BLK-004 option 1: provisioning verifies the commit pip recorded for the installed TEN VAD (PEP 610
+    # direct_url.json) against the pin, and fails on any other commit or a non-git install.
+    first, second = local_package(tmp_path / "ten-vad-src", "ten_vad")
+    python = scratch_venv(tmp_path / "venv")
+    pip_install(python, f"ten_vad @ git+file://{tmp_path / 'ten-vad-src'}@{first}")
+    module = load_provision_module()
+    tree, cfg = make_tree(tmp_path)
+    config = json.loads(cfg.read_text(encoding="utf-8"))
+
+    config["ten_vad"]["commit"] = first
+    cfg.write_text(json.dumps(config), encoding="utf-8")
+    provisioner = module.Provisioner(tree, cfg, tmp_path / "cache")
+    provisioner.check_ten_vad(python)
+    assert provisioner.rows == [("ten-vad", "PASS", f"ten_vad 1.0.6.8 at commit {first[:12]} (pinned)")]
+
+    config["ten_vad"]["commit"] = second
+    cfg.write_text(json.dumps(config), encoding="utf-8")
+    with pytest.raises(module.StepFailed) as wrong:
+        module.Provisioner(tree, cfg, tmp_path / "cache").check_ten_vad(python)
+    assert str(wrong.value) == f"ten_vad commit is {first}, pinned {second}"
+
+    # Installed from a plain folder: pip records no git commit, which is not the pinned commit either.
+    pip_install(python, "--force-reinstall", str(tmp_path / "ten-vad-src"))
+    with pytest.raises(module.StepFailed) as plain:
+        module.Provisioner(tree, cfg, tmp_path / "cache").check_ten_vad(python)
+    assert str(plain.value) == f"ten_vad commit is None, pinned {second}"
+
+
+def test_FR_0_0_12_reinstalls_when_pip_check_fails(tmp_path):
+    # PLAN Round 2: the install is skipped only when the stamp matches AND `pip check` passes (audit F18).
+    local_package(tmp_path / "pkg-src", "aqis_needs_dep", requires=["aqis-absent-dependency>=1"])
+    python = scratch_venv(tmp_path / "venv")
+    module = load_provision_module()
+    tree, cfg = make_tree(tmp_path)
+    provisioner = module.Provisioner(tree, cfg, tmp_path / "cache")
+    stamp_file = tmp_path / "venv" / module.STAMP_NAME
+
+    assert provisioner.reinstall_reason(python, "stamp-1") == "first install"
+    stamp_file.write_text("stamp-0\n", encoding="utf-8")
+    assert provisioner.reinstall_reason(python, "stamp-1") == "harness requirement files changed"
+    stamp_file.write_text("stamp-1\n", encoding="utf-8")
+    assert provisioner.reinstall_reason(python, "stamp-1") is None
+
+    pip_install(python, "--no-deps", str(tmp_path / "pkg-src"))
+    reason = provisioner.reinstall_reason(python, "stamp-1")
+    assert reason is not None and reason.startswith("pip check failed")
+    assert "aqis-absent-dependency" in reason
 
 
 # ---- the real repository (AT-0.0-05, AT-0.0-06) ------------------------------------------

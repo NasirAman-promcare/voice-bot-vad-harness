@@ -247,7 +247,7 @@ The Stop hook also reports no problems on this branch (`echo '{"stop_hook_active
 | --- | --- | --- | --- | --- |
 | AT-0.0-04 CI green on the PR | GitHub → the WP-0.0 pull request → Checks (or the Actions tab) | Open the `aqis-lab-ci` run for the PR's latest commit (`pull_request` event) | Every step green; "Version" prints `python=3.13.x`; "Fast lab test suite" ends `83 passed, 5 deselected` (or more passed, no failures); the "Audit gate" step shows `EVENT_NAME: pull_request` and ends `0 findings: OK` | Pending (owner) |
 
-No Colab or Oracle checks belong to WP-0.0.
+Round 1 had no Colab or Oracle checks. Round 2 adds the Colab check OC-0.0-01, and the audit round 2 fixes settle Oracle (owner decision on F16). Both are listed under "Round 2 owner-run checks" below. (Corrected for audit finding F22.)
 
 ## audit-allow lines
 None. No line in the repository carries an `audit-allow` exemption; the gate reports `Exempted lines (# audit-allow): 0`. Files exempted by the owner approval (`ALLOW-PATTERNS-IN`, `docs/approvals/WP-0.0.md`): `tools/audit/patterns.py`, `tests/aqis_lab/fixtures/gate/allow_lines.py`, `tests/aqis_lab/fixtures/gate/code_patterns.py`, `tests/aqis_lab/fixtures/gate/test_patterns.py`.
@@ -284,7 +284,7 @@ None. No line in the repository carries an `audit-allow` exemption; the gate rep
 | F03 | `test_FR_0_0_01_version_marks_dirty_tree` now stages an edit and a deletion | Auditor mutation (`git diff --name-only` plus untracked): `F03 +dirty misses staged => 1 failed, 4 passed, 98 deselected` |
 | F04 | `gate.py`: `read_changed_file`, `diff_against_base`, `load_protected`, registry, spec and test-file reads now raise `GateError` (exit 2). Tests: `test_FR_0_0_06_fails_closed_on_unreadable_changed_file`, `test_FR_0_0_06_fails_closed_when_protected_paths_unreadable[missing/directory]`, `test_FR_0_0_06_fails_closed_on_git_error` (the last also shows the Stop hook reports `GATE ERROR`) | Round 2 mutation R3 (dangling symlink skipped silently): `1 failed` |
 | F05 | Docstring of `test_FR_0_0_04_harness_collection_unchanged` states its limits; its pytest subprocesses use `PYTHONDONTWRITEBYTECODE=1`. The combined run in `.venv-harness` is recorded under FR-0.0-04 below | Harness outcomes identical alone and combined (22 of 22) |
-| F06 | `test_FR_0_0_08_module_headers_match_registry`, added before the fix (commit `9897ce2` fails, `7fb578d` passes). Headers and registry synced; the three package markers have full headers; `ALLOW_REASON_RE` is listed in CAP-AUDIT-008 | Passes; it caught one more mismatch during round 2 (the `harness_provision.py` header), which was fixed |
+| F06 | `test_FR_0_0_08_module_headers_match_registry`, added before the fix (commit `9897ce2` fails, `7fb578d` passes). Headers and registry synced; the three package markers have full headers. Correction (audit F20): `ALLOW_REASON_RE` was not in the CAP-AUDIT-008 row until the round 2 audit fixes, which also added `LAB_CODE_DIRS`, `LAB_CI_FILES`, `LAB_TEST_DIR`, `SCANNED_SUFFIXES` and `glob_to_regex` | Passes; it caught one more mismatch during round 2 (the `harness_provision.py` header), which was fixed |
 | F07 | NFR commands and output below. **History, stated accurately:** in round 1, the check (e), check (f) and FR-0.0-07 code landed in `3f7d52a` together with checks (a) to (d), **before** their tests were committed. The titles of `b8bbe52`, `65be1e1`, `6fe8c71` and `b2067a0` describe test files only. Pushed history is not rewritten. In round 2, tests and implementation are separate commits; example checked in a scratch clone: `1ede332` (tests only) `17 failed, 32 passed`, `5ae3ce3` (fix) `49 passed` | See below |
 | F08 | Owner approved the round-1 additions (`docs/approvals/WP-0.0.md`, condition R2-4) | Approved |
 | F09 | Replacement decoding everywhere; `repository_root` catches `TimeoutExpired`; F1 cites `docs/specs/**/<WP>-*.md:1`. Test: `test_FR_0_0_06_decodes_non_utf8_with_replacement` (a Latin-1 byte in a new and in a modified lab file gives the finding, exit 1, no traceback) | Passes |
@@ -351,8 +351,9 @@ EXIT=0
 
 ## FR-0.0-04 — combined run in the harness environment (F05)
 `PYTHONDONTWRITEBYTECODE=1 .venv-harness/bin/python -m pytest tests/regression tests/aqis_lab -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider -q --junitxml=<scratch>`, then a comparison of the harness test cases with the harness-only run:
+Re-run after the round 2 audit fixes (audit F22: the earlier excerpt `2 failed, 128 passed` predated later tests):
 ```text
-2 failed, 128 passed, 7 deselected in 28.21s
+2 failed, 152 passed, 7 deselected in 41.75s
 harness outcomes identical alone vs combined with lab tests: True 22 22 21 passed
 FAILED tests/regression/test_loss_category.py::test_packet_loss_category_applies_drop_impairment_in_bridge
 FAILED tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_environment_matches_lock
@@ -451,7 +452,8 @@ tests/aqis_lab/test_aqis_gate_nfr.py::test_NFR_0_0_03_imports_are_stdlib_or_pinn
 | Check | Where | Command | Expected output | Result report |
 | --- | --- | --- | --- | --- |
 | AT-0.0-04 and AT-0.0-07: CI green on the PR | GitHub, PR #1, Checks | Open the `aqis-lab-ci` run for the latest commit (`pull_request` event) | Job `lab` green, with the step "Work package ID from pull request title" printing `WP-0.0` and the gate running with `--wp WP-0.0`, ending `0 findings: OK`. Job `harness-regression` green, with the provisioning table all PASS (torch INFO) and `RESULT: PASS` from the regression check | Pending (owner) |
-| OC-0.0-01: Colab harness setup | Colab, fresh CPU runtime | Cells 1 to 6 of `docs/colab/HARNESS_SETUP.md`; commit the downloaded file as `docs/environment/colab_harness_provision.txt` | Every row PASS (torch `INFO | not installed, decision R2-3`), `RESULT: PASS`, `exit code: 0`, `git status --porcelain: []` | Pending (owner) |
+| OC-0.0-01: Colab harness setup | Colab, fresh CPU runtime (x86_64) | Before the merge: in cell 1 of `docs/colab/HARNESS_SETUP.md` set `BRANCH = "claude/hopeful-noether-yinc4e"` (`main` has no provisioning script until the merge, audit F15). Run cells 1 to 6, then commit the downloaded file as `docs/environment/colab_harness_provision.txt` | A `platform / PASS / Linux x86_64` row and every other row PASS (torch `INFO / not installed, decision R2-3`), `RESULT: PASS`, `exit code: 0`, `git status --porcelain: []`. A wrong branch stops cell 2 with `fatal: Remote branch <name> not found in upstream origin` and `RuntimeError: git clone of branch <name> from https://github.com/... failed (exit 128)`, with no command line shown | Pending (owner) |
+| Oracle VM (owner decision on F16) | Oracle VM, only if it is Linux x86_64 | `bash aqis_lab/deploy/harness_provision.sh` in a clone of the branch | On Linux x86_64: as on Colab. On Arm (aarch64): exit 1 at once, a single row `platform / FAIL / harness provisioning needs Linux x86_64; this machine is Linux aarch64. TEN VAD at commit 22a3bcd4509d ships its native library only for Linux x86_64 (lib/Linux/x64/libten_vad.so) and provides no Arm (aarch64) binary, ...`, `Downloads this run: 0`, `RESULT: FAIL`. The harness is not supported there; this is the owner's decision, not a defect | Not needed unless the owner runs the harness on Oracle (`docs/environment/oracle_probe.txt` is still missing) |
 
 ## Round 2 audit gate
 Command: `git fetch origin main && .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0` (AT-0.0-03). Real output:

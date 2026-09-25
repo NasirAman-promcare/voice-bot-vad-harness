@@ -94,7 +94,9 @@ def test_FR_0_0_10_pr_title_parser(tmp_path):
         assert proc.returncode == 0, (title, proc.stderr)
         assert written == f"WP_ID={wp}\n", (title, written)
     for title in ("Guardrails and audit tooling", "WP-0.0x tooling", "wp-0.0 lower case", "[WP-0.0] brackets",
-                  "WP-0 missing number", "WP-0.0\nWP_ID=injected"):
+                  "WP-0 missing number", "WP-0.0\nWP_ID=injected",
+                  # the ID must start the title (audit F11): an ID later in the title is not the PR's WP
+                  "Guardrails WP-0.0", "Fix typo, see WP-0.3 notes", " WP-0.0 leading space"):
         proc, written = _parse_title(tmp_path, title)
         assert proc.returncode != 0, title
         assert written == "" and "ERROR:" in proc.stderr, title

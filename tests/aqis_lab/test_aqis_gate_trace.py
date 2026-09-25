@@ -101,5 +101,7 @@ def test_FR_0_0_09_reports_unknown_wp(repo):
     found = f_findings(repo.gate_json("--wp", "WP-8.8"))
     assert [r for r, _, _, _ in found] == ["F1"]
     assert "WP-8.8" in found[0][3]
+    # F1 cites the searched spec glob at line 1 (audit F09 fix, test added for audit F19)
+    assert (found[0][1], found[0][2]) == ("docs/specs/**/WP-8.8-*.md", 1)
     bad = repo.gate("--base", "origin/main", "--wp", "banana", json_output=False)
     assert bad.returncode == 2 and bad.stderr.startswith("ERROR:")
