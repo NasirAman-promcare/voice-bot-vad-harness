@@ -4,8 +4,8 @@ Usage (from inside the repository):
   python -m tools.audit.gate --base <ref> [--wp <WP-ID>] [--json]
 
 CAPABILITIES:
-  CAP-AUDIT-001: check (a) protected paths per docs/process/PROTECTED_PATHS.txt with approvals read from origin/main [tests: test_FR_0_0_05_a_detects_never_path, test_FR_0_0_05_a_detects_guarded_path_without_approval, test_FR_0_0_05_a_passes_guarded_path_with_main_approval, test_FR_0_0_05_a_ignores_approval_committed_only_on_branch, test_FR_0_0_05_a_ignores_expired_or_withdrawn_approval, test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point, test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point, test_FR_0_0_06_approvals_none_when_origin_main_unverifiable, test_FR_0_0_06_fails_closed_when_protected_paths_unreadable]
-  CAP-AUDIT-002: check (b) existing tests modified or deleted without ALLOW-EDIT [tests: test_FR_0_0_05_b_detects_modified_existing_test, test_FR_0_0_05_b_detects_deleted_existing_test, test_FR_0_0_05_b_passes_new_test_and_approved_edit]
+  CAP-AUDIT-001: check (a) protected paths per docs/process/PROTECTED_PATHS.txt with approvals read from origin/main [tests: test_FR_0_0_05_a_detects_never_path, test_FR_0_0_05_a_detects_guarded_path_without_approval, test_FR_0_0_05_a_passes_guarded_path_with_main_approval, test_FR_0_0_05_a_ignores_approval_committed_only_on_branch, test_FR_0_0_05_a_ignores_expired_or_withdrawn_approval, test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point, test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point, test_FR_0_0_06_approvals_none_when_origin_main_unverifiable, test_FR_0_0_06_fails_closed_when_protected_paths_unreadable, test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed, test_FR_0_0_05_a_approvals_readme_approves_nothing, test_FR_0_0_05_a_detects_renamed_guarded_harness_test]
+  CAP-AUDIT-002: check (b) existing tests modified or deleted without ALLOW-EDIT [tests: test_FR_0_0_05_b_detects_modified_existing_test, test_FR_0_0_05_b_detects_deleted_existing_test, test_FR_0_0_05_b_passes_new_test_and_approved_edit, test_FR_0_0_05_b_detects_renamed_existing_lab_test]
   CAP-AUDIT-003: check (c) compromise patterns in added lab code lines and test-integrity patterns in added lab test lines [tests: test_FR_0_0_05_c_detects_each_code_pattern, test_FR_0_0_05_c_detects_each_test_pattern, test_FR_0_0_05_c_scans_only_added_lines, test_FR_0_0_05_c_includes_uncommitted_and_untracked_work, test_FR_0_0_06_scans_v2_file_types_and_dirs, test_FR_0_0_06_flags_pytestmark_and_param_skips, test_FR_0_0_06_decodes_non_utf8_with_replacement, test_FR_0_0_06_fails_closed_on_unreadable_changed_file, test_FR_0_0_06_fails_closed_on_git_error]
   CAP-AUDIT-004: check (d) CAPABILITIES header in new aqis_lab/ modules [tests: test_FR_0_0_05_d_detects_new_module_without_header, test_FR_0_0_05_d_passes_module_with_header_or_short_file]
   CAP-AUDIT-005: check (e) capability registry consistency [tests: test_FR_0_0_08_detects_row_with_missing_test, test_FR_0_0_08_detects_row_with_missing_module, test_FR_0_0_08_detects_row_removed_since_base, test_FR_0_0_08_detects_malformed_row, test_FR_0_0_08_detects_missing_registry, test_FR_0_0_08_passes_consistent_registry, test_FR_0_0_08_repository_registry_is_consistent]
@@ -26,6 +26,7 @@ CHANGE LOG:
   2026-09-25 WP-0.0 round 2 FR-0.0-06 (amended), F04, F09: Stop hook v2/v3 scan scope and status mapping;
              fail closed (read_changed_file, diff_against_base, load_protected, registry, spec, test files);
              UTF-8 decoding with replacement; no approvals when origin/main is unverifiable; F1 cites the glob.
+  2026-09-25 WP-0.0 audit round 4 F28: header lists the new rename, built-in NEVER and README tests (header only).
 """
 import argparse
 import ast

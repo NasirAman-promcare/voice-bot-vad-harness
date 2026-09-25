@@ -121,7 +121,7 @@ All four create a scratch venv with `python -m venv <dir>`, which runs `ensurepi
 - Provisioning itself passed on Colab, because it makes `.venv-harness` with `uv venv --seed`, which needs no `ensurepip`.
 
 **What I tried:**
-- **Reproduced here without changing the system:** a uv-installed Python 3.13.7 in the scratchpad with its `ensurepip/_bundled` wheels removed. `python -m venv` → `venv rc=1` with the same `ensurepip` error.
+- **Reproduced here** (Correction, audit finding F31: this did change the system. `uv python install` also created the link `/root/.local/bin/python3.13`, first on PATH, pointing at the scratchpad Python. It was removed in round 4 with `uv python uninstall`; see FIXES.md "Round 4 audit fixes".)**:** a uv-installed Python 3.13.7 in the scratchpad with its `ensurepip/_bundled` wheels removed. `python -m venv` → `venv rc=1` with the same `ensurepip` error.
 - **The four tests with a lab venv on that Python:** `4 failed` (the same four as on Colab).
 - **Candidate that works:** `uv venv --seed --python <that Python>` → `pip 26.2.1`, working pip.
 - **Where uv gets pip:** from uv's cache, or else from PyPI. With `--offline` it worked here only because provisioning had already cached pip.
