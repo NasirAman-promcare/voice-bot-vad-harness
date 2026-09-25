@@ -1,0 +1,33 @@
+{
+  "_about": "Pins for aqis_lab/deploy/harness_provision.sh (WP-0.0 round 2, FR-0.0-12). Owner decisions: R2-1 option A (corpus from git tag corpus-v1), R2-3 option A (torch not installed), BLK-004 option 1 (TEN VAD commit in harness-vcs.txt).",
+  "system_packages": ["git-lfs", "libc++1", "libopus0"],
+  "harness_requirements": [
+    "requirements/base.txt", "requirements/corpus.txt", "requirements/tier1.txt",
+    "requirements/tier2.txt", "requirements/report.txt", "scripts/run_phase.py"
+  ],
+  "extras_lock": "requirements/aqis_lab/harness-extras.txt",
+  "vcs_lock": "requirements/aqis_lab/harness-vcs.txt",
+  "ten_vad": {"distribution": "ten_vad", "commit": "22a3bcd4509d0faaa8eef4881e8af5f39c178950"},
+  "import_check": ["numpy", "scipy", "soundfile", "yaml", "aiortc", "av", "websockets", "opuslib",
+                   "pytest", "pytest_asyncio", "webrtcvad", "kaldi_native_fbank", "ten_vad"],
+  "not_installed": [{"name": "torch", "reason": "decision R2-3"}],
+  "corpus": {
+    "tag": "corpus-v1",
+    "commit": "a3ebbf892afda7b31661f33f2a1056913461eb16",
+    "path": "corpus-v1.tar.gz",
+    "sha256": "ef4d5da1e30f6a296f84fb59d38bdb5644a9d3b41ac930b9a3e4e5dae64efbbb",
+    "size": 46353268,
+    "manifest": "corpus/manifest.json",
+    "audio_dir": "corpus/audio"
+  },
+  "firered": {
+    "repo": "https://huggingface.co/FireRedTeam/FireRedVAD",
+    "commit": "7990aaccc6b7aec1e527743bd30201f2c4a03b8c",
+    "subdir": "Stream-VAD",
+    "files": {
+      "Stream-VAD/model.pth.tar": {"sha256": "ec88a8ae8ac5f004cdbd20c1eac4a9e9d12067c3d51ac5b141afa1f921fb59c9", "size": 2283513},
+      "Stream-VAD/cmvn.ark": {"sha256": "c87f6f13edf0f0ec7535ddfc9cc3387d9268cb234b70182d566c5e2edf3ca473", "size": 1311}
+    },
+    "link": "pretrained_models/FireRedVAD/Stream-VAD"
+  }
+}

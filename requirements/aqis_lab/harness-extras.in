@@ -1,0 +1,14 @@
+# Extra packages the existing VAD harness tests need but no harness requirements file lists
+# (WP-0.0 round 2, FR-0.0-12 b). Installed by aqis_lab/deploy/harness_provision.sh into .venv-harness
+# with pip hash checking, after "scripts/run_phase.py install all".
+#
+# Regenerate the lock from the repository root with uv 0.8.17 after editing this file:
+#   uv pip compile requirements/aqis_lab/harness-extras.in --universal --python-version 3.13 --generate-hashes --output-file requirements/aqis_lab/harness-extras.txt
+# Pass the same command as --custom-compile-command so the lock header records it.
+# The TEN VAD commit pin lives in harness-vcs.txt: pip cannot hash-check a git requirement (BLK-004, option 1).
+
+# Test runner and asyncio support for tests/regression (two tests use @pytest.mark.asyncio).
+pytest
+pytest-asyncio
+# Opus decoder bindings used by bots/listener_bot.py (needs the libopus0 system library).
+opuslib
