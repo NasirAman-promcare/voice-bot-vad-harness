@@ -104,3 +104,38 @@ WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_
 **Paused until answered:** the corpus step of FR-0.0-12, the provisioned baseline and the `harness-regression` CI job (FR-0.0-11 amended), AT-0.0-05 to AT-0.0-07. Everything else is committed: provisioning code and tests (fast tests pass), locks, and the TEN VAD pin.
 
 **Owner answer:** Option 1 (session chat, 2026-09-25): pin `corpus-v1.tar.gz` to commit `1479626` and verify sha256 `ef4d5da1…` directly from git. The owner also approved continuing the independent parts (FR-0.0-10, FR-0.0-13, FR-0.0-11).
+
+## BLK-006 — Colab: scratch venvs with pip cannot be made with `python -m venv` (4 tests fail)
+STATUS: OPEN
+WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_01N7gtpxBMnXJe8XU2D1AzuM
+
+**What I need:** your choice of how tests create throwaway virtual environments that have pip. The fix also changes an existing test (`test_FR_0_0_03_lock_installable_with_plain_pip`, round 1), and the surgical-fix skill says to escalate for that.
+
+**Why:** your Colab check `docs/progress/WP-0.0/OWNER_VERIFY_COLAB_WP-0.0_20260925T151855Z.md` failed on four tests:
+- Fast: `test_FR_0_0_12_rejects_ten_vad_at_other_commit`, `test_FR_0_0_12_reinstalls_when_pip_check_fails` and `test_FR_0_0_12_venv_problem_detects_venv_without_pip`.
+- Slow: `test_FR_0_0_03_lock_installable_with_plain_pip`.
+
+All four create a scratch venv with `python -m venv <dir>`, which runs `ensurepip`.
+- Colab's Python 3.13 is Ubuntu's `/usr/bin/python3.13` without the `python3.13-venv` package, and without that package `ensurepip` fails: `Command '[..., '-m', 'ensurepip', '--upgrade', '--default-pip']' returned non-zero exit status 1`.
+- This VM has `python3.13-venv 3.13.12-1+noble1` installed, so the tests passed here and in CI.
+- Provisioning itself passed on Colab, because it makes `.venv-harness` with `uv venv --seed`, which needs no `ensurepip`.
+
+**What I tried:**
+- **Reproduced here without changing the system:** a uv-installed Python 3.13.7 in the scratchpad with its `ensurepip/_bundled` wheels removed. `python -m venv` → `venv rc=1` with the same `ensurepip` error.
+- **The four tests with a lab venv on that Python:** `4 failed` (the same four as on Colab).
+- **Candidate that works:** `uv venv --seed --python <that Python>` → `pip 26.2.1`, working pip.
+- **Where uv gets pip:** from uv's cache, or else from PyPI. With `--offline` it worked here only because provisioning had already cached pip.
+
+**Options:**
+1. **(Recommended)** One shared test helper makes every scratch venv that needs pip with `uv venv --seed --python <the running Python>`. This is the same mechanism provisioning uses, already proven on Colab. It is used by the three round 3 tests and by `test_FR_0_0_03_lock_installable_with_plain_pip`, where only the venv-creation line changes, not the assertions. That test is already marked `slow` and `network`.
+   - Trade-off: when uv's cache has no pip, the three fast tests download the pip wheel (about 2 MB) from PyPI. That happens on every CI `lab` run, because setup-uv prunes cached wheels. They would stay in the fast suite without a `network` marker, although they then use the network.
+2. As option 1, but also mark the three fast tests `network`, so the markers are exact.
+   - Trade-off: they leave the fast suite, so CI job `lab` no longer runs the F13, F18 and F27 guards unless the workflow gains a step that runs them. That workflow change would also need your approval.
+3. As option 1, with `--offline`, and make every environment warm uv's cache with pip first (CI and Colab would need an extra setup step).
+   - Trade-off: tests fail with "no cached pip" wherever that step was skipped. This is fragile.
+4. The Colab procedure installs `python3.13-venv` with apt.
+   - Trade-off: it fixes Colab only. It is a system change the lab tests would silently depend on, other machines (Oracle) can differ, and it goes against "same result everywhere". Not recommended.
+
+**Paused until answered:** the fix for the Colab report, which covers those four tests and the `scratch_venv` helper. Nothing else is changed. The branch is as audited at `aa9e74c`, plus your report commit `22ce3c6` and this entry.
+
+**Owner answer:** 
