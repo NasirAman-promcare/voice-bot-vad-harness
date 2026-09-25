@@ -41,7 +41,7 @@ WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_
 **Owner answer:**
 
 ## BLK-003 — Approval says Stop hook v3 (kit patch 2) is on main, but it is not
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_01N7gtpxBMnXJe8XU2D1AzuM
 
 **What I need:** either kit patch 2 (Stop hook v3) committed to `main`, or your confirmation that I should build Round 2 against the Stop hook v2 now on `main`.
@@ -56,4 +56,4 @@ WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_
 
 **Paused until answered:** all Round 2 build work (every part touches the gate, the parity tests or both).
 
-**Owner answer:**
+**Owner answer:** Owner committed kit patch 2 (Stop hook v3) to main (`e4b38ac`) and said continue. Merged into this branch. v3 changes only the hook's memory and reporting; its detection rules equal v2 (verified by reading the diff), so Round 2 builds against v3.
