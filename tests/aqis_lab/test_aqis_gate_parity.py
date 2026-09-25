@@ -87,6 +87,27 @@ def s_combined(r):
     r.delete("tests/lab_support/test_adds.py")
 
 
+def s_v2_file_types(r):
+    r.branch(); r.copy_fixture("shell_patterns.sh", "aqis_lab/deploy/x.sh"); r.copy_fixture("lab_ci.yml", ".github/workflows/aqis-lab-x.yml")
+    r.copy_fixture("requirements.in", "requirements/aqis_lab/x.in"); r.copy_fixture("config.toml", "config/aqis_lab/x.toml")
+    r.copy_fixture("shell_patterns.sh", "tests/aqis_lab/x.sh"); r.copy_fixture("config.toml", "config/other.toml")
+
+
+def s_pytestmark(r):
+    r.branch(); r.copy_fixture("test_pytestmark.py", "tests/aqis_lab/test_marked.py")
+
+
+def s_added_then_deleted_in_worktree(r):
+    r.branch(); r.write("vad_adapters/staged.py", "S = 1\n"); git(r.path, "add", "vad_adapters/staged.py")
+    r.delete("vad_adapters/staged.py"); r.write("tools/z.py", "Z = 'fake'\n")
+
+
+def s_non_utf8(r):
+    r.branch(); r.copy_fixture("non_utf8.py", "tools/non_utf8.py"); r.copy_fixture("non_utf8.py", "aqis_lab/non_utf8.py")
+    with open(r.path / "tools/existing_tool.py", "ab") as handle:
+        handle.write(b"# XXX caf\xe9\n")
+
+
 def s_clean(r):
     r.branch(); r.write("aqis_lab/ok.py", '"""Ok.\n\nCAPABILITIES:\n  CAP-X-1: y [tests: t]\n"""\nA = 1\nB = 2\nC = 3\nD = 4\n')
     r.write("docs/notes.md", "TODO in prose is fine\n")
@@ -100,6 +121,8 @@ SCENARIOS = {
     "allow_lines": (s_allow_lines, False), "allow_patterns_in": (s_allow_patterns_in, False),
     "headers": (s_headers, False), "added_then_removed": (s_added_then_removed, False),
     "main_moved": (s_main_moved, False), "combined": (s_combined, False), "clean": (s_clean, False),
+    "v2_file_types": (s_v2_file_types, False), "pytestmark": (s_pytestmark, False),
+    "added_then_deleted_in_worktree": (s_added_then_deleted_in_worktree, False), "non_utf8": (s_non_utf8, False),
 }
 EXPECT_NONE = {"guarded_approved", "approved_lab_test_edit", "clean"}
 
@@ -132,13 +155,15 @@ def test_FR_0_0_06_pattern_tables_identical_to_stop_hook():
         "t = lambda tab: [[l, r.pattern, r.flags] for l, r in tab]\n"
         "print(json.dumps({'code': t(s.CODE_PATTERNS), 'test': t(s.TEST_PATTERNS),"
         " 'allow': [s.ALLOW_RE.pattern, s.ALLOW_RE.flags], 'header': [s.HEADER_RE.pattern, s.HEADER_RE.flags],"
-        " 'lab_code': list(s.LAB_CODE_DIRS), 'lab_test': s.LAB_TEST_DIR, 'hunk': s.HUNK_RE.pattern}))")
+        " 'lab_code': list(s.LAB_CODE_DIRS), 'lab_test': s.LAB_TEST_DIR, 'hunk': s.HUNK_RE.pattern,"
+        " 'suffixes': list(s.SCANNED_SUFFIXES), 'ci_files': s.LAB_CI_FILES.pattern}))")
     ours = {
         "code": [[l, r.pattern, r.flags] for l, r in patterns.CODE_PATTERNS],
         "test": [[l, r.pattern, r.flags] for l, r in patterns.TEST_PATTERNS],
         "allow": [patterns.ALLOW_RE.pattern, patterns.ALLOW_RE.flags],
         "header": [patterns.HEADER_RE.pattern, patterns.HEADER_RE.flags],
-        "lab_code": list(gate.LAB_CODE_DIRS), "lab_test": gate.LAB_TEST_DIR, "hunk": gate.HUNK_RE.pattern,
+        "lab_code": list(patterns.LAB_CODE_DIRS), "lab_test": patterns.LAB_TEST_DIR, "hunk": gate.HUNK_RE.pattern,
+        "suffixes": list(patterns.SCANNED_SUFFIXES), "ci_files": patterns.LAB_CI_FILES.pattern,
     }
     assert ours == hook
 

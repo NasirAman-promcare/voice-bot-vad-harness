@@ -27,3 +27,4 @@ def bare():
 
 COUNT = int("3")  # type: ignore
 from unittest.mock import MagicMock
+CHECK = "make check || true"
