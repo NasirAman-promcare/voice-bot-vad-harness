@@ -57,3 +57,28 @@ WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_
 **Paused until answered:** all Round 2 build work (every part touches the gate, the parity tests or both).
 
 **Owner answer:** Owner committed kit patch 2 (Stop hook v3) to main (`e4b38ac`) and said continue. Merged into this branch. v3 changes only the hook's memory and reporting; its detection rules equal v2 (verified by reading the diff), so Round 2 builds against v3.
+
+## BLK-004 — TEN VAD commit pin cannot live in the hash-checked harness-extras.txt
+STATUS: OPEN
+WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_01N7gtpxBMnXJe8XU2D1AzuM
+
+**What I need:** a decision on where and how the TEN VAD commit pin lives.
+
+**Why:** the approval condition says "Pin TEN VAD to the commit currently installed, in requirements/aqis_lab/harness-extras.txt". FR-0.0-12(b) says that file is "pinned with hashes", so provisioning installs it with `pip install --require-hashes`. These cannot both hold:
+- pip's hash-checking mode rejects version-control requirements ("we don't have a way to hash version control repositories"). If any line in a file has `--hash`, the whole file is in that mode, so a `ten-vad @ git+https://github.com/TEN-framework/ten-vad.git@<commit>` line breaks the install.
+- The hashable alternative, a GitHub archive (`https://github.com/TEN-framework/ten-vad/archive/<commit>.tar.gz --hash=sha256:...`), is **blocked in this cloud environment**. The proxy answers 403, "GitHub access to this repository is not enabled for this session". `add_repo` confirms that only anonymous git clone/fetch is served for public repositories, not archives. Provisioning on the cloud VM (AT-0.0-05, AT-0.0-06) would therefore fail. GitHub also does not strictly guarantee archive bytes stay identical.
+
+**What I tried:**
+- `git ls-remote https://github.com/TEN-framework/ten-vad.git HEAD` gives `22a3bcd4509d0faaa8eef4881e8af5f39c178950`, the commit `tier1.txt` installs today (its `setup.py` says `ten_vad` 1.0.6.8).
+- `git clone` of that commit works here.
+- `curl` of the archive and of `codeload.github.com` returns 403 from the proxy.
+- `add_repo` for read access: "already available ... anonymous git reads (clone/fetch)" only.
+
+**Options:**
+1. **(Recommended)** Keep `harness-extras.txt` fully hash-checked (pytest, pytest-asyncio, opuslib and their dependencies). Put the TEN VAD pin in a second file, `requirements/aqis_lab/harness-vcs.txt`, containing `ten-vad @ git+https://github.com/TEN-framework/ten-vad.git@22a3bcd4509d0faaa8eef4881e8af5f39c178950`. Provisioning installs it with `pip install --no-deps -r`, and the commit SHA (content-addressed by git) is the integrity check. After install it verifies `direct_url.json` records that exact commit, and `harness-extras.txt` points to the file in a comment. Works on the VM, CI, Colab and Oracle.
+2. Put the git line in `harness-extras.txt` and install that file **without** `--require-hashes` (the git line has no hash; the PyPI lines keep theirs, but pip will not enforce them). This weakens FR-0.0-12(b).
+3. Use a hashed GitHub archive URL in `harness-extras.txt`. This needs the cloud environment to allow GitHub archive downloads (`codeload.github.com` through the session proxy), which I cannot change, and accepts the risk that GitHub changes archive bytes.
+
+**Paused until answered:** FR-0.0-12 (provisioning), and the parts that depend on it: FR-0.0-11 amended (provisioned baseline, `harness-regression` CI job), AT-0.0-05 to AT-0.0-07. Already done in this round: FR-0.0-06 amended, F01 to F04, F06, F09 and F10 (pushed, fast suite 99 passed).
+
+**Owner answer:**
