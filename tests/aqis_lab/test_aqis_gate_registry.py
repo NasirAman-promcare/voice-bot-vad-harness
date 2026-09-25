@@ -1,6 +1,7 @@
 """FR-0.0-08: registry consistency. Every row names tests and a module that exist; no row present at the
 base is missing."""
 import json
+import re
 import subprocess
 import sys
 
@@ -84,3 +85,41 @@ def test_FR_0_0_08_repository_registry_is_consistent():
     assert proc.returncode in (0, 1), proc.stderr
     report = json.loads(proc.stdout)
     assert [f for f in report["findings"] if f["check"] == "e"] == []
+
+
+def _registry_rows():
+    rows = {}
+    for line in (ROOT / REG).read_text(encoding="utf-8").splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) == 7 and cells[0].startswith("CAP-"):
+            tests = {t.strip().strip("`").split("::")[-1] for t in cells[4].split(",") if t.strip().strip("`")}
+            rows[cells[0]] = (cells[1].strip("`"), tests)
+    return rows
+
+
+def _header_entries(path):
+    """{CAP-ID: set(test names)} from a module header (Python docstring or shell comment block)."""
+    text = "\n".join(line.lstrip("#").rstrip() for line in path.read_text(encoding="utf-8").splitlines()[:80])
+    entries = {}
+    for m in re.finditer(r"^\s*(CAP-[A-Z0-9-]+):.*?\[tests:\s*(.*?)\]", text, re.M | re.S):
+        entries[m.group(1)] = {t.strip() for t in re.split(r"[,\s]+", m.group(2)) if t.strip()}
+    return entries
+
+
+def test_FR_0_0_08_module_headers_match_registry():
+    # WP-0.0-F06: every lab module named in the registry states the same tests in its header as its row.
+    rows = _registry_rows()
+    checked = 0
+    for cap, (module, tests) in sorted(rows.items()):
+        path = ROOT / module
+        if not (module.startswith(("aqis_lab/", "tools/")) and path.suffix in (".py", ".sh")):
+            continue
+        entries = _header_entries(path)
+        assert cap in entries, f"{module} header does not list {cap}"
+        assert entries[cap] == tests, f"{cap}: header {sorted(entries[cap])} != registry {sorted(tests)}"
+        checked += 1
+    assert checked >= 10
+    for package in ("aqis_lab/commands/__init__.py", "tools/__init__.py", "tools/audit/__init__.py"):
+        doc = (ROOT / package).read_text(encoding="utf-8")
+        for field in ("CAPABILITIES:", "INPUTS AND OUTPUTS:", "CONTRACTS:", "INVARIANTS:", "NOT IN SCOPE:", "CHANGE LOG:"):
+            assert field in doc, f"{package} header lacks {field}"
