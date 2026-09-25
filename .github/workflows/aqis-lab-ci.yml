@@ -1,6 +1,10 @@
-# AQIS lab CI (WP-0.0 FR-0.0-10). Builds .venv exactly as developers do (Colab Python from
-# docs/environment/colab_probe.txt, hash-checked requirements/aqis_lab/phase0.txt), runs the fast lab
-# suite and the audit gate. Read-only: it cannot push, dispatch or change any other workflow.
+# AQIS lab CI (WP-0.0 FR-0.0-10 and FR-0.0-11, amended). Read-only: it cannot push, dispatch or change any
+# other workflow.
+#   lab: builds .venv exactly as developers do (Colab Python from docs/environment/colab_probe.txt,
+#        hash-checked requirements/aqis_lab/phase0.txt), runs the fast lab suite and the audit gate
+#        (with --wp from the pull request title on pull requests).
+#   harness-regression: provisions the existing harness (aqis_lab/deploy/harness_provision.sh), runs its tests
+#        and fails when a test that passed in docs/baselines/harness_tests_baseline.md no longer passes.
 name: aqis-lab-ci
 
 on:
@@ -34,10 +38,57 @@ jobs:
       - name: Fast lab test suite
         run: .venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network"
 
-      - name: Audit gate (pull request base, or origin/main on push)
+      - name: Work package ID from pull request title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          case "$PR_TITLE" in
+            *$'\n'*|*$'\r'*) echo "ERROR: the pull request title must be a single line" >&2; exit 1 ;;
+          esac
+          wp_re='^(WP-[0-9]+\.[0-9]+)([ :]|$)'
+          if [[ "$PR_TITLE" =~ $wp_re ]]; then
+            echo "WP_ID=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+            echo "Work package from the pull request title: ${BASH_REMATCH[1]}"
+          else
+            echo "ERROR: the pull request title must start with a work package ID such as 'WP-0.0 ...'; got: $PR_TITLE" >&2
+            exit 1
+          fi
+
+      - name: Audit gate (pull request base with --wp, or origin/main on push)
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
         run: |
-          if [ "$EVENT_NAME" = "pull_request" ]; then BASE="origin/$BASE_REF"; else BASE="origin/main"; fi
-          .venv/bin/python -m tools.audit.gate --base "$BASE"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            .venv/bin/python -m tools.audit.gate --base "origin/$BASE_REF" --wp "$WP_ID"
+          else
+            .venv/bin/python -m tools.audit.gate --base "origin/main"
+          fi
+
+  harness-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out (full history; the corpus is read from git at its pinned commit)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv 0.8.17
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+
+      - name: Provision the harness (system packages, .venv-harness, corpus, weights)
+        run: bash aqis_lab/deploy/harness_provision.sh
+
+      - name: Harness tests (known baseline failures are judged by the next step)
+        run: |
+          rc=0
+          PYTHONDONTWRITEBYTECODE=1 .venv-harness/bin/python -m pytest tests/regression -rA -p no:cacheprovider --junitxml="$RUNNER_TEMP/harness_junit.xml" || rc=$?
+          echo "pytest exit code: $rc"
+          if [ "$rc" -gt 1 ]; then echo "ERROR: pytest could not run the harness tests (exit $rc)" >&2; exit "$rc"; fi
+
+      - name: Regression check against the provisioned baseline
+        run: .venv-harness/bin/python -m tools.harness.regression_check --junit "$RUNNER_TEMP/harness_junit.xml"
