@@ -82,3 +82,25 @@ WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_
 **Paused until answered:** FR-0.0-12 (provisioning), and the parts that depend on it: FR-0.0-11 amended (provisioned baseline, `harness-regression` CI job), AT-0.0-05 to AT-0.0-07. Already done in this round: FR-0.0-06 amended, F01 to F04, F06, F09 and F10 (pushed, fast suite 99 passed).
 
 **Owner answer:** Option 1 (session chat, 2026-09-25). `harness-extras.txt` stays fully hash-checked; the TEN VAD commit goes in `requirements/aqis_lab/harness-vcs.txt`, and provisioning verifies the installed commit (`22a3bcd4…`).
+
+## BLK-005 — Tag corpus-v1 does not contain corpus-v1.tar.gz (my Round 2 plan was wrong)
+STATUS: OPEN
+WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_01N7gtpxBMnXJe8XU2D1AzuM
+
+**What I need:** a new decision for R2-1, the source of the corpus archive.
+
+**Why:** your decision R2-1 is "Take corpus-v1.tar.gz from git at tag corpus-v1 and verify its SHA-256". That decision rests on my Round 2 plan, which said the archive was "identical at the tag and at HEAD". **That statement was wrong**: I misread a single `git ls-tree` output line while planning. The facts, all verified with git:
+- Tag `corpus-v1` is commit `a3ebbf8` ("Upload full VAD harness codebase", 2026-09-14 10:29). Its tree has **no** `corpus-v1.tar.gz` (`git ls-tree corpus-v1` lists only code folders and files).
+- The archive was first committed an hour later in `52ab506` ("Add Tier 1 benchmark results…", 2026-09-14 11:44): blob `745e7bc`, sha256 `832c8d3f…`. Its `corpus/manifest.json` **differs** from the tracked manifest.
+- It was replaced in `1479626` ("Update Tier 2 live pipeline…", 2026-09-17): blob `4234c5f`, sha256 `ef4d5da1e30f6a296f84fb59d38bdb5644a9d3b41ac930b9a3e4e5dae64efbbb`, 46,353,268 bytes. This is the version at HEAD and on `main`. Its `corpus/manifest.json` is **byte-identical** to the tracked `corpus/manifest.json`, so it is the only archive the harness can use.
+
+**What I tried:** a real provisioning run on this VM. Every other step passed (system packages, `.venv-harness`, TEN VAD commit verified, imports including the TenVad native library, FireRedVAD weights). The corpus step failed: `fatal: path 'corpus-v1.tar.gz' exists on disk, but not in 'a3ebbf8…'`.
+
+**Options:**
+1. **(Recommended)** Pin the corpus to commit `1479626` (the last commit that changed the archive) and blob `4234c5f`, verified by sha256 `ef4d5da1…`. Provisioning reads it from git objects at that commit: no network, no token, same bytes as the tracked file.
+2. You move the tag `corpus-v1` to `1479626`, or create a new tag such as `corpus-v1.1` there. Provisioning then reads "from git at tag" exactly as R2-1 says. This is a GitHub action on your side, and moving an existing tag rewrites what `corpus-v1` means for anyone who fetched it.
+3. Keep tag `corpus-v1` and additionally require the archive commit to be a descendant of it. This is option 1 with an extra check; it ties the pin to the tag without moving it.
+
+**Paused until answered:** the corpus step of FR-0.0-12, the provisioned baseline and the `harness-regression` CI job (FR-0.0-11 amended), AT-0.0-05 to AT-0.0-07. Everything else is committed: provisioning code and tests (fast tests pass), locks, and the TEN VAD pin.
+
+**Owner answer:**

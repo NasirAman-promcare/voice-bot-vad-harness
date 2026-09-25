@@ -412,3 +412,6 @@ Unchanged: `aqis_lab/deploy/dev_bootstrap.sh` and `aqis_lab/commands/version.py`
 7. **After the build.**
    - Run OC-0.0-01 in Colab (the cells from `docs/colab/HARNESS_SETUP.md`) and commit `docs/environment/colab_harness_provision.txt`.
    - Confirm AT-0.0-04 and AT-0.0-07: both CI jobs green on PR #1.
+
+## Round 2 correction (2026-09-25, during the build)
+In FR-0.0-12(c) and question R2-1 I stated that the committed archive `corpus-v1.tar.gz` is "blob `4234c5f`, identical at the tag and at HEAD". **That is wrong.** Tag `corpus-v1` (`a3ebbf8`) does not contain the archive. Blob `4234c5f` (sha256 `ef4d5da1…`) was committed in `1479626` on 2026-09-17. An older, different archive (`832c8d3f…`, manifest differs from the tracked one) was committed in `52ab506`. Your decision R2-1 was based on my wrong statement, so it is re-opened as BLK-005 in `docs/progress/BLOCKERS.md`.
