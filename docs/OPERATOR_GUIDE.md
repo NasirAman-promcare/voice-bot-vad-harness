@@ -76,13 +76,16 @@ At claude.ai/code, click the cloud icon above the message box → **Add cloud en
 alphacephei.com
 openslr.org
 *.openslr.org
+huggingface.co
+*.huggingface.co
+*.hf.co
 ```
 - **Environment variables**: none. Never put secrets here; anyone using the environment can read them.
 - **Setup script**:
 ```text
 #!/bin/bash
 apt-get update -y >/dev/null 2>&1 || true
-DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg sox libsndfile1 rclone >/dev/null 2>&1 || true
+DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg sox libsndfile1 rclone git-lfs libc++1 libopus0 >/dev/null 2>&1 || true
 exit 0
 ```
 
@@ -142,5 +145,6 @@ Expected: steps 3 to 5 are blocked with a `BLOCKED:` message; step 6 works; step
 - **`🛑 OWNER ACTION NEEDED`**: Claude has written a blocker in `docs/progress/BLOCKERS.md` and stopped. Answer in the chat. If the session went idle, reopen it; the conversation is restored.
 - **`⚠️ STOP GATE`**: the automatic check still sees problems. Do not merge. Ask Claude to fix them with `/surgical-fix`.
 - **`BLOCKED:` on a harness file**: decide. If the change is truly needed, approve it with an `ALLOW-EDIT:` line for exactly that file; otherwise say no.
+- **Setting up the harness anywhere** (Colab, Oracle, CI, cloud VM): once WP-0.0 round 2 is merged, run `bash aqis_lab/deploy/harness_provision.sh` first instead of manual download, extract and install cells; exact Colab cells are in `docs/colab/HARNESS_SETUP.md`.
 - **A Colab or Oracle check fails**: commit the report, start a session, and type `/surgical-fix <path to the report>`. Do not debug inside Colab.
 - **Something broke on `main`**: revert the pull request on GitHub, then fix on a new branch.
