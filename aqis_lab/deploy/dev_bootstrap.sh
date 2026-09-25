@@ -5,8 +5,9 @@
 #   CAP-ENV-001: creates .venv with the Python major.minor from docs/environment/colab_probe.txt using uv,
 #                installs requirements/aqis_lab/phase0.txt with hash checking, idempotently
 #                [tests: test_FR_0_0_02_fails_when_probe_missing, test_FR_0_0_02_fails_when_probe_unreadable,
-#                 test_FR_0_0_02_fails_when_uv_missing, test_FR_0_0_02_creates_venv_with_probe_python,
-#                 test_FR_0_0_02_second_run_changes_nothing_within_30s, test_FR_0_0_02_rejects_lock_with_wrong_hash]
+#                 test_FR_0_0_02_fails_when_uv_missing, test_FR_0_0_02_uses_version_named_by_probe,
+#                 test_FR_0_0_02_creates_venv_with_probe_python, test_FR_0_0_02_second_run_changes_nothing_within_30s,
+#                 test_FR_0_0_02_rejects_lock_with_wrong_hash]
 # INPUTS AND OUTPUTS: reads the Colab probe and the lock; writes only <repo>/.venv. Usage:
 #   bash aqis_lab/deploy/dev_bootstrap.sh
 # INVARIANTS:
