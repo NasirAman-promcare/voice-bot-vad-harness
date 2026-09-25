@@ -183,3 +183,29 @@ No gate or provisioning code changes.
 - Afterwards `ls -la /root/.local/bin | grep -c python3.13` gives `0`, `command -v python3.13` gives `/usr/bin/python3.13`, and `python3.13 --version` gives `Python 3.13.12`.
 - This repository's `.venv` and `.venv-harness` never used the link: both `pyvenv.cfg` files have `home = /usr/bin`.
 - The scratch lab venv built on the removed Python was deleted with the rest of `scratchpad/colabrepro`.
+
+### Baseline and verification (round 4)
+- **Baseline.** I did not run a separate baseline this round. The latest results I ran myself on the unchanged code are from `033322b`: fast `138 passed`, slow `8 passed` (EVIDENCE.md, "BLK-006 records completed"). The only later commits before round 4 are the owner's Colab report and the audit report. The auditor's round 4 report gives the same figures for `f83536a`.
+- **Red first.** New tests on unchanged code: `1 failed, 13 passed`. The failure was the F30 licence test (`KeyError: 'licence'`). The 13 guards passed on correct code, and each auditor mutation now fails at least one of them:
+```text
+### M26 built-in NEVER list removed: 2 failed, 62 passed, 96 deselected in 15.09s
+### M23 --no-renames removed from the committed diff: 4 failed, 60 passed, 96 deselected in 14.54s
+### M24 README.md counted as an approval: 2 failed, 62 passed, 96 deselected in 14.61s
+### M16 every matching pattern reported: 1 failed, 63 passed, 96 deselected in 15.18s
+### M17 header searched in the whole module: 1 failed, 63 passed, 96 deselected in 15.03s
+### M18 header required for modified modules too: 1 failed, 63 passed, 96 deselected in 14.73s
+### MX EXPIRES ignored: 2 failed, 62 passed, 96 deselected in 15.88s
+### MS any STATUS counts as approved: 3 failed, 61 passed, 96 deselected in 16.17s
+```
+- **After the fixes** (`9016ee7`, clean tree):
+```text
+fast git-lfs 3.4.1: 152 passed, 8 deselected in 32.97s
+fast git-lfs 3.7.0: 152 passed, 8 deselected in 34.09s
+slow/network: 8 passed, 152 deselected in 58.93s
+gate: 0 findings: OK (0.3 s)
+git status lines after: 0
+commit: 9016ee7
+```
+- **CI on `9016ee7`:** pull request run `36163086560` and push run `36163080671`, both jobs success.
+- **Diff inside the budget.** No gate or provisioning code changed; `gate.py` and `harness_provision.py` changed only in their header lists and change logs. The tests changed only by additions: new scenario functions and `SCENARIOS`/`EXPECT_NONE` entries, and new test functions. No existing assertion changed.
+- **Records.** The registry rows CAP-AUDIT-001, CAP-AUDIT-002, CAP-ENV-003 and CAP-ENV-006 are updated; `test_FR_0_0_08_module_headers_match_registry` passes.

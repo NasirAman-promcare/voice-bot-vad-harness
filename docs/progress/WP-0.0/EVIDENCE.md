@@ -451,7 +451,7 @@ tests/aqis_lab/test_aqis_gate_nfr.py::test_NFR_0_0_03_imports_are_stdlib_or_pinn
 ## Round 2 owner-run checks
 | Check | Where | Command | Expected output | Result report |
 | --- | --- | --- | --- | --- |
-| AT-0.0-04 and AT-0.0-07: CI green on the PR | GitHub, PR #1, Checks | Open the `aqis-lab-ci` run for the latest commit (`pull_request` event) | Job `lab` green, with the step "Work package ID from pull request title" printing `WP-0.0` and the gate running with `--wp WP-0.0`, ending `0 findings: OK`. Job `harness-regression` green, with the provisioning table all PASS (torch INFO) and `RESULT: PASS` from the regression check | Green on `d35290b`: pull request run `36151741552` (jobs `lab` and `harness-regression` success; `Work package from the pull request title: WP-0.0`, `0 findings: OK`), push run `36151733422` success. See "Round 3 audit fixes". Owner to confirm on the latest commit |
+| AT-0.0-04 and AT-0.0-07: CI green on the PR | GitHub, PR #1, Checks | Open the `aqis-lab-ci` run for the latest commit (`pull_request` event) | Job `lab` green, with the step "Work package ID from pull request title" printing `WP-0.0` and the gate running with `--wp WP-0.0`, ending `0 findings: OK`. Job `harness-regression` green, with the provisioning table all PASS (torch INFO) and `RESULT: PASS` from the regression check | Green on `9016ee7` (round 4): pull request run `36163086560` and push run `36163080671`, both jobs success. Earlier: `033322b` (BLK-006) pull request `36156782531`, push `36156776526`; `d35290b` (round 3) pull request `36151741552`. Owner to confirm on the latest commit |
 | OC-0.0-01: Colab harness setup | Colab, fresh CPU runtime (x86_64) | Before the merge: in cell 1 of `docs/colab/HARNESS_SETUP.md` set `BRANCH = "claude/hopeful-noether-yinc4e"` (`main` has no provisioning script until the merge, audit F15). Run cells 1 to 6, then commit the downloaded file as `docs/environment/colab_harness_provision.txt` | A `platform / PASS / Ubuntu ... on Linux x86_64` row and every other row PASS (torch `INFO / not installed, decision R2-3`), `RESULT: PASS`, `exit code: 0`, `git status --porcelain: []`. A wrong branch stops cell 2 with `fatal: Remote branch <name> not found in upstream origin` and `RuntimeError: git clone of branch <name> from https://github.com/... failed (exit 128)`, with no command line shown | Pending (owner) |
 | Oracle VM (owner decision F16, approval conditions round 3) | Oracle VM, only if it is Debian or Ubuntu on x86_64 | `bash aqis_lab/deploy/harness_provision.sh` in a clone of the branch | **Debian or Ubuntu on x86_64:** as on Colab. **Arm (aarch64):** exit 1 at once, a single row `platform / FAIL / harness provisioning needs Debian or Ubuntu on Linux x86_64; this machine is Linux aarch64. TEN VAD at commit 22a3bcd4509d ships its native library only for Linux x86_64 ... no Arm (aarch64) binary ...`. **x86_64 with another distribution** (for example Oracle Linux, `ID=ol`): exit 1 at once, a single row `platform / FAIL / harness provisioning needs Debian or Ubuntu on Linux x86_64; this machine runs ol (...), not debian or ubuntu. the system step installs packages with apt-get ...`. In both FAIL cases: `Downloads this run: 0`, `RESULT: FAIL`. The harness is not supported there; this is the owner's decision, not a defect | Not needed unless the owner runs the harness on Oracle (`docs/environment/oracle_probe.txt` is still missing) |
 
@@ -675,3 +675,58 @@ after:   4 passed, 142 deselected in 10.85s
 On this VM the fast suite gives `138 passed, 8 deselected in 27.53s`.
 
 The owner's Colab report also shows every other check as PASS or INFO. Version, gate and a clean `git status` passed. The harness tests gave `1 failed, 21 passed`, the recorded baseline.
+
+### BLK-006 records completed (audit finding F32)
+- **Gate** on `033322b` (the BLK-006 commit, run locally before pushing): `0 findings: OK (0.2 s)`. The Stop hook printed nothing.
+- **Slow suite** on `033322b`, clean tree: `8 passed, 138 deselected in 60.39s`, `git status lines: 0`.
+- **CI on `033322b`:** pull request run `36156782531` (`lab` success, including the "Work package ID from pull request title" and "Audit gate" steps; `harness-regression` success) and push run `36156776526` (both jobs success).
+- **Owner's Colab re-run on `033322b`:** `docs/progress/WP-0.0/OWNER_VERIFY_COLAB_WP-0.0_20260925T155908Z.md` shows every check PASS (fast `138 passed`, slow `8 passed`, gate `0 findings`, clean tree), and harness tests INFO `1 failed, 21 passed`, the recorded baseline.
+- **Difference not listed in round 3:** the `_about` text of `config/aqis_lab/harness_assets.json` was also edited in round 3 (`d35290b`) to name the round 3 platform conditions. That is text only; no key a program reads changed.
+- **Status history:** STATUS stayed READY-FOR-AUDIT while BLK-006 was open (`8099955` to `d403bad`). It should have been marked blocked.
+
+## Round 4 audit fixes (F28 to F32)
+Root causes, change budget and the F31 system fix are in `docs/progress/WP-0.0/FIXES.md`, "Round 4 audit fixes". No gate or provisioning code changed: F28 and F29 add tests, F30 adds pins, and F31 and F32 correct the system and the records.
+
+**New tests.**
+- **Parity scenarios** in `test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos`:
+  - `never_section_stripped`, `renamed_lab_test`, `renamed_harness_test`, `readme_approval`, `expired_approval` and `unapproved_status`, which cover checks (a) and (b);
+  - `multi_pattern_line`, `late_header` and `modified_headerless_module`, which cover checks (c) and (d).
+
+  Every rule in PLAN.md "Parity with the Stop hook" now has a scenario.
+- **FR-0.0-05 detection tests:** `test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed`, `test_FR_0_0_05_a_approvals_readme_approves_nothing`, `test_FR_0_0_05_a_detects_renamed_guarded_harness_test` (A2 `D`, A2 `A`, B2) and `test_FR_0_0_05_b_detects_renamed_existing_lab_test` (B2).
+- **FR-0.0-12:** `test_FR_0_0_12_asset_licences_recorded`.
+
+**Test-first.** Against the current code, the 13 new F28 and F29 tests passed (`1 failed, 13 passed`). The gate is correct, so these tests prove themselves through the mutations below. The one failure was the F30 licence test: `E       KeyError: 'licence'`.
+
+**Mutations** (the auditor's M26, M23, M24, M16, M17 and M18, plus the EXPIRES and STATUS rules). Each was applied alone to `tools/audit/gate.py` in a scratch copy, then restored. Command: `-m "not slow and not network" -k "FR_0_0_05 or FR_0_0_06"`.
+```text
+### M26 built-in NEVER list removed: 2 failed, 62 passed, 96 deselected in 15.09s
+### M23 --no-renames removed from the committed diff: 4 failed, 60 passed, 96 deselected in 14.54s
+### M24 README.md counted as an approval: 2 failed, 62 passed, 96 deselected in 14.61s
+### M16 every matching pattern reported: 1 failed, 63 passed, 96 deselected in 15.18s
+### M17 header searched in the whole module: 1 failed, 63 passed, 96 deselected in 15.03s
+### M18 header required for modified modules too: 1 failed, 63 passed, 96 deselected in 14.73s
+### MX EXPIRES ignored: 2 failed, 62 passed, 96 deselected in 15.88s
+### MS any STATUS counts as approved: 3 failed, 61 passed, 96 deselected in 16.17s
+```
+Each mutation fails at least one named new test (FIXES.md lists them).
+
+| Finding | Fix | Tests (requirement) |
+| --- | --- | --- |
+| F28 | Tests only. The built-in NEVER list survives a stripped `[NEVER]` section; `--no-renames` makes a renamed test a deleted test; `docs/approvals/README.md` approves nothing | 3 parity scenarios and 4 detection tests above (FR-0.0-05, FR-0.0-06) |
+| F29 | Tests only. First pattern wins; header within the first 80 lines; header required only for new modules. EXPIRES and STATUS rules also added to parity | 5 parity scenarios above (FR-0.0-06) |
+| F30 | `licence` for `ten_vad`: Apache-2.0 with Agora's additional conditions, condition 1 quoted, pointing to the LICENSE at commit `22a3bcd4509d`. `licence` for `corpus`: LibriSpeech CC BY 4.0 (https://www.openslr.org/12/) and MUSAN CC BY 4.0 (https://www.openslr.org/17/), both read from those OpenSLR pages on 2026-09-25 (`License: CC BY 4.0`, `License: Attribution 4.0 International (CC BY 4.0)`). The per-source registry belongs to WP-0.4 | `test_FR_0_0_12_asset_licences_recorded` (FR-0.0-12) |
+| F31 | The `python3.13` link in `/root/.local/bin` was removed with `uv python uninstall`, and `command -v python3.13` now gives `/usr/bin/python3.13`. The two false sentences in FIXES.md and BLOCKERS.md now carry a correction note | System check commands in FIXES.md |
+| F32 | The records above: BLK-006 gate, slow suite and CI; the CI row; the `_about` difference; the owner's Colab reports | Records |
+
+**Suites after the fixes** (commit `9016ee7`, clean tree; git-lfs 3.7.0 from the scratchpad on PATH for the second line):
+```text
+fast git-lfs 3.4.1: 152 passed, 8 deselected in 32.97s
+fast git-lfs 3.7.0: 152 passed, 8 deselected in 34.09s
+slow/network: 8 passed, 152 deselected in 58.93s
+gate: 0 findings: OK (0.3 s)
+git status lines after: 0
+commit: 9016ee7
+```
+**CI on `9016ee7`:** pull request run `36163086560`, success; push run `36163080671`, success; both jobs in each.
+
