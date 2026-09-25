@@ -1,10 +1,9 @@
-# Approval: WP-0.0
-
-- **Work Package**: WP-0.0 (Foundations and Guardrails)
-- **Plan Commit**: aaa9814
-- **Branch**: claude/hopeful-noether-yinc4e
-- **Approved by**: Nasir Aman
-- **Status**: APPROVED
-
+STATUS: APPROVED
+WP: WP-0.0
+APPROVED-BY: owner
+DATE: 2026-09-25
+PLAN: docs/progress/WP-0.0/PLAN.md
+CONDITIONS:
+- none (owner decisions 1-5 recorded in PLAN.md)
 ALLOW-PATTERNS-IN: tools/audit/patterns.py
 ALLOW-PATTERNS-IN: tests/aqis_lab/fixtures/**
