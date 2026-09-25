@@ -5,7 +5,7 @@ Values: NOT-STARTED, PLANNED, APPROVED, IN-BUILD, READY-FOR-AUDIT, AUDIT-FAIL, A
 
 | WP | Title | Status | Branch / PR | Updated |
 | --- | --- | --- | --- | --- |
-| WP-0.0 | Guardrails and audit tooling | AUDIT-FAIL | claude/hopeful-noether-yinc4e, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/1 | 2026-09-25 |
+| WP-0.0 | Guardrails and audit tooling | READY-FOR-AUDIT | claude/hopeful-noether-yinc4e, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/1 | 2026-09-25 |
 | WP-0.1 | Tier 2 VAD transport baseline | NOT-STARTED | | |
 | WP-0.2 | Contracts | NOT-STARTED | | |
 | WP-0.3 | Text normaliser and scorer | NOT-STARTED | | |

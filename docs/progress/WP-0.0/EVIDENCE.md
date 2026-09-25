@@ -451,7 +451,7 @@ tests/aqis_lab/test_aqis_gate_nfr.py::test_NFR_0_0_03_imports_are_stdlib_or_pinn
 ## Round 2 owner-run checks
 | Check | Where | Command | Expected output | Result report |
 | --- | --- | --- | --- | --- |
-| AT-0.0-04 and AT-0.0-07: CI green on the PR | GitHub, PR #1, Checks | Open the `aqis-lab-ci` run for the latest commit (`pull_request` event) | Job `lab` green, with the step "Work package ID from pull request title" printing `WP-0.0` and the gate running with `--wp WP-0.0`, ending `0 findings: OK`. Job `harness-regression` green, with the provisioning table all PASS (torch INFO) and `RESULT: PASS` from the regression check | Pending (owner) |
+| AT-0.0-04 and AT-0.0-07: CI green on the PR | GitHub, PR #1, Checks | Open the `aqis-lab-ci` run for the latest commit (`pull_request` event) | Job `lab` green, with the step "Work package ID from pull request title" printing `WP-0.0` and the gate running with `--wp WP-0.0`, ending `0 findings: OK`. Job `harness-regression` green, with the provisioning table all PASS (torch INFO) and `RESULT: PASS` from the regression check | Green on `d35290b`: pull request run `36151741552` (jobs `lab` and `harness-regression` success; `Work package from the pull request title: WP-0.0`, `0 findings: OK`), push run `36151733422` success. See "Round 3 audit fixes". Owner to confirm on the latest commit |
 | OC-0.0-01: Colab harness setup | Colab, fresh CPU runtime (x86_64) | Before the merge: in cell 1 of `docs/colab/HARNESS_SETUP.md` set `BRANCH = "claude/hopeful-noether-yinc4e"` (`main` has no provisioning script until the merge, audit F15). Run cells 1 to 6, then commit the downloaded file as `docs/environment/colab_harness_provision.txt` | A `platform / PASS / Ubuntu ... on Linux x86_64` row and every other row PASS (torch `INFO / not installed, decision R2-3`), `RESULT: PASS`, `exit code: 0`, `git status --porcelain: []`. A wrong branch stops cell 2 with `fatal: Remote branch <name> not found in upstream origin` and `RuntimeError: git clone of branch <name> from https://github.com/... failed (exit 128)`, with no command line shown | Pending (owner) |
 | Oracle VM (owner decision F16, approval conditions round 3) | Oracle VM, only if it is Debian or Ubuntu on x86_64 | `bash aqis_lab/deploy/harness_provision.sh` in a clone of the branch | **Debian or Ubuntu on x86_64:** as on Colab. **Arm (aarch64):** exit 1 at once, a single row `platform / FAIL / harness provisioning needs Debian or Ubuntu on Linux x86_64; this machine is Linux aarch64. TEN VAD at commit 22a3bcd4509d ships its native library only for Linux x86_64 ... no Arm (aarch64) binary ...`. **x86_64 with another distribution** (for example Oracle Linux, `ID=ol`): exit 1 at once, a single row `platform / FAIL / harness provisioning needs Debian or Ubuntu on Linux x86_64; this machine runs ol (...), not debian or ubuntu. the system step installs packages with apt-get ...`. In both FAIL cases: `Downloads this run: 0`, `RESULT: FAIL`. The harness is not supported there; this is the owner's decision, not a defect | Not needed unless the owner runs the harness on Oracle (`docs/environment/oracle_probe.txt` is still missing) |
 
@@ -579,3 +579,82 @@ Downloads this run: 5
 RESULT: PASS
 ```
 Run 2 ends with `| python | PASS | .venv-harness Python 3.13; requirements unchanged and pip check passes, nothing installed |`, `Downloads this run: 0` and `RESULT: PASS`.
+
+## Round 3 audit fixes (F23 to F27)
+Root causes and the change budget are in `docs/progress/WP-0.0/FIXES.md`, "Round 3 audit fixes". The owner's go-ahead and the new conditions are in `docs/approvals/WP-0.0.md` on `main` (`1bade2d`), merged here at `8a5383a`. Difference 5 above (the `harness-regression` job runs the harness tests on their own) is acknowledged there.
+
+**Baseline before any change** (`8a5383a`), fast suite:
+- git-lfs 3.4.1 (this VM): `132 passed, 7 deselected in 34.52s`.
+- git-lfs 3.7.0 on PATH (the version on the GitHub runner, downloaded to the scratchpad): `1 failed, 131 passed, 7 deselected in 29.92s`. This reproduces the CI failure. The real CI log (job `lab`, run `36149406313`) shows the same: `FAILED tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_reports_lfs_pull_failure_detail - AssertionError: Stream-VAD/model.pth.tar is a Git LFS pointer, not content`, `1 failed, 131 passed, 7 deselected in 17.81s`.
+
+**Root cause checks** (scratch repositories, `GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1`):
+```text
+pointer, no .gitattributes:  lfs 3.7.0 rc=0 "Skipping object checkout, Git LFS is not installed for this repository."   lfs 3.4.1 rc=2 "remote missing object"
+pointer, LFS .gitattributes: lfs 3.7.0 rc=2 "remote missing object"   lfs 3.4.1 rc=2 "remote missing object"
+real LFS content, no install:    lfs 3.7.0 rc=0 "Skipping object checkout ..." content: version https://git-lfs.g...   lfs 3.4.1 the same
+real LFS content, install --local: lfs 3.7.0 rc=0 content: real model content   lfs 3.4.1 the same
+```
+
+**Test-first, red run.** New tests added, before any code change. `-m "not slow and not network"`, `test_aqis_harness_provision.py`: `5 failed, 20 passed` with git-lfs 3.4.1, and the same 5 with 3.7.0. The failures:
+```text
+E   [FAIL] weights: Stream-VAD/model.pth.tar is a Git LFS pointer, not content   (F23: real LFS content not checked out without a global LFS install)
+E   AssertionError: Stream-VAD/model.pth.tar is a Git LFS pointer, not content   (F26: no git lfs output when the pull exits 0)
+E   KeyError: 'distributions'   (F24: no distribution pin)
+E   assert 0 == 1 ... | platform | PASS | Linux x86_64 | ... RESULT: PASS   (F24: a distribution outside the pin ran every step)
+E   AttributeError: 'Provisioner' object has no attribute 'venv_problem'   (F27)
+```
+With the realistic `.gitattributes` in the fixture, `test_FR_0_0_12_reports_lfs_pull_failure_detail` (the CI failure) passes on both git-lfs versions. It did not need to change.
+
+**After the fixes** (`test_aqis_harness_provision.py`, fast): `25 passed, 3 deselected` with git-lfs 3.4.1 and `25 passed, 3 deselected` with git-lfs 3.7.0.
+
+**Mutations.** Each fix was removed in turn in a scratch copy, then restored. Script: `scratchpad/mutate3.py`.
+```text
+### F23 no git lfs install --local (git-lfs 3.4.1) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 16.47s
+### F23 no git lfs install --local (git-lfs 3.7.0) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 15.13s
+### F26 no output when pull exits 0 (git-lfs 3.4.1) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 15.09s
+### F26 no output when pull exits 0 (git-lfs 3.7.0) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 15.00s
+### F24 distribution not checked (git-lfs 3.4.1) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 15.99s
+### F25 no sudo prefix (git-lfs 3.4.1) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 15.92s
+### F27 venv_problem ignores pip (git-lfs 3.4.1) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 13.12s
+### F27 step_python ignores venv_problem (git-lfs 3.4.1) -m 'slow or network' -k 'rebuilds_venv': 1 failed, 145 deselected in 2.18s
+```
+The F27 step mutation fails for the named reason: `[FAIL] python: python scripts/run_phase.py install failed (exit 1): .../.venv-harness/bin/python: No module named pip`.
+
+| Finding | Fix | Tests (requirement) |
+| --- | --- | --- |
+| F23 | `step_weights` runs `git lfs install --local` in the weights cache clone before `git lfs pull`, so Git LFS works whatever the machine's global or system git config says. The fixture's weights repository carries the LFS `.gitattributes` rule of the real Hugging Face repository (`*.tar filter=lfs ...`) | `test_FR_0_0_12_fetches_lfs_content_without_global_lfs_install`: a real LFS repository in the test's folder, a hermetic git config, and the content checked out. The CI test `test_FR_0_0_12_reports_lfs_pull_failure_detail` now passes on git-lfs 3.4.1 and 3.7.0 (FR-0.0-12) |
+| F24 | `check_platform` also requires the `/etc/os-release` ID to be `debian` or `ubuntu` (the new `distributions` pin, owner decision F16). Otherwise there is a single `platform` FAIL row naming the distribution and the reason, with nothing run, downloaded or written. The Oracle owner-run row reads "Debian or Ubuntu on x86_64" and gives the expected FAIL rows for Arm and for other distributions. The platform notes in the Colab doc and the script headers are updated | `test_FR_0_0_12_platform_pin_is_debian_or_ubuntu`, `test_FR_0_0_12_fails_fast_on_unsupported_distribution` (FR-0.0-12) |
+| F25 | Test only; `step_system` was correct. The test runs the script as an unprivileged user: as uid 65534 through `setpriv` when root, directly otherwise. Stand-in `dpkg-query`, `sudo` and `apt-get` sit in the test's temporary folder, and the test asserts the exact calls `sudo -n apt-get update -y` and `sudo -n apt-get install -y aqis-standin-package`, run with a non-zero uid. It is never skipped. As the conditions require, the slow real-repository tests put stand-ins on PATH for `apt-get` and `sudo` that refuse to run. **Real non-root evidence from CI:** job `harness-regression`, run `36149406313` (runner user, not root) printed `DOWNLOAD: sudo -n apt-get update -y`, `DOWNLOAD: sudo -n apt-get install -y libc++1 libopus0` and `| system | PASS | installed libc++1, libopus0; already present: git-lfs |` | `test_FR_0_0_12_non_root_uses_sudo_for_missing_package` (FR-0.0-12) |
+| F26 | Whenever pointer files remain after `git lfs pull`, the FAIL row carries git-lfs's exit code and last output lines: `git lfs pull failed (exit N): ...`, or `git lfs pull finished (exit 0) but left pointer files: ...` | `test_FR_0_0_12_reports_lfs_output_when_pull_leaves_pointers` (a pointer with an invalid oid; git-lfs exits 0) (FR-0.0-12) |
+| F27 | New `venv_problem`: no working Python, the wrong Python, or no working pip means the venv is broken. `step_python` then prints `rebuilding .venv-harness: <reason>` and rebuilds it with `uv venv --seed --clear`, and fails only if it is still broken afterwards | `test_FR_0_0_12_venv_problem_detects_venv_without_pip` (fast), `test_FR_0_0_12_rebuilds_venv_left_without_pip` (slow, network: a clone whose `.venv-harness` has no pip is repaired, and `python`, `ten-vad` and `imports` PASS) (FR-0.0-12) |
+
+**Suites after the fixes** (commit `d35290b`, clean tree):
+```text
+fast git-lfs 3.4.1: 138 passed, 8 deselected in 35.82s
+fast git-lfs 3.7.0: 138 passed, 8 deselected in 32.45s
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_creates_venv_with_probe_python PASSED [ 12%]
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_second_run_changes_nothing_within_30s PASSED [ 25%]
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_rejects_lock_with_wrong_hash PASSED [ 37%]
+tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_provisions_harness_end_to_end PASSED [ 50%]
+tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_second_run_downloads_nothing_within_60s PASSED [ 62%]
+tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_rebuilds_venv_left_without_pip PASSED [ 75%]
+tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_regeneration_is_reproducible PASSED [ 87%]
+tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_lock_installable_with_plain_pip PASSED [100%]
+================= 8 passed, 138 deselected in 91.49s (0:01:31) =================
+git status lines after: 0
+```
+
+**CI on `d35290b`** (AT-0.0-04, AT-0.0-07; logs read through the GitHub API):
+- Push run `36151733422` (run 39): `success`.
+- Pull request run `36151741552` (run 40): job `lab` `success`, job `harness-regression` `success`.
+- Job `lab` (`108126423593`), steps "Work package ID from pull request title" and "Audit gate":
+```text
+PR_TITLE: WP-0.0 Guardrails and audit tooling
+Work package from the pull request title: WP-0.0
+aqis-audit-gate: base origin/main (merge-base 1bade2dc66cc), head bceb1bbc4f40, approvals origin/main 1bade2dc66cc, wp WP-0.0
+Findings: 0
+0 findings: OK (0.2 s)
+```
+- The earlier red runs (`a6c78af`, `202c440`, `5cdf131`) all failed on the one git-lfs version test fixed here.
+
+**Gate** (local): `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0` → `Findings: 0`, `0 findings: OK (0.2 s)`. The Stop hook prints nothing.

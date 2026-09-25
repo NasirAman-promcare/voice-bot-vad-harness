@@ -100,3 +100,20 @@ These suites include every test linked to the capabilities at risk.
 | `docs/colab/HARNESS_SETUP.md` | Platform note | F24 |
 | `docs/capabilities/REGISTRY.md` | Rows CAP-ENV-003, CAP-ENV-006 (descriptions and test lists) | all |
 | `docs/progress/WP-0.0/EVIDENCE.md`, `STATUS.md`, this file | Records; Oracle row wording | all |
+
+### Baseline (before any change, commit `8a5383a`)
+- Fast suite: `132 passed, 7 deselected in 34.52s` with git-lfs 3.4.1.
+- With git-lfs 3.7.0 on PATH: `1 failed, 131 passed, 7 deselected in 29.92s`, which is the CI failure reproduced.
+
+These suites include every test linked to CAP-ENV-003, CAP-ENV-005 and CAP-ENV-006.
+
+### Verification
+- **Red first.** The new tests failed for the named reasons before the code changed: `5 failed, 20 passed` on both git-lfs versions.
+- **Mutations.** Each fix was removed in turn, and a named test caught every removal: F23 and F26 on both git-lfs versions, F24, F25, and F27 both in `venv_problem` and in `step_python`, the last through the slow test.
+- **After the fixes** (`d35290b`, clean tree):
+  - Fast suite: `138 passed` with git-lfs 3.4.1 and with 3.7.0.
+  - Slow and network suite: `8 passed`, git status empty afterwards.
+  - Gate: `0 findings`.
+- **CI** on `d35290b`: push run `36151733422` success; pull request run `36151741552` success, with the `lab` job (WP ID `WP-0.0`, gate `0 findings: OK`) and the `harness-regression` job both green.
+- **Diff.** `git diff 8a5383a d35290b` changes only the files and functions in the change budget. No existing test assertion changed, only the helpers `make_tree`, `run_real` and the import line.
+- **Records.** The module header change logs and the registry rows (CAP-ENV-003, CAP-ENV-006) are updated.
