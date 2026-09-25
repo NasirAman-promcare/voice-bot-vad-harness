@@ -64,7 +64,6 @@ def make_tree(tmp_path, *, model_blob=MODEL, tracked_manifest=None, corpus_sha=N
     git(tree, "init", "-q")
     git(tree, "add", "-A")
     git(tree, "commit", "-q", "-m", "tree with corpus")
-    git(tree, "tag", "corpus-v1")
     corpus_commit = git(tree, "rev-parse", "HEAD").strip()
 
     weights = tmp_path / "weights-src"
@@ -78,7 +77,7 @@ def make_tree(tmp_path, *, model_blob=MODEL, tracked_manifest=None, corpus_sha=N
 
     config = {
         "system_packages": [],
-        "corpus": {"tag": "corpus-v1", "commit": corpus_commit, "path": "corpus-v1.tar.gz",
+        "corpus": {"name": "corpus-v1", "commit": corpus_commit, "path": "corpus-v1.tar.gz",
                    "sha256": corpus_sha or sha(archive), "size": len(archive),
                    "manifest": "corpus/manifest.json", "audio_dir": "corpus/audio"},
         "firered": {"repo": str(weights), "commit": weights_commit, "subdir": "Stream-VAD",
@@ -148,6 +147,18 @@ def test_FR_0_0_12_second_data_run_downloads_nothing(tmp_path):
     assert second.returncode == 0, second.stdout
     assert downloads(second.stdout) == 0
     assert git(tree, "status", "--porcelain") == ""
+
+
+def test_FR_0_0_12_reads_corpus_at_pinned_commit(tmp_path):
+    # Owner decision BLK-005 option 1: the archive comes from git at the pinned commit, not from the working tree.
+    tree, cfg = make_tree(tmp_path)
+    (tree / "corpus-v1.tar.gz").write_bytes(b"a later, different archive")
+    git(tree, "commit", "-q", "-am", "archive replaced after the pinned commit")
+    proc = run(tree, cfg, tmp_path / "cache", *DATA)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert (tree / "corpus" / "audio" / "a.wav").read_bytes() == WAV_A
+    config = json.loads(cfg.read_text(encoding="utf-8"))
+    assert config["corpus"]["commit"][:12] in table(proc.stdout)["corpus"][1]
 
 
 def test_FR_0_0_12_fails_on_asset_checksum_mismatch(tmp_path):
