@@ -5,7 +5,7 @@ Claude appends an entry here (template: `docs/process/templates/BLOCKER.md`) whe
 <!-- entries start below -->
 
 ## BLK-001 — WP-0.0 approval file is not recognised by the hooks
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_01N7gtpxBMnXJe8XU2D1AzuM
 
 **What I need:** `docs/approvals/WP-0.0.md` on `main` to contain a line that reads exactly `STATUS: APPROVED` (at the start of the line, no bullet or bold).
@@ -20,4 +20,4 @@ WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_
 
 **Paused until answered:** all of `/wp-build WP-0.0`.
 
-**Owner answer:**
+**Owner answer:** Owner rewrote `docs/approvals/WP-0.0.md` on main (`475890d`) in the template format. Verified: `load_approvals('.', 'origin/main')` → approved files `['WP-0.0.md']`, ALLOW-PATTERNS-IN `['tools/audit/patterns.py', 'tests/aqis_lab/fixtures/**']`.
