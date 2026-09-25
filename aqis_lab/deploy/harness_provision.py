@@ -4,7 +4,7 @@ Run through aqis_lab/deploy/harness_provision.sh (the first step everywhere the 
 cloud VM, CI, Colab, Oracle). Standard library only; runs on any Python 3.10+ before a venv exists.
 
 CAPABILITIES:
-  CAP-ENV-003: provisions the harness idempotently: apt packages, .venv-harness on the Colab Python with the harness's own install command plus the hash-checked extras and the commit-pinned TEN VAD, the corpus from git tag corpus-v1 and the FireRedVAD weights into a cache outside the tree, verified by SHA-256 (no Git LFS pointer files), exposed only through git-ignored paths; prints a PASS/FAIL table and exits 1 on any failure [tests: test_FR_0_0_12_places_data_only_in_ignored_paths, test_FR_0_0_12_second_data_run_downloads_nothing, test_FR_0_0_12_fails_on_asset_checksum_mismatch, test_FR_0_0_12_rejects_lfs_pointer_file, test_FR_0_0_12_manifest_mismatch_is_an_error, test_FR_0_0_12_refuses_target_that_git_does_not_ignore, test_FR_0_0_12_never_writes_token, test_FR_0_0_12_rejects_unknown_step, test_FR_0_0_12_provisions_harness_end_to_end, test_FR_0_0_12_second_run_downloads_nothing_within_60s]
+  CAP-ENV-003: provisions the harness idempotently: apt packages, .venv-harness on the Colab Python with the harness's own install command plus the hash-checked extras and the commit-pinned TEN VAD, the corpus from git at its pinned commit and the FireRedVAD weights into a cache outside the tree, verified by SHA-256 (no Git LFS pointer files), exposed only through git-ignored paths; prints a PASS/FAIL table and exits 1 on any failure [tests: test_FR_0_0_12_places_data_only_in_ignored_paths, test_FR_0_0_12_second_data_run_downloads_nothing, test_FR_0_0_12_fails_on_asset_checksum_mismatch, test_FR_0_0_12_rejects_lfs_pointer_file, test_FR_0_0_12_manifest_mismatch_is_an_error, test_FR_0_0_12_refuses_target_that_git_does_not_ignore, test_FR_0_0_12_never_writes_token, test_FR_0_0_12_rejects_unknown_step, test_FR_0_0_12_provisions_harness_end_to_end, test_FR_0_0_12_second_run_downloads_nothing_within_60s]
 INPUTS AND OUTPUTS: config/aqis_lab/harness_assets.json (or $AQIS_HARNESS_ASSETS), docs/environment/colab_probe.txt,
   the harness requirement files; writes .venv-harness/, ${AQIS_CACHE:-$HOME/.cache/aqis}, symlinks under
   corpus/audio/ and pretrained_models/FireRedVAD/ (both git-ignored). Options: --steps system,python,corpus,weights,verify.
@@ -19,6 +19,7 @@ NOT IN SCOPE:
   - torch (owner decision R2-3), GPU packages, running the harness tests (CI job harness-regression does).
 CHANGE LOG:
   2026-09-25 WP-0.0 round 2 FR-0.0-12 created.
+  2026-09-25 WP-0.0 round 2 BLK-005 option 1: corpus pinned to a commit (the tag lacks the archive).
 """
 import argparse
 import hashlib
@@ -231,12 +232,11 @@ class Provisioner:
         c = self.cfg["corpus"]
         audio_rel = c["audio_dir"]
         self.require_ignored(f"{audio_rel}/probe.wav")
-        commit = self.git("rev-parse", "--verify", "--quiet", f"refs/tags/{c['tag']}^{{commit}}", check=False).stdout.strip()
-        if not commit:
-            self.git("fetch", "--no-tags", "origin", f"refs/tags/{c['tag']}:refs/tags/{c['tag']}", network=True)
-            commit = self.git("rev-parse", "--verify", f"refs/tags/{c['tag']}^{{commit}}").stdout.strip()
-        if commit != c["commit"]:
-            raise StepFailed(f"tag {c['tag']} is at {commit}, pinned {c['commit']}")
+        commit = c["commit"]
+        if self.git("cat-file", "-e", f"{commit}^{{commit}}", check=False).returncode != 0:
+            self.git("fetch", "--no-tags", "origin", commit, network=True)
+            if self.git("cat-file", "-e", f"{commit}^{{commit}}", check=False).returncode != 0:
+                raise StepFailed(f"pinned commit {commit} is not available in this clone, even after fetching it")
         base = self.cache / "corpus" / c["sha256"]
         archive = base / Path(c["path"]).name
         if not (archive.is_file() and self.sha256_file(archive) == c["sha256"]):
@@ -247,11 +247,11 @@ class Provisioner:
                                       stdout=handle, stderr=subprocess.PIPE)
             if proc.returncode != 0:
                 part.unlink()
-                raise StepFailed(f"cannot read {c['path']} at tag {c['tag']}: {proc.stderr.decode(errors='replace').strip()}")
+                raise StepFailed(f"cannot read {c['path']} at commit {commit[:12]}: {proc.stderr.decode(errors='replace').strip()}")
             got = self.sha256_file(part)
             if got != c["sha256"]:
                 part.unlink()
-                raise StepFailed(f"{c['path']} at tag {c['tag']} has sha256 {got}, pinned {c['sha256']}")
+                raise StepFailed(f"{c['path']} at commit {commit[:12]} has sha256 {got}, pinned {c['sha256']}")
             part.replace(archive)
         extracted = base / "extracted"
         marker = extracted / ".complete"
@@ -286,7 +286,7 @@ class Provisioner:
         missing = [e["clip_path"] for e in entries if not (self.root / e["clip_path"]).is_file()]
         if missing:
             raise StepFailed(f"{len(missing)} manifest clips still missing, first {missing[0]}")
-        self.row("corpus", "PASS", f"tag {c['tag']} {commit[:12]} sha256 {c['sha256'][:12]} verified; "
+        self.row("corpus", "PASS", f"{c['name']} from git at commit {commit[:12]}, sha256 {c['sha256'][:12]} verified; "
                  f"{len(entries)} manifest clips available under {audio_rel}/ ({linked} links created)")
 
     @staticmethod

@@ -1,5 +1,5 @@
 {
-  "_about": "Pins for aqis_lab/deploy/harness_provision.sh (WP-0.0 round 2, FR-0.0-12). Owner decisions: R2-1 option A (corpus from git tag corpus-v1), R2-3 option A (torch not installed), BLK-004 option 1 (TEN VAD commit in harness-vcs.txt).",
+  "_about": "Pins for aqis_lab/deploy/harness_provision.sh (WP-0.0 round 2, FR-0.0-12). Owner decisions: R2-1 option A as amended by BLK-005 option 1 (corpus from git at commit 1479626; tag corpus-v1 does not contain the archive), R2-3 option A (torch not installed), BLK-004 option 1 (TEN VAD commit in harness-vcs.txt).",
   "system_packages": ["git-lfs", "libc++1", "libopus0"],
   "harness_requirements": [
     "requirements/base.txt", "requirements/corpus.txt", "requirements/tier1.txt",
@@ -12,8 +12,8 @@
                    "pytest", "pytest_asyncio", "webrtcvad", "kaldi_native_fbank", "ten_vad"],
   "not_installed": [{"name": "torch", "reason": "decision R2-3"}],
   "corpus": {
-    "tag": "corpus-v1",
-    "commit": "a3ebbf892afda7b31661f33f2a1056913461eb16",
+    "name": "corpus-v1",
+    "commit": "14796262a824c86dc52dae3a5b448f5b178ba918",
     "path": "corpus-v1.tar.gz",
     "sha256": "ef4d5da1e30f6a296f84fb59d38bdb5644a9d3b41ac930b9a3e4e5dae64efbbb",
     "size": 46353268,

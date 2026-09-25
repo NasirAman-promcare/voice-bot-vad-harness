@@ -84,7 +84,7 @@ WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_
 **Owner answer:** Option 1 (session chat, 2026-09-25). `harness-extras.txt` stays fully hash-checked; the TEN VAD commit goes in `requirements/aqis_lab/harness-vcs.txt`, and provisioning verifies the installed commit (`22a3bcd4…`).
 
 ## BLK-005 — Tag corpus-v1 does not contain corpus-v1.tar.gz (my Round 2 plan was wrong)
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_01N7gtpxBMnXJe8XU2D1AzuM
 
 **What I need:** a new decision for R2-1, the source of the corpus archive.
@@ -103,4 +103,4 @@ WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_
 
 **Paused until answered:** the corpus step of FR-0.0-12, the provisioned baseline and the `harness-regression` CI job (FR-0.0-11 amended), AT-0.0-05 to AT-0.0-07. Everything else is committed: provisioning code and tests (fast tests pass), locks, and the TEN VAD pin.
 
-**Owner answer:**
+**Owner answer:** Option 1 (session chat, 2026-09-25): pin `corpus-v1.tar.gz` to commit `1479626` and verify sha256 `ef4d5da1…` directly from git. The owner also approved continuing the independent parts (FR-0.0-10, FR-0.0-13, FR-0.0-11).
