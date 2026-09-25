@@ -18,3 +18,4 @@ CONDITIONS:
 - CI: the harness-regression job runs the harness tests on their own, separately from the lab job, as described in EVIDENCE.md "Differences from the Round 2 plan". Both jobs must pass before merge.
 - Tests and audits must never run real apt-get, sudo or other system-changing commands. Replace them with stand-in commands placed on PATH inside the test's temporary folder only.
 - The non-root test runs the provisioning script as an unprivileged user (directly when not root, through setpriv when root). It must never be skipped, and it asserts that sudo -n is attempted for a missing package.
+- BLK-006 decision: Option 1 approved. Use uv venv --seed in shared test helpers for throwaway test environments. Modifying the venv creation line in test_FR_0_0_03_lock_installable_with_plain_pip is approved (assertions unchanged).
