@@ -140,3 +140,9 @@ These suites include every test linked to CAP-ENV-003, CAP-ENV-005 and CAP-ENV-0
 | `docs/progress/WP-0.0/EVIDENCE.md`, `FIXES.md`, `BLOCKERS.md` (BLK-006 answer), `STATUS.md` | Records |
 
 No production code, no capability and no registry row changes. The venv made `--without-pip` in `test_FR_0_0_12_venv_problem_detects_venv_without_pip` already works without `ensurepip`, so it stays as it is.
+
+### Baseline and verification
+- **Baseline on this VM** (`0a36ac5`, before the change): fast suite `138 passed, 8 deselected in 37.11s`.
+- **Reproduced, red.** The Colab failure was reproduced here without changing the system. A uv-installed CPython 3.13.7 in the scratchpad, with `lib/python3.13/ensurepip/_bundled/*.whl` removed, stands in for Ubuntu's Python without `python3.13-venv`. Then `python -m venv` → `Error: Command '[..., '-m', 'ensurepip', '--upgrade', '--default-pip']' returned non-zero exit status 1.` A lab venv on that Python (`uv pip sync --require-hashes requirements/aqis_lab/phase0.txt`) ran `-k "rejects_ten_vad_at_other_commit or reinstalls_when_pip_check_fails or venv_problem_detects or lock_installable_with_plain_pip"` → `4 failed`, the same four as on Colab.
+- **After the change, green.** Same lab venv, same command → `4 passed, 142 deselected in 10.85s`. On this VM the fast suite gives `138 passed, 8 deselected in 27.53s`.
+- **Diff.** Only the budgeted lines changed: the new `pip_venv` and its two imports (`shutil`, `sys`) in `aqis_testutil.py`; the body of the `scratch_venv` helper and one import line in `test_aqis_harness_provision.py`; one venv creation line and one import line in `test_aqis_lock.py`. No assertion changed. `import sys` in `test_aqis_lock.py` is now unused and left as it is, since the line is outside the approved change.

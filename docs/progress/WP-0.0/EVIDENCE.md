@@ -658,3 +658,20 @@ Findings: 0
 - The earlier red runs (`a6c78af`, `202c440`, `5cdf131`) all failed on the one git-lfs version test fixed here.
 
 **Gate** (local): `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0` → `Findings: 0`, `0 findings: OK (0.2 s)`. The Stop hook prints nothing.
+
+## Colab owner check fix (BLK-006)
+The owner's Colab verification (`docs/progress/WP-0.0/OWNER_VERIFY_COLAB_WP-0.0_20260925T151855Z.md`, on `aa9e74c`) failed on four tests. All four made scratch venvs with `python -m venv`, and `ensurepip` fails there: Colab's Python 3.13 is Ubuntu's, without `python3.13-venv`.
+
+The owner's decision (BLK-006 option 1, CONDITIONS in `docs/approvals/WP-0.0.md`):
+- The shared helper `pip_venv` in `tests/aqis_lab/aqis_testutil.py` makes those venvs with `uv venv --seed`, as provisioning does.
+- `scratch_venv` in `test_aqis_harness_provision.py` and the venv creation line of `test_FR_0_0_03_lock_installable_with_plain_pip` use it. Assertions are unchanged.
+
+Reproduction and proof, on a Colab-like Python (uv-installed CPython 3.13.7 with its `ensurepip` wheels removed; details in FIXES.md):
+```text
+before:  4 failed   (test_FR_0_0_12_rejects_ten_vad_at_other_commit, test_FR_0_0_12_reinstalls_when_pip_check_fails,
+                     test_FR_0_0_12_venv_problem_detects_venv_without_pip, test_FR_0_0_03_lock_installable_with_plain_pip)
+after:   4 passed, 142 deselected in 10.85s
+```
+On this VM the fast suite gives `138 passed, 8 deselected in 27.53s`.
+
+The owner's Colab report also shows every other check as PASS or INFO. Version, gate and a clean `git status` passed. The harness tests gave `1 failed, 21 passed`, the recorded baseline.

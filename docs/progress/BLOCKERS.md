@@ -106,7 +106,7 @@ WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_
 **Owner answer:** Option 1 (session chat, 2026-09-25): pin `corpus-v1.tar.gz` to commit `1479626` and verify sha256 `ef4d5da1…` directly from git. The owner also approved continuing the independent parts (FR-0.0-10, FR-0.0-13, FR-0.0-11).
 
 ## BLK-006 — Colab: scratch venvs with pip cannot be made with `python -m venv` (4 tests fail)
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_01N7gtpxBMnXJe8XU2D1AzuM
 
 **What I need:** your choice of how tests create throwaway virtual environments that have pip. The fix also changes an existing test (`test_FR_0_0_03_lock_installable_with_plain_pip`, round 1), and the surgical-fix skill says to escalate for that.
@@ -138,4 +138,4 @@ All four create a scratch venv with `python -m venv <dir>`, which runs `ensurepi
 
 **Paused until answered:** the fix for the Colab report, which covers those four tests and the `scratch_venv` helper. Nothing else is changed. The branch is as audited at `aa9e74c`, plus your report commit `22ce3c6` and this entry.
 
-**Owner answer:** 
+**Owner answer:** Option 1 (session chat, 2026-09-25; recorded under CONDITIONS in `docs/approvals/WP-0.0.md` on `main`, `d403bad`): use `uv venv --seed` in shared test helpers for throwaway test environments. Changing the venv creation line in `test_FR_0_0_03_lock_installable_with_plain_pip` is approved, with its assertions unchanged.

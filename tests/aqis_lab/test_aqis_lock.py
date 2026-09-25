@@ -8,7 +8,7 @@ import sys
 import pytest
 from packaging.markers import Marker
 
-from aqis_testutil import LOCK, LOCK_IN, ROOT, normalise, parse_lock, probe_python_major_minor
+from aqis_testutil import LOCK, LOCK_IN, ROOT, normalise, parse_lock, pip_venv, probe_python_major_minor
 
 
 def lock_header_command():
@@ -93,7 +93,7 @@ def test_FR_0_0_03_regeneration_is_reproducible(tmp_path):
 @pytest.mark.network
 def test_FR_0_0_03_lock_installable_with_plain_pip(tmp_path):
     venv = tmp_path / "pipvenv"
-    subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True, timeout=300)
+    pip_venv(venv)
     pip = [str(venv / "bin" / "python"), "-m", "pip"]
     proc = subprocess.run([*pip, "install", "--require-hashes", "--no-input", "-r", str(LOCK)],
                           capture_output=True, text=True, timeout=900)

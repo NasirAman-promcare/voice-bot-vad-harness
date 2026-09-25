@@ -6,7 +6,9 @@ from tools/audit.
 """
 import os
 import re
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -95,3 +97,17 @@ def git(repo, *args, check=True):
     if check and proc.returncode != 0:
         raise AssertionError(f"git {' '.join(args)} failed in {repo}: {proc.stderr}")
     return proc.stdout
+
+
+def pip_venv(path):
+    """A throwaway virtual environment with pip, made with `uv venv --seed` like .venv-harness (owner decision BLK-006).
+
+    `python -m venv` needs ensurepip, which Ubuntu's Python lacks unless the python3.X-venv package is installed
+    (Colab). uv seeds pip from its cache or from the package index instead. Returns the environment's python.
+    """
+    uv = shutil.which("uv")
+    assert uv, "uv is needed to create test environments (install uv 0.8.17, as dev_bootstrap.sh requires)"
+    proc = subprocess.run([uv, "venv", "--seed", "--python", sys.executable, str(path)], capture_output=True,
+                          text=True, timeout=600)
+    assert proc.returncode == 0, f"uv venv --seed failed for {path}: {proc.stdout}{proc.stderr}"
+    return Path(path) / "bin" / "python"

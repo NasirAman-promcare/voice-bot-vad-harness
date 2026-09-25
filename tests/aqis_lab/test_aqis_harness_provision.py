@@ -23,7 +23,7 @@ from pathlib import Path
 
 import pytest
 
-from aqis_testutil import ROOT, git, hermetic_git_env, probe_python_major_minor
+from aqis_testutil import ROOT, git, hermetic_git_env, pip_venv, probe_python_major_minor
 
 SCRIPT_SH = ROOT / "aqis_lab" / "deploy" / "harness_provision.sh"
 SCRIPT_PY = ROOT / "aqis_lab" / "deploy" / "harness_provision.py"
@@ -478,8 +478,7 @@ def local_package(path, name, requires=()):
 
 
 def scratch_venv(path):
-    subprocess.run([sys.executable, "-m", "venv", str(path)], check=True, capture_output=True, timeout=300)
-    return path / "bin" / "python"
+    return pip_venv(path)
 
 
 def pip_install(python, *args):
