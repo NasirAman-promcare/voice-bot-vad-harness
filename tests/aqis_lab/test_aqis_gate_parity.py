@@ -113,6 +113,70 @@ def s_clean(r):
     r.write("docs/notes.md", "TODO in prose is fine\n")
 
 
+def strip_never_section(text):
+    """PROTECTED_PATHS.txt without its [NEVER] section (the lines from [NEVER] up to the next section)."""
+    out, skipping = [], False
+    for line in text.splitlines(keepends=True):
+        if line.strip().startswith("["):
+            skipping = line.strip() == "[NEVER]"
+        if not skipping:
+            out.append(line)
+    assert "[NEVER]" not in "".join(out) and "[GUARDED]" in "".join(out)
+    return "".join(out)
+
+
+def s_never_section_stripped(r):
+    # Audit F28 (M26): the built-in NEVER list still applies when the branch deletes the [NEVER] section.
+    r.branch()
+    policy = r.path / "docs/process/PROTECTED_PATHS.txt"
+    r.write("docs/process/PROTECTED_PATHS.txt", strip_never_section(policy.read_text(encoding="utf-8")))
+    r.write("CLAUDE.md", "rewritten\n"); r.commit("c")
+
+
+def s_renamed_lab_test(r):
+    # Audit F28 (M23): --no-renames; a renamed existing lab test counts as deleted.
+    r.branch(); git(r.path, "mv", "tests/aqis_lab/test_existing.py", "tests/aqis_lab/test_renamed.py"); r.commit("c")
+
+
+def s_renamed_harness_test(r):
+    r.branch(); git(r.path, "mv", "tests/regression/test_example.py", "tests/regression/test_moved.py"); r.commit("c")
+
+
+def s_readme_approval(r):
+    # Audit F28 (M24): docs/approvals/README.md is never an approval, whatever it contains.
+    r.approve_on_main("README.md", "ALLOW-EDIT: vad_adapters/**\n")
+    r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
+
+
+def s_expired_approval(r):
+    r.approve_on_main("WP-9.9.md", "EXPIRES: 2000-01-01\nALLOW-EDIT: vad_adapters/**\n")
+    r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
+
+
+def s_unapproved_status(r):
+    r.approve_on_main("WP-9.9.md", "ALLOW-EDIT: vad_adapters/**\n", status="DRAFT")
+    r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
+
+
+def s_multi_pattern_line(r):
+    # Audit F29 (M16): one added line matching three code patterns gives one finding (the first pattern wins).
+    r.branch(); r.write("tools/multi.py", 'NOTE = "TODO: placeholder hack"\n')
+
+
+def s_late_header(r):
+    # Audit F29 (M17): the header must be within the first 80 lines of a new lab module.
+    lines = [f"V{i} = {i}\n" for i in range(91)] + ["CAPABILITIES: int = 1\n", "W = 2\n", "X = 3\n"]
+    assert len(lines) == 94 and lines[91].startswith("CAPABILITIES:")
+    r.branch(); r.write("aqis_lab/late_header.py", "".join(lines))
+
+
+def s_modified_headerless_module(r):
+    # Audit F29 (M18): only new lab modules need a header; an existing header-less one may be modified.
+    r.write("aqis_lab/legacy.py", "".join(f"L{i} = {i}\n" for i in range(10))); r.commit("legacy module on main")
+    git(r.path, "push", "-q", "origin", "main")
+    r.branch(); r.append("aqis_lab/legacy.py", "L10 = 10\n")
+
+
 SCENARIOS = {
     "never": (s_never, False), "guarded": (s_guarded, False), "guarded_approved": (s_guarded_approved, False),
     "branch_only_approval": (s_branch_only_approval, False), "modified_harness_test": (s_modified_harness_test, False),
@@ -123,8 +187,14 @@ SCENARIOS = {
     "main_moved": (s_main_moved, False), "combined": (s_combined, False), "clean": (s_clean, False),
     "v2_file_types": (s_v2_file_types, False), "pytestmark": (s_pytestmark, False),
     "added_then_deleted_in_worktree": (s_added_then_deleted_in_worktree, False), "non_utf8": (s_non_utf8, False),
+    # audit round 4 (F28, F29): every parity rule in PLAN.md "Parity with the Stop hook" has a scenario
+    "never_section_stripped": (s_never_section_stripped, False), "renamed_lab_test": (s_renamed_lab_test, True),
+    "renamed_harness_test": (s_renamed_harness_test, False), "readme_approval": (s_readme_approval, False),
+    "expired_approval": (s_expired_approval, False), "unapproved_status": (s_unapproved_status, False),
+    "multi_pattern_line": (s_multi_pattern_line, False), "late_header": (s_late_header, False),
+    "modified_headerless_module": (s_modified_headerless_module, False),
 }
-EXPECT_NONE = {"guarded_approved", "approved_lab_test_edit", "clean"}
+EXPECT_NONE = {"guarded_approved", "approved_lab_test_edit", "clean", "modified_headerless_module"}
 
 
 @pytest.mark.parametrize("name", sorted(SCENARIOS))

@@ -14,7 +14,8 @@
   ],
   "extras_lock": "requirements/aqis_lab/harness-extras.txt",
   "vcs_lock": "requirements/aqis_lab/harness-vcs.txt",
-  "ten_vad": {"distribution": "ten_vad", "commit": "22a3bcd4509d0faaa8eef4881e8af5f39c178950"},
+  "ten_vad": {"distribution": "ten_vad", "commit": "22a3bcd4509d0faaa8eef4881e8af5f39c178950",
+              "licence": "Apache-2.0 with additional conditions from Agora (LICENSE of the ten-vad repository at commit 22a3bcd4509d, installed as ten_vad-1.0.6.8.dist-info/licenses/LICENSE). Condition 1: You may not Deploy the ten-vad in a way that competes with Agora's offerings and/or that allows others to compete with Agora's offerings. Read the full conditions before any use beyond this lab."},
   "import_check": ["numpy", "scipy", "soundfile", "yaml", "aiortc", "av", "websockets", "opuslib",
                    "pytest", "pytest_asyncio", "webrtcvad", "kaldi_native_fbank", "ten_vad"],
   "not_installed": [{"name": "torch", "reason": "decision R2-3"}],
@@ -25,7 +26,8 @@
     "sha256": "ef4d5da1e30f6a296f84fb59d38bdb5644a9d3b41ac930b9a3e4e5dae64efbbb",
     "size": 46353268,
     "manifest": "corpus/manifest.json",
-    "audio_dir": "corpus/audio"
+    "audio_dir": "corpus/audio",
+    "licence": "Clips built from LibriSpeech (CC BY 4.0, https://www.openslr.org/12/) and MUSAN (CC BY 4.0, https://www.openslr.org/17/), the sources named in corpus/corpus_build_config.yaml; licences as stated on those OpenSLR pages on 2026-09-25. The per-source registry belongs to WP-0.4."
   },
   "firered": {
     "repo": "https://huggingface.co/FireRedTeam/FireRedVAD",

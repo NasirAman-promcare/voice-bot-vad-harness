@@ -352,6 +352,18 @@ def test_FR_0_0_12_reports_lfs_output_when_pull_leaves_pointers(tmp_path):
     assert re.search(r"git lfs pull (finished \(exit 0\) but left pointer files|failed \(exit [1-9]\d*\)): \S", detail), detail
 
 
+def test_FR_0_0_12_asset_licences_recorded():
+    # Audit F30: every pinned asset records its licence; TEN VAD's additional conditions are stated.
+    ten_vad, corpus, firered = REAL_CONFIG["ten_vad"], REAL_CONFIG["corpus"], REAL_CONFIG["firered"]
+    assert "Apache-2.0" in firered["licence"]
+    assert "Apache-2.0" in ten_vad["licence"] and "additional conditions" in ten_vad["licence"]
+    assert "compete with Agora's offerings" in ten_vad["licence"]
+    assert "LICENSE" in ten_vad["licence"] and ten_vad["commit"][:12] in ten_vad["licence"]
+    for source, url in (("LibriSpeech", "https://www.openslr.org/12/"), ("MUSAN", "https://www.openslr.org/17/")):
+        assert source in corpus["licence"] and url in corpus["licence"]
+    assert corpus["licence"].count("CC BY 4.0") == 2
+
+
 def test_FR_0_0_12_platform_pin_is_debian_or_ubuntu():
     # Approval condition (F16 decision): Debian or Ubuntu on x86_64 only.
     pin = REAL_CONFIG["platform"]

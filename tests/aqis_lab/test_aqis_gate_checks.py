@@ -23,6 +23,41 @@ def repo(tmp_path):
 
 
 # ---- (a) protected paths -----------------------------------------------------------------
+def test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed(repo):
+    # Audit F28 (M26): a branch that deletes the [NEVER] section of PROTECTED_PATHS.txt and rewrites CLAUDE.md
+    # is still caught, by the built-in NEVER list.
+    repo.branch()
+    policy = (repo.path / "docs/process/PROTECTED_PATHS.txt").read_text(encoding="utf-8")
+    start, end = policy.index("[NEVER]"), policy.index("[GUARDED]")
+    repo.write("docs/process/PROTECTED_PATHS.txt", policy[:start] + policy[end:])
+    repo.write("CLAUDE.md", "rewritten\n")
+    repo.commit("drop the NEVER section")
+    report = repo.gate_json()
+    assert report["ok"] is False
+    assert sorted((f["rule"], f["path"], f["state"]) for f in report["findings"]) == [
+        ("A1", "CLAUDE.md", "A"), ("A1", "docs/process/PROTECTED_PATHS.txt", "M")]
+
+
+def test_FR_0_0_05_a_approvals_readme_approves_nothing(repo):
+    # Audit F28 (M24): docs/approvals/README.md on main is ignored even when it holds approval lines.
+    repo.approve_on_main("README.md", "ALLOW-EDIT: vad_adapters/**\n")
+    repo.branch()
+    repo.append("vad_adapters/example.py", "\nEXTRA = 1\n")
+    report = repo.gate_json()
+    assert rules(report) == [("A2", "vad_adapters/example.py")]
+
+
+def test_FR_0_0_05_a_detects_renamed_guarded_harness_test(repo):
+    # Audit F28 (M23): with --no-renames a rename is a delete plus an add of guarded paths, and a deleted test.
+    repo.branch()
+    git(repo.path, "mv", "tests/regression/test_example.py", "tests/regression/test_moved.py")
+    repo.commit("rename a harness test")
+    report = repo.gate_json()
+    found = sorted((f["rule"], f["path"], f.get("state")) for f in report["findings"])
+    assert found == [("A2", "tests/regression/test_example.py", "D"), ("A2", "tests/regression/test_moved.py", "A"),
+                     ("B2", "tests/regression/test_example.py", "D")]
+
+
 def test_FR_0_0_05_a_detects_never_path(repo):
     repo.branch()
     repo.append("docs/process/PROTECTED_PATHS.txt", "\n# edited\n")
@@ -109,6 +144,17 @@ def test_FR_0_0_05_b_detects_deleted_existing_test(tmp_path):
     # The deleted file held the only test named by registry row CAP-FIX-001, so check (e) reports it too.
     assert rules(report) == [("B2", "tests/aqis_lab/test_existing.py"), ("E3", "docs/capabilities/REGISTRY.md")]
     assert report["findings"][0]["severity"] == "CRITICAL"
+
+
+def test_FR_0_0_05_b_detects_renamed_existing_lab_test(tmp_path):
+    # Audit F28 (M23): renaming an existing lab test away deletes the original test.
+    repo = FixtureRepo(tmp_path, with_lab_test=True)
+    repo.branch()
+    git(repo.path, "mv", "tests/aqis_lab/test_existing.py", "tests/aqis_lab/test_renamed.py")
+    repo.commit("rename a lab test")
+    report = repo.gate_json()
+    assert report["ok"] is False
+    assert rules(report) == [("B2", "tests/aqis_lab/test_existing.py")]
 
 
 def test_FR_0_0_05_b_passes_new_test_and_approved_edit(tmp_path):

@@ -146,3 +146,40 @@ No production code, no capability and no registry row changes. The venv made `--
 - **Reproduced, red.** The Colab failure was reproduced here without changing the system. A uv-installed CPython 3.13.7 in the scratchpad, with `lib/python3.13/ensurepip/_bundled/*.whl` removed, stands in for Ubuntu's Python without `python3.13-venv`. Then `python -m venv` → `Error: Command '[..., '-m', 'ensurepip', '--upgrade', '--default-pip']' returned non-zero exit status 1.` A lab venv on that Python (`uv pip sync --require-hashes requirements/aqis_lab/phase0.txt`) ran `-k "rejects_ten_vad_at_other_commit or reinstalls_when_pip_check_fails or venv_problem_detects or lock_installable_with_plain_pip"` → `4 failed`, the same four as on Colab.
 - **After the change, green.** Same lab venv, same command → `4 passed, 142 deselected in 10.85s`. On this VM the fast suite gives `138 passed, 8 deselected in 27.53s`.
 - **Diff.** Only the budgeted lines changed: the new `pip_venv` and its two imports (`shutil`, `sys`) in `aqis_testutil.py`; the body of the `scratch_venv` helper and one import line in `test_aqis_harness_provision.py`; one venv creation line and one import line in `test_aqis_lock.py`. No assertion changed. `import sys` in `test_aqis_lock.py` is now unused and left as it is, since the line is outside the approved change.
+
+## Round 4 audit fixes (F28 to F32)
+
+**Source.** `docs/progress/WP-0.0/AUDIT.md` round 4, commit `db11efb`, verdict FAIL.
+
+**Owner instruction.** `/surgical-fix WP-0.0-F28 … F32` (session chat, 2026-09-25).
+
+### Root causes
+| Finding | Root cause |
+| --- | --- |
+| F28 CRITICAL | The gate code is correct, but no test ever exercised three rules of checks (a) and (b): the built-in NEVER list when `PROTECTED_PATHS.txt` loses its `[NEVER]` section, `--no-renames` for a renamed test, and "`docs/approvals/README.md` is ignored". |
+| F29 CRITICAL | The parity scenarios had no line matching several code patterns, no new lab module longer than 80 lines, and no modified header-less lab module. So "first pattern wins", "header within the first 80 lines" and "new modules only" were never compared with the hook. The `EXPIRES` and non-`APPROVED` status rules had gate-only tests but no parity scenario. |
+| F30 MINOR | Licence entries were added for FireRedVAD only. TEN VAD (Apache-2.0 with Agora's additional conditions) and the corpus-v1 sources were missed. |
+| F31 MINOR | My BLK-006 reproduction used `uv python install`, which also puts a `python3.13` link in `/root/.local/bin`, first on PATH. I did not notice it, and the records wrongly said the system was not changed. |
+| F32 MINOR | After BLK-006 I recorded only the fast suite. No gate run, slow suite or CI run IDs were recorded. The CI row was left on `d35290b`, and the round 3 `_about` text edit was not listed as a difference. |
+
+### Change budget
+| File | Change | Finding |
+| --- | --- | --- |
+| `tests/aqis_lab/test_aqis_gate_parity.py` | New scenario functions and `SCENARIOS` entries: `never_section_stripped`, `renamed_lab_test`, `renamed_harness_test`, `readme_approval`, `expired_approval`, `unapproved_status`, `multi_pattern_line`, `late_header`, `modified_headerless_module` (the last one also in `EXPECT_NONE`). Helper `strip_never_section`. No existing scenario or assertion changed | F28, F29 |
+| `tests/aqis_lab/test_aqis_gate_checks.py` | New tests `test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed`, `test_FR_0_0_05_a_approvals_readme_approves_nothing`, `test_FR_0_0_05_a_detects_renamed_guarded_harness_test`, `test_FR_0_0_05_b_detects_renamed_existing_lab_test` | F28 |
+| `tests/aqis_lab/test_aqis_harness_provision.py` | New test `test_FR_0_0_12_asset_licences_recorded` | F30 |
+| `config/aqis_lab/harness_assets.json` | New `licence` keys for `ten_vad` and `corpus` | F30 |
+| `tools/audit/gate.py` | Module header only: the new tests in the CAP-AUDIT-001 and CAP-AUDIT-002 lists, and a change log line. No code | F28 |
+| `aqis_lab/deploy/harness_provision.py` | Module header only: the new test in the CAP-ENV-003 list (the registry row shares it) | F30 |
+| `docs/capabilities/REGISTRY.md` | Test lists of CAP-AUDIT-001, CAP-AUDIT-002, CAP-ENV-003 and CAP-ENV-006 | F28, F30 |
+| `docs/progress/WP-0.0/EVIDENCE.md`, `FIXES.md`, `BLOCKERS.md`, `STATUS.md` | Records, including the corrections F31 and F32 ask for | F31, F32 |
+
+No gate or provisioning code changes.
+
+**Capabilities at risk.** None changes behaviour: CAP-AUDIT-001 to 004 and CAP-ENV-003 and 006 gain tests only.
+
+**F31 system fix, already done.**
+- Ran `UV_PYTHON_INSTALL_DIR=<scratchpad>/colabrepro/py uv python uninstall 3.13`, which printed `Uninstalled Python 3.13.7 in 96ms` and ` - cpython-3.13.7-linux-x86_64-gnu (python3.13)`.
+- Afterwards `ls -la /root/.local/bin | grep -c python3.13` gives `0`, `command -v python3.13` gives `/usr/bin/python3.13`, and `python3.13 --version` gives `Python 3.13.12`.
+- This repository's `.venv` and `.venv-harness` never used the link: both `pyvenv.cfg` files have `home = /usr/bin`.
+- The scratch lab venv built on the removed Python was deleted with the rest of `scratchpad/colabrepro`.
