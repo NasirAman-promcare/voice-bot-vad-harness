@@ -264,3 +264,216 @@ None. No line in the repository carries an `audit-allow` exemption; the gate rep
   - `docs/capabilities/REGISTRY.md`: appended rows only.
   - `docs/progress/BLOCKERS.md`: BLK-001 appended, then resolved.
   - No GUARDED or NEVER path is changed, and no path carries an absolute filesystem location.
+
+---
+
+# Round 2 (after audit round 1, Amendment 1)
+
+- **Environment:** cloud VM (Ubuntu 24.04.4 LTS, x86_64).
+  - Lab `.venv`: Python 3.13.12, uv 0.8.17, `phase0.txt` sha256 `5c9a64eb0ded6484…`.
+  - Harness `.venv-harness`: Python 3.13.12, `harness-extras.txt` sha256 `339abead3e1b65b9…`.
+- **Base:** `origin/main` `e4b38ac` (kit patch 2, Stop hook v3), with Round 2 approval `2528e74`.
+- **Owner decisions:** R2-1 as amended by BLK-005 (option 1), R2-2, R2-3 A, R2-4, BLK-004 option 1.
+- **Commits:** Round 2 commits run from `1ede332` to the end of this branch. Each requirement's tests were committed before its implementation, so the order can be checked with `git log --stat` (F07).
+
+## Findings F01 to F10 (AT-0.0-08)
+| Finding | Proof | Result |
+| --- | --- | --- |
+| F01 | `test_FR_0_0_02_uses_version_named_by_probe` (probe says 3.99, expects exit 1, `Python 3.99` in stderr, no `.venv`) | Auditor mutation `PY="3.13"`: `F01 PY=3.13 hard-coded => 1 failed, 9 passed, 93 deselected` |
+| F02 | `test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point`, `test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point` (`approve_on_main(..., merge_into_branch=False)`) | Auditor mutation `load_approvals(git, base)`: `F02 approvals at merge-base => 2 failed, 19 passed, 82 deselected` |
+| F03 | `test_FR_0_0_01_version_marks_dirty_tree` now stages an edit and a deletion | Auditor mutation (`git diff --name-only` plus untracked): `F03 +dirty misses staged => 1 failed, 4 passed, 98 deselected` |
+| F04 | `gate.py`: `read_changed_file`, `diff_against_base`, `load_protected`, registry, spec and test-file reads now raise `GateError` (exit 2). Tests: `test_FR_0_0_06_fails_closed_on_unreadable_changed_file`, `test_FR_0_0_06_fails_closed_when_protected_paths_unreadable[missing/directory]`, `test_FR_0_0_06_fails_closed_on_git_error` (the last also shows the Stop hook reports `GATE ERROR`) | Round 2 mutation R3 (dangling symlink skipped silently): `1 failed` |
+| F05 | Docstring of `test_FR_0_0_04_harness_collection_unchanged` states its limits; its pytest subprocesses use `PYTHONDONTWRITEBYTECODE=1`. The combined run in `.venv-harness` is recorded under FR-0.0-04 below | Harness outcomes identical alone and combined (22 of 22) |
+| F06 | `test_FR_0_0_08_module_headers_match_registry`, added before the fix (commit `9897ce2` fails, `7fb578d` passes). Headers and registry synced; the three package markers have full headers; `ALLOW_REASON_RE` is listed in CAP-AUDIT-008 | Passes; it caught one more mismatch during round 2 (the `harness_provision.py` header), which was fixed |
+| F07 | NFR commands and output below. **History, stated accurately:** in round 1, the check (e), check (f) and FR-0.0-07 code landed in `3f7d52a` together with checks (a) to (d), **before** their tests were committed. The titles of `b8bbe52`, `65be1e1`, `6fe8c71` and `b2067a0` describe test files only. Pushed history is not rewritten. In round 2, tests and implementation are separate commits; example checked in a scratch clone: `1ede332` (tests only) `17 failed, 32 passed`, `5ae3ce3` (fix) `49 passed` | See below |
+| F08 | Owner approved the round-1 additions (`docs/approvals/WP-0.0.md`, condition R2-4) | Approved |
+| F09 | Replacement decoding everywhere; `repository_root` catches `TimeoutExpired`; F1 cites `docs/specs/**/<WP>-*.md:1`. Test: `test_FR_0_0_06_decodes_non_utf8_with_replacement` (a Latin-1 byte in a new and in a modified lab file gives the finding, exit 1, no traceback) | Passes |
+| F10 | `test_FR_0_0_01_version_prints_package_commit_python` compares only with the AST-read `__version__`; the literal is gone | Passes |
+
+## FR-0.0-06 (amended) — the gate matches Stop hook v2/v3, fails closed, wider scan
+- **Tests** (`tests/aqis_lab/test_aqis_gate_v2.py` and `test_aqis_gate_parity.py`):
+  - `test_FR_0_0_06_scans_v2_file_types_and_dirs`
+  - `test_FR_0_0_06_flags_pytestmark_and_param_skips`
+  - `test_FR_0_0_06_decodes_non_utf8_with_replacement`
+  - the three `test_FR_0_0_06_fails_closed_*` tests
+  - `test_FR_0_0_06_approvals_none_when_origin_main_unverifiable`
+  - `test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos`, 20 scenarios; new: `v2_file_types`, `pytestmark`, `added_then_deleted_in_worktree`, `non_utf8`
+  - `test_FR_0_0_06_pattern_tables_identical_to_stop_hook`, which also compares the suffixes and the CI-file glob
+- **Tests first:** before the fix, `13 failed, 17 passed` (for example, `JSONDecodeError` when the gate crashed on non-UTF-8, `AttributeError: module 'tools.audit.patterns' has no attribute 'LAB_CODE_DIRS'`, AD file reported as `D` instead of `A`). After the fix: `30 passed in 7.62s`.
+- **Stop hook v3** (`e4b38ac`) changes only memory and reporting ("Detection rules are unchanged from version 2"); the parity tests run against v3.
+- **Round 2 mutations** (scratch clone, one at a time, real output):
+```text
+R1 old status mapping (AD as deleted) => 1 failed, 29 passed, 98 deselected in 7.01s
+R2 drop shell pattern => 7 failed, 28 passed, 93 deselected in 8.02s
+R3 dangling symlink skipped silently => 1 failed, 29 passed, 98 deselected in 7.60s
+```
+- **Status:** DONE. Differences G1 and G2 are accepted (R2-2) and documented in `docs/tools/AUDIT_GATE.md`.
+
+## FR-0.0-10 (amended) — WP ID from the pull request title
+- **Tests:**
+  - `test_FR_0_0_10_ci_takes_wp_from_pr_title`
+  - `test_FR_0_0_10_pr_title_parser`, which runs the workflow's own shell step with `PR_TITLE`/`GITHUB_ENV`:
+    - accepts `WP-0.0 …`, `WP-0.12: …`, `WP-1.3`;
+    - rejects a missing ID, `WP-0.0x`, lower case, brackets, `WP-0`, and a two-line title that tries to write its own `WP_ID=`;
+  - `test_FR_0_0_10_ci_gate_base_selection` (updated to the amended gate step).
+- **Tests first:** `6 failed, 2 passed` before the workflow change; `8 passed in 0.20s` after it.
+- **Mutation:** R8 (title regex without the trailing boundary) gives `1 failed`.
+- **Status:** DONE locally. The pull-request run is AT-0.0-04 / AT-0.0-07 (owner).
+
+## FR-0.0-11 (amended) — provisioned baseline and the regression job
+- **Record:** `docs/baselines/harness_tests_baseline.md`, with "Provisioned baseline (round 2)" (commit tested `d6b2364`) first and the round 1 baseline kept under "History (round 1)".
+- **Tool:** `tools/harness/regression_check.py`.
+- **CI job:** `harness-regression` (provision, run tests with JUnit output, regression check).
+- **Tests:**
+  - `test_FR_0_0_11_regression_check_flags_newly_failing_baseline_pass`
+  - `test_FR_0_0_11_regression_check_flags_missing_baseline_pass`
+  - `test_FR_0_0_11_regression_check_passes_same_or_better`
+  - `test_FR_0_0_11_regression_check_rejects_unreadable_inputs`
+  - `test_FR_0_0_11_regression_check_accepts_repository_baseline`
+  - `test_FR_0_0_11_ci_has_harness_regression_job`
+  - `test_FR_0_0_11_baseline_records_command_and_environment` and `test_FR_0_0_11_baseline_lists_every_harness_test`, both now requiring both sections
+- **Tests first:** `5 failed` (module missing; no Round 2 section yet) before the implementation; `7 passed` after.
+- **Mutation:** R7 (missing baseline tests tolerated) gives `1 failed`.
+- **AT-0.0-06:** `PYTHONDONTWRITEBYTECODE=1 .venv-harness/bin/python -m pytest tests/regression -rA -p no:cacheprovider --junitxml=<scratch>`. Real output:
+```text
+FAILED tests/regression/test_loss_category.py::test_packet_loss_category_applies_drop_impairment_in_bridge
+========================= 1 failed, 21 passed in 5.07s =========================
+GIT STATUS (incl. ignored) IDENTICAL
+```
+  No import or collection errors.
+- **Regression check on that report:** `.venv-harness/bin/python -B -m tools.harness.regression_check --junit <scratch>/r2_junit.xml`
+```text
+baseline: 22 tests, 21 passed; this run: 22 tests, 21 passed
+RESULT: PASS
+EXIT=0
+```
+- **Status:** DONE locally. AT-0.0-07 (the CI job green on the PR) is for the owner to confirm.
+
+## FR-0.0-04 — combined run in the harness environment (F05)
+`PYTHONDONTWRITEBYTECODE=1 .venv-harness/bin/python -m pytest tests/regression tests/aqis_lab -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider -q --junitxml=<scratch>`, then a comparison of the harness test cases with the harness-only run:
+```text
+2 failed, 128 passed, 7 deselected in 28.21s
+harness outcomes identical alone vs combined with lab tests: True 22 22 21 passed
+FAILED tests/regression/test_loss_category.py::test_packet_loss_category_applies_drop_impairment_in_bridge
+FAILED tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_environment_matches_lock
+```
+The lab failure is expected in that environment: `test_FR_0_0_03_environment_matches_lock` asserts that the running interpreter is the lab `.venv`, and `.venv-harness` is not.
+
+## FR-0.0-12 — harness provisioning
+- **Files:**
+  - `aqis_lab/deploy/harness_provision.sh`, a wrapper around `harness_provision.py` (standard library, system `python3` 3.10 or newer);
+  - `requirements/aqis_lab/harness-extras.in` and `harness-extras.txt`, hash-checked;
+  - `requirements/aqis_lab/harness-vcs.txt`, the TEN VAD commit `22a3bcd4…` (BLK-004 option 1);
+  - `config/aqis_lab/harness_assets.json`: corpus commit `14796262a824…` (BLK-005 option 1), sha256 `ef4d5da1…`; FireRedVAD commit `7990aac…` with per-file sha256; torch not installed (R2-3).
+- **Tests:**
+  - Fast, each running the real script in a throwaway git tree with local sources:
+    - `test_FR_0_0_12_places_data_only_in_ignored_paths`
+    - `test_FR_0_0_12_second_data_run_downloads_nothing`
+    - `test_FR_0_0_12_reads_corpus_at_pinned_commit`
+    - `test_FR_0_0_12_fails_on_asset_checksum_mismatch`
+    - `test_FR_0_0_12_rejects_lfs_pointer_file`
+    - `test_FR_0_0_12_manifest_mismatch_is_an_error`
+    - `test_FR_0_0_12_refuses_target_that_git_does_not_ignore`
+    - `test_FR_0_0_12_never_writes_token` (sentinel `GITHUB_TOKEN` found nowhere in the tree, `.git` or the cache)
+    - `test_FR_0_0_12_rejects_unknown_step`
+    - `test_FR_0_0_12_harness_extras_lock_is_hash_pinned`
+    - `test_FR_0_0_12_asset_pins_match_repository`
+  - Slow and network, on this repository: `test_FR_0_0_12_provisions_harness_end_to_end`, `test_FR_0_0_12_second_run_downloads_nothing_within_60s`.
+- **Tests first:** `8 failed` (script missing) before the implementation; later `6 failed` (`KeyError: 'tag'`) before the pin-by-commit change.
+- **Mutations** (one at a time, real output):
+```text
+R4 corpus sha not verified => 1 failed, 10 passed, 117 deselected in 2.97s
+R5 LFS pointer accepted => 1 failed, 10 passed, 117 deselected in 2.83s
+R6 ignore check skipped => 1 failed, 10 passed, 117 deselected in 2.72s
+R9 corpus read from working tree, not pinned commit => 1 failed, 10 passed, 117 deselected in 2.73s
+```
+- **First real run:** it found that tag `corpus-v1` does not contain the archive (BLK-005). My Round 2 plan had stated otherwise; the correction is in `PLAN.md`.
+- **Where the harness expects its data, and how it is provided:**
+  - clips at `corpus/audio/<name>.wav`: 229 symlinks into `~/.cache/aqis/corpus/<sha256>/extracted/`, inside the ignored real directory `corpus/audio/`;
+  - weights at `pretrained_models/FireRedVAD/Stream-VAD`: a symlink into `~/.cache/aqis/firered/<commit>/repo/Stream-VAD`, inside the ignored `pretrained_models/`;
+  - the tracked `corpus/manifest.json` is compared with the archive's copy (byte-identical) and never written.
+
+### AT-0.0-05 — provision twice from scratch
+Command: remove `.venv-harness`, `~/.cache/aqis`, `corpus/audio` and `pretrained_models` (all created by provisioning), then run `bash aqis_lab/deploy/harness_provision.sh` twice. Real output:
+```text
+run 1: exit=0 elapsed=44.2s Downloads this run: 5 RESULT: PASS git-status=[]
+run 2: exit=0 elapsed=0.7s Downloads this run: 0 RESULT: PASS git-status=[]
+```
+Run 1 table (real):
+```text
+| system | PASS | already installed: git-lfs, libc++1, libopus0 |
+| python | PASS | .venv-harness Python 3.13; installed run_phase.py install all, requirements/aqis_lab/harness-extras.txt (hash-checked), requirements/aqis_lab/harness-vcs.txt |
+| ten-vad | PASS | ten_vad 1.0.6.8 at commit 22a3bcd4509d (pinned) |
+| imports | PASS | imported numpy, scipy, soundfile, yaml, aiortc, av, websockets, opuslib, pytest, pytest_asyncio, webrtcvad, kaldi_native_fbank, ten_vad; TenVad native library loaded |
+| torch | INFO | not installed, decision R2-3 |
+| corpus | PASS | corpus-v1 from git at commit 14796262a824, sha256 ef4d5da1e30f verified; 229 manifest clips available under corpus/audio/ (229 links created) |
+| weights | PASS | https://huggingface.co/FireRedTeam/FireRedVAD at 7990aaccc6b7: Stream-VAD/model.pth.tar, Stream-VAD/cmvn.ark sha256 verified, no LFS pointers; available at pretrained_models/FireRedVAD/Stream-VAD |
+| git-status | PASS | git status --porcelain is empty |
+```
+The system packages were installed by the first provisioning attempt in this session. Its real output: `[PASS] system: installed git-lfs, libc++1; already present: libopus0`.
+
+- **Slow and network suite:** `.venv/bin/python -m pytest tests/aqis_lab -v -p no:cacheprovider -m "slow or network"`
+```text
+tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_provisions_harness_end_to_end PASSED
+tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_second_run_downloads_nothing_within_60s PASSED
+====================== 7 passed, 121 deselected in 8.09s =======================
+```
+- **Status:** DONE.
+
+## FR-0.0-13 — Colab harness setup
+- **Doc:** `docs/colab/HARNESS_SETUP.md`, cells 1 to 6:
+  1. settings;
+  2. clone with the `GITHUB_TOKEN` secret in a one-off `-c http.extraHeader` for the clone command only;
+  3. assert there is no extraheader in git config and the remote is unchanged;
+  4. uv 0.8.17 if missing;
+  5. provision and write the report;
+  6. download the report.
+- **Tests:** `test_FR_0_0_13_colab_doc_cells_are_valid_python`, `test_FR_0_0_13_token_used_only_for_the_clone_command`, `test_FR_0_0_13_one_provisioning_command_and_report`.
+- **Tests first:** `3 failed` (`FileNotFoundError`) before the doc; `3 passed` after.
+- **Owner-run check:** OC-0.0-01, below.
+- **Status:** DONE, pending OC-0.0-01.
+
+## NFR-0.0-01/02/03 — commands and output (F07)
+- **Command:** `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_gate_nfr.py -v -p no:cacheprovider`
+```text
+tests/aqis_lab/test_aqis_gate_nfr.py::test_NFR_0_0_01_gate_runtime_under_60s PASSED
+tests/aqis_lab/test_aqis_gate_nfr.py::test_NFR_0_0_02_every_message_names_file_line_and_rule PASSED
+tests/aqis_lab/test_aqis_gate_nfr.py::test_NFR_0_0_03_imports_are_stdlib_or_pinned PASSED
+============================== 3 passed in 0.62s ===============================
+```
+- **NFR-0.0-01:** the gate on this repository reports its own time: `0 findings: OK (0.2 s)`, see "Round 2 audit gate" below.
+- **Mutations:** round 1 M4 (rule missing from the message) and M9 (`import yaml` in the gate) each made the NFR tests fail. `tools/harness/` and `aqis_lab/deploy/harness_provision.py` are also covered by `test_NFR_0_0_03_imports_are_stdlib_or_pinned` (standard library only).
+
+## Round 2 fast suite
+`.venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network"` (AT-0.0-02): `121 passed, 7 deselected in 20.40s`.
+
+## Round 2 owner-run checks
+| Check | Where | Command | Expected output | Result report |
+| --- | --- | --- | --- | --- |
+| AT-0.0-04 and AT-0.0-07: CI green on the PR | GitHub, PR #1, Checks | Open the `aqis-lab-ci` run for the latest commit (`pull_request` event) | Job `lab` green, with the step "Work package ID from pull request title" printing `WP-0.0` and the gate running with `--wp WP-0.0`, ending `0 findings: OK`. Job `harness-regression` green, with the provisioning table all PASS (torch INFO) and `RESULT: PASS` from the regression check | Pending (owner) |
+| OC-0.0-01: Colab harness setup | Colab, fresh CPU runtime | Cells 1 to 6 of `docs/colab/HARNESS_SETUP.md`; commit the downloaded file as `docs/environment/colab_harness_provision.txt` | Every row PASS (torch `INFO | not installed, decision R2-3`), `RESULT: PASS`, `exit code: 0`, `git status --porcelain: []` | Pending (owner) |
+
+## Round 2 audit gate
+Command: `git fetch origin main && .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0` (AT-0.0-03). Real output:
+```text
+aqis-audit-gate: base origin/main (merge-base e4b38ac63d3f), head caa9a1e8fb03, approvals origin/main e4b38ac63d3f, wp WP-0.0
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 6
+  tests/aqis_lab/fixtures/gate/allow_lines.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/code_patterns.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/non_utf8.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/test_patterns.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/test_pytestmark.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tools/audit/patterns.py: tools/audit/patterns.py (WP-0.0.md)
+Findings: 0
+0 findings: OK (0.2 s)
+EXIT=0
+```
+
+AT-0.0-01 re-run: `bash aqis_lab/deploy/dev_bootstrap.sh && .venv/bin/python -m aqis_lab version` (last lines):
+```text
+OK: .venv ready: Python 3.13.12, lock sha256 5c9a64eb0ded6484a9bb7bf9b0fad9c5aa3ca321abfca499e24ceabd5461d422
+aqis_lab 0.0.1 commit=caa9a1e+dirty python=3.13.12
+EXIT=0
+```
+The commit shown is `+dirty` because this evidence file was being edited when the command ran.
