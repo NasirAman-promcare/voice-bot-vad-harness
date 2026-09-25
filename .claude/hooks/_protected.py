@@ -98,7 +98,8 @@ def relpath_in_project(root, path, cwd=None):
 
 def _git(root, *args):
     try:
-        proc = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, timeout=30)
+        proc = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True,
+                              encoding="utf-8", errors="replace", timeout=30)
         return proc.returncode, proc.stdout
     except (OSError, subprocess.TimeoutExpired):
         return 1, ""
@@ -116,8 +117,14 @@ def main_ref(root):
 
 
 def approval_texts(root, ref):
-    """[(file name, text)] of approval files as committed at ref (never the working tree when ref is set)."""
+    """[(file name, text)] of approval files as committed at ref.
+
+    Without a verified main reference no approval counts (fail closed): approvals are never read
+    from the working tree, where a branch could have forged them.
+    """
     root = Path(root)
+    if not ref:
+        return []
     if ref:
         rc, out = _git(root, "ls-tree", "--name-only", f"{ref}:docs/approvals")
         names = [n for n in out.splitlines() if n.endswith(".md")] if rc == 0 else []
@@ -127,15 +134,7 @@ def approval_texts(root, ref):
             if rc2 == 0:
                 texts.append((name, text))
         return texts
-    adir = root / "docs" / "approvals"
-    texts = []
-    if adir.is_dir():
-        for f in sorted(adir.glob("*.md")):
-            try:
-                texts.append((f.name, f.read_text(encoding="utf-8")))
-            except OSError:
-                continue
-    return texts
+    return []
 
 
 def load_approvals(root, ref=None):

@@ -22,7 +22,8 @@ def main():
     root = project_root(event)
     try:
         branch = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=root,
-                                capture_output=True, text=True, timeout=20).stdout.strip() or "unknown"
+                                capture_output=True, text=True, encoding="utf-8",
+                                errors="replace", timeout=20).stdout.strip() or "unknown"
     except (OSError, subprocess.TimeoutExpired):
         branch = "unknown"
     out = ["AQIS LAB SESSION CONTEXT (printed by .claude/hooks/session_context.py)"]
