@@ -23,7 +23,7 @@ WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_
 **Owner answer:** Owner rewrote `docs/approvals/WP-0.0.md` on main (`475890d`) in the template format. Verified: `load_approvals('.', 'origin/main')` → approved files `['WP-0.0.md']`, ALLOW-PATTERNS-IN `['tools/audit/patterns.py', 'tests/aqis_lab/fixtures/**']`.
 
 ## BLK-002 — Parity test red after kit patch 1 (Stop hook v2) until Round 2 is approved
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_01N7gtpxBMnXJe8XU2D1AzuM
 
 **What I need:** your Round 2 approval on `main` (see "What I need from you" in `docs/progress/WP-0.0/PLAN.md`, Round 2), so I can bring `tools/audit/patterns.py` and `tools/audit/gate.py` in line with Stop hook v2.
@@ -38,7 +38,7 @@ WP: WP-0.0  ·  Raised: 2026-09-25  ·  Session: https://claude.ai/code/session_
 
 **Paused until answered:** all Round 2 code work. The branch stays red in the meantime, and the Stop hook will show a warning on my next stop.
 
-**Owner answer:**
+**Owner answer:** Round 2 approved on main (`2528e74`, conditions R2-1 to R2-4). Fixed in `5ae3ce3` (gate and patterns match Stop hook v2/v3); fast suite `95 passed`.
 
 ## BLK-003 — Approval says Stop hook v3 (kit patch 2) is on main, but it is not
 STATUS: RESOLVED
