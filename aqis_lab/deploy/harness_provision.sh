@@ -2,7 +2,7 @@
 # Provision the existing VAD harness: system packages, .venv-harness, corpus-v1 and FireRedVAD weights.
 #
 # CAPABILITIES:
-#   CAP-ENV-003: entry point for harness provisioning; runs aqis_lab/deploy/harness_provision.py with the system
+#   CAP-ENV-005: entry point for harness provisioning; runs aqis_lab/deploy/harness_provision.py with the system
 #                python3 and passes its options and exit code through
 #                [tests: test_FR_0_0_12_places_data_only_in_ignored_paths, test_FR_0_0_12_rejects_unknown_step,
 #                 test_FR_0_0_12_provisions_harness_end_to_end]
