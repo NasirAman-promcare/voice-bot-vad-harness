@@ -4,6 +4,22 @@ Environment: cloud VM (Ubuntu 24.04.4 LTS, x86_64), Python 3.13.12 in `.venv` (C
 
 ## Requirements
 
+### FR-0.0-01 — `python -m aqis_lab version`
+- Tests: `test_FR_0_0_01_version_prints_package_commit_python`, `test_FR_0_0_01_version_marks_dirty_tree`, `test_FR_0_0_01_version_fails_loudly_outside_git`, `test_FR_0_0_01_dispatcher_rejects_unknown_command`
+- Tests first: all four failed before implementation (`No module named aqis_lab.__main__; 'aqis_lab' is a package and cannot be directly executed`; exit code 1 instead of 2).
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_version.py -v -p no:cacheprovider`, then `.venv/bin/python -m aqis_lab version`
+- Output (real excerpt):
+```text
+tests/aqis_lab/test_aqis_version.py::test_FR_0_0_01_version_prints_package_commit_python PASSED
+tests/aqis_lab/test_aqis_version.py::test_FR_0_0_01_version_marks_dirty_tree PASSED
+tests/aqis_lab/test_aqis_version.py::test_FR_0_0_01_version_fails_loudly_outside_git PASSED
+tests/aqis_lab/test_aqis_version.py::test_FR_0_0_01_dispatcher_rejects_unknown_command PASSED
+============================== 4 passed in 0.54s ===============================
+aqis_lab 0.0.1 commit=7c2c2bb+dirty python=3.13.12
+EXIT=0
+```
+- Status: DONE
+
 ### FR-0.0-02 — dev_bootstrap.sh
 - Tests: `test_FR_0_0_02_fails_when_probe_missing`, `test_FR_0_0_02_fails_when_probe_unreadable[directory|no_version_line|conflicting_versions]`, `test_FR_0_0_02_fails_when_uv_missing`; slow+network: `test_FR_0_0_02_creates_venv_with_probe_python`, `test_FR_0_0_02_second_run_changes_nothing_within_30s`, `test_FR_0_0_02_rejects_lock_with_wrong_hash`
 - Tests first: before the script existed, all fast FR-0.0-02 tests failed with `FileNotFoundError: ... aqis_lab/deploy/dev_bootstrap.sh` (run with a throwaway `uv run --with pytest==9.1.1` interpreter, since no lock existed yet).

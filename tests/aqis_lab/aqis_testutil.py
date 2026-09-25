@@ -4,7 +4,9 @@ The helpers compute expected values independently of the code under test: the pr
 parser and the lock parser here are separate from aqis_lab/deploy/dev_bootstrap.sh and
 from tools/audit.
 """
+import os
 import re
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -65,3 +67,31 @@ def parse_lock(text=None):
 
 def normalise(name):
     return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def hermetic_git_env(extra=None):
+    """Environment for git in throwaway repositories: no user or system config, fixed identity.
+
+    This keeps fixture repositories identical on the cloud VM (which signs commits globally)
+    and on CI runners (which have no identity).
+    """
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env.update({
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_AUTHOR_NAME": "AQIS Fixture",
+        "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
+        "GIT_COMMITTER_NAME": "AQIS Fixture",
+        "GIT_COMMITTER_EMAIL": "fixture@example.invalid",
+    })
+    if extra:
+        env.update(extra)
+    return env
+
+
+def git(repo, *args, check=True):
+    proc = subprocess.run(["git", "-c", "init.defaultBranch=main", *args], cwd=repo, capture_output=True,
+                          text=True, env=hermetic_git_env(), timeout=120)
+    if check and proc.returncode != 0:
+        raise AssertionError(f"git {' '.join(args)} failed in {repo}: {proc.stderr}")
+    return proc.stdout
