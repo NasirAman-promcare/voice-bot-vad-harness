@@ -93,6 +93,16 @@ def test_FR_0_0_02_fails_when_uv_missing(tmp_path):
     assert not (tree / ".venv").exists()
 
 
+def test_FR_0_0_02_uses_version_named_by_probe(tmp_path):
+    # WP-0.0-F01: the version must come from the probe; a version that cannot exist proves it is used.
+    tree = make_tree(tmp_path, probe_text="--- COLAB ENVIRONMENT PROBE ---\nPython Version: 3.99.1 (main)\n")
+    proc = run(tree, timeout=120)
+    assert proc.returncode != 0
+    assert "Colab probe requires Python 3.99" in proc.stdout
+    assert "ERROR:" in proc.stderr and "Python 3.99" in proc.stderr
+    assert not (tree / ".venv").exists()
+
+
 @pytest.mark.slow
 @pytest.mark.network
 def test_FR_0_0_02_creates_venv_with_probe_python(tmp_path):

@@ -79,8 +79,12 @@ class FixtureRepo:
         git(self.path, "add", "-A")
         git(self.path, "commit", "-q", "--allow-empty", "-m", message)
 
-    def approve_on_main(self, name, extra, status="APPROVED"):
-        """Commit an approval file to main and push it (the owner's route)."""
+    def approve_on_main(self, name, extra, status="APPROVED", merge_into_branch=True):
+        """Commit an approval file to main and push it (the owner's route).
+
+        With merge_into_branch=False the current branch does not merge main afterwards, so origin/main moves
+        past the branch point and differs from the merge-base (audit finding WP-0.0-F02).
+        """
         current = git(self.path, "rev-parse", "--abbrev-ref", "HEAD").strip()
         if current != "main":
             git(self.path, "checkout", "-q", "main")
@@ -90,7 +94,8 @@ class FixtureRepo:
         if current != "main":
             git(self.path, "checkout", "-q", current)
             git(self.path, "fetch", "-q", "origin")
-            git(self.path, "merge", "-q", "--no-edit", "origin/main")
+            if merge_into_branch:
+                git(self.path, "merge", "-q", "--no-edit", "origin/main")
 
     def branch(self, name="feature"):
         git(self.path, "checkout", "-q", "-b", name)

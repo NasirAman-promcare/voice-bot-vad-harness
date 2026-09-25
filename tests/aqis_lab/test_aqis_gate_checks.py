@@ -68,6 +68,31 @@ def test_FR_0_0_05_a_ignores_expired_or_withdrawn_approval(repo, status, extra):
     assert rules(repo.gate_json()) == [("A2", "vad_adapters/example.py")]
 
 
+def test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point(repo):
+    # WP-0.0-F02: the approval exists only on origin/main, after the branch point; the branch never merges it.
+    repo.branch()
+    repo.append("vad_adapters/example.py", "\nEXTRA = 1\n")
+    repo.commit("branch edits a guarded file")
+    repo.approve_on_main("WP-9.9.md", "ALLOW-EDIT: vad_adapters/example.py\n", merge_into_branch=False)
+    merge_base = git(repo.path, "merge-base", "origin/main", "HEAD").strip()
+    assert merge_base != git(repo.path, "rev-parse", "origin/main").strip()
+    report = repo.gate_json()
+    assert report["findings"] == []
+    assert report["approvals_commit"] == git(repo.path, "rev-parse", "origin/main").strip()
+
+
+def test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point(repo):
+    # WP-0.0-F02: approved at the branch point, withdrawn on origin/main later; the branch never merges it.
+    repo.approve_on_main("WP-9.9.md", "ALLOW-EDIT: vad_adapters/example.py\n")
+    repo.branch()
+    repo.append("vad_adapters/example.py", "\nEXTRA = 1\n")
+    repo.commit("branch edits a guarded file")
+    assert repo.gate_json()["findings"] == []
+    repo.approve_on_main("WP-9.9.md", "ALLOW-EDIT: vad_adapters/example.py\n", status="WITHDRAWN",
+                         merge_into_branch=False)
+    assert rules(repo.gate_json()) == [("A2", "vad_adapters/example.py")]
+
+
 # ---- (b) existing tests ------------------------------------------------------------------
 def test_FR_0_0_05_b_detects_modified_existing_test(repo):
     repo.branch()

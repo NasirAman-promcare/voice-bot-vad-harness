@@ -43,7 +43,7 @@ def test_FR_0_0_01_version_prints_package_commit_python():
     assert m, proc.stdout
     expected_commit = git(ROOT, "rev-parse", "--short", "HEAD").strip()
     dirty = bool(git(ROOT, "status", "--porcelain", "--untracked-files=normal").strip())
-    assert m.group(1) == package_version_from_source(ROOT) == "0.0.1"
+    assert m.group(1) == package_version_from_source(ROOT)
     assert m.group(2) == expected_commit
     assert bool(m.group(3)) == dirty
     assert m.group(4) == platform.python_version()
@@ -71,6 +71,18 @@ def test_FR_0_0_01_version_marks_dirty_tree(tmp_path):
     new_head = git(repo, "rev-parse", "--short", "HEAD").strip()
     after = run_version(repo).stdout
     assert f"commit={new_head} " in after and "+dirty" not in after and new_head != head
+
+    # WP-0.0-F03: staged-only changes are uncommitted changes too.
+    init.write_text(init.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    git(repo, "add", "aqis_lab/__init__.py")
+    assert git(repo, "diff", "--name-only").strip() == ""          # nothing unstaged
+    assert f"commit={new_head}+dirty " in run_version(repo).stdout
+    git(repo, "commit", "-q", "-m", "third")
+    third = git(repo, "rev-parse", "--short", "HEAD").strip()
+    assert "+dirty" not in run_version(repo).stdout
+    git(repo, "rm", "-q", "--cached", ".gitignore")                  # staged deletion, file still on disk
+    (repo / ".git" / "info" / "exclude").write_text(".gitignore\n*.log\n__pycache__/\n", encoding="utf-8")
+    assert f"commit={third}+dirty " in run_version(repo).stdout
 
 
 def test_FR_0_0_01_version_fails_loudly_outside_git(tmp_path):
