@@ -248,3 +248,36 @@ def test_FR_0_0_12_second_run_downloads_nothing_within_60s():
     assert downloads(second.stdout) == 0
     assert elapsed < 60, f"second run took {elapsed:.1f} s"
     assert git(ROOT, "status", "--porcelain") == before
+
+
+# ---- pins and locks (FR-0.0-12 b and c) ---------------------------------------------------
+def test_FR_0_0_12_harness_extras_lock_is_hash_pinned():
+    from aqis_testutil import parse_lock
+    lock = ROOT / "requirements" / "aqis_lab" / "harness-extras.txt"
+    entries = parse_lock(lock.read_text(encoding="utf-8"))
+    for required in ("pytest", "pytest-asyncio", "opuslib"):
+        assert required in entries, required
+    for name, entry in entries.items():
+        assert entry["hashes"] and all(a == "sha256" and len(d) == 64 for a, d in entry["hashes"]), name
+    header = lock.read_text(encoding="utf-8").splitlines()[1].lstrip("#").strip()
+    assert header.startswith("uv pip compile requirements/aqis_lab/harness-extras.in --universal --python-version 3.13")
+    assert header in (ROOT / "requirements" / "aqis_lab" / "harness-extras.in").read_text(encoding="utf-8")
+    assert "git+" not in lock.read_text(encoding="utf-8"), "git requirements cannot be hash-checked (BLK-004)"
+
+
+def test_FR_0_0_12_asset_pins_match_repository():
+    config = json.loads((ROOT / "config" / "aqis_lab" / "harness_assets.json").read_text(encoding="utf-8"))
+    corpus = config["corpus"]
+    blob = subprocess.run(["git", "cat-file", "blob", f"{corpus['commit']}:{corpus['path']}"], cwd=ROOT,
+                          capture_output=True, timeout=120, check=True).stdout
+    assert len(blob) == corpus["size"] and sha(blob) == corpus["sha256"]
+    with tarfile.open(fileobj=io.BytesIO(blob), mode="r:gz") as tar:
+        shipped = tar.extractfile(corpus["manifest"]).read()
+    assert shipped == (ROOT / corpus["manifest"]).read_bytes()
+    vcs = [line for line in (ROOT / "requirements" / "aqis_lab" / "harness-vcs.txt").read_text(encoding="utf-8").splitlines()
+           if line.strip() and not line.startswith("#")]
+    assert vcs == [f"ten_vad @ git+https://github.com/TEN-framework/ten-vad.git@{config['ten_vad']['commit']}"]
+    assert config["ten_vad"]["commit"] == "22a3bcd4509d0faaa8eef4881e8af5f39c178950"
+    assert config["not_installed"] == [{"name": "torch", "reason": "decision R2-3"}]
+    for pkg in ("git-lfs", "libc++1", "libopus0"):
+        assert pkg in config["system_packages"]
