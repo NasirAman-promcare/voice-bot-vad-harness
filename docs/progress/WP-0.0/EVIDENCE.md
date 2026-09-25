@@ -479,3 +479,103 @@ aqis_lab 0.0.1 commit=caa9a1e+dirty python=3.13.12
 EXIT=0
 ```
 The commit shown is `+dirty` because this evidence file was being edited when the command ran.
+
+## Round 2 audit fixes (F11 to F22)
+Root causes, change budget and baseline are in `docs/progress/WP-0.0/FIXES.md`. The owner decisions on F16 (Linux x86_64 only, fail fast elsewhere) and F17 (approval conditions updated on `main` at `227dac4`) are recorded there. `origin/main` was merged first (`d0b387b`).
+
+**Baseline before any change:**
+- Fast suite: `121 passed, 7 deselected in 20.64s`.
+- Slow and network suite: `7 passed, 121 deselected in 8.67s`.
+
+**Test-first, red run.**
+- Command: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not network" -k "FR_0_0_12 or FR_0_0_13"`.
+- Run after the new tests and the config pins, before any code or doc fix. Result: `6 failed, 18 passed, 115 deselected in 9.71s`.
+- The failures, each for the named reason:
+```text
+E   subprocess.CalledProcessError: Command '['git', '-c', 'http.extraHeader=Authorization: Basic eC1hY2Nlc3MtdG9rZW46Z2hwX0FVRElUX0YxNF90b2tlbl92YWx1ZV8wMTIzNDU2Nzg5YWJjZGVm', 'clone', '--branch', 'main', ...   (F14 reproduced: the base64 token is in the error)
+E   assert '`BRANCH = "claude/hopeful-noether-yinc4e"`' in 'Run cells 1 to 6 on a fresh runtime.'   (F15)
+E   assert 0 == 1  ... setarch linux32 ... RESULT: PASS   (F16: provisioning ran every step on an i686 machine)
+E   AssertionError: ('system_packages', ... RESULT: PASS ...)  assert 0 == 2   (F21: a missing key gave PASS)
+E   AssertionError: Stream-VAD/model.pth.tar is a Git LFS pointer, not content   (F21: no git lfs pull detail)
+E   AttributeError: 'Provisioner' object has no attribute 'reinstall_reason'   (F18: no pip check in the skip)
+```
+
+**Guard code that was already correct (F11, F12, F13, F19).** For these findings the new tests pass as they should. Proof that they guard the code is the auditor's own mutations, applied one at a time in a scratch copy and reverted. Script: `scratchpad/mutate.py`; each line is `-m "not slow and not network" -k <filter>`.
+```text
+### F11 PR-title regex without ^ (.github/workflows/aqis-lab-ci.yml) -k 'FR_0_0_10': 1 failed, 6 passed, 132 deselected in 0.55s
+### F12 step_verify blinded (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 2 failed, 17 passed, 120 deselected in 11.15s
+### F13 skipped accepted (tools/harness/regression_check.py) -k 'FR_0_0_11': 1 failed, 8 passed, 130 deselected in 0.49s
+### F13 TEN VAD commit never compared (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 1 failed, 18 passed, 120 deselected in 10.91s
+### F19 F1 cites docs/specs (tools/audit/gate.py) -k 'FR_0_0_09 or NFR_0_0_02': 1 failed, 7 passed, 131 deselected in 2.09s
+### F16 platform check removed (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 1 failed, 18 passed, 120 deselected in 11.24s
+### F18 pip check removed (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 1 failed, 18 passed, 120 deselected in 11.46s
+### F21 lfs detail dropped (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 1 failed, 18 passed, 120 deselected in 11.65s
+### F21 required keys not checked (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 1 failed, 18 passed, 120 deselected in 11.42s
+### F14 clone with check=True (docs/colab/HARNESS_SETUP.md) -k 'FR_0_0_13': 1 failed, 4 passed, 134 deselected in 0.15s
+```
+The failing test in each case:
+- F11: `test_FR_0_0_10_pr_title_parser`.
+- F12: `test_FR_0_0_12_fails_when_tree_was_dirty_before` and `test_FR_0_0_12_fails_when_provisioning_dirties_tree`.
+- F13: `test_FR_0_0_11_regression_check_flags_newly_skipped_baseline_pass` and `test_FR_0_0_12_rejects_ten_vad_at_other_commit`.
+- F19: `test_FR_0_0_09_reports_unknown_wp`.
+- F16: `test_FR_0_0_12_fails_fast_on_machine_without_ten_vad_binary`.
+- F18: `test_FR_0_0_12_reinstalls_when_pip_check_fails`.
+- F21: `test_FR_0_0_12_reports_lfs_pull_failure_detail` and `test_FR_0_0_12_rejects_config_missing_required_key`.
+- F14: `test_FR_0_0_13_clone_failure_never_shows_token`.
+
+| Finding | Fix | Tests (requirement) |
+| --- | --- | --- |
+| F11 | Rejected titles with the ID later in the title: `Guardrails WP-0.0`, `Fix typo, see WP-0.3 notes`, ` WP-0.0 leading space` | `test_FR_0_0_10_pr_title_parser` (FR-0.0-10) |
+| F12 | Tests only; `step_verify` was already correct. (1) An untracked file exists before the run: `git-status` FAIL, `RESULT: FAIL`, exit 1. (2) The cache is inside the tree: `git status changed during provisioning`, `?? cache-in-tree/`, exit 1 | `test_FR_0_0_12_fails_when_tree_was_dirty_before`, `test_FR_0_0_12_fails_when_provisioning_dirties_tree` (FR-0.0-12) |
+| F13 | (1) A skipped outcome of a baseline pass is a regression. (2) A real offline `pip install` of a local git package, built by an in-tree PEP 517 backend in a scratch venv: the pinned commit gives PASS; another commit gives `ten_vad commit is <first>, pinned <second>`; a plain-folder install gives `commit is None` | `test_FR_0_0_11_regression_check_flags_newly_skipped_baseline_pass` (FR-0.0-11), `test_FR_0_0_12_rejects_ten_vad_at_other_commit` (FR-0.0-12) |
+| F14 | Cell 2 keeps only the exit code (no `check=True`), sets `GIT_TERMINAL_PROMPT=0`, deletes the token and header before checking the result, and raises `RuntimeError` naming only the branch and the repository | `test_FR_0_0_13_clone_failure_never_shows_token` runs cells 1 and 2 for real, with a failing clone and a stand-in for `google.colab.userdata`. The token and its base64 form are in neither the traceback, the output nor any variable left behind (FR-0.0-13) |
+| F15 | The OC-0.0-01 steps start with `BRANCH = "claude/hopeful-noether-yinc4e"` and state the output for a wrong branch. The EVIDENCE owner-run row matches | `test_FR_0_0_13_oc_steps_use_pull_request_branch` (FR-0.0-13) |
+| F16 | Owner decision: a `platform` pin (`Linux`, `["x86_64"]`, with the reason) in `harness_assets.json`. `check_platform` runs before any step. Elsewhere there is a single `platform` FAIL row naming the machine and saying TEN VAD has no Arm binary, with 0 downloads and nothing written. Documented in both script headers, `docs/colab/HARNESS_SETUP.md` and the owner-run table | `test_FR_0_0_12_platform_pin_is_linux_x86_64`, `test_FR_0_0_12_fails_fast_on_machine_without_ten_vad_binary`, which uses `setarch linux32`, a real non-x86_64 machine type (FR-0.0-12) |
+| F17 | Owner updated `docs/approvals/WP-0.0.md` on `main` (`227dac4`): corpus at commit `1479626`, TEN VAD pinned in `harness-vcs.txt`. Merged at `d0b387b` | Gate below reads approvals at `227dac4` |
+| F18 | `pip check` added to the install skip, as the plan says (`reinstall_reason`). The `dev_bootstrap.sh` change log line was added. Remaining differences are listed below | `test_FR_0_0_12_reinstalls_when_pip_check_fails` (FR-0.0-12) |
+| F19 | Assertion that F1 cites `docs/specs/**/WP-8.8-*.md` at line 1 | `test_FR_0_0_09_reports_unknown_wp` (FR-0.0-09) |
+| F20 | CAP-AUDIT-008 lists `ALLOW_REASON_RE`, `LAB_CODE_DIRS`, `LAB_CI_FILES`, `LAB_TEST_DIR`, `SCANNED_SUFFIXES`, `glob_to_regex`, with a matching description. The F06 line above is corrected | `test_FR_0_0_08_module_headers_match_registry`, gate check (e) |
+| F21 | Required config keys: a missing key gives exit 2, `ERROR: ... has no '<key>' key`. The `git lfs pull` exit code and last stderr lines go into the weights FAIL detail. `git cat-file blob` gets a 3600 s timeout, with `TimeoutExpired`/`OSError` turned into a FAIL row | `test_FR_0_0_12_rejects_config_missing_required_key`, `test_FR_0_0_12_reports_lfs_pull_failure_detail` (FR-0.0-12). There is no test for the timeout itself: a git read of more than an hour cannot be produced in a test |
+| F22 | Corrected: the owner-run note, the provisioning test docstring, `AUDIT_GATE.md` (an unreadable approval does not count; that is the one read that does not exit 2), and the FR-0.0-04 combined run excerpt (re-run: `2 failed, 152 passed`, harness outcomes identical). The FireRedVAD licence (`Apache-2.0`, from `license: apache-2.0` in `README.md` at the pinned commit) is recorded in `harness_assets.json` | Documentation |
+
+### Differences from the Round 2 plan (audit F18; for the owner's acknowledgement)
+1. **Python module.** `aqis_lab/deploy/harness_provision.py` holds the provisioning logic. The plan listed only `harness_provision.sh`, which is now a thin wrapper. Registry rows CAP-ENV-005 (the `.sh`) and CAP-ENV-006 (the pins file) were added for them.
+2. **Test files.** `tests/aqis_lab/test_aqis_gate_v2.py` and `tests/aqis_lab/test_aqis_colab_doc.py` are new test files the plan did not name.
+3. **`tools/audit/gate.py`.** `load_approvals` changed to take the approvals ref, and `check_registry` changed to fail closed on the base read. `glob_to_regex` moved to `tools/audit/patterns.py` so the gate and the pattern tables share one copy. None of these were in the budget table.
+4. **`dev_bootstrap.sh`.** Its header test list changed (F06), although the plan said "Unchanged". The missing change log line has now been added. No code changed.
+5. **CI `harness-regression` job.** It runs `tests/regression` alone, not together with the lab tests. The reasons:
+   - In `.venv-harness`, `test_FR_0_0_03_environment_matches_lock` fails by design, because it asserts the lab `.venv`.
+   - Every lab test would show up as "newly passing" in the regression check.
+
+   The combined run is recorded above instead ("FR-0.0-04 — combined run", `True 22 22 21 passed`), and job `lab` runs the lab suite. **The owner is asked to acknowledge this, or to ask for the combined run in CI.**
+6. **Round 2 audit fixes.**
+   - New functions `check_platform`, `reinstall_reason` and `report`, and the `platform` and `firered.licence` config keys, listed in FIXES.md.
+   - The Arm fail-fast is the owner's F16 decision, given in chat. The approval file on `main` does not record it yet.
+
+**Suites after the fixes.**
+- Fast suite: `132 passed, 7 deselected in 31.55s`.
+- Slow and network suite, on the committed tree `a6c78af`: `7 passed, 132 deselected in 9.93s`, including `test_FR_0_0_12_provisions_harness_end_to_end` and `test_FR_0_0_12_second_run_downloads_nothing_within_60s`; `git status --porcelain` empty afterwards.
+- Before that commit, the two provisioning slow tests failed because the working tree held the uncommitted fixes. Provisioning reported `git-status | FAIL | git status --porcelain is not empty (it was not empty before provisioning either)`: the F12 behaviour, working as specified.
+
+**AT-0.0-05 re-run after the fixes.** A fresh `git clone --no-local` of `a6c78af` with no `.venv-harness`, `corpus/audio` or `pretrained_models`, and an empty `AQIS_CACHE`. Command: `bash aqis_lab/deploy/harness_provision.sh`, run twice:
+```text
+run 1 exit=0 elapsed=48.3s git-status=[]
+run 2 exit=0 elapsed=1.1s git-status=[]
+```
+Run 1 table (real output):
+```text
+| Step | Result | Detail |
+| --- | --- | --- |
+| platform | PASS | Linux x86_64 |
+| system | PASS | already installed: git-lfs, libc++1, libopus0 |
+| python | PASS | .venv-harness Python 3.13; installed (first install) run_phase.py install all, requirements/aqis_lab/harness-extras.txt (hash-checked), requirements/aqis_lab/harness-vcs.txt |
+| ten-vad | PASS | ten_vad 1.0.6.8 at commit 22a3bcd4509d (pinned) |
+| imports | PASS | imported numpy, scipy, soundfile, yaml, aiortc, av, websockets, opuslib, pytest, pytest_asyncio, webrtcvad, kaldi_native_fbank, ten_vad; TenVad native library loaded |
+| torch | INFO | not installed, decision R2-3 |
+| corpus | PASS | corpus-v1 from git at commit 14796262a824, sha256 ef4d5da1e30f verified; 229 manifest clips available under corpus/audio/ (229 links created) |
+| weights | PASS | https://huggingface.co/FireRedTeam/FireRedVAD at 7990aaccc6b7: Stream-VAD/model.pth.tar, Stream-VAD/cmvn.ark sha256 verified, no LFS pointers; available at pretrained_models/FireRedVAD/Stream-VAD |
+| git-status | PASS | git status --porcelain is empty |
+Downloads this run: 5
+RESULT: PASS
+```
+Run 2 ends with `| python | PASS | .venv-harness Python 3.13; requirements unchanged and pip check passes, nothing installed |`, `Downloads this run: 0` and `RESULT: PASS`.

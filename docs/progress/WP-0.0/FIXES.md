@@ -52,3 +52,19 @@ No protected path, no test on `main` and no other function is touched.
 - CAP-AUDIT-006: test only.
 
 Their linked tests form the baseline below.
+
+### Baseline (before any change, commit `d0b387b`)
+- Fast suite: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"` → `121 passed, 7 deselected in 20.64s`.
+- Slow and network suite: `-m "slow or network"` → `7 passed, 121 deselected in 8.67s`.
+
+These suites include every test linked to the capabilities at risk.
+
+### Verification
+- **Red first.** The new tests failed for the named reasons before the fixes (`6 failed, 18 passed`). The tests that guard already-correct code (F11, F12, F13, F19) fail under the auditor's mutations. Output is in EVIDENCE.md, "Round 2 audit fixes".
+- **After the fixes.**
+  - Fast suite: `132 passed, 7 deselected`.
+  - Slow and network suite, on the clean committed tree: `7 passed`.
+  - AT-0.0-05 in a fresh clone: run 1 `exit=0 48.3s`, run 2 `exit=0 1.1s`, `Downloads this run: 0`, git status empty.
+  - Harness plus lab tests combined in `.venv-harness`: harness outcomes identical (`True 22 22 21 passed`).
+- **Gate.** `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0` → `0 findings: OK`. The Stop hook prints nothing.
+- **Diff inside the budget.** `git diff d0b387b -U0 --stat` lists only the files in the change budget. In `harness_provision.py`, only the budgeted functions and the header changed.
