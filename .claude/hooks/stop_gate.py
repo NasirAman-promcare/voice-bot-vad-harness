@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stop hook (version 2): a deterministic quality gate that runs every time Claude finishes a turn.
+"""Stop hook (version 3): a deterministic quality gate that runs every time Claude finishes a turn.
 
 It inspects this branch's changes since it left origin/main, plus uncommitted work, for:
   1. changes to NEVER or GUARDED paths without an owner approval committed on main,
@@ -11,9 +11,14 @@ It inspects this branch's changes since it left origin/main, plus uncommitted wo
   6. the project audit gate, tools/audit/gate.py, once WP-0.0 has built it.
 It fails closed: if git or a file cannot be read, that is reported as a problem, never as a pass.
 
-First stop with problems: the stop is blocked and Claude is told what to fix.
-Second consecutive stop with problems still open: the stop is allowed, and the owner sees a warning.
+Version 3 adds memory, so a known problem is reported once instead of on every stop:
+  - a new or changed set of problems blocks the stop once and Claude is told what to fix;
+  - the same set again, while an open blocker exists in docs/progress/BLOCKERS.md, stays quiet;
+  - the same set again with no open blocker gives the owner a warning but does not block;
+  - fast lab tests are re-run only when lab files, the lab environment or this hook changed.
+Memory lives in .git/aqis-stop-gate.json (never committed). Detection rules are unchanged from version 2.
 """
+import hashlib
 import json
 import os
 import re
@@ -33,6 +38,8 @@ SCANNED_SUFFIXES = (".py", ".sh", ".bash", ".yml", ".yaml", ".toml", ".cfg", ".i
 FAST_MARKERS = "not slow and not gpu and not colab and not oracle and not network"
 MAX_LINES = 60
 TEXT = {"text": True, "encoding": "utf-8", "errors": "replace"}
+HOOK_VERSION = "3"
+TIMING_RE = re.compile(r"\bin \d+(?:\.\d+)?s\b")
 
 CODE_PATTERNS = [
     ("TODO/FIXME/XXX marker", re.compile(r"\b(?:TODO|FIXME|XXX)\b")),
@@ -180,7 +187,83 @@ def run_checked(root, cmd, timeout, label):
     return f"{label} failed (exit code {proc.returncode}):\n{tail}"
 
 
-def evaluate(root):
+def git_dir(root):
+    rc, out = git(root, "rev-parse", "--absolute-git-dir")
+    return Path(out.strip()) if rc == 0 and out.strip() else None
+
+
+def load_state(root):
+    directory = git_dir(root)
+    if directory is None:
+        return None, {}
+    path = directory / "aqis-stop-gate.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return path, {}
+    return path, data if isinstance(data, dict) else {}
+
+
+def save_state(path, state):
+    if path is None:
+        return
+    try:
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps(state), encoding="utf-8")
+        tmp.replace(path)
+    except OSError as exc:
+        print(f"stop_gate: could not save its memory ({exc}); problems may be reported again", file=sys.stderr)
+
+
+def lab_key(root):
+    """Fingerprint of everything that can change the fast lab test result."""
+    digest = hashlib.sha256(f"hook{HOOK_VERSION}|{project_python(root)}".encode())
+    for folder in LAB_TRIGGER_DIRS:
+        rc, out = git(root, "rev-parse", f"HEAD:{folder.rstrip('/')}")
+        digest.update(f"{folder}={out.strip() if rc == 0 else '-'}|".encode())
+    _, out = git(root, "diff", "HEAD", "--binary", "--", *LAB_TRIGGER_DIRS)
+    digest.update(out.encode("utf-8", "replace"))
+    _, out = git(root, "ls-files", "--others", "--exclude-standard", "-z", "--", *LAB_TRIGGER_DIRS)
+    for rel in sorted(p for p in out.split("\0") if p):
+        digest.update(rel.encode())
+        try:
+            digest.update(hashlib.sha256((Path(root) / rel).read_bytes()).digest())
+        except OSError:
+            digest.update(b"unreadable")
+    venv_cfg = Path(root) / ".venv" / "pyvenv.cfg"
+    if venv_cfg.exists():
+        digest.update(str(venv_cfg.stat().st_mtime_ns).encode())
+    return digest.hexdigest()
+
+
+def issue_keys(issues):
+    """Stable identity of a problem set: failing test IDs, other messages without timings."""
+    keys = []
+    for issue in issues:
+        if issue.startswith("FAILING TESTS:"):
+            ids = re.findall(r"^(?:FAILED|ERROR) (\S+)", issue, re.M)
+            if ids:
+                keys.extend(f"FAILING TEST {test_id}" for test_id in ids)
+                continue
+        keys.append(TIMING_RE.sub("", issue))
+    return sorted(set(keys))
+
+
+def open_blocker_ids(root):
+    path = Path(root) / "docs" / "progress" / "BLOCKERS.md"
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    found = []
+    for block in re.split(r"^(?=## BLK-)", text, flags=re.M):
+        head = re.match(r"## (BLK-\S+)", block)
+        if head and re.search(r"^STATUS:\s*OPEN\s*$", block, re.M):
+            found.append(head.group(1))
+    return found
+
+
+def evaluate(root, memory):
     errors = []
     base = find_base(root)
     if base is None:
@@ -229,9 +312,15 @@ def evaluate(root):
     if any(path.startswith(LAB_TRIGGER_DIRS) for path in changes):
         tests_dir = Path(root) / "tests" / "aqis_lab"
         if tests_dir.is_dir() and any(tests_dir.rglob("test_*.py")):
-            failure = run_checked(root, [project_python(root), "-m", "pytest", "tests/aqis_lab", "-q", "-x",
-                                         "-p", "no:cacheprovider", "-m", FAST_MARKERS],
-                                  int(os.environ.get("AQIS_GATE_TEST_TIMEOUT", "600")), "fast lab tests")
+            key = lab_key(root)
+            cached = memory.get("tests") or {}
+            if cached.get("key") == key:
+                failure = cached.get("failure")
+            else:
+                failure = run_checked(root, [project_python(root), "-m", "pytest", "tests/aqis_lab", "-q", "-x",
+                                             "-p", "no:cacheprovider", "-m", FAST_MARKERS],
+                                      int(os.environ.get("AQIS_GATE_TEST_TIMEOUT", "600")), "fast lab tests")
+                memory["tests"] = {"key": key, "failure": failure, "runs": cached.get("runs", 0) + 1}
             if failure:
                 issues.append(f"FAILING TESTS: {failure}")
         if (Path(root) / "tools" / "audit" / "gate.py").is_file():
@@ -242,8 +331,7 @@ def evaluate(root):
     return issues, allowed_total
 
 
-def main():
-    raw = sys.stdin.buffer.read().decode("utf-8", errors="replace")
+def main(raw):
     try:
         event = json.loads(raw) if raw.strip() else {}
     except json.JSONDecodeError:
@@ -251,15 +339,28 @@ def main():
     root = project_root(event)
     if git(root, "rev-parse", "--is-inside-work-tree")[0] != 0:
         return 0
-    issues, allowed_total = evaluate(root)
+    state_path, memory = load_state(root)
+    issues, allowed_total = evaluate(root, memory)
     if not issues:
+        memory.pop("reported", None)
+        save_state(state_path, memory)
         return 0
+    keys = issue_keys(issues)
+    known = memory.get("reported") == keys
+    memory["reported"] = keys
+    save_state(state_path, memory)
     shown = issues[:MAX_LINES]
     if len(issues) > MAX_LINES:
         shown.append(f"... and {len(issues) - MAX_LINES} more")
     summary = "\n".join(f"- {line}" for line in shown)
     if allowed_total:
         summary += f"\n- note: {allowed_total} line(s) carry '# audit-allow:' and will be listed for the owner"
+    if known:
+        if open_blocker_ids(root):
+            return 0  # already reported, and a blocker is open: stay quiet
+        print(json.dumps({"systemMessage": "⚠️ STOP GATE: problems reported earlier are still open and no "
+                                           "blocker is logged for them. Do not merge.\n" + summary}))
+        return 0
     if event.get("stop_hook_active"):
         print(json.dumps({"systemMessage": "⚠️ STOP GATE: unresolved problems remain on this branch. "
                                            "Do not merge until they are fixed or approved.\n" + summary}))
@@ -269,9 +370,26 @@ def main():
                                 "the rules, never by weakening tests, adding skips, deleting checks or "
                                 "editing protected files. If a problem cannot be fixed honestly, use the "
                                 "ask-owner skill (BLOCKERS.md entry and a message starting with "
-                                "'🛑 OWNER ACTION NEEDED'), then stop again.\n" + summary}))
+                                "'🛑 OWNER ACTION NEEDED'), then stop again. If this exact problem is already logged as an "
+                                "open blocker, reply in one line; the gate will not raise it again.\n" + summary}))
     return 0
 
 
+def guarded_main():
+    """Fail closed: a crash of this hook is reported, never treated as a pass."""
+    raw = sys.stdin.buffer.read().decode("utf-8", errors="replace")
+    try:
+        return main(raw)
+    except Exception as exc:  # audit-allow: top-level guard that reports the crash instead of hiding it
+        message = f"GATE ERROR: the stop gate itself crashed ({type(exc).__name__}: {exc}). Tell the owner."
+        try:
+            repeat = bool(json.loads(raw).get("stop_hook_active")) if raw.strip() else False
+        except (ValueError, AttributeError):
+            repeat = False
+        key = "systemMessage" if repeat else "reason"
+        print(json.dumps({key: "⚠️ " + message} if repeat else {"decision": "block", key: message}))
+        return 0
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(guarded_main())

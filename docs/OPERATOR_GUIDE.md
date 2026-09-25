@@ -146,5 +146,6 @@ Expected: steps 3 to 5 are blocked with a `BLOCKED:` message; step 6 works; step
 - **`⚠️ STOP GATE`**: the automatic check still sees problems. Do not merge. Ask Claude to fix them with `/surgical-fix`.
 - **`BLOCKED:` on a harness file**: decide. If the change is truly needed, approve it with an `ALLOW-EDIT:` line for exactly that file; otherwise say no.
 - **Setting up the harness anywhere** (Colab, Oracle, CI, cloud VM): once WP-0.0 round 2 is merged, run `bash aqis_lab/deploy/harness_provision.sh` first instead of manual download, extract and install cells; exact Colab cells are in `docs/colab/HARNESS_SETUP.md`.
+- **Checking a branch yourself before merging**: upload `notebooks/aqis_lab/owner_verify.ipynb` to Colab (File → Upload notebook), set the branch name, run all cells, and commit the report it downloads to `docs/progress/<WP>/` on that branch. It checks facts; it does not replace `/wp-audit`.
 - **A Colab or Oracle check fails**: commit the report, start a session, and type `/surgical-fix <path to the report>`. Do not debug inside Colab.
 - **Something broke on `main`**: revert the pull request on GitHub, then fix on a new branch.
