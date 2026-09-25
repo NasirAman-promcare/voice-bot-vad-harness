@@ -12,7 +12,7 @@ Every item is verified by SHA-256 or commit, and the run ends with a PASS/FAIL t
 
 **The token is used for the clone command only.** It goes into a one-off `http.extraHeader` option on that command. It never goes into `.git/config`, the remote URL, a credential helper or an environment variable, and cell 3 proves it. If the clone fails, cell 2 raises an error that names only the branch and the repository. The command line is never shown, because it carries the token.
 
-**Platform.** The harness needs Linux x86_64, which standard Colab runtimes are. TEN VAD ships no Arm binary, so on any other machine provisioning stops at once with a `platform | FAIL` row that gives this reason.
+**Platform.** The harness needs Debian or Ubuntu on Linux x86_64. Standard Colab runtimes are Ubuntu on x86_64. TEN VAD ships no Arm binary, and the system step needs `apt-get`. On any other machine or distribution, provisioning stops at once with a `platform | FAIL` row that gives the reason.
 
 **Before you start:** in Colab, open the key icon (Secrets), make sure `GITHUB_TOKEN` exists (read-only "Contents" access to this repository) and that notebook access is allowed. A CPU runtime is enough.
 

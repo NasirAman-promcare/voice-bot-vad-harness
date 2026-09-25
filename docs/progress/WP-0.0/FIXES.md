@@ -68,3 +68,35 @@ These suites include every test linked to the capabilities at risk.
   - Harness plus lab tests combined in `.venv-harness`: harness outcomes identical (`True 22 22 21 passed`).
 - **Gate.** `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0` → `0 findings: OK`. The Stop hook prints nothing.
 - **Diff inside the budget.** `git diff d0b387b -U0 --stat` lists only the files in the change budget. In `harness_provision.py`, only the budgeted functions and the header changed.
+
+## Round 3 audit fixes (F23 to F27)
+
+**Source.** `docs/progress/WP-0.0/AUDIT.md` round 3, commit `5cdf131`, verdict FAIL.
+
+**Owner go-ahead (session chat, 2026-09-25).** Fixes approved as proposed and recorded under CONDITIONS in `docs/approvals/WP-0.0.md` on `main` (`1bade2d`, merged here at `8a5383a`). The conditions this round must meet:
+- `git lfs install --local` before `git lfs pull`, and git-lfs's output always shown when pointer files remain.
+- A broken `.venv-harness` is rebuilt.
+- Platform (F16 decision): harness provisioning supports **Debian or Ubuntu on x86_64** only. Any other platform fails fast with one platform FAIL row naming the reason. The Oracle row reads "Debian or Ubuntu on x86_64".
+- Tests never run real `apt-get`, `sudo` or other system-changing commands; stand-ins go on PATH inside the test's temporary folder only.
+- The non-root test runs the script as an unprivileged user (directly when not root, through `setpriv` when root). It is never skipped, and it asserts that `sudo -n` is attempted for a missing package.
+- The `harness-regression` CI job runs the harness tests on their own (difference 5 acknowledged). Both jobs must pass before merge.
+
+### Root causes
+| Finding | Root cause |
+| --- | --- |
+| F23 CRITICAL | **Unrealistic fixture.** The fixture's weights repository had no `.gitattributes`, unlike the real Hugging Face repository (35 LFS rules). git-lfs 3.7.0 then ignores the pointer (exit 0, "Skipping object checkout"), while 3.4.1 still tries the transfer (exit 2), so the test result depended on the git-lfs version. **Real defect behind it.** Reproduced with both 3.4.1 and 3.7.0: when Git LFS is not installed in git config, `git lfs pull` downloads the object but skips the checkout, exits 0 and leaves the pointer. Provisioning worked only because Debian's git-lfs package installs the filter in the system config. **Process.** I set READY-FOR-AUDIT without checking CI on the fix commit. |
+| F24 MAJOR | The F16 decision existed only in chat (now in the approval). The platform check tested only the machine, although the system step needs `apt-get` and `dpkg-query`, which only Debian and Ubuntu have. |
+| F25 MAJOR | No test ran `step_system` without root: the fast tests request no packages, and the slow tests run as root here. |
+| F26 MINOR | The `git lfs pull` output was added to the FAIL detail only when its exit code was not 0. |
+| F27 MINOR | `step_python` reused any `.venv-harness` whose Python version matched, even one left without pip by a failed `uv venv --seed`. |
+
+### Change budget
+| File | Functions or parts changed | Finding |
+| --- | --- | --- |
+| `aqis_lab/deploy/harness_provision.py` | `check_platform` (distribution check via `platform.freedesktop_os_release()`); `step_weights` (`git lfs install --local`; the pull's output in the FAIL detail for any exit code); new `venv_problem`; `step_python` (rebuild when `venv_problem` reports one); module header | F23, F24, F26, F27 |
+| `aqis_lab/deploy/harness_provision.sh` | Header only (platform wording, change log) | F24 |
+| `config/aqis_lab/harness_assets.json` | `platform`: new `distributions` and `distribution_reason` keys | F24 |
+| `tests/aqis_lab/test_aqis_harness_provision.py` | Helpers: `make_tree` (weights source gets the LFS `.gitattributes` rule of the real repository; options for real LFS content and system packages), `run_real` (stand-in `apt-get` and `sudo` on PATH, as the conditions require), new `standin_bin`. New tests listed under Evidence. No assertion of an existing test changed | F23, F24, F25, F26, F27 |
+| `docs/colab/HARNESS_SETUP.md` | Platform note | F24 |
+| `docs/capabilities/REGISTRY.md` | Rows CAP-ENV-003, CAP-ENV-006 (descriptions and test lists) | all |
+| `docs/progress/WP-0.0/EVIDENCE.md`, `STATUS.md`, this file | Records; Oracle row wording | all |

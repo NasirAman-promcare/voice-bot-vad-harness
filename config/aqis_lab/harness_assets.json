@@ -1,8 +1,10 @@
 {
-  "_about": "Pins for aqis_lab/deploy/harness_provision.sh (WP-0.0 round 2, FR-0.0-12). Owner decisions: R2-1 option A as amended by BLK-005 option 1 (corpus from git at commit 1479626; tag corpus-v1 does not contain the archive), R2-3 option A (torch not installed), BLK-004 option 1 (TEN VAD commit in harness-vcs.txt), audit F16 (Linux x86_64 only; provisioning fails fast elsewhere).",
+  "_about": "Pins for aqis_lab/deploy/harness_provision.sh (WP-0.0 round 2, FR-0.0-12). Owner decisions: R2-1 option A as amended by BLK-005 option 1 (corpus from git at commit 1479626; tag corpus-v1 does not contain the archive), R2-3 option A (torch not installed), BLK-004 option 1 (TEN VAD commit in harness-vcs.txt), audit F16 and the round 3 approval conditions (Debian or Ubuntu on Linux x86_64 only; provisioning fails fast elsewhere).",
   "platform": {
     "system": "Linux",
     "machines": ["x86_64"],
+    "distributions": ["debian", "ubuntu"],
+    "distribution_reason": "the system step installs packages with apt-get and checks them with dpkg-query, which this harness supports on Debian and Ubuntu only (owner decision F16)",
     "reason": "TEN VAD at commit 22a3bcd4509d ships its native library only for Linux x86_64 (lib/Linux/x64/libten_vad.so) and provides no Arm (aarch64) binary, so the harness cannot run on this machine"
   },
   "system_packages": ["git-lfs", "libc++1", "libopus0"],

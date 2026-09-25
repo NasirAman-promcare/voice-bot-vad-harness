@@ -17,11 +17,13 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
+from pathlib import Path
 
 import pytest
 
-from aqis_testutil import ROOT, git, hermetic_git_env
+from aqis_testutil import ROOT, git, hermetic_git_env, probe_python_major_minor
 
 SCRIPT_SH = ROOT / "aqis_lab" / "deploy" / "harness_provision.sh"
 SCRIPT_PY = ROOT / "aqis_lab" / "deploy" / "harness_provision.py"
@@ -54,7 +56,23 @@ def corpus_archive(files):
     return buf.getvalue()
 
 
-def make_tree(tmp_path, *, model_blob=MODEL, tracked_manifest=None, corpus_sha=None, gitignore=None):
+def standin_bin(directory, scripts):
+    """Stand-in commands on PATH inside the test's temporary folder (approval condition: tests never run real
+    apt-get, sudo or other system-changing commands). Returns the folder, to put first on PATH."""
+    directory.mkdir(parents=True, exist_ok=True)
+    for name, body in scripts.items():
+        path = directory / name
+        path.write_text("#!/bin/sh\n" + body, encoding="utf-8")
+        path.chmod(0o755)
+    return directory
+
+
+REFUSE_SYSTEM_CHANGES = {name: f'echo "stand-in {name}: system-changing command refused in tests: $*" >&2\nexit 97\n'
+                         for name in ("apt-get", "sudo")}
+
+
+def make_tree(tmp_path, *, model_blob=MODEL, tracked_manifest=None, corpus_sha=None, gitignore=None,
+              lfs_content=False, system_packages=()):
     tree = tmp_path / "tree"
     (tree / "aqis_lab" / "deploy").mkdir(parents=True)
     shutil.copy2(SCRIPT_SH, tree / "aqis_lab" / "deploy" / SCRIPT_SH.name)
@@ -74,15 +92,20 @@ def make_tree(tmp_path, *, model_blob=MODEL, tracked_manifest=None, corpus_sha=N
 
     weights = tmp_path / "weights-src"
     (weights / "Stream-VAD").mkdir(parents=True)
+    # The real FireRedVAD repository marks its weights as Git LFS files; the fixture does the same.
+    (weights / ".gitattributes").write_text("*.tar filter=lfs diff=lfs merge=lfs -text\n", encoding="utf-8")
+    git(weights, "init", "-q")
+    if lfs_content:
+        # A real LFS repository: the content goes into .git/lfs/objects, git stores only a pointer.
+        git(weights, "lfs", "install", "--local")
     (weights / "Stream-VAD" / "model.pth.tar").write_bytes(model_blob)
     (weights / "Stream-VAD" / "cmvn.ark").write_bytes(CMVN)
-    git(weights, "init", "-q")
     git(weights, "add", "-A")
     git(weights, "commit", "-q", "-m", "weights")
     weights_commit = git(weights, "rev-parse", "HEAD").strip()
 
     config = {
-        "system_packages": [],
+        "system_packages": list(system_packages),
         "corpus": {"name": "corpus-v1", "commit": corpus_commit, "path": "corpus-v1.tar.gz",
                    "sha256": corpus_sha or sha(archive), "size": len(archive),
                    "manifest": "corpus/manifest.json", "audio_dir": "corpus/audio"},
@@ -302,6 +325,119 @@ def test_FR_0_0_12_reports_lfs_pull_failure_detail(tmp_path):
     assert str(tmp_path / "weights-src") in detail, detail
 
 
+def test_FR_0_0_12_fetches_lfs_content_without_global_lfs_install(tmp_path):
+    # Audit F23: with no Git LFS filter in any git config (hermetic environment, as on a machine where
+    # `git lfs install` never ran), provisioning must still turn pointers into content from a real LFS remote.
+    assert shutil.which("git-lfs"), "git-lfs is needed for this test (a system package the harness also needs)"
+    tree, cfg = make_tree(tmp_path, lfs_content=True)
+    stored = subprocess.run(["git", "cat-file", "blob", "HEAD:Stream-VAD/model.pth.tar"], cwd=tmp_path / "weights-src",
+                            capture_output=True, env=hermetic_git_env(), check=True, timeout=60).stdout
+    assert stored.startswith(b"version https://git-lfs"), "the fixture must store the weights in LFS"
+    proc = run(tree, cfg, tmp_path / "cache", *DATA)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert table(proc.stdout)["weights"][0] == "PASS"
+    assert (tree / "pretrained_models" / "FireRedVAD" / "Stream-VAD" / "model.pth.tar").read_bytes() == MODEL
+
+
+def test_FR_0_0_12_reports_lfs_output_when_pull_leaves_pointers(tmp_path):
+    # Audit F26: git-lfs can exit 0 and still leave a pointer (here one whose oid is not valid); the FAIL row
+    # must still carry the pull's exit code and output.
+    assert shutil.which("git-lfs"), "git-lfs is needed for this test (a system package the harness also needs)"
+    bad_pointer = b"version https://git-lfs.github.com/spec/v1\noid sha256:not-a-valid-oid\nsize 12\n"
+    tree, cfg = make_tree(tmp_path, model_blob=bad_pointer)
+    proc = run(tree, cfg, tmp_path / "cache", *DATA)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    result, detail = table(proc.stdout)["weights"]
+    assert result == "FAIL" and "is a Git LFS pointer, not content" in detail
+    assert re.search(r"git lfs pull (finished \(exit 0\) but left pointer files|failed \(exit [1-9]\d*\)): \S", detail), detail
+
+
+def test_FR_0_0_12_platform_pin_is_debian_or_ubuntu():
+    # Approval condition (F16 decision): Debian or Ubuntu on x86_64 only.
+    pin = REAL_CONFIG["platform"]
+    assert pin["distributions"] == ["debian", "ubuntu"]
+    assert "apt-get" in pin["distribution_reason"] and "dpkg-query" in pin["distribution_reason"]
+
+
+def os_release_ids():
+    """ID and ID_LIKE from /etc/os-release, read independently of the code under test."""
+    values = {}
+    for line in Path("/etc/os-release").read_text(encoding="utf-8").splitlines():
+        key, sep, value = line.partition("=")
+        if sep:
+            values[key.strip()] = value.strip().strip('"').strip("'")
+    return values.get("ID", ""), values.get("ID_LIKE", "").split()
+
+
+def test_FR_0_0_12_fails_fast_on_unsupported_distribution(tmp_path):
+    # The same check with a pin that excludes this machine's distribution: one platform FAIL row naming the
+    # distribution and the reason; nothing else runs, nothing is downloaded or written.
+    tree, cfg = make_tree(tmp_path)
+    config = json.loads(cfg.read_text(encoding="utf-8"))
+    config["platform"]["distributions"] = ["aqis-no-such-distribution"]
+    cfg.write_text(json.dumps(config), encoding="utf-8")
+    cache = tmp_path / "cache"
+    proc = run(tree, cfg, cache, *DATA)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    rows = table(proc.stdout)
+    assert list(rows) == ["platform"], rows
+    result, detail = rows["platform"]
+    this_id, _ = os_release_ids()
+    assert result == "FAIL" and f"this machine runs {this_id}" in detail
+    assert "aqis-no-such-distribution" in detail and config["platform"]["distribution_reason"] in detail
+    assert downloads(proc.stdout) == 0 and proc.stdout.splitlines()[-1] == "RESULT: FAIL"
+    assert not cache.exists() and not (tree / "corpus" / "audio").exists()
+
+
+def test_FR_0_0_12_non_root_uses_sudo_for_missing_package(tmp_path):
+    # Audit F25, approval condition: the script runs as an unprivileged user (directly when not root, through
+    # setpriv when root) with stand-in dpkg-query, sudo and apt-get on PATH, and must call `sudo -n apt-get` for
+    # a package that is missing. Never skipped.
+    as_root = os.geteuid() == 0
+    setpriv = shutil.which("setpriv")
+    if as_root:
+        assert setpriv, "setpriv (util-linux) is needed to run the script as an unprivileged user"
+    base = Path(tempfile.mkdtemp(prefix="aqis-nonroot-")) if as_root else tmp_path
+    try:
+        package = "aqis-standin-package"
+        tree, cfg = make_tree(base, system_packages=[package])
+        state = base / "standin-installed"
+        state.mkdir()
+        calls = base / "standin-calls.log"
+        standins = standin_bin(base / "standin-bin", {
+            "dpkg-query": 'for last in "$@"; do :; done\n'
+                          f'if [ -e "{state}/$last" ]; then printf "install ok installed"; exit 0; fi\n'
+                          'echo "dpkg-query: no packages found matching $last" >&2\nexit 1\n',
+            "sudo": f'echo "sudo $*" >> "{calls}"\n'
+                    '[ "$1" = "-n" ] || { echo "stand-in sudo: -n (non-interactive) is required" >&2; exit 1; }\n'
+                    'shift\nexec "$@"\n',
+            "apt-get": f'echo "apt-get $* (uid $(id -u))" >> "{calls}"\n'
+                       'if [ "$1" = "install" ]; then\n'
+                       f'  for arg in "$@"; do case "$arg" in install|-*) ;; *) : > "{state}/$arg";; esac; done\n'
+                       'fi\nexit 0\n',
+        })
+        env = hermetic_git_env({"AQIS_HARNESS_ASSETS": str(cfg), "AQIS_CACHE": str(base / "cache"), "HOME": str(base),
+                                "PATH": f"{standins}{os.pathsep}{os.environ['PATH']}"})
+        command = ["bash", str(tree / "aqis_lab" / "deploy" / SCRIPT_SH.name), "--steps", "system"]
+        if as_root:
+            nobody = 65534
+            for path in [base, *base.rglob("*")]:
+                os.lchown(path, nobody, nobody)
+            command = [setpriv, f"--reuid={nobody}", f"--regid={nobody}", "--clear-groups", *command]
+        proc = subprocess.run(command, cwd=tree, capture_output=True, text=True, env=env, timeout=120)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        result, detail = table(proc.stdout)["system"]
+        assert result == "PASS" and f"installed {package}" in detail
+        lines = calls.read_text(encoding="utf-8").splitlines()
+        uid = re.search(r"\(uid (\d+)\)", lines[1]).group(1)
+        assert uid != "0", "the script must run unprivileged"
+        assert lines == ["sudo -n apt-get update -y", f"apt-get update -y (uid {uid})",
+                         f"sudo -n apt-get install -y {package}", f"apt-get install -y {package} (uid {uid})"]
+    finally:
+        if as_root:
+            shutil.rmtree(base)
+
+
 # ---- TEN VAD commit and pip check, against a real pip install (audit F13, F18) ---------------
 BACKEND = """import base64, hashlib, zipfile
 NAME, VERSION, REQUIRES = {name!r}, "1.0.6.8", {requires!r}
@@ -409,9 +545,31 @@ def test_FR_0_0_12_reinstalls_when_pip_check_fails(tmp_path):
     assert "aqis-absent-dependency" in reason
 
 
+def test_FR_0_0_12_venv_problem_detects_venv_without_pip(tmp_path):
+    # Audit F27: a .venv-harness left without pip by a failed `uv venv --seed` must count as broken.
+    module = load_provision_module()
+    tree, cfg = make_tree(tmp_path)
+    provisioner = module.Provisioner(tree, cfg, tmp_path / "cache")
+    version = "%d.%d" % sys.version_info[:2]
+    no_pip = tmp_path / "no-pip"
+    subprocess.run([sys.executable, "-m", "venv", "--without-pip", str(no_pip)], check=True, capture_output=True,
+                   timeout=300)
+    assert provisioner.venv_problem(no_pip / "bin" / "python", version) == ".venv-harness has no working pip"
+    with_pip = scratch_venv(tmp_path / "with-pip")
+    assert provisioner.venv_problem(with_pip, version) is None
+    assert provisioner.venv_problem(with_pip, "2.7") == f".venv-harness runs Python {version}, not 2.7"
+    assert provisioner.venv_problem(tmp_path / "absent" / "bin" / "python", version) == ".venv-harness has no working Python"
+
+
 # ---- the real repository (AT-0.0-05, AT-0.0-06) ------------------------------------------
 def run_real(timeout=3600):
-    return subprocess.run(["bash", str(SCRIPT_SH)], cwd=ROOT, capture_output=True, text=True, timeout=timeout)
+    # Real dpkg-query (read-only); apt-get and sudo are stand-ins that refuse, so a missing system package fails
+    # the test instead of changing the machine (approval condition, round 3).
+    with tempfile.TemporaryDirectory(prefix="aqis-standin-") as folder:
+        path = standin_bin(Path(folder), REFUSE_SYSTEM_CHANGES)
+        env = dict(os.environ, PATH=f"{path}{os.pathsep}{os.environ['PATH']}")
+        return subprocess.run(["bash", str(SCRIPT_SH)], cwd=ROOT, capture_output=True, text=True, timeout=timeout,
+                              env=env)
 
 
 @pytest.mark.slow
@@ -440,6 +598,33 @@ def test_FR_0_0_12_second_run_downloads_nothing_within_60s():
     assert downloads(second.stdout) == 0
     assert elapsed < 60, f"second run took {elapsed:.1f} s"
     assert git(ROOT, "status", "--porcelain") == before
+
+
+@pytest.mark.slow
+@pytest.mark.network
+def test_FR_0_0_12_rebuilds_venv_left_without_pip(tmp_path):
+    # Audit F27, end to end: a copy of this repository whose .venv-harness has Python but no pip (what a failed
+    # `uv venv --seed` leaves) is repaired by the python step, not stuck on "No module named pip".
+    copy = tmp_path / "repo"
+    subprocess.run(["git", "clone", "-q", "--no-local", str(ROOT), str(copy)], check=True, timeout=600,
+                   env=hermetic_git_env())
+    for rel in ("aqis_lab/deploy/harness_provision.py", "aqis_lab/deploy/harness_provision.sh",
+                "config/aqis_lab/harness_assets.json"):
+        shutil.copy2(ROOT / rel, copy / rel)          # the provisioning code under test, as in the working tree
+    version = "%d.%d" % sys.version_info[:2]
+    # The broken venv must run the probe's Python, so a missing pip is the only thing wrong with it.
+    assert version == probe_python_major_minor(), (version, probe_python_major_minor())
+    subprocess.run([sys.executable, "-m", "venv", "--without-pip", str(copy / ".venv-harness")], check=True,
+                   capture_output=True, timeout=300)
+    with tempfile.TemporaryDirectory(prefix="aqis-standin-") as folder:
+        path = standin_bin(Path(folder), REFUSE_SYSTEM_CHANGES)
+        env = dict(os.environ, PATH=f"{path}{os.pathsep}{os.environ['PATH']}")
+        proc = subprocess.run(["bash", str(copy / "aqis_lab" / "deploy" / SCRIPT_SH.name), "--steps", "python"],
+                              cwd=copy, capture_output=True, text=True, env=env, timeout=3600)
+    assert proc.returncode == 0, proc.stdout[-4000:] + proc.stderr[-2000:]
+    assert "rebuilding .venv-harness: .venv-harness has no working pip" in proc.stdout
+    rows = table(proc.stdout)
+    assert rows["python"][0] == "PASS" and rows["ten-vad"][0] == "PASS" and rows["imports"][0] == "PASS"
 
 
 # ---- pins and locks (FR-0.0-12 b and c) ---------------------------------------------------

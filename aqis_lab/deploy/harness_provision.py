@@ -2,11 +2,12 @@
 
 Run through aqis_lab/deploy/harness_provision.sh (the first step everywhere the harness runs:
 cloud VM, CI, Colab, Oracle). Standard library only; runs on any Python 3.10+ before a venv exists.
-The harness needs Linux x86_64: the pinned TEN VAD ships a native library for no other Linux machine, so on
-Arm (aarch64) or any other machine provisioning fails at once, before any step (owner decision, audit F16).
+The harness needs Debian or Ubuntu on Linux x86_64: the pinned TEN VAD ships a native library for no other Linux
+machine, and the system step needs apt-get and dpkg-query. On Arm (aarch64), any other machine or any other
+distribution provisioning fails at once, before any step (owner decision F16, approval conditions).
 
 CAPABILITIES:
-  CAP-ENV-003: provisions the harness idempotently: apt packages, .venv-harness on the Colab Python with the harness's own install command plus the hash-checked extras and the commit-pinned TEN VAD, the corpus from git at its pinned commit and the FireRedVAD weights into a cache outside the tree, verified by SHA-256 (no Git LFS pointer files), exposed only through git-ignored paths; fails fast on a machine other than Linux x86_64 (no TEN VAD binary); skips the install only when the stamp matches and pip check passes; verifies the installed TEN VAD commit; rejects an assets config with a missing key (exit 2); prints a PASS/FAIL table and exits 1 on any failure, including a git status that is not empty [tests: test_FR_0_0_12_places_data_only_in_ignored_paths, test_FR_0_0_12_second_data_run_downloads_nothing, test_FR_0_0_12_reads_corpus_at_pinned_commit, test_FR_0_0_12_fails_on_asset_checksum_mismatch, test_FR_0_0_12_rejects_lfs_pointer_file, test_FR_0_0_12_manifest_mismatch_is_an_error, test_FR_0_0_12_refuses_target_that_git_does_not_ignore, test_FR_0_0_12_never_writes_token, test_FR_0_0_12_rejects_unknown_step, test_FR_0_0_12_fails_when_tree_was_dirty_before, test_FR_0_0_12_fails_when_provisioning_dirties_tree, test_FR_0_0_12_platform_pin_is_linux_x86_64, test_FR_0_0_12_fails_fast_on_machine_without_ten_vad_binary, test_FR_0_0_12_rejects_config_missing_required_key, test_FR_0_0_12_reports_lfs_pull_failure_detail, test_FR_0_0_12_rejects_ten_vad_at_other_commit, test_FR_0_0_12_reinstalls_when_pip_check_fails, test_FR_0_0_12_provisions_harness_end_to_end, test_FR_0_0_12_second_run_downloads_nothing_within_60s]
+  CAP-ENV-003: provisions the harness idempotently: apt packages, .venv-harness on the Colab Python with the harness's own install command plus the hash-checked extras and the commit-pinned TEN VAD, the corpus from git at its pinned commit and the FireRedVAD weights into a cache outside the tree, verified by SHA-256 (no Git LFS pointer files), exposed only through git-ignored paths; fails fast unless the machine is Debian or Ubuntu on Linux x86_64 (no TEN VAD binary elsewhere; apt-get and dpkg-query needed); rebuilds a .venv-harness without a working pip; enables Git LFS for the weights clone itself (git lfs install --local) and reports git-lfs output whenever pointers remain; skips the install only when the stamp matches and pip check passes; verifies the installed TEN VAD commit; rejects an assets config with a missing key (exit 2); prints a PASS/FAIL table and exits 1 on any failure, including a git status that is not empty [tests: test_FR_0_0_12_places_data_only_in_ignored_paths, test_FR_0_0_12_second_data_run_downloads_nothing, test_FR_0_0_12_reads_corpus_at_pinned_commit, test_FR_0_0_12_fails_on_asset_checksum_mismatch, test_FR_0_0_12_rejects_lfs_pointer_file, test_FR_0_0_12_manifest_mismatch_is_an_error, test_FR_0_0_12_refuses_target_that_git_does_not_ignore, test_FR_0_0_12_never_writes_token, test_FR_0_0_12_rejects_unknown_step, test_FR_0_0_12_fails_when_tree_was_dirty_before, test_FR_0_0_12_fails_when_provisioning_dirties_tree, test_FR_0_0_12_platform_pin_is_linux_x86_64, test_FR_0_0_12_fails_fast_on_machine_without_ten_vad_binary, test_FR_0_0_12_rejects_config_missing_required_key, test_FR_0_0_12_reports_lfs_pull_failure_detail, test_FR_0_0_12_rejects_ten_vad_at_other_commit, test_FR_0_0_12_reinstalls_when_pip_check_fails, test_FR_0_0_12_fetches_lfs_content_without_global_lfs_install, test_FR_0_0_12_reports_lfs_output_when_pull_leaves_pointers, test_FR_0_0_12_platform_pin_is_debian_or_ubuntu, test_FR_0_0_12_fails_fast_on_unsupported_distribution, test_FR_0_0_12_non_root_uses_sudo_for_missing_package, test_FR_0_0_12_venv_problem_detects_venv_without_pip, test_FR_0_0_12_rebuilds_venv_left_without_pip, test_FR_0_0_12_provisions_harness_end_to_end, test_FR_0_0_12_second_run_downloads_nothing_within_60s]
 INPUTS AND OUTPUTS: config/aqis_lab/harness_assets.json (or $AQIS_HARNESS_ASSETS), docs/environment/colab_probe.txt,
   the harness requirement files; writes .venv-harness/, ${AQIS_CACHE:-$HOME/.cache/aqis}, symlinks under
   corpus/audio/ and pretrained_models/FireRedVAD/ (both git-ignored). Options: --steps system,python,corpus,weights,verify.
@@ -18,7 +19,8 @@ INVARIANTS:
   - Never reads, writes or logs a GitHub token; the corpus comes from local git objects, not the network.
   - Every network action is counted and reported ("Downloads this run"); a repeat run with nothing changed makes none.
   - Existing user files are never overwritten: an occupied target is a FAIL.
-  - Runs only where platform.system() and platform.machine() match the "platform" pin (Linux x86_64).
+  - Runs only where platform.system(), platform.machine() and the /etc/os-release ID match the "platform" pin
+    (Debian or Ubuntu on Linux x86_64).
 NOT IN SCOPE:
   - torch (owner decision R2-3), GPU packages, running the harness tests (CI job harness-regression does).
   - Machines without a TEN VAD native library, such as an Arm Oracle VM (owner decision, audit F16).
@@ -28,6 +30,9 @@ CHANGE LOG:
   2026-09-25 WP-0.0 audit round 2 fixes: F16 platform check before any step; F18 pip check in the install skip
     (reinstall_reason); F21 required config keys, git lfs pull result kept in the FAIL detail, timeout on
     git cat-file.
+  2026-09-25 WP-0.0 audit round 3 fixes: F23/F26 git lfs install --local in the weights clone and git-lfs output
+    in the FAIL detail for any exit code; F24 distribution check (Debian or Ubuntu); F27 venv_problem rebuilds a
+    .venv-harness without a working pip.
 """
 import argparse
 import hashlib
@@ -112,10 +117,22 @@ class Provisioner:
     def check_platform(self):
         pin = self.cfg["platform"]
         system, machine = platform.system(), platform.machine()
+        needs = (f"{' or '.join(d.capitalize() for d in pin['distributions'])} on {pin['system']} "
+                 f"{' or '.join(pin['machines'])}")
         if system != pin["system"] or machine not in pin["machines"]:
-            raise StepFailed(f"harness provisioning needs {pin['system']} {' or '.join(pin['machines'])}; this machine "
-                             f"is {system} {machine or 'unknown'}. {pin['reason']}")
-        self.row("platform", "PASS", f"{system} {machine}")
+            raise StepFailed(f"harness provisioning needs {needs}; this machine is {system} {machine or 'unknown'}. "
+                             f"{pin['reason']}")
+        try:
+            release = platform.freedesktop_os_release()
+        except OSError as exc:
+            raise StepFailed(f"harness provisioning needs {needs}; cannot tell the distribution because "
+                             f"/etc/os-release is unreadable ({exc}). {pin['distribution_reason']}") from exc
+        distribution = release.get("ID", "")
+        if distribution not in pin["distributions"]:
+            raise StepFailed(f"harness provisioning needs {needs}; this machine runs {distribution or 'an unknown distribution'}"
+                             f" ({release.get('PRETTY_NAME', 'no PRETTY_NAME')}), not {' or '.join(pin['distributions'])}. "
+                             f"{pin['distribution_reason']}")
+        self.row("platform", "PASS", f"{release.get('PRETTY_NAME', distribution)} on {system} {machine}")
 
     # -- step: system packages -------------------------------------------------------------
     def step_system(self):
@@ -188,11 +205,13 @@ class Provisioner:
             raise StepFailed("uv not found on PATH; install uv 0.8.17 and re-run")
         venv = self.root / ".venv-harness"
         python = venv / "bin" / "python"
-        current = self.venv_python_version(python)
-        if current != version:
+        problem = self.venv_problem(python, version)
+        if problem is not None:
+            print(f"rebuilding .venv-harness: {problem}", flush=True)
             self.run([uv, "venv", "--seed", "--clear", "--python", version, venv])
-            if self.venv_python_version(python) != version:
-                raise StepFailed(f".venv-harness does not run Python {version}")
+            problem = self.venv_problem(python, version)
+            if problem is not None:
+                raise StepFailed(f"{problem}, even after rebuilding it with uv venv --seed --clear")
         stamp_file = venv / STAMP_NAME
         stamp = self.stamp_value(version)
         reason = self.reinstall_reason(python, stamp)
@@ -213,6 +232,18 @@ class Provisioner:
         self.check_imports(python)
         for item in self.cfg["not_installed"]:
             self.row(item["name"], "INFO", f"not installed, {item['reason']}")
+
+    def venv_problem(self, python, version):
+        """None when .venv-harness runs the wanted Python and has a working pip, otherwise what is wrong with it
+        (a failed first run can leave Python without pip)."""
+        current = self.venv_python_version(python)
+        if current is None:
+            return ".venv-harness has no working Python"
+        if current != version:
+            return f".venv-harness runs Python {current}, not {version}"
+        if self.run([python, "-I", "-B", "-m", "pip", "--version"], check=False, timeout=300).returncode != 0:
+            return ".venv-harness has no working pip"
+        return None
 
     def reinstall_reason(self, python, stamp):
         """None when the environment already holds exactly these requirements (same stamp and pip check passes),
@@ -384,17 +415,24 @@ class Provisioner:
             self.git("checkout", "--quiet", w["commit"], cwd=repo, env=env)
             pointers = [rel for rel in w["files"] if (repo / rel).is_file()
                         and (repo / rel).read_bytes()[:len(LFS_POINTER_PREFIX)] == LFS_POINTER_PREFIX]
+            lfs = None
             if pointers:
                 if self.run(["git", "lfs", "version"], check=False).returncode != 0:
                     raise StepFailed("git-lfs is not installed, so these stay Git LFS pointer files: "
                                      + ", ".join(pointers))
+                # Without the LFS filter in git config, git lfs pull downloads but skips the checkout (exit 0);
+                # enable it for this cache clone only, whatever the machine's global or system config says.
+                self.git("lfs", "install", "--local", cwd=repo, env=env)
                 include = ",".join(pointers)
                 lfs = self.git("lfs", "pull", "--include", include, cwd=repo, network=True, check=False)
             problems = self.weights_ok(repo, w["files"])
             if problems:
-                if pointers and lfs.returncode != 0:
-                    tail = " / ".join((lfs.stderr or lfs.stdout).strip().splitlines()[-3:])
-                    problems.append(f"git lfs pull failed (exit {lfs.returncode}): {tail}")
+                if lfs is not None:
+                    said = " / ".join((lfs.stderr.strip() or lfs.stdout.strip()).splitlines()[-3:]) or "no output"
+                    if lfs.returncode != 0:
+                        problems.append(f"git lfs pull failed (exit {lfs.returncode}): {said}")
+                    else:
+                        problems.append(f"git lfs pull finished (exit 0) but left pointer files: {said}")
                 raise StepFailed("; ".join(problems))
         link = self.root / link_rel
         target = repo / w["subdir"]
