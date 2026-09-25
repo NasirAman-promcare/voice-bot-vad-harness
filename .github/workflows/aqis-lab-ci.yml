@@ -1,0 +1,43 @@
+# AQIS lab CI (WP-0.0 FR-0.0-10). Builds .venv exactly as developers do (Colab Python from
+# docs/environment/colab_probe.txt, hash-checked requirements/aqis_lab/phase0.txt), runs the fast lab
+# suite and the audit gate. Read-only: it cannot push, dispatch or change any other workflow.
+name: aqis-lab-ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out (full history for merge-base and origin/main approvals)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv 0.8.17
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+
+      - name: Bootstrap .venv (Colab-matching Python, hash-checked lock)
+        run: bash aqis_lab/deploy/dev_bootstrap.sh
+
+      - name: Version
+        run: .venv/bin/python -m aqis_lab version
+
+      - name: Fast lab test suite
+        run: .venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network"
+
+      - name: Audit gate (pull request base, or origin/main on push)
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then BASE="origin/$BASE_REF"; else BASE="origin/main"; fi
+          .venv/bin/python -m tools.audit.gate --base "$BASE"
