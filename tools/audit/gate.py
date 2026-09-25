@@ -23,10 +23,14 @@ NOT IN SCOPE:
   - Running tests (the Stop hook and CI do that).
 CHANGE LOG:
   2026-09-25 WP-0.0 FR-0.0-05 created.
+  2026-09-25 WP-0.0 round 2 FR-0.0-06 (amended), F04, F09: Stop hook v2/v3 scan scope and status mapping;
+             fail closed (read_changed_file, diff_against_base, load_protected, registry, spec, test files);
+             UTF-8 decoding with replacement; no approvals when origin/main is unverifiable; F1 cites the glob.
 """
 import argparse
 import ast
 import json
+import os
 import re
 import subprocess
 import sys
@@ -42,8 +46,8 @@ APPROVALS_REF = "origin/main"
 SECTIONS = ("NEVER", "GUARDED", "LAB-OWNED")
 # Always enforced, even if the list file is missing or damaged (same as the hooks).
 DEFAULT_NEVER = ("CLAUDE.md", ".claude/**", "docs/specs/**", "docs/process/**", "docs/approvals/**")
-LAB_CODE_DIRS = ("aqis_lab/", "tools/")
-LAB_TEST_DIR = "tests/aqis_lab/"
+LAB_CODE_DIRS = patterns.LAB_CODE_DIRS
+LAB_TEST_DIR = patterns.LAB_TEST_DIR
 FIXTURE_DIR = "tests/aqis_lab/fixtures/"
 REGISTRY = "docs/capabilities/REGISTRY.md"
 REGISTRY_COLUMNS = ("Capability ID", "Module", "Functions", "What it does", "Tests", "Introduced by", "Status")
@@ -54,7 +58,7 @@ ID_PREFIXES_DOCS_ONLY = ("AT", "OC")
 
 
 class GateError(Exception):
-    """The gate could not run (bad reference, not a repository, missing origin/main)."""
+    """The gate could not run or could not read something it must check (exit 2, never a pass)."""
 
 
 @dataclass
@@ -95,7 +99,8 @@ class Git:
     def run(self, *args, timeout=60):
         """(returncode, stdout, stderr) of a git command in the repository."""
         try:
-            proc = subprocess.run(["git", *args], cwd=self.root, capture_output=True, text=True, timeout=timeout)
+            proc = subprocess.run(["git", *args], cwd=self.root, capture_output=True, text=True, encoding="utf-8",
+                                  errors="replace", timeout=timeout)
         except FileNotFoundError as exc:
             raise GateError("git is not installed or not on PATH") from exc
         except subprocess.TimeoutExpired as exc:
@@ -119,9 +124,11 @@ class Git:
 def repository_root(cwd):
     try:
         proc = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=cwd, capture_output=True, text=True,
-                              timeout=60)
+                              encoding="utf-8", errors="replace", timeout=60)
     except FileNotFoundError as exc:
         raise GateError("git is not installed or not on PATH") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise GateError("git rev-parse --show-toplevel did not finish within 60 s") from exc
     if proc.returncode != 0:
         raise GateError(f"{cwd} is not inside a git repository: {proc.stderr.strip()}")
     return Path(proc.stdout.strip())
@@ -130,38 +137,22 @@ def repository_root(cwd):
 # ---------------------------------------------------------------------------------------------
 # policy: protected paths and approvals (same semantics as .claude/hooks/_protected.py)
 # ---------------------------------------------------------------------------------------------
-def glob_to_regex(pattern):
-    """Convert a repo-relative glob with **, * and ? into an anchored regular expression."""
-    pattern = pattern.strip().lstrip("/")
-    out, i = [], 0
-    while i < len(pattern):
-        c = pattern[i]
-        if c == "*":
-            if pattern[i:i + 3] == "**/":
-                out.append("(?:.*/)?")
-                i += 3
-                continue
-            if pattern[i:i + 2] == "**":
-                out.append(".*")
-                i += 2
-                continue
-            out.append("[^/]*")
-        elif c == "?":
-            out.append("[^/]")
-        else:
-            out.append(re.escape(c))
-        i += 1
-    return re.compile("^" + "".join(out) + "$")
+glob_to_regex = patterns.glob_to_regex  # one implementation, shared with the scan scope
 
 
 def load_protected(root):
-    """{section: [regex]} from the working-tree PROTECTED_PATHS.txt plus the built-in NEVER list."""
+    """{section: [regex]} from the working-tree PROTECTED_PATHS.txt plus the built-in NEVER list.
+
+    Fails closed (GateError) when the list is missing or unreadable (difference G2 from the Stop hook,
+    which falls back to the built-in NEVER list; owner decision R2-2).
+    """
     sections = {name: [] for name in SECTIONS}
     current = None
+    policy = Path(root) / "docs" / "process" / "PROTECTED_PATHS.txt"
     try:
-        text = (Path(root) / "docs" / "process" / "PROTECTED_PATHS.txt").read_text(encoding="utf-8")
-    except OSError:
-        text = ""
+        text = policy.read_bytes().decode("utf-8", errors="replace")
+    except OSError as exc:
+        raise GateError(f"docs/process/PROTECTED_PATHS.txt:1: cannot read the protected-path list: {exc}") from exc
     for raw in text.splitlines():
         line = raw.split("#", 1)[0].strip()
         if not line:
@@ -195,20 +186,23 @@ class Approvals:
 
 
 def resolve_approvals_ref(git):
-    """Commit of origin/main, fetching it once if it is missing (as the hooks do)."""
+    """Commit of origin/main, fetching it once if it is missing (as the hooks do); None when unverifiable.
+
+    Without a verified origin/main no approval counts (FR-0.0-06 amended): the caller then applies none,
+    which can only add findings, never remove them.
+    """
     commit = git.commit_of(APPROVALS_REF)
     if commit is None:
         git.run("fetch", "--quiet", "origin", "main:refs/remotes/origin/main", timeout=120)
         commit = git.commit_of(APPROVALS_REF)
-    if commit is None:
-        raise GateError(f"{APPROVALS_REF} not found and could not be fetched; approvals are read only from "
-                        f"{APPROVALS_REF} (run: git fetch origin main)")
     return commit
 
 
 def load_approvals(git, ref):
-    """Rules from approval files with STATUS: APPROVED committed at ref (never the working tree)."""
+    """Rules from approval files with STATUS: APPROVED committed at ref (never the working tree); none if ref is None."""
     edit_rules, pattern_rules, files = [], [], []
+    if ref is None:
+        return Approvals(edit_rules, pattern_rules, files)
     today = date.today().isoformat()
     rc, out, _ = git.run("ls-tree", "--name-only", f"{ref}:docs/approvals")
     names = [n for n in out.splitlines() if n.endswith(".md")] if rc == 0 else []
@@ -258,12 +252,10 @@ def changed_files(git, base):
         if len(entry) < 4:
             continue
         code, path = entry[:2], entry[3:]
-        if "?" in code:
+        if "?" in code or "A" in code:
             state = "A"
         elif "D" in code:
             state = "D"
-        elif "A" in code:
-            state = "A"
         else:
             state = "M"
         previous = changes.get(path)
@@ -275,18 +267,38 @@ def changed_files(git, base):
     return changes
 
 
+def read_changed_file(git, path):
+    """Text of a changed file (UTF-8 with replacement); None when nothing exists at the path.
+
+    Fails closed: a path that exists but is not a regular file (for example a dangling symlink) or cannot
+    be read raises GateError (difference G2: the Stop hook skips such a file silently; owner decision R2-2).
+    """
+    full = git.root / path
+    if not os.path.lexists(full):
+        return None  # staged as added, then removed from the working tree: nothing left to scan
+    if not full.is_file():
+        raise GateError(f"{path}:1: changed file is not a regular file (for example a dangling symlink); cannot scan it")
+    try:
+        return full.read_bytes().decode("utf-8", errors="replace")
+    except OSError as exc:
+        raise GateError(f"{path}:1: cannot read changed file: {exc}") from exc
+
+
+def diff_against_base(git, base, path):
+    rc, out, err = git.run("diff", "-U0", "--no-color", "--text", base, "--", path)
+    if rc != 0:
+        raise GateError(f"{path}:1: git diff against {base[:12]} failed: {err.strip() or 'no message'}")
+    return out
+
+
 def added_lines(git, base, path):
     """[(line_number, text)] for lines added relative to base (or all lines of a new file)."""
-    full = git.root / path
-    if not full.is_file():
+    text = read_changed_file(git, path)
+    if text is None:
         return []
     if not git.exists(base, path):
-        try:
-            text = full.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            return []
         return list(enumerate(text.splitlines(), start=1))
-    _, out, _ = git.run("diff", "-U0", "--no-color", base, "--", path)
+    out = diff_against_base(git, base, path)
     lines, new_no = [], 0
     for line in out.splitlines():
         hunk = HUNK_RE.match(line)
@@ -305,8 +317,7 @@ def first_changed_line(git, base, path, state):
     """Line to cite for a whole-file finding: first changed line of a modified text file, else 1."""
     if state != "M":
         return 1
-    _, out, _ = git.run("diff", "-U0", "--no-color", base, "--", path)
-    for line in out.splitlines():
+    for line in diff_against_base(git, base, path).splitlines():
         hunk = HUNK_RE.match(line)
         if hunk:
             return max(int(hunk.group(1)), 1)
@@ -337,21 +348,29 @@ def check_protected_and_tests(git, base, changes, sections, approvals, report):
                     f"on {APPROVALS_REF}", state=state))
 
 
+def scan_table(path):
+    """(patterns, rule) for a path inside the lab scan scope of Stop hook v2/v3, else None."""
+    if path.startswith(LAB_TEST_DIR) and path.endswith(".py"):
+        return patterns.TEST_PATTERNS, "C2"
+    if ((path.startswith(LAB_CODE_DIRS) or patterns.LAB_CI_FILES.match(path))
+            and path.endswith(patterns.SCANNED_SUFFIXES)):
+        return patterns.CODE_PATTERNS, "C1"
+    return None
+
+
 def check_patterns_and_headers(git, base, changes, approvals, report):
     for path, state in sorted(changes.items()):
-        if state == "D" or not path.endswith(".py"):
+        if state == "D":
             continue
+        scope = scan_table(path)
         exemption = matching_rule(approvals.pattern_rules, path)
         if exemption:
-            if path.startswith(LAB_CODE_DIRS) or path.startswith(LAB_TEST_DIR):
+            if scope:
                 report.exempted_files.append({"path": path, "approval": exemption[0], "glob": exemption[1]})
             continue
-        if path.startswith(LAB_TEST_DIR):
-            table, rule = patterns.TEST_PATTERNS, "C2"
-        elif path.startswith(LAB_CODE_DIRS):
-            table, rule = patterns.CODE_PATTERNS, "C1"
-        else:
+        if scope is None:
             continue
+        table, rule = scope
         for number, text in added_lines(git, base, path):
             if patterns.ALLOW_RE.search(text):
                 reason = patterns.ALLOW_REASON_RE.search(text).group(1).strip()
@@ -363,11 +382,8 @@ def check_patterns_and_headers(git, base, changes, approvals, report):
                         rule, "c", "COMPROMISE", path, number, f"{label}: {text.strip()[:110]}",
                         state=state, label=label, text=text))
                     break
-        if path.startswith("aqis_lab/") and state == "A" and not git.exists(base, path):
-            try:
-                content = (git.root / path).read_text(encoding="utf-8", errors="replace")
-            except OSError:
-                content = ""
+        if path.startswith("aqis_lab/") and path.endswith(".py") and state == "A":
+            content = read_changed_file(git, path) or ""
             meaningful = [line for line in content.splitlines() if line.strip()]
             if len(meaningful) > 5 and not patterns.HEADER_RE.search("\n".join(content.splitlines()[:80])):
                 report.findings.append(Finding(
@@ -394,7 +410,11 @@ def test_functions(root, folder):
         if rel.startswith(FIXTURE_DIR):
             continue
         try:
-            tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"), filename=rel)
+            source = path.read_bytes().decode("utf-8", errors="replace")
+        except OSError as exc:
+            raise GateError(f"{rel}:1: cannot read test file: {exc}") from exc
+        try:
+            tree = ast.parse(source, filename=rel)
         except SyntaxError as exc:
             raise GateError(f"{rel}:{exc.lineno}: cannot parse test file: {exc.msg}") from exc
         for node in tree.body:
@@ -456,7 +476,7 @@ def check_registry(git, base, report):
     root = git.root
     path = root / REGISTRY
     try:
-        text = path.read_text(encoding="utf-8")
+        text = path.read_bytes().decode("utf-8", errors="replace")
     except OSError as exc:
         report.findings.append(Finding("E1", "e", "MAJOR", REGISTRY, 1, f"capability registry missing or unreadable: {exc}"))
         text = None
@@ -489,8 +509,10 @@ def check_registry(git, base, report):
             if missing:
                 report.findings.append(Finding("E3", "e", "MAJOR", REGISTRY, number,
                                                f"{cap}: names tests that do not exist: {', '.join(missing)}"))
-    rc, base_text, _ = git.run("show", f"{base}:{REGISTRY}")
-    if rc == 0:
+    if git.exists(base, REGISTRY):
+        rc, base_text, err = git.run("show", f"{base}:{REGISTRY}")
+        if rc != 0:
+            raise GateError(f"{REGISTRY}:1: cannot read the registry at base {base[:12]}: {err.strip() or 'no message'}")
         base_rows, _ = parse_registry(base_text)
         for number, cells in base_rows:
             cap = _unquote(cells[0]) if cells else ""
@@ -529,16 +551,20 @@ def check_traceability(git, wp, report):
     specs = find_spec(root, wp)
     if len(specs) != 1:
         found = ", ".join(p.relative_to(root).as_posix() for p in specs) or "none"
-        report.findings.append(Finding("F1", "f", "MAJOR", "docs/specs", 1,
-                                       f"expected exactly one spec for {wp} under docs/specs/, found: {found}"))
+        report.findings.append(Finding("F1", "f", "MAJOR", f"docs/specs/**/{wp}-*.md", 1,
+                                       f"expected exactly one spec matching docs/specs/**/{wp}-*.md, found: {found}"))
         return
     spec_rel = specs[0].relative_to(root).as_posix()
-    ids = requirement_ids(specs[0].read_text(encoding="utf-8"), number)
+    try:
+        spec_text = specs[0].read_bytes().decode("utf-8", errors="replace")
+    except OSError as exc:
+        raise GateError(f"{spec_rel}:1: cannot read the spec: {exc}") from exc
+    ids = requirement_ids(spec_text, number)
     docs = {}
     for rule, name in (("F2", "PLAN.md"), ("F4", "EVIDENCE.md")):
         rel = f"docs/progress/{wp}/{name}"
         try:
-            docs[rule] = (rel, (root / rel).read_text(encoding="utf-8"))
+            docs[rule] = (rel, (root / rel).read_bytes().decode("utf-8", errors="replace"))
         except OSError:
             report.findings.append(Finding(rule, "f", "MAJOR", rel, 1, f"{name} for {wp} is missing or unreadable"))
     names = [n for n in test_functions(root, LAB_TEST_DIR.rstrip("/")) if "::" not in n]
@@ -598,8 +624,10 @@ def to_json(report, seconds):
 
 
 def render_text(report, seconds):
+    approvals = (f"approvals {APPROVALS_REF} {report.approvals_commit[:12]}" if report.approvals_commit
+                 else f"approvals: none ({APPROVALS_REF} not verifiable)")
     lines = [f"{TOOL}: base {report.base_ref} (merge-base {report.base_commit[:12]}), head {report.head_commit[:12]}, "
-             f"approvals {APPROVALS_REF} {report.approvals_commit[:12]}, wp {report.wp or '-'}"]
+             f"{approvals}, wp {report.wp or '-'}"]
     lines.append(f"Exempted lines (# audit-allow): {len(report.exempted_lines)}")
     lines.extend(f"  {e['path']}:{e['line']}: {e['reason']}" for e in report.exempted_lines)
     lines.append(f"Exempted files (ALLOW-PATTERNS-IN): {len(report.exempted_files)}")
