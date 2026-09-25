@@ -1,0 +1,16 @@
+# AQIS lab, phase 0, CPU dependencies (direct needs only). The lock is phase0.txt.
+#
+# Regenerate the lock from the repository root with uv 0.8.17 after editing this file:
+#   uv pip compile requirements/aqis_lab/phase0.in --universal --python-version 3.13 --generate-hashes --output-file requirements/aqis_lab/phase0.txt
+# Pass the same command as --custom-compile-command so the lock header records it.
+# --python-version is the major.minor from docs/environment/colab_probe.txt; --universal makes the
+# pins valid on x86_64 and aarch64 Linux (cloud VM, Colab, Oracle). Install only with hash checking:
+#   bash aqis_lab/deploy/dev_bootstrap.sh            (uv, development)
+#   pip install --require-hashes -r requirements/aqis_lab/phase0.txt   (plain pip, e.g. Colab)
+
+# Test runner for tests/aqis_lab (WP-0.0 FR-0.0-04).
+pytest
+# Contract validation (required by the WP-0.0 spec, used from WP-0.2).
+jsonschema
+# Parsing the CI workflow in tests (FR-0.0-10; owner-approved default 5e).
+pyyaml
