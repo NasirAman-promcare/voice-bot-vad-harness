@@ -117,3 +117,26 @@ These suites include every test linked to CAP-ENV-003, CAP-ENV-005 and CAP-ENV-0
 - **CI** on `d35290b`: push run `36151733422` success; pull request run `36151741552` success, with the `lab` job (WP ID `WP-0.0`, gate `0 findings: OK`) and the `harness-regression` job both green.
 - **Diff.** `git diff 8a5383a d35290b` changes only the files and functions in the change budget. No existing test assertion changed, only the helpers `make_tree`, `run_real` and the import line.
 - **Records.** The module header change logs and the registry rows (CAP-ENV-003, CAP-ENV-006) are updated.
+
+## Colab owner check fix (BLK-006)
+
+**Source.** `docs/progress/WP-0.0/OWNER_VERIFY_COLAB_WP-0.0_20260925T151855Z.md` (owner commit `22ce3c6`, on `aa9e74c`).
+- Fast suite: `3 failed, 135 passed`.
+- Slow suite: `1 failed, 7 passed`.
+- The failing tests are `test_FR_0_0_12_rejects_ten_vad_at_other_commit`, `test_FR_0_0_12_reinstalls_when_pip_check_fails`, `test_FR_0_0_12_venv_problem_detects_venv_without_pip` and `test_FR_0_0_03_lock_installable_with_plain_pip`.
+
+**Owner decision.** BLK-006 option 1, recorded under CONDITIONS in `docs/approvals/WP-0.0.md` on `main` (`d403bad`, merged here at `2c1963f`):
+- Use `uv venv --seed` in shared test helpers for throwaway test environments.
+- Changing the venv creation line in `test_FR_0_0_03_lock_installable_with_plain_pip` is approved, with its assertions unchanged.
+
+**Root cause.** The four tests made scratch venvs with `python -m venv`, which runs `ensurepip`. Colab's lab Python is Ubuntu's `/usr/bin/python3.13` without the `python3.13-venv` package, where `ensurepip` fails. This VM has that package (`python3.13-venv 3.13.12-1+noble1`), so the tests passed here and in CI. Production code is not affected: provisioning makes `.venv-harness` with `uv venv --seed` and passed on Colab.
+
+### Change budget
+| File | Change |
+| --- | --- |
+| `tests/aqis_lab/aqis_testutil.py` | New helper `pip_venv(path)`: `uv venv --seed --python <running Python> <path>`, which fails loudly if uv is missing or the command fails |
+| `tests/aqis_lab/test_aqis_harness_provision.py` | Helper `scratch_venv` delegates to `pip_venv`; import line. No test function changes |
+| `tests/aqis_lab/test_aqis_lock.py` | In `test_FR_0_0_03_lock_installable_with_plain_pip`, only the venv creation line (as approved), plus `pip_venv` in the import line. Assertions unchanged |
+| `docs/progress/WP-0.0/EVIDENCE.md`, `FIXES.md`, `BLOCKERS.md` (BLK-006 answer), `STATUS.md` | Records |
+
+No production code, no capability and no registry row changes. The venv made `--without-pip` in `test_FR_0_0_12_venv_problem_detects_venv_without_pip` already works without `ensurepip`, so it stays as it is.
