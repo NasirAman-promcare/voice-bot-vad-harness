@@ -1,6 +1,7 @@
 """FR-0.0-04: lab tests are discovered from tests/aqis_lab/ with five registered markers,
 without changing how the existing harness tests are discovered or run."""
 import configparser
+import os
 import re
 import subprocess
 import sys
@@ -11,8 +12,10 @@ LAB_DIR = ROOT / "tests" / "aqis_lab"
 
 
 def pytest_run(*args):
+    # PYTHONDONTWRITEBYTECODE: collecting harness modules must not leave __pycache__ in guarded folders (F05).
     return subprocess.run([sys.executable, "-m", "pytest", "-p", "no:cacheprovider", *args],
-                          cwd=ROOT, capture_output=True, text=True, timeout=600)
+                          cwd=ROOT, capture_output=True, text=True, timeout=600,
+                          env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
 
 
 def harness_lines(output):
@@ -39,6 +42,15 @@ def test_FR_0_0_04_lab_tests_use_only_registered_markers():
 
 
 def test_FR_0_0_04_harness_collection_unchanged():
+    """Harness discovery is the same with and without the lab tests in the same pytest session.
+
+    What it can detect: lab files (conftest, root config, name clashes) changing which harness files are
+    collected or how their collection ends. What it cannot detect here: in the lab .venv most harness modules
+    fail to import (numpy and similar are not in the lab lock), so it mostly compares collection errors. The
+    run-time proof is recorded in EVIDENCE.md: harness and lab tests run together in .venv-harness give the
+    same harness outcomes as the harness alone (22 of 22), and CI job harness-regression runs the harness
+    tests against the baseline on every push (audit finding WP-0.0-F05).
+    """
     alone = pytest_run("--collect-only", "-q", "tests/regression")
     together = pytest_run("--collect-only", "-q", "tests/regression", "tests/aqis_lab")
     alone_lines = harness_lines(alone.stdout)
