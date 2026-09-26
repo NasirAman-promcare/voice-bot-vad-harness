@@ -139,3 +139,29 @@ All four create a scratch venv with `python -m venv <dir>`, which runs `ensurepi
 **Paused until answered:** the fix for the Colab report, which covers those four tests and the `scratch_venv` helper. Nothing else is changed. The branch is as audited at `aa9e74c`, plus your report commit `22ce3c6` and this entry.
 
 **Owner answer:** Option 1 (session chat, 2026-09-25; recorded under CONDITIONS in `docs/approvals/WP-0.0.md` on `main`, `d403bad`): use `uv venv --seed` in shared test helpers for throwaway test environments. Changing the venv creation line in `test_FR_0_0_03_lock_installable_with_plain_pip` is approved, with its assertions unchanged.
+
+## BLK-007 — The root-path provisioning test (audit F43, P12) cannot run as root on the CI runner
+STATUS: OPEN
+WP: WP-0.0  ·  Raised: 2026-09-26  ·  Session: https://claude.ai/code/session_01N7gtpxBMnXJe8XU2D1AzuM
+
+**What I need:** your choice of how `test_FR_0_0_12_root_installs_without_sudo` runs the script as root on a machine where the test itself is not root, as on the CI runner.
+
+**Why:** audit F43 (P12) requires a test proving that as root `apt-get` is called without `sudo`. The test passes here, as real root. On the CI runner, which is not root, it runs the script as uid 0 of an unprivileged user namespace (`unshare --map-root-user`). GitHub's Ubuntu 24.04 runner blocks that: `unshare: write failed /proc/self/uid_map: Operation not permitted` (job `lab`, run `36231792360`; also `36231766392` and `36231008660`). CI is therefore red on one test: `1 failed, 203 passed`. Your conditions forbid real `sudo` in tests, and skipping a test is not allowed without your approval.
+
+**What I tried:**
+- Here: `setpriv --reuid=65534 … unshare --map-root-user id -u` printed `0`, and the test passes as root.
+- On CI, the same test fails as quoted above.
+
+Everything else in round 6 is green locally (fast `204 passed` with git-lfs 3.4.1 and 3.7.0, slow `8 passed`, gate `0 findings`). Of the round 6 mutations, 42 are caught and L8 is equivalent.
+
+**Options:**
+1. **(Recommended)** Test the root branch in-process. The test calls `Provisioner.step_system()` with `os.geteuid` replaced by a function that returns 0, inside the test only (pytest `monkeypatch`). The stand-in `dpkg-query`, `apt-get` and `sudo` stay on PATH, so the real `run` code path runs. It works identically on the VM, CI and Colab, and still fails under mutation P12.
+   - Trade-off: the user id is a test double, which the rules reserve for external services. That needs your approval.
+2. Add one CI step to job `lab` before the fast suite: `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`. The runner is thrown away after each job, and the test stays exactly as it is, a real subprocess.
+   - Trade-off: a system-changing command in the CI workflow (not in a test), plus a workflow change outside the round 6 budget.
+3. Run the test only where the test process is already root (this VM, Colab), and skip it with a stated reason elsewhere.
+   - Trade-off: CI no longer covers P12, and a skip is a compromise pattern that needs your approval.
+
+**Paused until answered:** only this test, and the final round 6 records. STATUS stays AUDIT-FAIL until CI is green. Everything else for F39 to F44 is committed and pushed (`bbfd928`).
+
+**Owner answer:** 
