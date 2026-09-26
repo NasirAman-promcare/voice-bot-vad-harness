@@ -19,5 +19,6 @@ CONDITIONS:
 - Tests and audits must never run real apt-get, sudo or other system-changing commands. Replace them with stand-in commands placed on PATH inside the test's temporary folder only.
 - Non-root test runs as unprivileged user and asserts sudo -n is attempted.
 - BLK-006 decision: Option 1 approved (uv venv --seed for test helpers).
-- Round 5: fixes for WP-0.0-F33 to F38 approved (test-first mutation coverage for approval regex start-of-line anchors, non-.py test edits, added-then-deleted branch files, stale provisioning cache/link cleanup, version command repo isolation, and TEN VAD license text).
+- Round 5: fixes for WP-0.0-F33 to F38 approved.
 - OC-0.0-01: The Colab harness provisioning verification summary recorded in docs/environment/colab_harness_provision.txt and OWNER_VERIFY_COLAB_WP-0.0_20260925T155908Z.md is accepted.
+- Round 6: fixes for WP-0.0-F39 to F44 approved (test coverage for gate hook parity rules, NFR requirement ID tracing in test names, provisioning weights/cache/apt checks, empty baseline table handling, TEN VAD native lib verification test, and documenting F44 symlink limit in AUDIT_GATE.md).
