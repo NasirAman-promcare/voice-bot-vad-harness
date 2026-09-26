@@ -112,3 +112,30 @@ def test_FR_0_0_06_approvals_none_when_origin_main_unverifiable(repo):
     assert [(f["rule"], f["path"]) for f in report["findings"]] == [("A2", "vad_adapters/example.py")]
     text = repo.gate("--base", "main", json_output=False).stdout
     assert "approvals: none (origin/main not verifiable)" in text
+
+
+def test_FR_0_0_06_fails_closed_when_branch_diff_fails(repo):
+    # Must-catch 7 (round 8 proof, break MC7.19): if `git diff --name-status <base> HEAD` fails, the gate exits 2
+    # and never reports a clean or partial result. The base commit's root tree object is removed, so git cannot
+    # read the base side of the diff; HEAD and its index stay readable.
+    repo.branch()
+    repo.append("tools/existing_tool.py", "\nEXTRA = 1\n")
+    repo.commit("branch change")
+    tree = git(repo.path, "rev-parse", "origin/main^{tree}").strip()
+    (repo.path / ".git" / "objects" / tree[:2] / tree[2:]).unlink()
+    proc = repo.gate("--base", "origin/main", json_output=False)
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert proc.stderr.startswith("ERROR:") and "git diff against" in proc.stderr
+    assert "0 findings" not in proc.stdout
+
+
+def test_FR_0_0_06_fails_closed_when_git_status_fails(repo):
+    # Must-catch 7, sibling case: a corrupt index makes `git status` fail; the gate exits 2, never a clean pass.
+    repo.branch()
+    repo.append("tools/existing_tool.py", "\nEXTRA = 1\n")
+    repo.commit("branch change")
+    (repo.path / ".git" / "index").write_bytes(b"DIRC not a valid index")
+    proc = repo.gate("--base", "origin/main", json_output=False)
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert proc.stderr.startswith("ERROR:") and "git status failed" in proc.stderr
+    assert "0 findings" not in proc.stdout
