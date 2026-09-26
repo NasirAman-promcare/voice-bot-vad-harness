@@ -71,6 +71,16 @@ def test_FR_0_0_09_detects_id_missing_from_test_names(repo):
     assert "FR_9_9_02" in found[0][3]
 
 
+def test_FR_0_0_09_detects_nfr_id_missing_from_test_names(repo):
+    # Audit F40: NFR IDs, like FR IDs, must appear in a test function name.
+    repo.write("tests/aqis_lab/test_thing.py", TESTS.replace("test_NFR_9_9_01_is_fast", "test_is_fast"))
+    report = repo.gate_json("--wp", "WP-9.9")
+    found = f_findings(report)
+    assert report["ok"] is False
+    assert [(r, p, n) for r, p, n, _ in found] == [("F3", SPEC, LINE_OF["NFR-9.9-01"])]
+    assert "NFR-9.9-01" in found[0][3] and "NFR_9_9_01" in found[0][3]
+
+
 def test_FR_0_0_09_detects_id_missing_from_evidence(repo):
     repo.write("docs/progress/WP-9.9/EVIDENCE.md", doc(["FR-9.9-01", "FR-9.9-02", "NFR-9.9-01", "OC-9.9-01"]))
     found = f_findings(repo.gate_json("--wp", "WP-9.9"))

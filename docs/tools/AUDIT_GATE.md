@@ -106,6 +106,13 @@ The table in `docs/capabilities/REGISTRY.md` has exactly the columns `Capability
 ```
 `state` (`A`/`M`/`D`) is set for check (a) to (d) findings. `label` and `text` (the full added line) are set for C findings.
 
+## Accepted limits
+- **An existing test replaced by a symlink (owner decision, round 6 audit finding F44).**
+  - **What happens:** a commit that replaces an existing test file with a symlink shows in `git diff --name-status` as a typechange (`T`). For example, `tests/aqis_lab/test_existing.py` could become a link to a weaker copy.
+  - **Why nothing reports it:** check (b) looks only at modified (`M`) and deleted (`D`) tests, and a `tests/aqis_lab/` path is LAB-OWNED, so check (a) is silent too.
+  - **Why it stays this way:** the Stop hook (`stop_gate.py:101,288`) has the same rule, and the gate must match the hook (FR-0.0-06). The owner accepted the limit under CONDITIONS in `docs/approvals/WP-0.0.md` ("documenting F44 symlink limit in AUDIT_GATE.md").
+  - **Test:** the parity scenario `lab_test_replaced_by_symlink` in `tests/aqis_lab/test_aqis_gate_parity.py` records that the gate and the hook both report nothing. If the hook is changed to treat `T` as `M`, that scenario fails until the gate is changed the same way.
+
 ## Limits
 - Standard library only (NFR-0.0-03). It runs on Python 3.10 or newer, so the Stop hook can fall back to the system `python3`.
 - It is read-only and does not run tests. Its runtime on this repository is well under 60 s (NFR-0.0-01, measured in `docs/progress/WP-0.0/EVIDENCE.md`).

@@ -102,3 +102,41 @@ def test_FR_0_0_11_regression_check_accepts_repository_baseline(tmp_path):
     assert len(rows) >= 22
     proc = check(junit(tmp_path, rows), base)
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_FR_0_0_11_regression_check_rejects_table_without_readable_rows(tmp_path):
+    # Audit F42: a Results table whose rows cannot be read is an input error, never an empty baseline that passes.
+    text = (f"# Harness regression baseline\n\n## {SECTION}\n\n### Results\n| Test | Outcome | Seconds |\n| --- | --- | --- |\n"
+            f"| {A} | PASSED | 0.001 |\n")
+    path = tmp_path / "baseline.md"
+    path.write_text(text, encoding="utf-8")
+    proc = check(junit(tmp_path, {A: "failed"}), path)
+    assert proc.returncode == 2 and proc.stderr.startswith("ERROR:") and "has no rows" in proc.stderr, proc.stdout
+    assert "RESULT: PASS" not in proc.stdout
+
+
+def repository_baseline_rows():
+    """{node: outcome} of the provisioned baseline's Results table, read independently of the tool."""
+    text = (ROOT / "docs" / "baselines" / "harness_tests_baseline.md").read_text(encoding="utf-8")
+    section = text.split(f"## {SECTION}", 1)[1].split("\n## ", 1)[0]
+    results = section.split("### Results", 1)[1].split("\n### ", 1)[0]
+    rows = {}
+    for line in results.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) == 3 and cells[0].startswith("`tests/"):
+            rows[cells[0].strip("`")] = cells[1]
+    return rows
+
+
+def test_FR_0_0_11_regression_check_reads_every_repository_baseline_row(tmp_path):
+    # Audit F42: the real baseline is parsed row by row, so one baseline pass that now fails is reported.
+    rows = repository_baseline_rows()
+    passes = sorted(node for node, outcome in rows.items() if outcome == "passed")
+    assert len(rows) == 22 and len(passes) == 21
+    current = dict(rows)
+    current[passes[0]] = "failed"
+    proc = check(junit(tmp_path, current), ROOT / "docs" / "baselines" / "harness_tests_baseline.md")
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert f"baseline: 22 tests, 21 passed; this run: 22 tests, 20 passed" in proc.stdout
+    assert [l for l in proc.stdout.splitlines() if l.startswith("REGRESSION: ")] == [
+        f"REGRESSION: {passes[0]} (baseline passed, now failed)"]

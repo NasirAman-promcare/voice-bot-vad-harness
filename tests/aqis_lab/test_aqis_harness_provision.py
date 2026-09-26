@@ -567,14 +567,150 @@ def test_FR_0_0_12_rejects_hostile_archive_member(tmp_path, member, words):
     assert not (tree / "corpus" / "audio").exists()
 
 
+# ---- integrity guards (audit F41) --------------------------------------------------------------------
+def test_FR_0_0_12_fails_on_weights_with_wrong_content(tmp_path):
+    # Weights that are neither the pinned bytes nor an LFS pointer fail the per-file SHA-256 check.
+    other = b"weights that are not the pinned ones" * 8
+    tree, cfg = make_tree(tmp_path, model_blob=other)
+    proc = run(tree, cfg, tmp_path / "cache", *DATA)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    result, detail = table(proc.stdout)["weights"]
+    assert result == "FAIL"
+    assert f"Stream-VAD/model.pth.tar has sha256 {sha(other)}, pinned {sha(MODEL)}" in detail
+    assert not (tree / "pretrained_models").exists()
+
+
+def test_FR_0_0_12_damaged_corpus_cache_is_replaced_from_git(tmp_path):
+    # A cached archive that no longer has the pinned SHA-256 is read again from git, never used.
+    tree, cfg = make_tree(tmp_path)
+    cache = tmp_path / "cache"
+    assert run(tree, cfg, cache, *DATA).returncode == 0
+    pinned = json.loads(cfg.read_text(encoding="utf-8"))["corpus"]["sha256"]
+    base = cache / "corpus" / pinned
+    damaged = corpus_archive({"corpus/audio/a.wav": b"RIFF" + b"\x09" * 60, "corpus/audio/b.wav": WAV_B,
+                              "corpus/manifest.json": manifest_bytes(["a.wav", "b.wav"]),
+                              "corpus/build/recipe_log.json": b"{}\n"})
+    (base / "corpus-v1.tar.gz").write_bytes(damaged)
+    shutil.rmtree(base / "extracted")
+    proc = run(tree, cfg, cache, *DATA)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert (tree / "corpus" / "audio" / "a.wav").read_bytes() == WAV_A
+    assert sha((base / "corpus-v1.tar.gz").read_bytes()) == pinned
+
+
+SYSTEM_STANDINS_DPKG_MISSING = {
+    "dpkg-query": 'for last in "$@"; do :; done\necho "dpkg-query: no packages found matching $last" >&2\nexit 1\n',
+}
+
+
+def test_FR_0_0_12_fails_when_apt_get_installs_nothing(tmp_path):
+    # apt-get exits 0 but the package is still missing: the system step must FAIL, naming the package.
+    package = "aqis-standin-package"
+    tree, cfg = make_tree(tmp_path, system_packages=[package])
+    calls = tmp_path / "calls.log"
+    standins = standin_bin(tmp_path / "standin-bin", {
+        **SYSTEM_STANDINS_DPKG_MISSING,
+        "apt-get": f'echo "apt-get $*" >> "{calls}"\nexit 0\n',
+        "sudo": f'echo "sudo $*" >> "{calls}"\n[ "$1" = "-n" ] || exit 1\nshift\nexec "$@"\n',
+    })
+    proc = run(tree, cfg, tmp_path / "cache", "--steps", "system",
+               extra_env={"PATH": f"{standins}{os.pathsep}{os.environ['PATH']}"})
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    result, detail = table(proc.stdout)["system"]
+    assert result == "FAIL" and detail == f"apt-get finished but these are not installed: {package}"
+    assert f"apt-get install -y {package}" in calls.read_text(encoding="utf-8")
+
+
+def test_FR_0_0_12_root_installs_without_sudo(tmp_path):
+    # Audit F43 (P12): as root, apt-get is called directly, never through sudo. When the test itself is not root it
+    # runs the script as uid 0 of an unprivileged user namespace (unshare --map-root-user); never skipped.
+    package = "aqis-standin-package"
+    tree, cfg = make_tree(tmp_path, system_packages=[package])
+    state = tmp_path / "installed"
+    state.mkdir()
+    calls = tmp_path / "calls.log"
+    standins = standin_bin(tmp_path / "standin-bin", {
+        "dpkg-query": 'for last in "$@"; do :; done\n'
+                      f'if [ -e "{state}/$last" ]; then printf "install ok installed"; exit 0; fi\nexit 1\n',
+        "apt-get": f'echo "apt-get $* (uid $(id -u))" >> "{calls}"\n'
+                   f'if [ "$1" = "install" ]; then for a in "$@"; do case "$a" in install|-*) ;; *) : > "{state}/$a";; esac; done; fi\n',
+        "sudo": f'echo "sudo $*" >> "{calls}"\nexit 97\n',
+    })
+    env = hermetic_git_env({"AQIS_HARNESS_ASSETS": str(cfg), "AQIS_CACHE": str(tmp_path / "cache"),
+                            "PATH": f"{standins}{os.pathsep}{os.environ['PATH']}"})
+    command = ["bash", str(tree / "aqis_lab" / "deploy" / SCRIPT_SH.name), "--steps", "system"]
+    if os.geteuid() != 0:
+        unshare = shutil.which("unshare")
+        assert unshare, "unshare (util-linux) is needed to run the script as uid 0 without privileges"
+        command = [unshare, "--map-root-user", *command]
+    proc = subprocess.run(command, cwd=tree, capture_output=True, text=True, env=env, timeout=120)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert table(proc.stdout)["system"] == ("PASS", f"installed {package}; already present: none")
+    assert calls.read_text(encoding="utf-8").splitlines() == [
+        "apt-get update -y (uid 0)", f"apt-get install -y {package} (uid 0)"]
+
+
+# ---- promised behaviours (audit F43) ------------------------------------------------------------------
+def test_FR_0_0_12_rejects_probe_with_two_python_versions(tmp_path):
+    tree, cfg = make_tree(tmp_path)
+    (tree / "docs" / "environment").mkdir(parents=True)
+    (tree / "docs" / "environment" / "colab_probe.txt").write_text(
+        "Python Version: 3.13.15 (main)\nPython 3.12.3\n", encoding="utf-8")
+    proc = run(tree, cfg, tmp_path / "cache", "--steps", "python")
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    result, detail = table(proc.stdout)["python"]
+    assert result == "FAIL"
+    assert detail == "docs/environment/colab_probe.txt must name exactly one Python version, found ['3.12', '3.13']"
+
+
+def test_FR_0_0_12_install_stamp_covers_every_requirement_file(tmp_path):
+    # The install is repeated when any harness requirement file, the extras lock or the TEN VAD pin changes.
+    module = load_provision_module()
+    tree, cfg = make_tree(tmp_path)
+    config = json.loads(cfg.read_text(encoding="utf-8"))
+    config["harness_requirements"] = ["requirements/base.txt"]
+    cfg.write_text(json.dumps(config), encoding="utf-8")
+    files = {"requirements/base.txt": "numpy>=1.24\n", config["extras_lock"]: "pytest==9.1.1 --hash=sha256:00\n",
+             config["vcs_lock"]: "ten_vad @ git+https://example.invalid/ten-vad.git@" + "1" * 40 + "\n"}
+    for rel, text in files.items():
+        (tree / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tree / rel).write_text(text, encoding="utf-8")
+    provisioner = module.Provisioner(tree, cfg, tmp_path / "cache")
+    first = provisioner.stamp_value("3.13")
+    assert provisioner.stamp_value("3.13") == first and provisioner.stamp_value("3.12") != first
+    for rel in files:
+        (tree / rel).write_text(files[rel] + "# changed\n", encoding="utf-8")
+        assert provisioner.stamp_value("3.13") != first, rel
+        (tree / rel).write_text(files[rel], encoding="utf-8")
+        assert provisioner.stamp_value("3.13") == first, rel
+
+
+def test_FR_0_0_12_import_check_builds_ten_vad(tmp_path):
+    # The imports row promises "TenVad native library loaded": a ten_vad whose TenVad cannot be built must fail.
+    local_package(tmp_path / "ten-vad-src", "ten_vad",
+                  init_source="class TenVad:\n    def __init__(self, hop_size, threshold):\n"
+                              "        raise OSError('stand-in: native library libten_vad.so cannot be loaded')\n")
+    python = scratch_venv(tmp_path / "venv")
+    pip_install(python, str(tmp_path / "ten-vad-src"))
+    module = load_provision_module()
+    tree, cfg = make_tree(tmp_path)
+    config = json.loads(cfg.read_text(encoding="utf-8"))
+    config["import_check"] = ["ten_vad"]
+    cfg.write_text(json.dumps(config), encoding="utf-8")
+    with pytest.raises(module.StepFailed) as failure:
+        module.Provisioner(tree, cfg, tmp_path / "cache").check_imports(python)
+    assert str(failure.value).startswith("import check failed:")
+    assert "native library libten_vad.so cannot be loaded" in str(failure.value)
+
+
 # ---- TEN VAD commit and pip check, against a real pip install (audit F13, F18) ---------------
 BACKEND = """import base64, hashlib, zipfile
-NAME, VERSION, REQUIRES = {name!r}, "1.0.6.8", {requires!r}
+NAME, VERSION, REQUIRES, INIT = {name!r}, "1.0.6.8", {requires!r}, {init!r}
 def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
     info = NAME + "-" + VERSION + ".dist-info"
     meta = "Metadata-Version: 2.1\\nName: " + NAME + "\\nVersion: " + VERSION + "\\n"
     meta += "".join("Requires-Dist: " + r + "\\n" for r in REQUIRES)
-    files = {{NAME + "/__init__.py": b"", info + "/METADATA": meta.encode(),
+    files = {{NAME + "/__init__.py": INIT.encode(), info + "/METADATA": meta.encode(),
              info + "/WHEEL": b"Wheel-Version: 1.0\\nGenerator: aqis-test\\nRoot-Is-Purelib: true\\nTag: py3-none-any\\n"}}
     wheel = NAME + "-" + VERSION + "-py3-none-any.whl"
     with zipfile.ZipFile(wheel_directory + "/" + wheel, "w") as archive:
@@ -589,13 +725,13 @@ def build_wheel(wheel_directory, config_settings=None, metadata_directory=None):
 """
 
 
-def local_package(path, name, requires=()):
+def local_package(path, name, requires=(), init_source=""):
     """A git repository holding a pip-installable package (in-tree PEP 517 backend, so no download is needed).
     Returns the commits (first, second) of two different revisions."""
     path.mkdir(parents=True)
     (path / "pyproject.toml").write_text('[build-system]\nrequires = []\nbuild-backend = "backend"\n'
                                          'backend-path = ["."]\n', encoding="utf-8")
-    (path / "backend.py").write_text(BACKEND.format(name=name, requires=list(requires)), encoding="utf-8")
+    (path / "backend.py").write_text(BACKEND.format(name=name, requires=list(requires), init=init_source), encoding="utf-8")
     git(path, "init", "-q")
     git(path, "add", "-A")
     git(path, "commit", "-q", "-m", "first")

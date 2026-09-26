@@ -2,6 +2,7 @@
 import json
 import subprocess
 import sys
+from datetime import date
 
 import pytest
 
@@ -242,6 +243,83 @@ def s_staged_rename_of_harness_test(r):
     r.branch(); git(r.path, "mv", "tests/regression/test_example.py", "tests/regression/test_staged.py")
 
 
+# ---- audit round 6 (F39): the remaining rules of _protected.py and the header boundary ------------------
+def s_allow_patterns_in_trailing_note(r):
+    # ALLOW-PATTERNS-IN counts only when its value ends the line: this approval exempts nothing.
+    r.commit_approval_text_on_main("WP-9.9.md", "STATUS: APPROVED\nALLOW-PATTERNS-IN: tools/t.py (pattern table)\n")
+    r.branch(); r.copy_fixture("code_patterns.py", "tools/t.py")
+
+
+def s_non_md_approval(r):
+    # Only .md files in docs/approvals/ are approvals.
+    r.commit_approval_text_on_main("WP-9.9.txt", "STATUS: APPROVED\nALLOW-EDIT: vad_adapters/**\n")
+    r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
+
+
+def policy_on_main(r, change):
+    """Commit a changed PROTECTED_PATHS.txt to main (the owner's route), so the branch does not change it."""
+    path = r.path / "docs/process/PROTECTED_PATHS.txt"
+    r.write("docs/process/PROTECTED_PATHS.txt", change(path.read_text(encoding="utf-8")))
+    r.commit("policy on main"); git(r.path, "push", "-q", "origin", "main")
+
+
+def s_policy_inline_comment(r):
+    # "#" starts a comment in PROTECTED_PATHS.txt, also after a glob.
+    def change(text):
+        assert text.count("\nvad_adapters/**\n") == 1
+        return text.replace("\nvad_adapters/**\n", "\nvad_adapters/**   # harness adapters\n")
+    policy_on_main(r, change)
+    r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
+
+
+def s_unknown_policy_section(r):
+    # An unknown [SECTION] ends the previous section: its lines belong to no section.
+    policy_on_main(r, lambda text: text + "\n[RETIRED]\nvad_adapters/example.py\n")
+    r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
+
+
+def header_at(line_no):
+    lines = [f"V{i} = {i}\n" for i in range(line_no - 1)] + ["CAPABILITIES: int = 1\n", "W = 2\n"]
+    assert lines[line_no - 1].startswith("CAPABILITIES:")
+    return "".join(lines)
+
+
+def s_header_at_line_80(r):
+    r.branch(); r.write("aqis_lab/header_80.py", header_at(80))
+
+
+def s_header_at_line_81(r):
+    r.branch(); r.write("aqis_lab/header_81.py", header_at(81))
+
+
+def s_expires_today(r):
+    # An approval is still valid on its expiry date.
+    r.commit_approval_text_on_main("WP-9.9.md", f"STATUS: APPROVED\nEXPIRES: {date.today().isoformat()}\n"
+                                                "ALLOW-EDIT: vad_adapters/**\n")
+    r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
+
+
+def s_expires_with_note(r):
+    # EXPIRES counts only when the date ends the line, so this approval does not expire.
+    r.commit_approval_text_on_main("WP-9.9.md", "STATUS: APPROVED\nEXPIRES: 2000-01-01 (trial only)\n"
+                                                "ALLOW-EDIT: vad_adapters/**\n")
+    r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
+
+
+# ---- audit round 6 (F44): accepted limit, identical in the gate and the owner's hook ------------------
+def s_lab_test_replaced_by_symlink(r):
+    # A committed typechange (T) of an existing lab test is reported by neither the hook nor the gate. The owner
+    # accepted this limit (docs/approvals/WP-0.0.md, round 6; docs/tools/AUDIT_GATE.md "Accepted limits").
+    r.branch()
+    r.write("tests/aqis_lab/weaker_copy.py",
+            "from aqis_lab.existing import add\n\n\ndef test_adds():\n    assert add(0, 0) == 0\n")
+    r.delete("tests/aqis_lab/test_existing.py")
+    (r.path / "tests/aqis_lab/test_existing.py").symlink_to("weaker_copy.py")
+    r.commit("replace a lab test by a symlink")
+    status = git(r.path, "diff", "--name-status", "origin/main", "HEAD")
+    assert "T\ttests/aqis_lab/test_existing.py" in status, status
+
+
 SCENARIOS = {
     "never": (s_never, False), "guarded": (s_guarded, False), "guarded_approved": (s_guarded_approved, False),
     "branch_only_approval": (s_branch_only_approval, False), "modified_harness_test": (s_modified_harness_test, False),
@@ -267,9 +345,17 @@ SCENARIOS = {
     "flagged_word_in_path": (s_flagged_word_in_path, False),
     "staged_rename_of_harness_test": (s_staged_rename_of_harness_test, False),
     "unscanned_suffix_in_lab_dirs": (s_unscanned_suffix_in_lab_dirs, False),
+    # audit round 6 (F39, F44)
+    "allow_patterns_in_trailing_note": (s_allow_patterns_in_trailing_note, False),
+    "non_md_approval": (s_non_md_approval, False), "policy_inline_comment": (s_policy_inline_comment, False),
+    "unknown_policy_section": (s_unknown_policy_section, False), "header_at_line_80": (s_header_at_line_80, False),
+    "header_at_line_81": (s_header_at_line_81, False), "expires_today": (s_expires_today, False),
+    "expires_with_note": (s_expires_with_note, False),
+    "lab_test_replaced_by_symlink": (s_lab_test_replaced_by_symlink, True),
 }
 EXPECT_NONE = {"guarded_approved", "approved_lab_test_edit", "clean", "modified_headerless_module", "bulleted_expires",
-               "modified_non_py_test_file", "non_py_lab_test_file", "flagged_word_in_path", "unscanned_suffix_in_lab_dirs"}
+               "modified_non_py_test_file", "non_py_lab_test_file", "flagged_word_in_path", "unscanned_suffix_in_lab_dirs",
+               "header_at_line_80", "expires_today", "expires_with_note", "lab_test_replaced_by_symlink"}
 # Scenarios whose exact findings are fixed here, so a change the hook shares cannot pass unnoticed either.
 EXPECT_EXACT = {
     **{key: [("A2", "vad_adapters/example.py", "M")] for key in APPROVAL_TEXTS},
@@ -277,6 +363,10 @@ EXPECT_EXACT = {
     "staged_rename_of_harness_test": [("A2", "tests/regression/test_example.py", "D"),
                                       ("A2", "tests/regression/test_staged.py", "A"),
                                       ("B2", "tests/regression/test_example.py")],
+    "non_md_approval": [("A2", "vad_adapters/example.py", "M")],
+    "policy_inline_comment": [("A2", "vad_adapters/example.py", "M")],
+    "unknown_policy_section": [("A2", "vad_adapters/example.py", "M")],
+    "header_at_line_81": [("D1", "aqis_lab/header_81.py")],
 }
 
 

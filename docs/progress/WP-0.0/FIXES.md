@@ -269,3 +269,40 @@ git status lines after: 0
 ```
 - **CI on `335363d`:** pull request run `36228654749` and push run `36228652324`, both jobs success.
 - **Diff inside the budget.** No gate, provisioning or `version` code changed. `gate.py`, `harness_provision.py` and `version.py` changed only in their header test lists and change logs. `harness_assets.json` changed only in `ten_vad.licence`. The tests changed by additions, plus the one `elif` branch in the parity test function that is listed in the budget.
+
+## Round 6 audit fixes (F39 to F44)
+
+**Source.** `docs/progress/WP-0.0/AUDIT.md` round 6, commit `e19d0e1`, verdict FAIL.
+
+**Owner approval.** Round 6 fixes are approved under CONDITIONS in `docs/approvals/WP-0.0.md` on `main` (`2cf6e0a`, merged at `ad5abe2`), including "documenting F44 symlink limit in AUDIT_GATE.md". Owner instruction: `/surgical-fix WP-0.0-F39 … F44`, test-first. F45 and F46 (minor) are not in that instruction and stay open.
+
+**Baseline, run before any change** on `ad5abe2`, clean tree:
+```text
+fast: 182 passed, 8 deselected in 34.57s
+slow/network: 8 passed, 182 deselected in 47.39s
+gate: 0 findings: OK (0.3 s)
+git status lines after: 0
+```
+
+### Root causes
+| Finding | Root cause |
+| --- | --- |
+| F39 CRITICAL | My round 5 table covered the approval regex anchors and a few `_protected.py` rules, but not every line. The trailing-text rule for `ALLOW-PATTERNS-IN`, the `.md`-only rule, comments and unknown sections in `PROTECTED_PATHS.txt`, the exact line 80 boundary, expiry on the day itself, and a trailing note after `EXPIRES` had no scenario. The claim at EVIDENCE.md:763 went beyond what the table showed. |
+| F40 CRITICAL | The traceability tests removed only an FR name from the test names, never an NFR name. |
+| F41 CRITICAL | The weights, cache and `apt-get` guards were only ever given correct or pointer input. No test used wrong weights, a damaged cache, or an install that does nothing. |
+| F42 CRITICAL | No regression-check test used a Results table with no parseable rows. The repository-baseline test only checked exit 0. |
+| F43 MAJOR | The root path of the system step, the probe check in provisioning, the stamp's `harness-vcs.txt` input, and the `TenVad` construction in the import check had no failing input. |
+| F44 MAJOR | Check (b) considers only `M` and `D`, so a committed typechange (`T`, a test replaced by a symlink) is not reported. This is the same in the owner's hook. The owner accepted it as a documented limit (round 6 approval). |
+
+### Change budget
+| File | Change | Finding |
+| --- | --- | --- |
+| `tests/aqis_lab/test_aqis_gate_parity.py` | New scenario functions, and `SCENARIOS`, `EXPECT_NONE` and `EXPECT_EXACT` entries only | F39, F44 |
+| `tests/aqis_lab/test_aqis_gate_trace.py` | New test `test_FR_0_0_09_detects_nfr_id_missing_from_test_names` | F40 |
+| `tests/aqis_lab/test_aqis_harness_provision.py` | New tests for wrong weights, a damaged cache, an `apt-get` that installs nothing, the root path, a probe with two versions, the stamp inputs, and a `TenVad` that cannot be built. The helpers `BACKEND` and `local_package` gain an optional `__init__.py` source; the default is unchanged | F41, F43 |
+| `tests/aqis_lab/test_aqis_harness_regression.py` | New tests: a Results table with no parseable rows, and the real baseline read row by row, with one pass flipped to a failure | F42 |
+| `docs/tools/AUDIT_GATE.md` | New "Accepted limits" entry for a typechange of an existing test (F44) | F44 |
+| Headers of `tools/audit/gate.py`, `aqis_lab/deploy/harness_provision.py`, `tools/harness/regression_check.py`; `docs/capabilities/REGISTRY.md` | Test lists and change logs only | all |
+| `docs/progress/WP-0.0/EVIDENCE.md`, `FIXES.md`, `STATUS.md` | Records: the corrected EVIDENCE.md:763 claim and a line-by-line mutation table for `_protected.py:26-164` | F39 |
+
+No gate, provisioning or regression-check code changes.
