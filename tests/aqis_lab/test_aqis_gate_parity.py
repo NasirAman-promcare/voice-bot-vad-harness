@@ -184,6 +184,8 @@ APPROVAL_TEXTS = {
     "indented_allow_edit": "STATUS: APPROVED\n  ALLOW-EDIT: vad_adapters/**\n",
     "bulleted_status": "- STATUS: APPROVED\nALLOW-EDIT: vad_adapters/**\n",
     "allow_edit_trailing_text": "STATUS: APPROVED\nALLOW-EDIT: vad_adapters/** (WP-0.1 only)\n",
+    # audit round 6 (F39, line-by-line review of _protected.py:154): STATUS must end its line too
+    "status_trailing_text": "STATUS: APPROVED (draft)\nALLOW-EDIT: vad_adapters/**\n",
 }
 
 
