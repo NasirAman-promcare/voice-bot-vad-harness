@@ -31,3 +31,11 @@ One text normaliser and one scorer that every system is judged by, producing cor
 
 ## Stop and ask if
 - The normaliser package is unavailable for the probe's Python version, or its behaviour contradicts an example in this spec.
+
+## Must-catch behaviours
+1. Normalisation is idempotent, and the normaliser's name and version are recorded in every score row.
+2. Substitution, deletion and insertion counts match the independent `jiwer` check exactly.
+3. Corpus-level WER is total errors over total reference words, never the mean of per-clip WERs.
+4. Empty references follow the defined rule.
+5. The main score removes disfluencies and the disfluency-aware score keeps them.
+6. Every score row carries `run_card_id`, `clip_id` and both text hashes.

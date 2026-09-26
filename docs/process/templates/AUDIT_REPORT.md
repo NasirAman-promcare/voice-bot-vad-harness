@@ -1,34 +1,36 @@
-# AUDIT — <WP-ID>
+# AUDIT — <WP-ID>, round <n>
 
-Auditor: wp-auditor  ·  Date: <YYYY-MM-DD>  ·  Commit audited: <sha>  ·  Diff base: <sha>
+Auditor: wp-auditor · Date: <YYYY-MM-DD> · Commit audited: <sha> · Previous audited commit: <sha or "first audit"> · Protocol: version 2
 
 ## Verdict: PASS | FAIL
-CRITICAL: <n>  ·  MAJOR: <n>  ·  MINOR: <n>
+CRITICAL: <n> · MAJOR: <n> (fixed <n>, accepted as debt <n>, open <n>) · MINOR: <n>
+
+## Scope of this audit
+<First audit, or re-audit: previous findings, diff since the previous audited commit, full suites, CI, must-catch proof.>
 
 ## Checklist
 | Item | Result | Evidence |
 | --- | --- | --- |
-| A1 Scope and dependencies | | |
-| A2 Requirement coverage | | |
-| A3 Acceptance commands | | |
-| A4 Test suites | | |
-| A5 Test integrity | | |
-| A6 Mutation spot-check | | |
-| A7 Compromise scan | | |
-| A8 Scope diff | | |
-| A9 Capabilities | | |
-| A10 Contracts | | |
-| A11 Environment parity | | |
-| A12 Reproducibility and traceability | | |
-| A13 Errors and logging | | |
-| A14 Documentation, licences, data | | |
+| A1 to A15, one row each | | |
+
+## Must-catch proof (A6)
+| Behaviour | Break made in /tmp copy | Test that failed | Result |
+| --- | --- | --- | --- |
+
+## Exploratory breaks (A15, at most 10)
+| Break | Where | Survived? | Severity |
+| --- | --- | --- | --- |
 
 ## Findings
-| ID | Severity | Item | Finding | Evidence | Required fix |
+| ID | Severity | Item | Finding | Evidence | Recommendation: fix now, or accept as debt (target WP) |
 | --- | --- | --- | --- | --- | --- |
+
+## Convergence (round 3 onwards)
+| Round | CRITICAL | MAJOR | MINOR | Open findings inside the must-catch list |
+| --- | --- | --- | --- | --- |
 
 ## For the owner
 - audit-allow lines: <list or None>
 - Approvals used: <list>
-- PARTIAL labels: <list or None>
+- Debt accepted so far: <list or None>
 - Owner-run checks still pending: <list or None>

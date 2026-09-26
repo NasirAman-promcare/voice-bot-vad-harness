@@ -19,3 +19,7 @@ Finish the full Tier 2 VAD run on the real network with the existing harness, un
 
 ## Acceptance
 - **AT-0.1-01** The auditor checks five random numbers in `SUMMARY.md` against the raw files.
+
+## Must-catch behaviours
+1. Every number in `SUMMARY.md` matches its cited raw file; the auditor changes one raw value in a copy and the check reports the mismatch.
+2. A missing raw file is reported as missing, never filled in.

@@ -19,13 +19,15 @@ For each requirement, in plan order:
 2. Implement the real behaviour inside the change budget.
 3. Run the requirement's tests, then the fast suite. Fix the code, never the test.
 4. Add or update the module header and the `docs/capabilities/REGISTRY.md` rows.
-5. Record the requirement in `docs/progress/$ARGUMENTS/EVIDENCE.md` (template: `docs/process/templates/EVIDENCE.md`).
+5. Record the requirement in `docs/progress/$ARGUMENTS/EVIDENCE.md`.
 6. Commit with the message `$ARGUMENTS <REQ-ID>: <what>`, then push.
 
 At any blocker, use the ask-owner skill immediately.
 
 When every requirement is done:
+- Must-catch proof: for each behaviour in the spec's "Must-catch behaviours" list, break it in a copy under `/tmp`, confirm a named test fails, and record the break and the failing test in `EVIDENCE.md`. Add a test wherever none fails.
 - Run every acceptance command in the spec and paste the real outputs into `EVIDENCE.md`.
-- Run the audit gate if it exists. List owner-run checks (Colab, Oracle) with exact commands and expected outputs.
-- Self-check against `docs/process/AUDIT_PROTOCOL.md` and fix what you find.
-- Set STATUS to `READY-FOR-AUDIT`, open or update the pull request to `main`, and end with `✅ READY FOR AUDIT — owner: run /wp-audit $ARGUMENTS`, followed by the owner-run checks.
+- Run the audit gate. List owner-run checks with exact commands and expected outputs.
+- Push, then wait for CI on your latest commit and paste every job's result into `EVIDENCE.md`. Never mark READY-FOR-AUDIT while any job is red or still running.
+- Set STATUS to `READY-FOR-AUDIT`, open or update the pull request, and end with `✅ READY FOR AUDIT — owner: run /wp-audit $ARGUMENTS`.
+- Do not schedule check-ins or post pull request comments unless the owner asks.

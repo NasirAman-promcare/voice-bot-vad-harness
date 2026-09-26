@@ -41,3 +41,11 @@ The same command runs on the cloud VM, Colab and Oracle; a health check proves t
 
 ## Stop and ask if
 - A Colab-only behaviour cannot be exercised by an automated test here; describe the owner check instead of guessing.
+
+## Must-catch behaviours
+1. `doctor` fails on a Python version that differs from the Colab probe, on packages that differ from the lock, and on a missing or read-only Drive folder in Colab.
+2. After an interruption, finished shards are skipped and the final results are byte-identical to an uninterrupted run.
+3. A shard without its completion marker is never counted as finished.
+4. The launcher notebook contains no logic beyond the allowed steps.
+5. Platform details come from `aqis_lab.platform` only.
+6. The unit log appends a correct estimate from the rate table.

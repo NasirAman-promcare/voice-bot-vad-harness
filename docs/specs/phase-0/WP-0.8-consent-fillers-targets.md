@@ -21,3 +21,7 @@ Prepare everything people-facing that phase 1 needs, and put the owner's decisio
 
 ## Acceptance
 - **AT-0.8-01** The auditor checks completeness against each requirement and that no value was invented where the owner must decide.
+
+## Must-catch behaviours
+1. No value the owner must decide is filled in by Claude.
+2. Every filler has a risk level and at least one context where it must never play.

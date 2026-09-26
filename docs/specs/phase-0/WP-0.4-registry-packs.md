@@ -37,3 +37,11 @@ A registry that records where every clip came from and under what licence, a det
 
 ## Stop and ask if
 - Owner recordings are missing, the corpus lacks transcripts, or a download host is blocked.
+
+## Must-catch behaviours
+1. A clip without a licence is rejected; an owner recording without a consent reference is rejected.
+2. Building twice gives byte-identical archives and manifest.
+3. `pack verify` fails on any changed, missing or extra member.
+4. The smoke pack has exactly the category counts the spec lists.
+5. Mixing records its recipe, and the same seed reproduces the same audio.
+6. The folder and archive size limits are enforced.
