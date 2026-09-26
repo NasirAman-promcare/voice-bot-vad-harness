@@ -15,7 +15,7 @@
   "extras_lock": "requirements/aqis_lab/harness-extras.txt",
   "vcs_lock": "requirements/aqis_lab/harness-vcs.txt",
   "ten_vad": {"distribution": "ten_vad", "commit": "22a3bcd4509d0faaa8eef4881e8af5f39c178950",
-              "licence": "Apache-2.0 with additional conditions from Agora (LICENSE of the ten-vad repository at commit 22a3bcd4509d, installed as ten_vad-1.0.6.8.dist-info/licenses/LICENSE). Condition 1: You may not Deploy the ten-vad in a way that competes with Agora's offerings and/or that allows others to compete with Agora's offerings. Read the full conditions before any use beyond this lab."},
+              "licence": "Apache-2.0 with six additional conditions from Agora (LICENSE of the ten-vad repository at commit 22a3bcd4509d, installed as ten_vad-1.0.6.8.dist-info/licenses/LICENSE; read it in full before any use beyond this lab). 1: \"You may not Deploy the ten-vad in a way that competes with Agora's offerings and/or that allows others to compete with Agora's offerings, including without limitation enabling any third party to develop or deploy Applications.\" 2: Deploy it solely to create and enable deployment of your Application(s) solely for your benefit and the benefit of your direct End Users (the notice \"Powered by ten-vad\" is optional). 3: Derivative Works stay under this licence. 4 and 5: definitions of End Users and Application(s). 6: it contains code derived from projects under BSD-3-Clause and BSD-2-Clause; see its NOTICES file."},
   "import_check": ["numpy", "scipy", "soundfile", "yaml", "aiortc", "av", "websockets", "opuslib",
                    "pytest", "pytest_asyncio", "webrtcvad", "kaldi_native_fbank", "ten_vad"],
   "not_installed": [{"name": "torch", "reason": "decision R2-3"}],

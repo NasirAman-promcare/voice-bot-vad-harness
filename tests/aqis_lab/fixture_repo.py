@@ -97,6 +97,21 @@ class FixtureRepo:
             if merge_into_branch:
                 git(self.path, "merge", "-q", "--no-edit", "origin/main")
 
+    def commit_approval_text_on_main(self, name, text):
+        """Commit an approval file with exactly this text to main, push it, and merge it into the current branch.
+
+        Used for approvals whose lines are not in the standard form (audit finding WP-0.0-F33)."""
+        current = git(self.path, "rev-parse", "--abbrev-ref", "HEAD").strip()
+        if current != "main":
+            git(self.path, "checkout", "-q", "main")
+        self.write(f"docs/approvals/{name}", text)
+        self.commit(f"approval {name}")
+        git(self.path, "push", "-q", "origin", "main")
+        if current != "main":
+            git(self.path, "checkout", "-q", current)
+            git(self.path, "fetch", "-q", "origin")
+            git(self.path, "merge", "-q", "--no-edit", "origin/main")
+
     def branch(self, name="feature"):
         git(self.path, "checkout", "-q", "-b", name)
 

@@ -177,6 +177,69 @@ def s_modified_headerless_module(r):
     r.branch(); r.append("aqis_lab/legacy.py", "L10 = 10\n")
 
 
+# ---- audit round 5 (F33): approval keywords count only at the start of a line, with the value ending it ----
+APPROVAL_TEXTS = {
+    "bulleted_allow_edit": "STATUS: APPROVED\nCONDITIONS:\n- ALLOW-EDIT: vad_adapters/**\n",
+    "indented_allow_edit": "STATUS: APPROVED\n  ALLOW-EDIT: vad_adapters/**\n",
+    "bulleted_status": "- STATUS: APPROVED\nALLOW-EDIT: vad_adapters/**\n",
+    "allow_edit_trailing_text": "STATUS: APPROVED\nALLOW-EDIT: vad_adapters/** (WP-0.1 only)\n",
+}
+
+
+def approval_text_scenario(key):
+    def scenario(r):
+        r.commit_approval_text_on_main("WP-9.9.md", APPROVAL_TEXTS[key])
+        r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
+    return scenario
+
+
+def s_indented_allow_patterns_in(r):
+    r.commit_approval_text_on_main("WP-9.9.md", "STATUS: APPROVED\n  ALLOW-PATTERNS-IN: tools/t.py\n")
+    r.branch(); r.copy_fixture("code_patterns.py", "tools/t.py")
+
+
+def s_bulleted_expires(r):
+    # "- EXPIRES:" is not an expiry line, so the approval still counts: no finding.
+    r.commit_approval_text_on_main("WP-9.9.md", "STATUS: APPROVED\nALLOW-EDIT: vad_adapters/**\n- EXPIRES: 2000-01-01\n")
+    r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
+
+
+# ---- audit round 5 (F34) ----------------------------------------------------------------------------
+def s_modified_non_py_test_file(r):
+    # Check (b) applies to .py files under tests/ only.
+    r.write("tests/aqis_lab/data/expected.json", '{"a": 1}\n'); r.commit("data on main")
+    git(r.path, "push", "-q", "origin", "main")
+    r.branch(); r.write("tests/aqis_lab/data/expected.json", '{"a": 2}\n')
+
+
+def s_non_py_lab_test_file(r):
+    # Test patterns apply to .py files under tests/aqis_lab/ only.
+    r.branch(); r.write("tests/aqis_lab/README.md", "Lab tests never use xfail.\n")
+
+
+def s_guarded_added_then_deleted(r):
+    # A GUARDED file committed on the branch, then deleted in the working tree, is ignored.
+    r.branch(); r.write("vad_adapters/tmp_adapter.py", "T = 1\n"); r.commit("add")
+    r.delete("vad_adapters/tmp_adapter.py"); r.write("tools/z.py", "Z = 'fake'\n")
+
+
+def s_flagged_word_in_path(r):
+    # Diff header lines (+++ b/tools/fake_clock.py) are not added lines.
+    r.write("tools/fake_clock.py", "CLOCK = 0\n"); r.commit("clock on main")
+    git(r.path, "push", "-q", "origin", "main")
+    r.branch(); r.append("tools/fake_clock.py", "TICK = 1\n")
+
+
+def s_unscanned_suffix_in_lab_dirs(r):
+    # Only files with a scanned suffix under the lab code folders are scanned for code patterns.
+    r.branch(); r.write("aqis_lab/NOTES.md", "TODO: write the placeholder notes\n"); r.write("tools/data.json", '{"fake": 1}\n')
+
+
+def s_staged_rename_of_harness_test(r):
+    # --no-renames also applies to staged, uncommitted work.
+    r.branch(); git(r.path, "mv", "tests/regression/test_example.py", "tests/regression/test_staged.py")
+
+
 SCENARIOS = {
     "never": (s_never, False), "guarded": (s_guarded, False), "guarded_approved": (s_guarded_approved, False),
     "branch_only_approval": (s_branch_only_approval, False), "modified_harness_test": (s_modified_harness_test, False),
@@ -193,8 +256,26 @@ SCENARIOS = {
     "expired_approval": (s_expired_approval, False), "unapproved_status": (s_unapproved_status, False),
     "multi_pattern_line": (s_multi_pattern_line, False), "late_header": (s_late_header, False),
     "modified_headerless_module": (s_modified_headerless_module, False),
+    # audit round 5 (F33, F34)
+    **{key: (approval_text_scenario(key), False) for key in APPROVAL_TEXTS},
+    "indented_allow_patterns_in": (s_indented_allow_patterns_in, False), "bulleted_expires": (s_bulleted_expires, False),
+    "modified_non_py_test_file": (s_modified_non_py_test_file, False),
+    "non_py_lab_test_file": (s_non_py_lab_test_file, False),
+    "guarded_added_then_deleted": (s_guarded_added_then_deleted, False),
+    "flagged_word_in_path": (s_flagged_word_in_path, False),
+    "staged_rename_of_harness_test": (s_staged_rename_of_harness_test, False),
+    "unscanned_suffix_in_lab_dirs": (s_unscanned_suffix_in_lab_dirs, False),
 }
-EXPECT_NONE = {"guarded_approved", "approved_lab_test_edit", "clean", "modified_headerless_module"}
+EXPECT_NONE = {"guarded_approved", "approved_lab_test_edit", "clean", "modified_headerless_module", "bulleted_expires",
+               "modified_non_py_test_file", "non_py_lab_test_file", "flagged_word_in_path", "unscanned_suffix_in_lab_dirs"}
+# Scenarios whose exact findings are fixed here, so a change the hook shares cannot pass unnoticed either.
+EXPECT_EXACT = {
+    **{key: [("A2", "vad_adapters/example.py", "M")] for key in APPROVAL_TEXTS},
+    "guarded_added_then_deleted": [("C", "tools/z.py", 1, "dummy or fake wording", "Z = 'fake'")],
+    "staged_rename_of_harness_test": [("A2", "tests/regression/test_example.py", "D"),
+                                      ("A2", "tests/regression/test_staged.py", "A"),
+                                      ("B2", "tests/regression/test_example.py")],
+}
 
 
 @pytest.mark.parametrize("name", sorted(SCENARIOS))
@@ -207,6 +288,8 @@ def test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos(tmp_path, name):
     assert ours == hook
     if name in EXPECT_NONE:
         assert ours == []
+    elif name in EXPECT_EXACT:
+        assert ours == sorted(EXPECT_EXACT[name], key=repr)
     else:
         assert ours, f"scenario {name} must produce findings for the comparison to mean anything"
 

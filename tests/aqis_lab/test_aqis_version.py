@@ -104,3 +104,36 @@ def test_FR_0_0_01_dispatcher_rejects_unknown_command():
     extra = subprocess.run([sys.executable, "-m", "aqis_lab", "version", "--bogus"], cwd=ROOT,
                            capture_output=True, text=True, timeout=60)
     assert extra.returncode == 2 and "--bogus" in extra.stderr
+
+
+def test_FR_0_0_01_version_reports_package_repository_not_cwd(tmp_path):
+    # Audit F36: git is queried in the package's own repository, never the caller's working directory.
+    repo = make_copy_repo(tmp_path)
+    head = git(repo, "rev-parse", "--short", "HEAD").strip()
+    other = tmp_path / "other"
+    (other / "docs").mkdir(parents=True)
+    (other / "docs" / "notes.md").write_text("another checkout\n", encoding="utf-8")
+    git(other, "init", "-q")
+    git(other, "add", "-A")
+    git(other, "commit", "-q", "-m", "other checkout")
+    other_head = git(other, "rev-parse", "--short", "HEAD").strip()
+    assert other_head != head
+    (tmp_path / "plain").mkdir()
+    env = hermetic_git_env({"PYTHONPATH": str(repo)})
+    for cwd in (other, other / "docs", tmp_path / "plain"):
+        proc = run_version(cwd, env=env)
+        assert proc.returncode == 0, (cwd, proc.stderr)
+        m = LINE_RE.fullmatch(proc.stdout.strip())
+        assert m and m.group(2) == head and not m.group(3), (cwd, proc.stdout)
+
+
+def test_FR_0_0_01_version_rejects_package_below_checkout_top(tmp_path):
+    # Audit F36: a package that is not at the top of its git checkout is an error, never another commit.
+    checkout = tmp_path / "checkout"
+    shutil.copytree(ROOT / "aqis_lab", checkout / "sub" / "aqis_lab", ignore=shutil.ignore_patterns("__pycache__"))
+    git(checkout, "init", "-q")
+    git(checkout, "add", "-A")
+    git(checkout, "commit", "-q", "-m", "package in a subfolder")
+    proc = run_version(tmp_path, env=hermetic_git_env({"PYTHONPATH": str(checkout / "sub")}))
+    assert proc.returncode == 1 and proc.stdout == ""
+    assert proc.stderr.startswith("ERROR:") and "is not its top level" in proc.stderr, proc.stderr

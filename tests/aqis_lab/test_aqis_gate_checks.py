@@ -38,6 +38,42 @@ def test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed(repo
         ("A1", "CLAUDE.md", "A"), ("A1", "docs/process/PROTECTED_PATHS.txt", "M")]
 
 
+@pytest.mark.parametrize("text", [
+    "STATUS: APPROVED\nCONDITIONS:\n- ALLOW-EDIT: vad_adapters/**\n",
+    "STATUS: APPROVED\n  ALLOW-EDIT: vad_adapters/**\n",
+    "- STATUS: APPROVED\nALLOW-EDIT: vad_adapters/**\n",
+    "  STATUS: APPROVED\nALLOW-EDIT: vad_adapters/**\n",
+    "STATUS: APPROVED\nALLOW-EDIT: vad_adapters/** (WP-0.1 only)\n",
+], ids=["bulleted_allow_edit", "indented_allow_edit", "bulleted_status", "indented_status", "trailing_text"])
+def test_FR_0_0_05_a_approval_lines_must_start_the_line(repo, text):
+    # Audit F33: STATUS: APPROVED and ALLOW-EDIT count only at the start of a line, with the value ending it
+    # (as in the Stop hook); a bullet, an indent or trailing text approves nothing.
+    repo.commit_approval_text_on_main("WP-9.9.md", text)
+    repo.branch()
+    repo.append("vad_adapters/example.py", "\nEXTRA = 1\n")
+    report = repo.gate_json()
+    assert report["ok"] is False and rules(report) == [("A2", "vad_adapters/example.py")]
+
+
+def test_FR_0_0_05_a_standard_approval_lines_still_approve(repo):
+    # The positive control for the test above: the same approval written in the standard form approves.
+    repo.commit_approval_text_on_main("WP-9.9.md", "STATUS: APPROVED\nALLOW-EDIT: vad_adapters/**\n- EXPIRES: 2000-01-01\n")
+    repo.branch()
+    repo.append("vad_adapters/example.py", "\nEXTRA = 1\n")
+    report = repo.gate_json()
+    assert report["ok"] is True and report["findings"] == []     # a bulleted EXPIRES line is not an expiry
+
+
+def test_FR_0_0_05_c_indented_allow_patterns_in_exempts_nothing(repo):
+    # Audit F33: an indented ALLOW-PATTERNS-IN line exempts no file.
+    repo.commit_approval_text_on_main("WP-9.9.md", "STATUS: APPROVED\n  ALLOW-PATTERNS-IN: tools/t.py\n")
+    repo.branch()
+    repo.copy_fixture("code_patterns.py", "tools/t.py")
+    report = repo.gate_json()
+    assert report["exempted_files"] == []
+    assert {f["rule"] for f in report["findings"]} == {"C1"} and all(f["path"] == "tools/t.py" for f in report["findings"])
+
+
 def test_FR_0_0_05_a_approvals_readme_approves_nothing(repo):
     # Audit F28 (M24): docs/approvals/README.md on main is ignored even when it holds approval lines.
     repo.approve_on_main("README.md", "ALLOW-EDIT: vad_adapters/**\n")

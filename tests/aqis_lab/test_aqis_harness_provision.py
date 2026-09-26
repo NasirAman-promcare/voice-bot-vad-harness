@@ -45,7 +45,8 @@ def manifest_bytes(names):
     return (json.dumps(entries, indent=1) + "\n").encode()
 
 
-def corpus_archive(files):
+def corpus_archive(files, extra_members=()):
+    """A gzip tar of regular files, plus optional extra TarInfo members (links, escaping paths) for hostile archives."""
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         for name, data in files.items():
@@ -53,6 +54,8 @@ def corpus_archive(files):
             info.size = len(data)
             info.mtime = 0
             tar.addfile(info, io.BytesIO(data))
+        for info, data in extra_members:
+            tar.addfile(info, io.BytesIO(data) if data is not None else None)
     return buf.getvalue()
 
 
@@ -72,16 +75,17 @@ REFUSE_SYSTEM_CHANGES = {name: f'echo "stand-in {name}: system-changing command 
 
 
 def make_tree(tmp_path, *, model_blob=MODEL, tracked_manifest=None, corpus_sha=None, gitignore=None,
-              lfs_content=False, system_packages=()):
+              lfs_content=False, system_packages=(), manifest_names=("a.wav", "b.wav"), extra_members=()):
     tree = tmp_path / "tree"
     (tree / "aqis_lab" / "deploy").mkdir(parents=True)
     shutil.copy2(SCRIPT_SH, tree / "aqis_lab" / "deploy" / SCRIPT_SH.name)
     shutil.copy2(SCRIPT_PY, tree / "aqis_lab" / "deploy" / SCRIPT_PY.name)
     (tree / ".gitignore").write_text(
         (ROOT / ".gitignore").read_text(encoding="utf-8") if gitignore is None else gitignore, encoding="utf-8")
-    manifest = manifest_bytes(["a.wav", "b.wav"])
+    manifest = manifest_bytes(list(manifest_names))
     archive = corpus_archive({"corpus/audio/a.wav": WAV_A, "corpus/audio/b.wav": WAV_B,
-                              "corpus/manifest.json": manifest, "corpus/build/recipe_log.json": b"{}\n"})
+                              "corpus/manifest.json": manifest, "corpus/build/recipe_log.json": b"{}\n"},
+                             extra_members)
     (tree / "corpus").mkdir()
     (tree / "corpus" / "manifest.json").write_bytes(manifest if tracked_manifest is None else tracked_manifest)
     (tree / "corpus-v1.tar.gz").write_bytes(archive)
@@ -364,6 +368,21 @@ def test_FR_0_0_12_asset_licences_recorded():
     assert corpus["licence"].count("CC BY 4.0") == 2
 
 
+def test_FR_0_0_12_ten_vad_licence_states_all_conditions():
+    # Audit F37: condition 1 quoted in full, and every one of the six additional conditions summarised.
+    # The quote is the text of LICENSE lines 10-13 at the pinned commit (ten_vad-1.0.6.8.dist-info/licenses/LICENSE).
+    licence = " ".join(REAL_CONFIG["ten_vad"]["licence"].split())
+    condition_1 = ("You may not Deploy the ten-vad in a way that competes with Agora's offerings and/or that allows "
+                   "others to compete with Agora's offerings, including without limitation enabling any third party "
+                   "to develop or deploy Applications.")
+    assert condition_1 in licence
+    assert "six additional conditions" in licence
+    for words in ("solely for your benefit and the benefit of your direct End Users",   # condition 2
+                  "Derivative Works", "End Users", "Application(s)",                      # conditions 3 to 5
+                  "BSD-3-Clause", "BSD-2-Clause", "NOTICES"):                             # condition 6
+        assert words in licence, words
+
+
 def test_FR_0_0_12_platform_pin_is_debian_or_ubuntu():
     # Approval condition (F16 decision): Debian or Ubuntu on x86_64 only.
     pin = REAL_CONFIG["platform"]
@@ -448,6 +467,104 @@ def test_FR_0_0_12_non_root_uses_sudo_for_missing_package(tmp_path):
     finally:
         if as_root:
             shutil.rmtree(base)
+
+
+# ---- occupied or foreign targets and hostile archives (audit F35): FAIL, and nothing overwritten --------
+def assert_corpus_fail(proc, words):
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    result, detail = table(proc.stdout)["corpus"]
+    assert result == "FAIL" and words in detail, detail
+
+
+def test_FR_0_0_12_refuses_clip_occupied_by_different_content(tmp_path):
+    tree, cfg = make_tree(tmp_path)
+    (tree / "corpus" / "audio").mkdir(parents=True)
+    (tree / "corpus" / "audio" / "a.wav").write_bytes(b"stale clip from an older corpus")
+    proc = run(tree, cfg, tmp_path / "cache", *DATA)
+    assert_corpus_fail(proc, "corpus/audio/a.wav is occupied by different content; not overwriting it")
+    stale = tree / "corpus" / "audio" / "a.wav"
+    assert not stale.is_symlink() and stale.read_bytes() == b"stale clip from an older corpus"
+
+
+def test_FR_0_0_12_fails_when_manifest_clip_missing_from_archive(tmp_path):
+    tree, cfg = make_tree(tmp_path, manifest_names=("a.wav", "b.wav", "c.wav"))
+    proc = run(tree, cfg, tmp_path / "cache", *DATA)
+    assert_corpus_fail(proc, "1 manifest clips still missing, first corpus/audio/c.wav")
+
+
+@pytest.mark.parametrize("kind, words", [
+    # A symlinked corpus/audio is refused by the first guard: git matches no ignore rule through a symlink.
+    ("symlink", "corpus/audio/probe.wav is not ignored by git"),
+    ("file", "corpus/audio exists and is not a real directory; not touching it"),
+])
+def test_FR_0_0_12_refuses_audio_dir_that_is_not_a_directory(tmp_path, kind, words):
+    tree, cfg = make_tree(tmp_path)
+    audio = tree / "corpus" / "audio"
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    if kind == "symlink":
+        audio.symlink_to(elsewhere)
+    else:
+        audio.write_bytes(b"not a folder")
+    proc = run(tree, cfg, tmp_path / "cache", *DATA)
+    assert_corpus_fail(proc, words)
+    if kind == "symlink":
+        assert audio.is_symlink() and os.readlink(audio) == str(elsewhere) and not any(elsewhere.iterdir())
+    else:
+        assert audio.read_bytes() == b"not a folder"
+
+
+def test_FR_0_0_12_refuses_weights_link_pointing_elsewhere(tmp_path):
+    tree, cfg = make_tree(tmp_path)
+    old = tmp_path / "old-weights"
+    old.mkdir()
+    link = tree / "pretrained_models" / "FireRedVAD" / "Stream-VAD"
+    link.parent.mkdir(parents=True)
+    link.symlink_to(old)
+    proc = run(tree, cfg, tmp_path / "cache", *DATA)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    result, detail = table(proc.stdout)["weights"]
+    assert result == "FAIL" and f"pretrained_models/FireRedVAD/Stream-VAD already points elsewhere ({old})" in detail
+    assert os.readlink(link) == str(old)
+
+
+def test_FR_0_0_12_refuses_real_folder_at_weights_link(tmp_path):
+    tree, cfg = make_tree(tmp_path)
+    folder = tree / "pretrained_models" / "FireRedVAD" / "Stream-VAD"
+    folder.mkdir(parents=True)
+    (folder / "user_notes.txt").write_text("keep me\n", encoding="utf-8")
+    proc = run(tree, cfg, tmp_path / "cache", *DATA)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    result, detail = table(proc.stdout)["weights"]
+    assert result == "FAIL" and "occupied by a real file or folder; not overwriting it" in detail
+    assert not folder.is_symlink() and (folder / "user_notes.txt").read_text(encoding="utf-8") == "keep me\n"
+
+
+def escaping_member():
+    info = tarfile.TarInfo("../../escape.txt")
+    data = b"written outside the extraction folder"
+    info.size = len(data)
+    return info, data
+
+
+def symlink_member():
+    info = tarfile.TarInfo("corpus/audio/link.wav")
+    info.type = tarfile.SYMTYPE
+    info.linkname = "/etc/hostname"
+    return info, None
+
+
+@pytest.mark.parametrize("member, words", [(escaping_member, "archive member escapes the cache: ../../escape.txt"),
+                                           (symlink_member, "archive member is not a regular file or folder: "
+                                                            "corpus/audio/link.wav")],
+                         ids=["escaping_path", "symlink"])
+def test_FR_0_0_12_rejects_hostile_archive_member(tmp_path, member, words):
+    tree, cfg = make_tree(tmp_path, extra_members=[member()])
+    cache = tmp_path / "cache"
+    proc = run(tree, cfg, cache, *DATA)
+    assert_corpus_fail(proc, words)
+    assert not any(tmp_path.rglob("escape.txt")) and not any(p.is_symlink() for p in cache.rglob("*"))
+    assert not (tree / "corpus" / "audio").exists()
 
 
 # ---- TEN VAD commit and pip check, against a real pip install (audit F13, F18) ---------------

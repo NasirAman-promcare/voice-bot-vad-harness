@@ -209,3 +209,42 @@ commit: 9016ee7
 - **CI on `9016ee7`:** pull request run `36163086560` and push run `36163080671`, both jobs success.
 - **Diff inside the budget.** No gate or provisioning code changed; `gate.py` and `harness_provision.py` changed only in their header lists and change logs. The tests changed only by additions: new scenario functions and `SCENARIOS`/`EXPECT_NONE` entries, and new test functions. No existing assertion changed.
 - **Records.** The registry rows CAP-AUDIT-001, CAP-AUDIT-002, CAP-ENV-003 and CAP-ENV-006 are updated; `test_FR_0_0_08_module_headers_match_registry` passes.
+
+## Round 5 audit fixes (F33 to F38)
+
+**Source.** `docs/progress/WP-0.0/AUDIT.md` round 5, commit `1579031`, verdict FAIL.
+
+**Owner approval.** Round 5 fixes are approved under CONDITIONS in `docs/approvals/WP-0.0.md` on `main` (`7303ddd`, merged at `1676b0f`), and the OC-0.0-01 summary is accepted there. Owner instruction: `/surgical-fix WP-0.0-F33 … F38`, test-first test additions only.
+
+**Baseline (F38), run before any change** on `1676b0f`, clean tree:
+```text
+fast: 152 passed, 8 deselected in 30.11s
+slow/network: 8 passed, 152 deselected in 52.33s
+gate: 0 findings: OK (0.2 s)
+git status lines after: 0
+```
+These cover every test linked to CAP-AUDIT-001 to 004, CAP-ENV-003, CAP-ENV-006 and CAP-CLI-002, the capabilities these tests guard.
+
+### Root causes
+| Finding | Root cause |
+| --- | --- |
+| F33 CRITICAL | No test put an approval keyword anywhere but at the start of a line, or followed a glob with more text. The approval regexes sit inline in `load_approvals`, outside the compared pattern tables. |
+| F34 CRITICAL | The parity scenarios never modified a non-`.py` file under `tests/`, never put test-pattern words in a non-`.py` lab test file, and never let a `+++` path hold a flagged word. The "added, then deleted" scenario used a path that gives no finding either way. My round 4 claim that every parity rule had a scenario was not checked rule by rule. |
+| F35 CRITICAL | The provisioning tests all started with empty targets. No test put stale or foreign data where provisioning writes, or a hostile archive member in the corpus. |
+| F36 MAJOR | Every `version` test ran from the package's own repository root. The package-root design was therefore never compared with a different working directory. |
+| F37 MINOR | I shortened the TEN VAD licence quote without marking the cut, and did not summarise conditions 2 to 6. |
+| F38 MINOR | Round 4 skipped the baseline step; done above for this round. |
+
+### Change budget
+| File | Change | Finding |
+| --- | --- | --- |
+| `tests/aqis_lab/fixture_repo.py` | New method `FixtureRepo.commit_approval_text_on_main(name, text)`: an approval file with exact text on `main`, merged into the branch. Existing methods unchanged | F33 |
+| `tests/aqis_lab/test_aqis_gate_parity.py` | New scenario functions, `SCENARIOS`/`EXPECT_NONE` entries, and a new `EXPECT_EXACT` table. `test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos` gains one `elif` branch that asserts the exact findings for the scenarios in `EXPECT_EXACT` (the auditor asked for scenarios "each with the expected findings"). It is a stronger assertion, and no existing assertion changes | F33, F34 |
+| `tests/aqis_lab/test_aqis_gate_checks.py` | New FR-0.0-05 tests for approval-line anchoring | F33 |
+| `tests/aqis_lab/test_aqis_harness_provision.py` | Helpers `corpus_archive` and `make_tree` gain optional arguments for extra archive members and manifest clips; defaults are unchanged. New tests for occupied or foreign targets and hostile archive members, and for the TEN VAD licence text | F35, F37 |
+| `tests/aqis_lab/test_aqis_version.py` | New FR-0.0-01 tests: working directory in another checkout, and the package below the checkout's top level | F36 |
+| `config/aqis_lab/harness_assets.json` | `ten_vad.licence` text: condition 1 in full, summary of the six conditions | F37 |
+| Module headers of `tools/audit/gate.py`, `aqis_lab/deploy/harness_provision.py`, `aqis_lab/commands/version.py`; `docs/capabilities/REGISTRY.md` | Test lists and change logs only | all |
+| `docs/progress/WP-0.0/EVIDENCE.md`, `FIXES.md`, `STATUS.md` | Records: the corrected claim at EVIDENCE.md:695, and a rule-by-rule mutation table for `stop_gate.py:90-170` and `:280-310` | F34 |
+
+No gate, provisioning or version code changes.
