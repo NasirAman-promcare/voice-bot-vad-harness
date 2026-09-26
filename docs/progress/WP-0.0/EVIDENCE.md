@@ -1077,3 +1077,23 @@ The battery script is `mustcatch_r8.py` in the scratchpad; its output is the tab
 | MC16.59 | 16 | report not compared with the requested modules | `aqis_lab/deploy/harness_provision.py` | 3 failed, 56 passed, 179 deselected in 16.33s | test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null]]]; test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null], ["os", null], ["csv", null]]]; test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null], ["csv", null], ["csv", null]]] |
 | MC16.60 | 16 | failed modules not reported | `aqis_lab/deploy/harness_provision.py` | 2 failed, 57 passed, 179 deselected in 16.51s | test_aqis_harness_provision.py::test_FR_0_0_12_import_check_builds_ten_vad; test_aqis_harness_provision.py::test_FR_0_0_12_import_check_names_each_failing_module |
 | MC16.61 | 16 | P16 TenVad not built | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 16.45s | test_aqis_harness_provision.py::test_FR_0_0_12_import_check_builds_ten_vad |
+
+**Suites and gate on the clean committed tree (`6e28f44`).** The fast suite is `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"`. It ran once with the system git-lfs, and once with git-lfs 3.7.0 first on PATH. The slow suite is `-m "slow or network"`. The gate is `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0`.
+```text
+commit: 6e28f44
+status lines before: 0
+fast git-lfs/3.4.1: 232 passed, 8 deselected in 44.05s
+fast git-lfs/3.7.0: 232 passed, 8 deselected in 42.61s
+slow/network: 8 passed, 232 deselected in 56.20s
+gate: 0 findings: OK (0.3 s)
+git status lines after: 0
+```
+
+**CI (workflow `aqis-lab-ci`, both runs `completed success`):**
+- `57ba8b7`, the round 8 fixes: push `36258768589`, pull request `36258771848`.
+- `c45259e`, records: push `36258982662`, pull request `36258986216`.
+- `6e28f44`, the must-catch proof and fail-closed tests: push `36260431925`, pull request `36260437433`.
+
+The final records commit, which sets STATUS to READY-FOR-AUDIT, changes only `EVIDENCE.md` and `STATUS.md`. Its CI result is reported to the owner in the session.
+
+**Open.** No fix is left open. F48, F51 and F53 are accepted debt (DEBT-001 to DEBT-003, target WP-0.9). One question from the round 7 report is still the owner's to decide: should provisioning re-hash each extracted clip on every run (AUDIT.md round 7, "For the owner")? The round 8 scope does not include it, so nothing was changed.
