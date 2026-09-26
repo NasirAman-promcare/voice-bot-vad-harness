@@ -36,3 +36,11 @@ Producing real events; adapters.
 
 ## Stop and ask if
 - A field's meaning is unclear for later phases, or the blueprint and this spec disagree.
+
+## Must-catch behaviours
+1. Each required field of each schema: omitting it is rejected, naming the field by JSON Pointer.
+2. Wrong types and values outside enums are rejected.
+3. An unknown major schema version is rejected.
+4. `run_card_id` equals the SHA-256 of the canonical run card as defined, computed independently in the test.
+5. The documents and the schemas list exactly the same fields.
+6. `contracts validate` exits non-zero on any invalid record in a JSON Lines file.

@@ -1,7 +1,7 @@
 STATUS: APPROVED
 WP: WP-0.0
 APPROVED-BY: owner
-DATE: 2026-09-25
+DATE: 2026-09-26
 PLAN: docs/progress/WP-0.0/PLAN.md (Round 1 and Round 2 sections)
 ALLOW-PATTERNS-IN: tools/audit/patterns.py
 ALLOW-PATTERNS-IN: tests/aqis_lab/fixtures/**
@@ -21,4 +21,8 @@ CONDITIONS:
 - Round 5: fixes for WP-0.0-F33 to F38 approved.
 - OC-0.0-01: The Colab harness provisioning verification summary is accepted.
 - Round 6: fixes for WP-0.0-F39 to F46 approved.
-- BLK-007 decision: Option 1 approved. In test_FR_0_0_12_root_installs_without_sudo, use pytest monkeypatch for os.geteuid to return 0. Include minor fixes F45 and F46.
+- BLK-007 decision: Option 1 approved (monkeypatch geteuid in root test).
+- F44 accepted as a known limit: a test file replaced by a symlink is not reported by the hook or the gate.
+- The non-root provisioning test runs as an unprivileged user (directly when not root, through setpriv when root), is never skipped, and asserts that sudo -n is attempted for a missing package.
+- AT-0.0-04 and AT-0.0-07 confirmed green by the owner in the Actions tab.
+- Round 8 is the final round: fix WP-0.0-F47, F49, F50, F52 and F54. F48, F51 and F53 are accepted as debt in docs/progress/DEBT.md, target WP-0.9. Audits follow AUDIT_PROTOCOL version 2 (kit patch 3).

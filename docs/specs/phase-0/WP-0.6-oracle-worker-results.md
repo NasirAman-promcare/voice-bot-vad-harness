@@ -33,3 +33,10 @@ The Oracle VM runs the lab the same way as everywhere else; results are stored a
 
 ## Stop and ask if
 - The Oracle architecture blocks a pinned dependency, or core reservation is not possible on the shape.
+
+## Must-catch behaviours
+1. The results store refuses to overwrite existing rows.
+2. `trace` returns the exact run card, manifest version, clip, commit and lock hash for a row.
+3. Timing runs are pinned to the reserved cores.
+4. `sync` never deletes remote files.
+5. The setup script stops with a clear message on an unsupported architecture or operating system.

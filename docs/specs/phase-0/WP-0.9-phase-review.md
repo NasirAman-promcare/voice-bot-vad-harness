@@ -13,3 +13,7 @@ Close phase 0 with evidence, and hand phase 1 a clean start.
 
 ## Acceptance
 - **AT-0.9-01** `/phase-audit 0` returns PASS.
+
+## Must-catch behaviours
+1. Each exit criterion E1 to E6 links to evidence that exists.
+2. Every open debt row in `docs/progress/DEBT.md` targeting phase 0 is either closed or moved to a named later WP, with the owner's approval.

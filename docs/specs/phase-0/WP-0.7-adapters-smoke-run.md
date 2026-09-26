@@ -41,3 +41,11 @@ Run three real components on the smoke pack end to end and prove identical resul
 
 ## Stop and ask if
 - A model download host is blocked; results differ across platforms (report every difference, never hide one); NeMo cannot be pinned for the Colab Python version.
+
+## Must-catch behaviours
+1. Every adapter event validates against event log v1.
+2. An adapter failure emits an `error` event and raises.
+3. The Parakeet adapter refuses to run without a GPU and is never silently skipped.
+4. The Vosk model is rejected when its checksum differs.
+5. The real-speed feeder cannot run faster than real time.
+6. `parity` reports every per-clip difference.

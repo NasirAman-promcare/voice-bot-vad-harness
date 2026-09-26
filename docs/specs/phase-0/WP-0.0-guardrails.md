@@ -93,3 +93,34 @@ Contracts, adapters, and Colab or Oracle code.
 
 ### Stop and ask if
 - The harness needs a network service or a GPU for its tests, or writes into tracked paths at runtime.
+
+---
+
+## Amendment 2 — bounded audits and closing WP-0.0 (owner, 2026-09-26)
+
+**Why.** Seven audit rounds have passed. The code works in every case checked, but the audit rules in version 1 counted every untested line found by a code break as CRITICAL and let each round search wider, so they could not converge. From now on, audits follow `docs/process/AUDIT_PROTOCOL.md` version 2: this must-catch list is the fixed target, and at most 10 exploratory breaks per round are allowed in changed code.
+
+### Must-catch behaviours
+Each must make a named test fail when broken:
+1. Edits to NEVER paths are blocked and reported, by both the hook and the gate.
+2. Edits to GUARDED paths are blocked unless an `ALLOW-EDIT` approval with `STATUS: APPROVED` exists on `origin/main`.
+3. Approvals count only from `origin/main`: approvals made on a branch, expired ones, and ones without `STATUS: APPROVED` are ignored.
+4. Existing tests modified or deleted without approval are reported.
+5. Compromise patterns are detected in every scanned file type; `audit-allow` needs a reason and is always listed.
+6. Skips, xfails, `pytestmark` skips and trivial asserts in lab tests are detected.
+7. The gate fails closed: git or file read errors give exit 2, never a clean pass.
+8. A new lab module without a CAPABILITIES header is reported.
+9. Registry rows cannot disappear, and every test they name exists **and is collected by pytest**.
+10. Traceability: every requirement ID appears in PLAN.md, in a test pytest collects, and in EVIDENCE.md.
+11. The bootstrap uses the Colab probe's Python version and fails fast when the probe is missing or unreadable.
+12. `version` shows `+dirty` for staged, unstaged and untracked changes.
+13. Provisioning never reports PASS for a package that is not installed or an install that failed.
+14. Provisioning never reports PASS for corpus or weights with wrong or partial content: hash mismatch, a link pointing at other content, an interrupted extraction, or Git LFS pointer files.
+15. Provisioning leaves `git status` clean and never writes the GitHub token anywhere.
+16. The import check reports each module separately and cannot report modules it did not import.
+
+### Closing scope (round 8, final)
+- Fix WP-0.0-F47 (must-catch 9 and 10), F49 (13), F50 (14), F52 (16) and F54 (documentation).
+- F48, F51 and F53 are accepted as debt in `docs/progress/DEBT.md`, with target WP-0.9.
+- Before READY-FOR-AUDIT, record the must-catch proof for all 16 behaviours in `EVIDENCE.md`, and show CI green on the final commit.
+- The final audit follows protocol version 2 and is a re-audit of round 7.
