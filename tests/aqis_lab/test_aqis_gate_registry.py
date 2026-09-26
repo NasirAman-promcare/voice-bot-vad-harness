@@ -140,3 +140,68 @@ def test_FR_0_0_08_module_headers_match_registry():
         doc = (ROOT / package).read_text(encoding="utf-8")
         for field in ("CAPABILITIES:", "INPUTS AND OUTPUTS:", "CONTRACTS:", "INVARIANTS:", "NOT IN SCOPE:", "CHANGE LOG:"):
             assert field in doc, f"{package} header lacks {field}"
+
+
+# Audit F47 (must-catch 9): a registry row may name only tests that pytest collects. Every placement below
+# defines a function whose name starts with "test"; pytest's default collection runs only those in COLLECTED
+# (checked against pytest itself in the test).
+COLLECTION_PROBE = {
+    "tests/aqis_lab/probe/test_probe.py": (
+        "from collections import OrderedDict\n\nimport pytest\n\n\n"
+        "def test_module_level():\n    assert 1 + 1 == 2\n\n\n"
+        "class TestGroup:\n    def test_in_test_class(self):\n        assert 2 + 2 == 4\n\n"
+        "    class TestInner:\n        def test_in_nested_test_class(self):\n            assert 7 + 7 == 14\n\n"
+        "    @property\n    def test_only_as_property(self):\n        return 8\n\n\n"
+        "class Helpers:\n    def test_only_in_helper_class(self):\n        assert 3 + 3 == 6\n\n\n"
+        "class TestWithInit:\n    def __init__(self):\n        self.x = 1\n\n"
+        "    def test_only_in_class_with_init(self):\n        assert self.x == 1\n\n\n"
+        "class TestWithNew:\n    def __new__(cls):\n        return super().__new__(cls)\n\n"
+        "    def test_only_in_class_with_new(self):\n        assert 9 + 9 == 18\n\n\n"
+        "class Base:\n    def __init__(self):\n        self.y = 2\n\n\n"
+        "class TestInheritsInit(Base):\n    def test_only_in_class_inheriting_init(self):\n        assert self.y == 2\n\n\n"
+        "class TestSwitchedOff:\n    __test__ = False\n\n"
+        "    def test_only_in_switched_off_class(self):\n        assert 10 + 10 == 20\n\n\n"
+        "class TestImportedBase(OrderedDict):\n    def test_only_in_class_with_imported_base(self):\n"
+        "        assert 13 + 13 == 26\n\n\n"
+        "@pytest.fixture\ndef test_only_as_fixture():\n    return 11\n\n\n"
+        "def helper():\n    def test_only_nested():\n        assert 4 + 4 == 8\n    return test_only_nested\n"),
+    "tests/aqis_lab/probe/probe_test.py": "def test_in_suffix_file():\n    assert 5 + 5 == 10\n",
+    "tests/aqis_lab/probe/probe_helpers.py": "def test_only_in_helper_module():\n    assert 6 + 6 == 12\n",
+    "tests/aqis_lab/probe/test_switched_off.py": ("__test__ = False\n\n\n"
+                                                  "def test_only_in_switched_off_module():\n    assert 12 + 12 == 24\n"),
+}
+COLLECTED = ["test_in_nested_test_class", "test_in_suffix_file", "test_in_test_class", "test_module_level"]
+NOT_COLLECTED = ["test_only_as_fixture", "test_only_as_property", "test_only_in_class_inheriting_init",
+                 "test_only_in_class_with_imported_base",
+                 "test_only_in_class_with_init", "test_only_in_class_with_new", "test_only_in_helper_class",
+                 "test_only_in_helper_module", "test_only_in_switched_off_class", "test_only_in_switched_off_module",
+                 "test_only_nested"]
+
+
+def pytest_collected_names(path):
+    proc = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider",
+                           "tests/aqis_lab/probe"], cwd=path, capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    return sorted(line.rsplit("::", 1)[1] for line in proc.stdout.splitlines() if "::" in line)
+
+
+def test_FR_0_0_08_row_names_only_tests_pytest_collects(repo):
+    for rel, text in COLLECTION_PROBE.items():
+        repo.write(rel, text)
+    # Independent oracle: pytest itself collects exactly the expected tests.
+    assert pytest_collected_names(repo.path) == COLLECTED
+    names = ", ".join(f"`{n}`" for n in COLLECTED + NOT_COLLECTED)
+    repo.append(REG, row("CAP-FIX-002", "`aqis_lab/existing.py`", names))
+    found = e_findings(repo.gate_json())
+    assert [(r, line) for r, line, _ in found] == [("E3", 6)]
+    reported = found[0][2].rsplit(": ", 1)[1].split(", ")
+    assert sorted(reported) == NOT_COLLECTED
+
+
+def test_FR_0_0_08_row_naming_collected_tests_passes(repo):
+    for rel, text in COLLECTION_PROBE.items():
+        repo.write(rel, text)
+    names = ", ".join(f"`{n}`" for n in COLLECTED)
+    repo.append(REG, row("CAP-FIX-002", "`aqis_lab/existing.py`", names))
+    report = repo.gate_json()
+    assert e_findings(report) == [] and report["ok"] is True

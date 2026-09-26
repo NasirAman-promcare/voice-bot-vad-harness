@@ -3,7 +3,7 @@
 The audit gate checks a branch's changes for the rule violations the AQIS lab cares about. It exits `0` only when it finds nothing. It is built by WP-0.0 (FR-0.0-05 to FR-0.0-09, NFR-0.0-01 to NFR-0.0-03; FR-0.0-06 amended in round 2 to match Stop hook version 2/3). It runs in CI (with `--wp` taken from the pull request title), and the Stop hook (`.claude/hooks/stop_gate.py`) calls it at the end of every Claude turn.
 
 ## Usage
-Run from the repository root, with the project environment. The `tools` package is imported from the current folder. From anywhere else, set `PYTHONPATH` to the repository root. From `docs/` that is not enough, because the folder `docs/tools/` shadows the package: `cd` to the root instead (corrected for audit finding F45):
+Run from the repository root, with the project environment. The `tools` package is imported from the current folder. From any subfolder, including `docs/`, set `PYTHONPATH` to the repository root and it works the same. Without `PYTHONPATH`, a subfolder fails: from `docs/` with `No module named 'tools.audit'` (the folder `docs/tools/` is found instead of the package), elsewhere with `No module named 'tools'` (corrected for audit findings F45 and F54):
 
 ```bash
 git fetch origin main                                   # approvals are read from origin/main
@@ -88,13 +88,18 @@ Exemptions never count as findings. They are printed first, so the findings stay
 ## Registry format (check e)
 The table in `docs/capabilities/REGISTRY.md` has exactly the columns `Capability ID | Module | Functions | What it does | Tests | Introduced by | Status`. Cells cannot contain `|`, and backticks around values are ignored.
 - **Module**: a repo-relative file path, for example `aqis_lab/commands/version.py` or `aqis_lab/deploy/dev_bootstrap.sh`, or a dotted Python module such as `aqis_lab.commands.version`, resolved to `.py` or `/__init__.py`.
-- **Tests**: comma-separated test function names such as `test_FR_0_0_01_x`, or `path::name`, or `path::Class::name`. A name exists when a function with that name is defined in a Python file under `tests/`, excluding `tests/aqis_lab/fixtures/`. The function must be at module level, or a method of a class whose name starts with `Test`.
+- **Tests**: comma-separated test function names such as `test_FR_0_0_01_x`, or `path::name`, or `path::Class::name`. A name exists when pytest's default collection would run it, read from the source without running pytest. The rules (corrected for audit finding F47):
+  - The file is under `tests/`, outside `tests/aqis_lab/fixtures/`, and named `test_*.py` or `*_test.py`. A module that sets `__test__ = False` has no tests.
+  - The function name starts with `test` and is defined with `def` or `async def` at module level. It can also be a method of a class whose name starts with `Test`, including a class nested in such a class.
+  - The class must not set `__test__ = False`. It must not define `__init__` or `__new__`, either itself or through a base class. Every base class must be defined in the same file (or be `object`). A base class imported from elsewhere cannot be read, so the class does not count; this is stricter than pytest.
+  - Functions decorated with `fixture` or `property` are not tests. Functions nested inside other functions, and methods of any other class, are not tests either.
+  - Tests inherited from a base class, and tests bound by assignment (`test_x = f`), are not counted either. This is also stricter than pytest, so the gate can reject a name pytest runs, but never accepts one it does not.
 
 ## Traceability (check f, `--wp`)
 - The spec is the single file `docs/specs/**/<WP>-*.md`.
 - **Requirement IDs** are the `FR-`, `NFR-`, `AT-` and `OC-` IDs carrying that WP's own number, so `FR-0.2-03` inside the WP-0.0 spec is ignored.
 - **Every ID** must appear in `docs/progress/<WP>/PLAN.md` and `EVIDENCE.md`.
-- **`FR-` and `NFR-` IDs** must also appear in a test function name under `tests/aqis_lab/` (fixtures excluded). `AT-` and `OC-` IDs are acceptance commands and owner checks, so they need only the two documents (owner decision 1).
+- **`FR-` and `NFR-` IDs** must also appear in the name of a test under `tests/aqis_lab/` that pytest collects, under the same rules as the registry's **Tests** column (fixtures excluded; audit finding F47). `AT-` and `OC-` IDs are acceptance commands and owner checks, so they need only the two documents (owner decision 1).
 - **Matching**: in test names, `FR-0.2-03` matches `FR_0_2_03`. Matches need a non-alphanumeric character before and no digit after, so `NFR_0_2_03` never satisfies `FR-0.2-03` and `FR_0_2_031` never satisfies `FR-0.2-03`. The same boundaries apply to the hyphenated IDs in the documents.
 
 ## JSON report (`--json`)
@@ -110,7 +115,7 @@ The table in `docs/capabilities/REGISTRY.md` has exactly the columns `Capability
 - **An existing test replaced by a symlink (owner decision, round 6 audit finding F44).**
   - **What happens:** a commit that replaces an existing test file with a symlink shows in `git diff --name-status` as a typechange (`T`). For example, `tests/aqis_lab/test_existing.py` could become a link to a weaker copy.
   - **Why nothing reports it:** check (b) looks only at modified (`M`) and deleted (`D`) tests, and a `tests/aqis_lab/` path is LAB-OWNED, so check (a) is silent too.
-  - **Why it stays this way:** the Stop hook (`stop_gate.py:101,288`) has the same rule, and the gate must match the hook (FR-0.0-06). The owner accepted the limit under CONDITIONS in `docs/approvals/WP-0.0.md` ("documenting F44 symlink limit in AUDIT_GATE.md").
+  - **Why it stays this way:** the Stop hook (`stop_gate.py:101,288`) has the same rule, and the gate must match the hook (FR-0.0-06). The owner accepted the limit under CONDITIONS in `docs/approvals/WP-0.0.md` on `main`: "F44 accepted as a known limit: a test file replaced by a symlink is not reported by the hook or the gate." (corrected for audit finding F54).
   - **Test:** the parity scenario `lab_test_replaced_by_symlink` in `tests/aqis_lab/test_aqis_gate_parity.py` records that the gate and the hook both report nothing. If the hook is changed to treat `T` as `M`, that scenario fails until the gate is changed the same way.
 
 ## Limits

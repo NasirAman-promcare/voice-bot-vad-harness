@@ -7,7 +7,7 @@ machine, and the system step needs apt-get and dpkg-query. On Arm (aarch64), any
 distribution provisioning fails at once, before any step (owner decision F16, approval conditions).
 
 CAPABILITIES:
-  CAP-ENV-003: provisions the harness idempotently: apt packages, .venv-harness on the Colab Python with the harness's own install command plus the hash-checked extras and the commit-pinned TEN VAD, the corpus from git at its pinned commit and the FireRedVAD weights into a cache outside the tree, verified by SHA-256 (no Git LFS pointer files), exposed only through git-ignored paths; fails fast unless the machine is Debian or Ubuntu on Linux x86_64 (no TEN VAD binary elsewhere; apt-get and dpkg-query needed); rebuilds a .venv-harness without a working pip; enables Git LFS for the weights clone itself (git lfs install --local) and reports git-lfs output whenever pointers remain; skips the install only when the stamp matches and pip check passes; verifies the installed TEN VAD commit; rejects an assets config with a missing key (exit 2); prints a PASS/FAIL table and exits 1 on any failure, including a git status that is not empty [tests: test_FR_0_0_12_places_data_only_in_ignored_paths, test_FR_0_0_12_second_data_run_downloads_nothing, test_FR_0_0_12_reads_corpus_at_pinned_commit, test_FR_0_0_12_fails_on_asset_checksum_mismatch, test_FR_0_0_12_rejects_lfs_pointer_file, test_FR_0_0_12_manifest_mismatch_is_an_error, test_FR_0_0_12_refuses_target_that_git_does_not_ignore, test_FR_0_0_12_never_writes_token, test_FR_0_0_12_rejects_unknown_step, test_FR_0_0_12_fails_when_tree_was_dirty_before, test_FR_0_0_12_fails_when_provisioning_dirties_tree, test_FR_0_0_12_platform_pin_is_linux_x86_64, test_FR_0_0_12_fails_fast_on_machine_without_ten_vad_binary, test_FR_0_0_12_rejects_config_missing_required_key, test_FR_0_0_12_reports_lfs_pull_failure_detail, test_FR_0_0_12_rejects_ten_vad_at_other_commit, test_FR_0_0_12_reinstalls_when_pip_check_fails, test_FR_0_0_12_fetches_lfs_content_without_global_lfs_install, test_FR_0_0_12_reports_lfs_output_when_pull_leaves_pointers, test_FR_0_0_12_platform_pin_is_debian_or_ubuntu, test_FR_0_0_12_asset_licences_recorded, test_FR_0_0_12_fails_fast_on_unsupported_distribution, test_FR_0_0_12_non_root_uses_sudo_for_missing_package, test_FR_0_0_12_venv_problem_detects_venv_without_pip, test_FR_0_0_12_rebuilds_venv_left_without_pip, test_FR_0_0_12_provisions_harness_end_to_end, test_FR_0_0_12_second_run_downloads_nothing_within_60s, test_FR_0_0_12_refuses_clip_occupied_by_different_content, test_FR_0_0_12_fails_when_manifest_clip_missing_from_archive, test_FR_0_0_12_refuses_audio_dir_that_is_not_a_directory, test_FR_0_0_12_refuses_weights_link_pointing_elsewhere, test_FR_0_0_12_refuses_real_folder_at_weights_link, test_FR_0_0_12_rejects_hostile_archive_member, test_FR_0_0_12_ten_vad_licence_states_all_conditions, test_FR_0_0_12_fails_on_weights_with_wrong_content, test_FR_0_0_12_damaged_corpus_cache_is_replaced_from_git, test_FR_0_0_12_fails_when_apt_get_installs_nothing, test_FR_0_0_12_root_installs_without_sudo, test_FR_0_0_12_rejects_probe_with_two_python_versions, test_FR_0_0_12_install_stamp_covers_every_requirement_file, test_FR_0_0_12_import_check_builds_ten_vad]
+  CAP-ENV-003: provisions the harness idempotently: apt packages, .venv-harness on the Colab Python with the harness's own install command plus the hash-checked extras and the commit-pinned TEN VAD, the corpus from git at its pinned commit and the FireRedVAD weights into a cache outside the tree, verified by SHA-256 (no Git LFS pointer files), exposed only through git-ignored paths; fails fast unless the machine is Debian or Ubuntu on Linux x86_64 (no TEN VAD binary elsewhere; apt-get and dpkg-query needed); rebuilds a .venv-harness without a working pip; enables Git LFS for the weights clone itself (git lfs install --local) and reports git-lfs output whenever pointers remain; skips the install only when the stamp matches and pip check passes; verifies the installed TEN VAD commit; rejects an assets config with a missing key (exit 2); imports each module of import_check on its own and builds the imports row only from the per-module report, naming every module that fails; prints a PASS/FAIL table and exits 1 on any failure, including a git status that is not empty [tests: test_FR_0_0_12_places_data_only_in_ignored_paths, test_FR_0_0_12_second_data_run_downloads_nothing, test_FR_0_0_12_reads_corpus_at_pinned_commit, test_FR_0_0_12_fails_on_asset_checksum_mismatch, test_FR_0_0_12_rejects_lfs_pointer_file, test_FR_0_0_12_manifest_mismatch_is_an_error, test_FR_0_0_12_refuses_target_that_git_does_not_ignore, test_FR_0_0_12_never_writes_token, test_FR_0_0_12_rejects_unknown_step, test_FR_0_0_12_fails_when_tree_was_dirty_before, test_FR_0_0_12_fails_when_provisioning_dirties_tree, test_FR_0_0_12_platform_pin_is_linux_x86_64, test_FR_0_0_12_fails_fast_on_machine_without_ten_vad_binary, test_FR_0_0_12_rejects_config_missing_required_key, test_FR_0_0_12_reports_lfs_pull_failure_detail, test_FR_0_0_12_rejects_ten_vad_at_other_commit, test_FR_0_0_12_reinstalls_when_pip_check_fails, test_FR_0_0_12_fetches_lfs_content_without_global_lfs_install, test_FR_0_0_12_reports_lfs_output_when_pull_leaves_pointers, test_FR_0_0_12_platform_pin_is_debian_or_ubuntu, test_FR_0_0_12_asset_licences_recorded, test_FR_0_0_12_fails_fast_on_unsupported_distribution, test_FR_0_0_12_non_root_uses_sudo_for_missing_package, test_FR_0_0_12_venv_problem_detects_venv_without_pip, test_FR_0_0_12_rebuilds_venv_left_without_pip, test_FR_0_0_12_provisions_harness_end_to_end, test_FR_0_0_12_second_run_downloads_nothing_within_60s, test_FR_0_0_12_refuses_clip_occupied_by_different_content, test_FR_0_0_12_fails_when_manifest_clip_missing_from_archive, test_FR_0_0_12_refuses_audio_dir_that_is_not_a_directory, test_FR_0_0_12_refuses_weights_link_pointing_elsewhere, test_FR_0_0_12_refuses_real_folder_at_weights_link, test_FR_0_0_12_rejects_hostile_archive_member, test_FR_0_0_12_ten_vad_licence_states_all_conditions, test_FR_0_0_12_fails_on_weights_with_wrong_content, test_FR_0_0_12_damaged_corpus_cache_is_replaced_from_git, test_FR_0_0_12_fails_when_apt_get_installs_nothing, test_FR_0_0_12_root_installs_without_sudo, test_FR_0_0_12_rejects_probe_with_two_python_versions, test_FR_0_0_12_install_stamp_covers_every_requirement_file, test_FR_0_0_12_import_check_builds_ten_vad, test_FR_0_0_12_installs_package_dpkg_knows_but_not_installed, test_FR_0_0_12_fails_when_status_stays_not_installed_after_apt_get, test_FR_0_0_12_installs_only_the_missing_packages, test_FR_0_0_12_skips_packages_already_installed, test_FR_0_0_12_refuses_clip_link_pointing_elsewhere, test_FR_0_0_12_interrupted_extraction_is_redone, test_FR_0_0_12_import_check_names_each_failing_module, test_FR_0_0_12_import_check_reports_the_modules_it_imported, test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import]
 INPUTS AND OUTPUTS: config/aqis_lab/harness_assets.json (or $AQIS_HARNESS_ASSETS), docs/environment/colab_probe.txt,
   the harness requirement files; writes .venv-harness/, ${AQIS_CACHE:-$HOME/.cache/aqis}, symlinks under
   corpus/audio/ and pretrained_models/FireRedVAD/ (both git-ignored). Options: --steps system,python,corpus,weights,verify.
@@ -36,6 +36,9 @@ CHANGE LOG:
   2026-09-25 WP-0.0 audit round 4 F30: header lists test_FR_0_0_12_asset_licences_recorded (header only).
   2026-09-26 WP-0.0 audit round 5 F35/F37: header lists the occupied-target, hostile-archive and licence tests (header only).
   2026-09-26 WP-0.0 audit round 6 F41/F43: header lists the integrity-guard and promised-behaviour tests (header only).
+  2026-09-26 WP-0.0 audit round 8 F52: check_imports imports each module on its own, names every failing module,
+    and builds the row only from the child's per-module report; F49/F50: header lists the dpkg status,
+    clip-link and interrupted-extraction tests.
 """
 import argparse
 import hashlib
@@ -280,20 +283,45 @@ class Provisioner:
         self.row("ten-vad", "PASS", f"{pin['distribution']} {info['version']} at commit {commit[:12]} (pinned)")
 
     def check_imports(self, python):
+        """Import every listed module in the harness Python, each on its own, and build the row only from the
+        per-module report the child prints as its last line: [[name, null or "Error: message"], ...]."""
         modules = list(self.cfg["import_check"])
-        code = ("import importlib, sys\n"
+        code = ("import importlib, json, sys\n"
+                "report = []\n"
                 "for name in sys.argv[1:]:\n"
-                "    importlib.import_module(name)\n"
-                "if 'ten_vad' in sys.argv[1:]:\n"
-                "    import ten_vad\n"
-                "    ten_vad.TenVad(256, 0.5)\n"
-                "print('imports ok')")
+                "    try:\n"
+                "        module = importlib.import_module(name)\n"
+                "        if name == 'ten_vad':\n"
+                "            module.TenVad(256, 0.5)\n"
+                "    except Exception as exc:\n"
+                "        report.append([name, type(exc).__name__ + ': ' + str(exc)])\n"
+                "    else:\n"
+                "        report.append([name, None])\n"
+                "sys.stdout.flush()\n"
+                "print()\n"
+                "print(json.dumps(report))")
         proc = self.run([python, "-B", "-c", code, *modules], check=False, cwd=self.root)
         if proc.returncode != 0:
             tail = " / ".join(proc.stderr.strip().splitlines()[-2:])
             raise StepFailed(f"import check failed: {tail}")
-        self.row("imports", "PASS", "imported " + ", ".join(modules) + ("; TenVad native library loaded"
-                                                                        if "ten_vad" in modules else ""))
+        lines = proc.stdout.strip().splitlines()
+        try:
+            report = json.loads(lines[-1]) if lines else None
+        except json.JSONDecodeError:
+            report = None
+        valid = (isinstance(report, list)
+                 and all(isinstance(e, list) and len(e) == 2 and isinstance(e[0], str)
+                         and (e[1] is None or isinstance(e[1], str)) for e in report))
+        if not valid or [e[0] for e in report] != modules:
+            got = [e[0] for e in report] if valid else "no per-module report"
+            raise StepFailed(f"import check did not report exactly the requested modules: requested "
+                             f"{', '.join(modules)}; reported {got if isinstance(got, str) else ', '.join(got)}")
+        failed = [f"{name}: {error}" for name, error in report if error is not None]
+        if failed:
+            raise StepFailed("import check failed: " + "; ".join(failed))
+        imported = [name for name, _ in report]
+        self.row("imports", "PASS", "imported " + ", ".join(imported) + ("; TenVad native library loaded"
+                                                                         if "ten_vad" in imported else ""))
 
     # -- step: corpus ----------------------------------------------------------------------
     def require_ignored(self, rel):

@@ -115,3 +115,33 @@ def test_FR_0_0_09_reports_unknown_wp(repo):
     assert (found[0][1], found[0][2]) == ("docs/specs/**/WP-8.8-*.md", 1)
     bad = repo.gate("--base", "origin/main", "--wp", "banana", json_output=False)
     assert bad.returncode == 2 and bad.stderr.startswith("ERROR:")
+
+
+# Audit F47 (must-catch 10): an ID counts only when its test name is one pytest collects.
+NOT_COLLECTED_PLACEMENTS = {
+    "nested_function": ("tests/aqis_lab/test_thing.py", TESTS.replace(
+        "def test_FR_9_9_02_does_b():\n    assert 2 + 2 == 4\n",
+        "def helper():\n    def test_FR_9_9_02_does_b():\n        assert 2 + 2 == 4\n    return test_FR_9_9_02_does_b\n")),
+    "method_of_non_test_class": ("tests/aqis_lab/test_thing.py", TESTS.replace(
+        "def test_FR_9_9_02_does_b():\n    assert 2 + 2 == 4\n",
+        "class Helpers:\n    def test_FR_9_9_02_does_b(self):\n        assert 2 + 2 == 4\n")),
+    "test_class_with_init": ("tests/aqis_lab/test_thing.py", TESTS.replace(
+        "def test_FR_9_9_02_does_b():\n    assert 2 + 2 == 4\n",
+        "class TestB:\n    def __init__(self):\n        self.x = 2\n\n"
+        "    def test_FR_9_9_02_does_b(self):\n        assert self.x + 2 == 4\n")),
+    "file_pytest_does_not_collect": ("tests/aqis_lab/thing_helpers.py",
+                                     "def test_FR_9_9_02_does_b():\n    assert 2 + 2 == 4\n"),
+}
+
+
+@pytest.mark.parametrize("placement", sorted(NOT_COLLECTED_PLACEMENTS))
+def test_FR_0_0_09_detects_id_only_in_uncollected_test(repo, placement):
+    rel, text = NOT_COLLECTED_PLACEMENTS[placement]
+    if rel != "tests/aqis_lab/test_thing.py":
+        repo.write("tests/aqis_lab/test_thing.py", TESTS.replace("def test_FR_9_9_02_does_b", "def test_does_b"))
+    repo.write(rel, text)
+    report = repo.gate_json("--wp", "WP-9.9")
+    found = f_findings(report)
+    assert report["ok"] is False
+    assert [(r, p, n) for r, p, n, _ in found] == [("F3", SPEC, LINE_OF["FR-9.9-02"])]
+    assert "FR-9.9-02" in found[0][3]

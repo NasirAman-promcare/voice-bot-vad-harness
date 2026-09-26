@@ -598,6 +598,52 @@ def test_FR_0_0_12_damaged_corpus_cache_is_replaced_from_git(tmp_path):
     assert sha((base / "corpus-v1.tar.gz").read_bytes()) == pinned
 
 
+def provisioned_once(tmp_path):
+    """A fixture tree provisioned once; returns (tree, cfg, cache, the cache's extracted folder)."""
+    tree, cfg = make_tree(tmp_path)
+    cache = tmp_path / "cache"
+    first = run(tree, cfg, cache, *DATA)
+    assert first.returncode == 0, first.stdout + first.stderr
+    pinned = json.loads(cfg.read_text(encoding="utf-8"))["corpus"]["sha256"]
+    return tree, cfg, cache, cache / "corpus" / pinned / "extracted"
+
+
+@pytest.mark.parametrize("target", ["other_content", "missing_file"])
+def test_FR_0_0_12_refuses_clip_link_pointing_elsewhere(tmp_path, target):
+    # Audit F50 (P35): an existing clip link counts only when it points at the extracted pinned clip. A link to
+    # other content, or a dangling link, is a FAIL naming the clip, and the link is left untouched.
+    tree, cfg, cache, extracted = provisioned_once(tmp_path)
+    link = tree / "corpus" / "audio" / "a.wav"
+    assert link.is_symlink() and os.readlink(link) == str(extracted / "corpus" / "audio" / "a.wav")
+    elsewhere = tmp_path / "elsewhere.wav"
+    if target == "other_content":
+        elsewhere.write_bytes(b"RIFF" + b"\x07" * 60)
+    link.unlink()
+    link.symlink_to(elsewhere)
+    proc = run(tree, cfg, cache, *DATA)
+    assert_corpus_fail(proc, "corpus/audio/a.wav is occupied by different content; not overwriting it")
+    assert link.is_symlink() and os.readlink(link) == str(elsewhere)
+    assert not elsewhere.exists() if target == "missing_file" else elsewhere.read_bytes() == b"RIFF" + b"\x07" * 60
+
+
+def test_FR_0_0_12_interrupted_extraction_is_redone(tmp_path):
+    # Audit F50 (P48): an extraction without its .complete marker was interrupted. It is removed and done again,
+    # so a truncated clip is replaced by the pinned bytes and a file the archive does not hold is not linked.
+    tree, cfg, cache, extracted = provisioned_once(tmp_path)
+    (extracted / ".complete").unlink()
+    (extracted / "corpus" / "audio" / "a.wav").write_bytes(WAV_A[:20])
+    (extracted / "corpus" / "audio" / "stray.wav").write_bytes(b"RIFF left by an interrupted run")
+    proc = run(tree, cfg, cache, *DATA)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert table(proc.stdout)["corpus"][0] == "PASS"
+    assert (tree / "corpus" / "audio" / "a.wav").read_bytes() == WAV_A
+    assert (tree / "corpus" / "audio" / "b.wav").read_bytes() == WAV_B
+    assert not (extracted / "corpus" / "audio" / "stray.wav").exists()
+    assert not os.path.lexists(tree / "corpus" / "audio" / "stray.wav")
+    assert (extracted / ".complete").read_text(encoding="utf-8").strip() == json.loads(
+        cfg.read_text(encoding="utf-8"))["corpus"]["sha256"]
+
+
 SYSTEM_STANDINS_DPKG_MISSING = {
     "dpkg-query": 'for last in "$@"; do :; done\necho "dpkg-query: no packages found matching $last" >&2\nexit 1\n',
 }
@@ -619,6 +665,89 @@ def test_FR_0_0_12_fails_when_apt_get_installs_nothing(tmp_path):
     result, detail = table(proc.stdout)["system"]
     assert result == "FAIL" and detail == f"apt-get finished but these are not installed: {package}"
     assert f"apt-get install -y {package}" in calls.read_text(encoding="utf-8")
+
+
+def dpkg_standins(tmp_path, *, status_when_missing=None, apt_installs=True):
+    """Stand-in dpkg-query, apt-get and sudo (audit F49). dpkg-query prints `install ok installed` for a package
+    whose marker exists. For any other package it exits 0 printing status_when_missing, as dpkg does for packages
+    it knows but that are not installed, or exits 1 when status_when_missing is None. apt-get logs its call and,
+    when apt_installs, creates the markers. sudo requires -n and runs the rest, so the step behaves the same with
+    and without root. Returns (folder for PATH, marker folder, call log)."""
+    state = tmp_path / "installed"
+    state.mkdir()
+    calls = tmp_path / "calls.log"
+    calls.write_text("", encoding="utf-8")
+    missing = ("exit 1\n" if status_when_missing is None
+               else f'printf "%s" "{status_when_missing}"\nexit 0\n')
+    mark = (f'if [ "$1" = "install" ]; then for a in "$@"; do case "$a" in install|-*) ;; *) : > "{state}/$a";; '
+            'esac; done; fi\n') if apt_installs else ""
+    folder = standin_bin(tmp_path / "standin-bin", {
+        "dpkg-query": 'for last in "$@"; do :; done\n'
+                      f'if [ -e "{state}/$last" ]; then printf "install ok installed"; exit 0; fi\n' + missing,
+        "apt-get": f'echo "apt-get $*" >> "{calls}"\n' + mark + "exit 0\n",
+        "sudo": '[ "$1" = "-n" ] || exit 1\nshift\nexec "$@"\n',
+    })
+    return folder, state, calls
+
+
+NOT_INSTALLED_STATUSES = ["deinstall ok config-files", "unknown ok not-installed", "install ok half-configured"]
+
+
+@pytest.mark.parametrize("status", NOT_INSTALLED_STATUSES)
+def test_FR_0_0_12_installs_package_dpkg_knows_but_not_installed(tmp_path, status):
+    # Audit F49 (P30): dpkg-query exits 0 for a package it knows but that is not installed. Only the status
+    # `install ok installed` counts as present, so the package is installed, never reported "already installed".
+    package = "aqis-standin-package"
+    tree, cfg = make_tree(tmp_path, system_packages=[package])
+    standins, state, calls = dpkg_standins(tmp_path, status_when_missing=status)
+    proc = run(tree, cfg, tmp_path / "cache", "--steps", "system",
+               extra_env={"PATH": f"{standins}{os.pathsep}{os.environ['PATH']}"})
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert table(proc.stdout)["system"] == ("PASS", f"installed {package}; already present: none")
+    assert calls.read_text(encoding="utf-8").splitlines() == ["apt-get update -y", f"apt-get install -y {package}"]
+    assert (state / package).exists()
+
+
+@pytest.mark.parametrize("status", NOT_INSTALLED_STATUSES)
+def test_FR_0_0_12_fails_when_status_stays_not_installed_after_apt_get(tmp_path, status):
+    # Audit F49 (P31): apt-get exits 0 and dpkg-query exits 0, but the status is not `install ok installed`
+    # (for example an interrupted install). The system step must FAIL, naming the package.
+    package = "aqis-standin-package"
+    tree, cfg = make_tree(tmp_path, system_packages=[package])
+    standins, _, calls = dpkg_standins(tmp_path, status_when_missing=status, apt_installs=False)
+    proc = run(tree, cfg, tmp_path / "cache", "--steps", "system",
+               extra_env={"PATH": f"{standins}{os.pathsep}{os.environ['PATH']}"})
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert table(proc.stdout)["system"] == ("FAIL", f"apt-get finished but these are not installed: {package}")
+    assert f"apt-get install -y {package}" in calls.read_text(encoding="utf-8").splitlines()
+
+
+def test_FR_0_0_12_installs_only_the_missing_packages(tmp_path):
+    # Audit F49, sibling case: one package is installed, the other is known to dpkg but not installed. Only the
+    # second is installed, and the row names each package in its own list.
+    present, absent = "aqis-standin-present", "aqis-standin-absent"
+    tree, cfg = make_tree(tmp_path, system_packages=[present, absent])
+    standins, state, calls = dpkg_standins(tmp_path, status_when_missing="deinstall ok config-files")
+    (state / present).touch()
+    proc = run(tree, cfg, tmp_path / "cache", "--steps", "system",
+               extra_env={"PATH": f"{standins}{os.pathsep}{os.environ['PATH']}"})
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert table(proc.stdout)["system"] == ("PASS", f"installed {absent}; already present: {present}")
+    assert calls.read_text(encoding="utf-8").splitlines() == ["apt-get update -y", f"apt-get install -y {absent}"]
+
+
+def test_FR_0_0_12_skips_packages_already_installed(tmp_path):
+    # Audit F49, sibling case: every package reports `install ok installed`, so apt-get is never called.
+    packages = ["aqis-standin-one", "aqis-standin-two"]
+    tree, cfg = make_tree(tmp_path, system_packages=packages)
+    standins, state, calls = dpkg_standins(tmp_path)
+    for package in packages:
+        (state / package).touch()
+    proc = run(tree, cfg, tmp_path / "cache", "--steps", "system",
+               extra_env={"PATH": f"{standins}{os.pathsep}{os.environ['PATH']}"})
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert table(proc.stdout)["system"] == ("PASS", "already installed: " + ", ".join(packages))
+    assert calls.read_text(encoding="utf-8") == ""
 
 
 def test_FR_0_0_12_root_installs_without_sudo(tmp_path, monkeypatch):
@@ -697,6 +826,56 @@ def test_FR_0_0_12_import_check_builds_ten_vad(tmp_path):
         module.Provisioner(tree, cfg, tmp_path / "cache").check_imports(python)
     assert str(failure.value).startswith("import check failed:")
     assert "native library libten_vad.so cannot be loaded" in str(failure.value)
+
+
+def import_check_provisioner(tmp_path, modules):
+    module = load_provision_module()
+    tree, cfg = make_tree(tmp_path)
+    config = json.loads(cfg.read_text(encoding="utf-8"))
+    config["import_check"] = modules
+    cfg.write_text(json.dumps(config), encoding="utf-8")
+    return module, tree, module.Provisioner(tree, cfg, tmp_path / "cache")
+
+
+def test_FR_0_0_12_import_check_names_each_failing_module(tmp_path):
+    # Audit F52 (P53, must-catch 16): every listed module is imported and reported on its own, so a missing
+    # module that is not first is named, and so is a second one after it. Modules that import are not named.
+    missing = ["aqis_no_such_module_one", "aqis_no_such_module_two"]
+    module, _, provisioner = import_check_provisioner(tmp_path, ["json", missing[0], "csv", missing[1]])
+    with pytest.raises(module.StepFailed) as failure:
+        provisioner.check_imports(sys.executable)
+    message = str(failure.value)
+    assert message == ("import check failed: " + "; ".join(
+        f"{name}: ModuleNotFoundError: No module named '{name}'" for name in missing))
+    assert provisioner.rows == []
+
+
+def test_FR_0_0_12_import_check_reports_the_modules_it_imported(tmp_path):
+    # Must-catch 16: the PASS row names the modules the check imported, in the configured order. A module that
+    # prints while it is imported does not disturb the report.
+    module, tree, provisioner = import_check_provisioner(tmp_path, ["json", "aqis_chatty_module", "csv"])
+    (tree / "aqis_chatty_module.py").write_text('print("hello from aqis_chatty_module")\n', encoding="utf-8")
+    provisioner.check_imports(sys.executable)
+    assert provisioner.rows == [("imports", "PASS", "imported json, aqis_chatty_module, csv")]
+
+
+@pytest.mark.parametrize("reply", [
+    '[["json", null]]',                                  # stopped after the first module
+    '[["json", null], ["os", null], ["csv", null]]',     # a module that was not requested
+    '[["json", null], ["csv", null], ["csv", null]]',    # a module reported twice
+    'imports ok',                                        # no per-module report at all
+])
+def test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import(tmp_path, reply):
+    # Must-catch 16: the row is built only from the per-module report. A report that does not cover exactly the
+    # requested modules is a FAIL, even when the interpreter exits 0. The interpreter here is a stand-in script
+    # in the test's temporary folder that prints the given reply.
+    module, _, provisioner = import_check_provisioner(tmp_path, ["json", "aqis_listed_module", "csv"])
+    python = standin_bin(tmp_path / "standin-python", {"python": f"cat <<'REPLY'\n{reply}\nREPLY\nexit 0\n"}) / "python"
+    with pytest.raises(module.StepFailed) as failure:
+        provisioner.check_imports(str(python))
+    assert str(failure.value).startswith("import check did not report exactly the requested modules")
+    assert "aqis_listed_module" in str(failure.value)
+    assert provisioner.rows == []
 
 
 # ---- TEN VAD commit and pip check, against a real pip install (audit F13, F18) ---------------

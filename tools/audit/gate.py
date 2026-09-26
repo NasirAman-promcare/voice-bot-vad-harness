@@ -8,8 +8,8 @@ CAPABILITIES:
   CAP-AUDIT-002: check (b) existing tests modified or deleted without ALLOW-EDIT [tests: test_FR_0_0_05_b_detects_modified_existing_test, test_FR_0_0_05_b_detects_deleted_existing_test, test_FR_0_0_05_b_passes_new_test_and_approved_edit, test_FR_0_0_05_b_detects_renamed_existing_lab_test]
   CAP-AUDIT-003: check (c) compromise patterns in added lab code lines and test-integrity patterns in added lab test lines [tests: test_FR_0_0_05_c_detects_each_code_pattern, test_FR_0_0_05_c_detects_each_test_pattern, test_FR_0_0_05_c_scans_only_added_lines, test_FR_0_0_05_c_includes_uncommitted_and_untracked_work, test_FR_0_0_06_scans_v2_file_types_and_dirs, test_FR_0_0_06_flags_pytestmark_and_param_skips, test_FR_0_0_06_decodes_non_utf8_with_replacement, test_FR_0_0_06_fails_closed_on_unreadable_changed_file, test_FR_0_0_06_fails_closed_on_git_error, test_FR_0_0_05_c_indented_allow_patterns_in_exempts_nothing]
   CAP-AUDIT-004: check (d) CAPABILITIES header in new aqis_lab/ modules [tests: test_FR_0_0_05_d_detects_new_module_without_header, test_FR_0_0_05_d_passes_module_with_header_or_short_file]
-  CAP-AUDIT-005: check (e) capability registry consistency [tests: test_FR_0_0_08_detects_row_with_missing_test, test_FR_0_0_08_detects_row_with_missing_module, test_FR_0_0_08_detects_row_removed_since_base, test_FR_0_0_08_detects_malformed_row, test_FR_0_0_08_detects_missing_registry, test_FR_0_0_08_passes_consistent_registry, test_FR_0_0_08_repository_registry_is_consistent, test_FR_0_0_08_detects_reordered_header_columns, test_FR_0_0_08_table_ends_at_first_non_table_line]
-  CAP-AUDIT-006: check (f) requirement traceability for --wp [tests: test_FR_0_0_09_detects_id_missing_from_plan, test_FR_0_0_09_detects_id_missing_from_test_names, test_FR_0_0_09_detects_id_missing_from_evidence, test_FR_0_0_09_underscore_matching_respects_boundaries, test_FR_0_0_09_ignores_other_wp_ids_in_spec, test_FR_0_0_09_reports_unknown_wp, test_FR_0_0_09_passes_complete_traceability, test_FR_0_0_09_detects_nfr_id_missing_from_test_names]
+  CAP-AUDIT-005: check (e) capability registry consistency [tests: test_FR_0_0_08_detects_row_with_missing_test, test_FR_0_0_08_detects_row_with_missing_module, test_FR_0_0_08_detects_row_removed_since_base, test_FR_0_0_08_detects_malformed_row, test_FR_0_0_08_detects_missing_registry, test_FR_0_0_08_passes_consistent_registry, test_FR_0_0_08_repository_registry_is_consistent, test_FR_0_0_08_detects_reordered_header_columns, test_FR_0_0_08_table_ends_at_first_non_table_line, test_FR_0_0_08_row_names_only_tests_pytest_collects, test_FR_0_0_08_row_naming_collected_tests_passes]
+  CAP-AUDIT-006: check (f) requirement traceability for --wp [tests: test_FR_0_0_09_detects_id_missing_from_plan, test_FR_0_0_09_detects_id_missing_from_test_names, test_FR_0_0_09_detects_id_missing_from_evidence, test_FR_0_0_09_underscore_matching_respects_boundaries, test_FR_0_0_09_ignores_other_wp_ids_in_spec, test_FR_0_0_09_reports_unknown_wp, test_FR_0_0_09_passes_complete_traceability, test_FR_0_0_09_detects_nfr_id_missing_from_test_names, test_FR_0_0_09_detects_id_only_in_uncollected_test]
   CAP-AUDIT-007: lists every audit-allow line and every ALLOW-PATTERNS-IN exempted file [tests: test_FR_0_0_07_audit_allow_with_reason_exempts_and_is_listed, test_FR_0_0_07_audit_allow_without_reason_does_not_exempt, test_FR_0_0_07_audit_allow_exempts_only_its_line, test_FR_0_0_07_allow_patterns_in_exempts_file_and_is_listed]
   CAP-AUDIT-009: command line, merge-base diffing, text and JSON reports, exit codes 0/1/2 [tests: test_FR_0_0_05_clean_branch_exits_zero, test_FR_0_0_05_uses_merge_base_not_ref_tip, test_FR_0_0_05_json_output_schema, test_FR_0_0_05_bad_base_ref_exits_2, test_NFR_0_0_01_gate_runtime_under_60s, test_NFR_0_0_02_every_message_names_file_line_and_rule, test_NFR_0_0_03_imports_are_stdlib_or_pinned]
 INPUTS AND OUTPUTS: git state of the repository containing the cwd; a report on stdout; exit 0 (no findings),
@@ -30,9 +30,13 @@ CHANGE LOG:
   2026-09-26 WP-0.0 audit round 5 F33: header lists the approval-line tests (header only).
   2026-09-26 WP-0.0 audit round 6 F40: header lists the NFR traceability test (header only).
   2026-09-26 WP-0.0 audit round 6 F46: header lists the origin/main fetch and registry table-shape tests (header only).
+  2026-09-26 WP-0.0 audit round 8 F47: test_functions mirrors pytest's default collection (file names, Test classes
+             without constructors or __test__ = False, nested Test classes, no fixtures or properties);
+             a Test class with a base class from another file does not count (fails closed).
 """
 import argparse
 import ast
+import fnmatch
 import json
 import os
 import re
@@ -399,11 +403,67 @@ def check_patterns_and_headers(git, base, changes, approvals, report):
 # ---------------------------------------------------------------------------------------------
 # shared: test function index
 # ---------------------------------------------------------------------------------------------
-def test_functions(root, folder):
-    """{path::name, path::Class::name, name} for every test function under folder, fixtures excluded.
+TEST_FILE_GLOBS = ("test_*.py", "*_test.py")  # pytest's default python_files
+NOT_TEST_DECORATORS = ("fixture", "property")  # pytest never collects these as tests
 
-    A test function is a module-level function whose name starts with 'test', or such a method of a
-    class whose name starts with 'Test'. Files that do not parse are reported as a GateError, never skipped.
+
+def _decorator_name(node):
+    target = node.func if isinstance(node, ast.Call) else node
+    if isinstance(target, ast.Attribute):
+        return target.attr
+    return target.id if isinstance(target, ast.Name) else ""
+
+
+def _is_test_def(node):
+    return (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test")
+            and not any(_decorator_name(d) in NOT_TEST_DECORATORS for d in node.decorator_list))
+
+
+def _sets_test_false(body):
+    """True when the body assigns __test__ = False, which stops pytest collecting it."""
+    for node in body:
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant) and node.value.value is False:
+            if any(isinstance(t, ast.Name) and t.id == "__test__" for t in node.targets):
+                return True
+    return False
+
+
+def _may_have_constructor(cls, classes, seen=()):
+    """True when the class, or a base class, defines __init__ or __new__, or when a base class is not defined
+    in the same module (it cannot be read, so the gate assumes the worst and fails closed)."""
+    if any(isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name in ("__init__", "__new__")
+           for n in cls.body):
+        return True
+    for base in cls.bases:
+        if isinstance(base, ast.Name) and base.id == "object":
+            continue
+        if not (isinstance(base, ast.Name) and base.id in classes) or base.id in seen:
+            return True
+        if _may_have_constructor(classes[base.id], classes, (*seen, cls.name)):
+            return True
+    return False
+
+
+def _collect_class(cls, prefix, classes, index):
+    if not cls.name.startswith("Test") or _sets_test_false(cls.body) or _may_have_constructor(cls, classes):
+        return
+    path = f"{prefix}::{cls.name}"
+    for item in cls.body:
+        if _is_test_def(item):
+            index.update({item.name, f"{path}::{item.name}"})
+        elif isinstance(item, ast.ClassDef):
+            _collect_class(item, path, classes, index)
+
+
+def test_functions(root, folder):
+    """{path::name, path::Class::name, name} for every test pytest collects under folder, fixtures excluded.
+
+    Mirrors pytest's default collection: files named test_*.py or *_test.py; module-level functions whose
+    name starts with 'test'; such methods of classes whose name starts with 'Test' (nested ones too) that
+    have no __init__ or __new__ of their own or from a base class, and whose base classes are all defined in
+    the same module (others cannot be read, so they do not count). Functions
+    decorated as fixtures or properties, and modules or classes that set __test__ = False, are not tests.
+    Files that do not parse are reported as a GateError, never skipped.
     """
     index = set()
     base = Path(root) / folder
@@ -411,7 +471,7 @@ def test_functions(root, folder):
         return index
     for path in sorted(base.rglob("*.py")):
         rel = path.relative_to(root).as_posix()
-        if rel.startswith(FIXTURE_DIR):
+        if rel.startswith(FIXTURE_DIR) or not any(fnmatch.fnmatchcase(path.name, g) for g in TEST_FILE_GLOBS):
             continue
         try:
             source = path.read_bytes().decode("utf-8", errors="replace")
@@ -421,13 +481,14 @@ def test_functions(root, folder):
             tree = ast.parse(source, filename=rel)
         except SyntaxError as exc:
             raise GateError(f"{rel}:{exc.lineno}: cannot parse test file: {exc.msg}") from exc
+        if _sets_test_false(tree.body):
+            continue
+        classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
         for node in tree.body:
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test"):
+            if _is_test_def(node):
                 index.update({node.name, f"{rel}::{node.name}"})
-            elif isinstance(node, ast.ClassDef) and node.name.startswith("Test"):
-                for item in node.body:
-                    if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name.startswith("test"):
-                        index.update({item.name, f"{rel}::{node.name}::{item.name}"})
+            elif isinstance(node, ast.ClassDef):
+                _collect_class(node, rel, classes, index)
     return index
 
 
