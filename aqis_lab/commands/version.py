@@ -1,7 +1,7 @@
 """The `version` command: package version, short git commit (+dirty) and Python version.
 
 CAPABILITIES:
-  CAP-CLI-002: prints `aqis_lab <version> commit=<short>[+dirty] python=<x.y.z>` and exits 0; exits 1 with an ERROR line when the commit cannot be determined [tests: test_FR_0_0_01_version_prints_package_commit_python, test_FR_0_0_01_version_marks_dirty_tree, test_FR_0_0_01_version_fails_loudly_outside_git]
+  CAP-CLI-002: prints `aqis_lab <version> commit=<short>[+dirty] python=<x.y.z>` and exits 0; exits 1 with an ERROR line when the commit cannot be determined [tests: test_FR_0_0_01_version_prints_package_commit_python, test_FR_0_0_01_version_marks_dirty_tree, test_FR_0_0_01_version_fails_loudly_outside_git, test_FR_0_0_01_version_reports_package_repository_not_cwd, test_FR_0_0_01_version_rejects_package_below_checkout_top]
 INPUTS AND OUTPUTS: reads git state of the repository that contains this package; one line to stdout.
 CONTRACTS: none.
 INVARIANTS:
@@ -12,6 +12,7 @@ NOT IN SCOPE:
   - Recording versions into run cards (WP-0.2).
 CHANGE LOG:
   2026-09-25 WP-0.0 FR-0.0-01 created.
+  2026-09-25 WP-0.0 audit round 5 F36: header lists the package-repository tests (header only).
 """
 import argparse
 import platform
