@@ -225,10 +225,11 @@ def s_guarded_added_then_deleted(r):
 
 
 def s_flagged_word_in_path(r):
-    # Diff header lines (+++ b/tools/fake_clock.py) are not added lines.
-    r.write("tools/fake_clock.py", "CLOCK = 0\n"); r.commit("clock on main")
+    # Diff header lines (+++ b/tools/fake.py) are not added lines. The path must hold the word with a word
+    # boundary after it ("fake_clock" would not match the pattern, so it could not show the difference).
+    r.write("tools/fake.py", "CLOCK = 0\n"); r.commit("clock on main")
     git(r.path, "push", "-q", "origin", "main")
-    r.branch(); r.append("tools/fake_clock.py", "TICK = 1\n")
+    r.branch(); r.append("tools/fake.py", "TICK = 1\n")
 
 
 def s_unscanned_suffix_in_lab_dirs(r):
