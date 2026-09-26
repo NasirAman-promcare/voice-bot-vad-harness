@@ -338,3 +338,62 @@ No gate, provisioning or `version` code changes.
 
 ### Verification
 Mutation results, suites, gate and CI runs are in EVIDENCE.md, "BLK-007 decision and minor fixes F45 and F46".
+
+## Round 8 audit fixes (F47, F49, F50, F52, F54), final round
+
+**Source.** `docs/progress/WP-0.0/AUDIT.md` round 7 (`a2a4f8b`), verdict FAIL. Spec Amendment 2 (`docs/specs/phase-0/WP-0.0-guardrails.md`, kit patch 3) fixes the must-catch list and the closing scope.
+
+**Owner approval.** `docs/approvals/WP-0.0.md` on `main` (`cd5543d`): "Round 8 is the final round: fix WP-0.0-F47, F49, F50, F52 and F54. F48, F51 and F53 are accepted as debt in docs/progress/DEBT.md, target WP-0.9. Audits follow AUDIT_PROTOCOL version 2 (kit patch 3)." Owner instruction: fix with `/surgical-fix`, covering sibling cases in the same functions.
+
+**Baseline.** Round 7 audited `0430acd`: fast `207 passed`, slow `8 passed`, gate `0 findings`, CI green (AUDIT.md round 7, A3 and A4). The merge of `origin/main` (kit patch 3) changed only owner files and `docs/progress/DEBT.md`.
+
+### Root causes
+| Finding | Root cause |
+| --- | --- |
+| F47 CRITICAL | `test_functions` read "a test that exists" as "a function named `test*` in any `.py` file under `tests/`". pytest's own rules are narrower: file names, `Test` classes without constructors, `__test__ = False`, fixtures and properties. Tests covered only module-level functions, `Test` class methods and the fixture folder. |
+| F49 CRITICAL | Every `dpkg-query` stand-in exited 1 for a missing package, so the status-text half of both checks was never exercised. |
+| F50 CRITICAL | The occupied-clip test used a regular file, never a symlink. No test removed the `.complete` marker. |
+| F52 MAJOR | `check_imports` ran one child process that stopped at the first failure. It built the PASS row from the config list, not from what the child imported. |
+| F54 MINOR | The F45 correction said `PYTHONPATH` does not help from `docs/`, without checking it. The F44 quote cited approval wording the owner later shortened, and the AT-0.0-04/07 row was not updated after round 5. |
+
+### Change budget
+| File | Functions or lines | Finding | Capabilities at risk |
+| --- | --- | --- | --- |
+| `tools/audit/gate.py` | `test_functions`, with new private helpers `_decorator_name`, `_is_test_def`, `_sets_test_false`, `_may_have_constructor`, `_collect_class`, constants `TEST_FILE_GLOBS` and `NOT_TEST_DECORATORS`, `import fnmatch`; header test lists and change log | F47 | CAP-AUDIT-005, CAP-AUDIT-006 (both call `test_functions`) |
+| `aqis_lab/deploy/harness_provision.py` | `check_imports` only; header capability text, test list and change log | F52 (plus the F49 and F50 test lists) | CAP-ENV-003 |
+| `tests/aqis_lab/test_aqis_gate_registry.py`, `test_aqis_gate_trace.py`, `test_aqis_harness_provision.py` | New tests and helpers only (`COLLECTION_PROBE`, `pytest_collected_names`, `NOT_COLLECTED_PLACEMENTS`, `dpkg_standins`, `provisioned_once`, `import_check_provisioner`); no existing test changed | F47, F49, F50, F52 | none |
+| `docs/tools/AUDIT_GATE.md` | Line 6 (`PYTHONPATH`); the registry **Tests** rule and the traceability test-name rule (F47); the F44 approval quote | F47, F54 | none |
+| `docs/capabilities/REGISTRY.md` | CAP-AUDIT-005, CAP-AUDIT-006 and CAP-ENV-003: test lists and "What it does" wording | F47, F49, F50, F52 | none |
+| `docs/progress/DEBT.md` | Rows DEBT-001 to DEBT-003 | F48, F51, F53 | none |
+| `docs/progress/WP-0.0/EVIDENCE.md`, `FIXES.md`, `docs/progress/STATUS.md` | Records: must-catch proof, AT-0.0-04/07 row, round 8 section | all | none |
+
+### What changed in code
+- **F47, `test_functions`.** It now follows pytest's default collection, and the tests check this against `pytest --collect-only` on the same files. A name counts only when all of these hold:
+  - The file is named `test_*.py` or `*_test.py`, and the module does not set `__test__ = False`.
+  - The function is not decorated as a fixture or property.
+  - For a method, the class name starts with `Test`, the class does not set `__test__ = False`, and it has no `__init__` or `__new__`, of its own or from a base class.
+  - Every base class is defined in the same file. A base class imported from elsewhere cannot be read, so the class does not count. This is stricter than pytest, and fails closed.
+
+  Methods of nested `Test` classes now count, as pytest runs them.
+- **F52, `check_imports`.** The child imports each module on its own, and builds `TenVad` for `ten_vad`. It prints a JSON report, `[[name, null or error], …]`, as its last line. The parent then:
+  - builds the row only from that report;
+  - FAILs when the report does not name exactly the requested modules, in order;
+  - names every failing module with its error.
+- **F49, F50.** Tests only. The guards were already correct.
+
+### Sibling cases covered (surgical-fix step 6)
+- **F47.** Besides G35 (methods of non-`Test` classes) and G36 (nested functions), the tests cover every other way a `test*` function can escape pytest:
+  - a file whose name pytest does not collect;
+  - a `Test` class with `__init__`, with `__new__`, or with a constructor inherited from a base class;
+  - a `Test` class with a base class from another module;
+  - `__test__ = False` on a class or on a module;
+  - `@pytest.fixture` and `@property` functions.
+
+  They also cover the case pytest does collect and the old gate missed: a method of a nested `Test` class. The traceability check gets four placements of its own.
+- **F49.** Three dpkg statuses (`deinstall ok config-files`, `unknown ok not-installed`, `install ok half-configured`) are tested both before and after `apt-get`. So are a mixed set (one package present, one not) and a set that is already installed, where `apt-get` is never called.
+  - Two fail-loud branches of `step_system` have no new test: missing `dpkg-query` or `apt-get`, and non-root without `sudo`. Each raises `StepFailed` before anything is installed, so neither can produce a PASS (must-catch 13).
+- **F50.** A clip link to other content, a dangling clip link, and an interrupted extraction are tested. For the interrupted extraction, the test checks three things: the truncated clip is replaced, a stray file is removed and never linked, and the marker is rewritten.
+- **F52.** Two missing modules, neither first, are both named. A module that prints while it is imported does not break the report. Four malformed reports are FAILs even when the interpreter exits 0: one that stops early, one with an extra module, one with a duplicate, and one with no report at all.
+
+### Verification
+The red runs before the code changes, the must-catch battery, the suites, the gate and CI are in EVIDENCE.md, "Round 8 audit fixes and must-catch proof".
