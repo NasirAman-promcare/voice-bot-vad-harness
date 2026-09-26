@@ -451,7 +451,7 @@ tests/aqis_lab/test_aqis_gate_nfr.py::test_NFR_0_0_03_imports_are_stdlib_or_pinn
 ## Round 2 owner-run checks
 | Check | Where | Command | Expected output | Result report |
 | --- | --- | --- | --- | --- |
-| AT-0.0-04 and AT-0.0-07: CI green on the PR | GitHub, PR #1, Checks | Open the `aqis-lab-ci` run for the latest commit (`pull_request` event) | Job `lab` green, with the step "Work package ID from pull request title" printing `WP-0.0` and the gate running with `--wp WP-0.0`, ending `0 findings: OK`. Job `harness-regression` green, with the provisioning table all PASS (torch INFO) and `RESULT: PASS` from the regression check | Green on `9016ee7` (round 4): pull request run `36163086560` and push run `36163080671`, both jobs success. Earlier: `033322b` (BLK-006) pull request `36156782531`, push `36156776526`; `d35290b` (round 3) pull request `36151741552`. Owner to confirm on the latest commit |
+| AT-0.0-04 and AT-0.0-07: CI green on the PR | GitHub, PR #1, Checks | Open the `aqis-lab-ci` run for the latest commit (`pull_request` event) | Job `lab` green, with the step "Work package ID from pull request title" printing `WP-0.0` and the gate running with `--wp WP-0.0`, ending `0 findings: OK`. Job `harness-regression` green, with the provisioning table all PASS (torch INFO) and `RESULT: PASS` from the regression check | Green on `335363d` (round 5): pull request run `36228654749` and push run `36228652324`, both jobs success. Earlier: `9016ee7` pull request `36163086560`; `033322b` pull request `36156782531`; `d35290b` pull request `36151741552`. Owner to confirm on the latest commit |
 | OC-0.0-01: Colab harness setup | Colab, fresh CPU runtime (x86_64) | Before the merge: in cell 1 of `docs/colab/HARNESS_SETUP.md` set `BRANCH = "claude/hopeful-noether-yinc4e"` (`main` has no provisioning script until the merge, audit F15). Run cells 1 to 6, then commit the downloaded file as `docs/environment/colab_harness_provision.txt` | A `platform / PASS / Ubuntu ... on Linux x86_64` row and every other row PASS (torch `INFO / not installed, decision R2-3`), `RESULT: PASS`, `exit code: 0`, `git status --porcelain: []`. A wrong branch stops cell 2 with `fatal: Remote branch <name> not found in upstream origin` and `RuntimeError: git clone of branch <name> from https://github.com/... failed (exit 128)`, with no command line shown | Pending (owner) |
 | Oracle VM (owner decision F16, approval conditions round 3) | Oracle VM, only if it is Debian or Ubuntu on x86_64 | `bash aqis_lab/deploy/harness_provision.sh` in a clone of the branch | **Debian or Ubuntu on x86_64:** as on Colab. **Arm (aarch64):** exit 1 at once, a single row `platform / FAIL / harness provisioning needs Debian or Ubuntu on Linux x86_64; this machine is Linux aarch64. TEN VAD at commit 22a3bcd4509d ships its native library only for Linux x86_64 ... no Arm (aarch64) binary ...`. **x86_64 with another distribution** (for example Oracle Linux, `ID=ol`): exit 1 at once, a single row `platform / FAIL / harness provisioning needs Debian or Ubuntu on Linux x86_64; this machine runs ol (...), not debian or ubuntu. the system step installs packages with apt-get ...`. In both FAIL cases: `Downloads this run: 0`, `RESULT: FAIL`. The harness is not supported there; this is the owner's decision, not a defect | Not needed unless the owner runs the harness on Oracle (`docs/environment/oracle_probe.txt` is still missing) |
 
@@ -811,3 +811,16 @@ Every other new guard passed against the correct code. They prove themselves thr
   - A file added on the branch keeps state `A` on later edits, or is dropped when deleted (`changed_files`).
 
   No input can tell the two versions apart, so no test can fail. The condition is kept because it mirrors the hook (`stop_gate.py:289`).
+
+**Suites after the round 5 fixes** (commit `335363d`, clean tree; git-lfs 3.7.0 from the scratchpad on PATH for the second line):
+```text
+commit: 335363d
+fast git-lfs 3.4.1: 182 passed, 8 deselected in 36.35s
+fast git-lfs 3.7.0: 182 passed, 8 deselected in 36.77s
+slow/network: 8 passed, 182 deselected in 54.39s
+gate: 0 findings: OK (0.2 s)
+git status lines after: 0
+```
+**CI on `335363d`:** pull request run `36228654749` and push run `36228652324`, both success (jobs `lab` and `harness-regression`).
+
+**OC-0.0-01:** accepted by the owner under CONDITIONS in `docs/approvals/WP-0.0.md` on `main` (`7303ddd`): "The Colab harness provisioning verification summary recorded in docs/environment/colab_harness_provision.txt and OWNER_VERIFY_COLAB_WP-0.0_20260925T155908Z.md is accepted."

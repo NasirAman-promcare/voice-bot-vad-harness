@@ -248,3 +248,24 @@ These cover every test linked to CAP-AUDIT-001 to 004, CAP-ENV-003, CAP-ENV-006 
 | `docs/progress/WP-0.0/EVIDENCE.md`, `FIXES.md`, `STATUS.md` | Records: the corrected claim at EVIDENCE.md:695, and a rule-by-rule mutation table for `stop_gate.py:90-170` and `:280-310` | F34 |
 
 No gate, provisioning or version code changes.
+
+### Verification (round 5)
+- **Red first.** With only the new tests added: `2 failed, 28 passed`.
+  - The F37 licence test failed as intended.
+  - The symlink case of the new `corpus/audio` test failed because I expected the wrong message. It was corrected to the real behaviour: the ignore guard refuses a symlinked `corpus/audio` first.
+  - Every other new guard passed on correct code.
+- **Mutations.** 40 of them: 23 hook rules (H1 to H20c), 8 approval and NEVER rules (A1 to A8), 7 provisioning guards (P1 to P7) and 2 `version` guards (V1, V2). The table is in EVIDENCE.md, "Round 5 audit fixes". Each is caught by a named test, with two notes:
+  - H10 was caught only after the `flagged_word_in_path` scenario was corrected to `tools/fake.py`.
+  - H16a is an equivalent mutation: no input can reach it with a different result. The reasoning is recorded in EVIDENCE.md.
+- **Stop hook.** It flagged the literal expected-failure word in `test_aqis_gate_parity.py`. The text was moved into `tests/aqis_lab/fixtures/gate/lab_test_readme.md`, as the plan's test-data rule requires. No skip, exemption or protected-file change was used.
+- **After the fixes** (`335363d`):
+```text
+commit: 335363d
+fast git-lfs 3.4.1: 182 passed, 8 deselected in 36.35s
+fast git-lfs 3.7.0: 182 passed, 8 deselected in 36.77s
+slow/network: 8 passed, 182 deselected in 54.39s
+gate: 0 findings: OK (0.2 s)
+git status lines after: 0
+```
+- **CI on `335363d`:** pull request run `36228654749` and push run `36228652324`, both jobs success.
+- **Diff inside the budget.** No gate, provisioning or `version` code changed. `gate.py`, `harness_provision.py` and `version.py` changed only in their header test lists and change logs. `harness_assets.json` changed only in `ten_vad.licence`. The tests changed by additions, plus the one `elif` branch in the parity test function that is listed in the budget.
