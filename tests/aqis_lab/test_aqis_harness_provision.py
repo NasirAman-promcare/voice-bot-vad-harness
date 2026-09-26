@@ -621,9 +621,10 @@ def test_FR_0_0_12_fails_when_apt_get_installs_nothing(tmp_path):
     assert f"apt-get install -y {package}" in calls.read_text(encoding="utf-8")
 
 
-def test_FR_0_0_12_root_installs_without_sudo(tmp_path):
-    # Audit F43 (P12): as root, apt-get is called directly, never through sudo. When the test itself is not root it
-    # runs the script as uid 0 of an unprivileged user namespace (unshare --map-root-user); never skipped.
+def test_FR_0_0_12_root_installs_without_sudo(tmp_path, monkeypatch):
+    # Audit F43 (P12): as root, apt-get is called directly, never through sudo. Owner decision BLK-007 option 1:
+    # the user id is replaced in this test only (os.geteuid returns 0, the CI runner cannot become uid 0 without
+    # real sudo), and the stand-in commands on PATH run through the real Provisioner.run code path. Never skipped.
     package = "aqis-standin-package"
     tree, cfg = make_tree(tmp_path, system_packages=[package])
     state = tmp_path / "installed"
@@ -632,22 +633,17 @@ def test_FR_0_0_12_root_installs_without_sudo(tmp_path):
     standins = standin_bin(tmp_path / "standin-bin", {
         "dpkg-query": 'for last in "$@"; do :; done\n'
                       f'if [ -e "{state}/$last" ]; then printf "install ok installed"; exit 0; fi\nexit 1\n',
-        "apt-get": f'echo "apt-get $* (uid $(id -u))" >> "{calls}"\n'
+        "apt-get": f'echo "apt-get $*" >> "{calls}"\n'
                    f'if [ "$1" = "install" ]; then for a in "$@"; do case "$a" in install|-*) ;; *) : > "{state}/$a";; esac; done; fi\n',
         "sudo": f'echo "sudo $*" >> "{calls}"\nexit 97\n',
     })
-    env = hermetic_git_env({"AQIS_HARNESS_ASSETS": str(cfg), "AQIS_CACHE": str(tmp_path / "cache"),
-                            "PATH": f"{standins}{os.pathsep}{os.environ['PATH']}"})
-    command = ["bash", str(tree / "aqis_lab" / "deploy" / SCRIPT_SH.name), "--steps", "system"]
-    if os.geteuid() != 0:
-        unshare = shutil.which("unshare")
-        assert unshare, "unshare (util-linux) is needed to run the script as uid 0 without privileges"
-        command = [unshare, "--map-root-user", *command]
-    proc = subprocess.run(command, cwd=tree, capture_output=True, text=True, env=env, timeout=120)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert table(proc.stdout)["system"] == ("PASS", f"installed {package}; already present: none")
-    assert calls.read_text(encoding="utf-8").splitlines() == [
-        "apt-get update -y (uid 0)", f"apt-get install -y {package} (uid 0)"]
+    module = load_provision_module()
+    monkeypatch.setattr(module.os, "geteuid", lambda: 0)
+    monkeypatch.setenv("PATH", f"{standins}{os.pathsep}{os.environ['PATH']}")
+    provisioner = module.Provisioner(tree, cfg, tmp_path / "cache")
+    provisioner.step_system()
+    assert provisioner.rows == [("system", "PASS", f"installed {package}; already present: none")]
+    assert calls.read_text(encoding="utf-8").splitlines() == ["apt-get update -y", f"apt-get install -y {package}"]
 
 
 # ---- promised behaviours (audit F43) ------------------------------------------------------------------

@@ -306,3 +306,35 @@ git status lines after: 0
 | `docs/progress/WP-0.0/EVIDENCE.md`, `FIXES.md`, `STATUS.md` | Records: the corrected EVIDENCE.md:763 claim and a line-by-line mutation table for `_protected.py:26-164` | F39 |
 
 No gate, provisioning or regression-check code changes.
+
+## BLK-007 decision and minor fixes F45 and F46
+
+**Source.** BLK-007 (CI runner cannot become uid 0 for `test_FR_0_0_12_root_installs_without_sudo`), and the round 6 audit's MINOR findings F45 and F46 (`docs/progress/WP-0.0/AUDIT.md` round 6).
+
+**Owner approval.** `docs/approvals/WP-0.0.md` on `main` (`8f11ab0`, merged into this branch at `3469e19`): "Round 6: fixes for WP-0.0-F39 to F46 approved" and "BLK-007 decision: Option 1 approved. In test_FR_0_0_12_root_installs_without_sudo, use pytest monkeypatch for os.geteuid to return 0. Include minor fixes F45 and F46."
+
+**Baseline.** The code under test is unchanged since `bbfd928` (fast `204 passed`, slow `8 passed`, gate `0 findings`, tree clean; recorded in EVIDENCE.md "Round 6 audit fixes"). The only red check on CI was the root-path test (BLK-007).
+
+### Root causes
+| Finding | Root cause |
+| --- | --- |
+| BLK-007 | The root-path test ran the script as uid 0 of an unprivileged user namespace. GitHub's Ubuntu 24.04 runner forbids writing `/proc/self/uid_map`, so the test failed there. |
+| F45 MINOR | The docs described the gate more broadly than it behaves (run location, exit-2 message form). The round 5 change-log dates were written a day early. Two EVIDENCE.md statements were not updated when the facts changed (exempted files; the OC-0.0-01 acceptance). |
+| F46 MINOR | Three documented gate behaviours had no test: the exact registry header columns (G13), the end of the registry table at the first non-table line (G14), and fetching a missing `origin/main` once (G22). |
+
+### Change budget
+| File | Change | Finding |
+| --- | --- | --- |
+| `tests/aqis_lab/test_aqis_harness_provision.py` | `test_FR_0_0_12_root_installs_without_sudo` only: `os.geteuid` returns 0 through `monkeypatch` inside the test, and `Provisioner.step_system()` runs in-process with the stand-in `dpkg-query`, `apt-get` and `sudo` on PATH. Same assertions: a PASS row naming the package, and exactly `apt-get update -y` then `apt-get install -y <package>`, never `sudo` | BLK-007 |
+| `docs/tools/AUDIT_GATE.md` | Line 6 (run from the repository root, or set `PYTHONPATH`) and the exit-2 row (what a message names) | F45 |
+| Change-log lines in `tools/audit/gate.py`, `aqis_lab/deploy/harness_provision.py`, `aqis_lab/commands/version.py` | Round 5 dates `2026-09-25` corrected to `2026-09-26` (header only) | F45 |
+| `docs/progress/WP-0.0/EVIDENCE.md` | Exempted-files list (6 files) and the OC-0.0-01 row, each with a correction note | F45 |
+| `tests/aqis_lab/test_aqis_gate_registry.py` | New tests `test_FR_0_0_08_detects_reordered_header_columns` and `test_FR_0_0_08_table_ends_at_first_non_table_line` | F46 |
+| `tests/aqis_lab/test_aqis_gate_checks.py` | New test `test_FR_0_0_05_a_fetches_missing_origin_main_once` | F46 |
+| `tools/audit/gate.py` header; `docs/capabilities/REGISTRY.md` | CAP-AUDIT-001 and CAP-AUDIT-005 test lists and one change-log line only | F46 |
+| `docs/progress/WP-0.0/EVIDENCE.md`, `FIXES.md`, `docs/progress/BLOCKERS.md`, `docs/progress/STATUS.md` | Records; BLK-007 resolved with the owner's answer | all |
+
+No gate, provisioning or `version` code changes.
+
+### Verification
+Mutation results, suites, gate and CI runs are in EVIDENCE.md, "BLK-007 decision and minor fixes F45 and F46".

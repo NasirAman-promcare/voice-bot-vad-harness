@@ -12,7 +12,7 @@ NOT IN SCOPE:
   - Recording versions into run cards (WP-0.2).
 CHANGE LOG:
   2026-09-25 WP-0.0 FR-0.0-01 created.
-  2026-09-25 WP-0.0 audit round 5 F36: header lists the package-repository tests (header only).
+  2026-09-26 WP-0.0 audit round 5 F36: header lists the package-repository tests (header only).
 """
 import argparse
 import platform

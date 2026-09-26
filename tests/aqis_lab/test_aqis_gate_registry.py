@@ -70,6 +70,23 @@ def test_FR_0_0_08_detects_missing_registry(repo):
     assert "CAP-FIX-001" in found[1][2]
 
 
+def test_FR_0_0_08_detects_reordered_header_columns(repo):
+    # Audit F46 (G13): the header must hold exactly the seven documented columns, in order.
+    repo.write(REG, REGISTRY_HEAD.replace("| Capability ID | Module | Functions |", "| Capability ID | Functions | Module |")
+               + REGISTRY_BASE_ROW)
+    found = e_findings(repo.gate_json())
+    header = [(r, line, message) for r, line, message in found if line == 3]
+    assert [(r, line) for r, line, _ in header] == [("E2", 3)]
+    assert "header columns are" in header[0][2]
+
+
+def test_FR_0_0_08_table_ends_at_first_non_table_line(repo):
+    # Audit F46 (G14): text and another table after the registry table are not registry rows.
+    repo.append(REG, "\nNotes about the registry.\n\n| Other | Table |\n| --- | --- |\n| only | two cells |\n")
+    report = repo.gate_json()
+    assert e_findings(report) == [] and report["ok"] is True
+
+
 def test_FR_0_0_08_passes_consistent_registry(repo):
     repo.write("tests/aqis_lab/test_more.py", "class TestThings:\n    def test_method(self):\n        assert 1 + 1 == 2\n")
     repo.append(REG, row("CAP-FIX-002", "`aqis_lab/existing.py`",

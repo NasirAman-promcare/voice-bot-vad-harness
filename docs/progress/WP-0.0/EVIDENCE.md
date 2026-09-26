@@ -250,7 +250,7 @@ The Stop hook also reports no problems on this branch (`echo '{"stop_hook_active
 Round 1 had no Colab or Oracle checks. Round 2 adds the Colab check OC-0.0-01, and the audit round 2 fixes settle Oracle (owner decision on F16). Both are listed under "Round 2 owner-run checks" below. (Corrected for audit finding F22.)
 
 ## audit-allow lines
-None. No line in the repository carries an `audit-allow` exemption; the gate reports `Exempted lines (# audit-allow): 0`. Files exempted by the owner approval (`ALLOW-PATTERNS-IN`, `docs/approvals/WP-0.0.md`): `tools/audit/patterns.py`, `tests/aqis_lab/fixtures/gate/allow_lines.py`, `tests/aqis_lab/fixtures/gate/code_patterns.py`, `tests/aqis_lab/fixtures/gate/test_patterns.py`.
+None. No line in the repository carries an `audit-allow` exemption; the gate reports `Exempted lines (# audit-allow): 0`. Files exempted by the owner approval (`ALLOW-PATTERNS-IN`, `docs/approvals/WP-0.0.md`), as the gate lists them now: `tests/aqis_lab/fixtures/gate/allow_lines.py`, `tests/aqis_lab/fixtures/gate/code_patterns.py`, `tests/aqis_lab/fixtures/gate/non_utf8.py`, `tests/aqis_lab/fixtures/gate/test_patterns.py`, `tests/aqis_lab/fixtures/gate/test_pytestmark.py`, `tools/audit/patterns.py` (6 files). Round 1 listed 4; the two later fixture files were added in round 2 (corrected for audit finding F45). The non-`.py` fixture `lab_test_readme.md` is also covered by the approval glob, but the gate lists only files inside the scan scope.
 
 ## Differences from the plan's file list (no behaviour deviations)
 - Added `tests/aqis_lab/aqis_testutil.py`: shared test helpers (an independent probe and lock parser, hermetic git environment). It is not a test module.
@@ -452,7 +452,7 @@ tests/aqis_lab/test_aqis_gate_nfr.py::test_NFR_0_0_03_imports_are_stdlib_or_pinn
 | Check | Where | Command | Expected output | Result report |
 | --- | --- | --- | --- | --- |
 | AT-0.0-04 and AT-0.0-07: CI green on the PR | GitHub, PR #1, Checks | Open the `aqis-lab-ci` run for the latest commit (`pull_request` event) | Job `lab` green, with the step "Work package ID from pull request title" printing `WP-0.0` and the gate running with `--wp WP-0.0`, ending `0 findings: OK`. Job `harness-regression` green, with the provisioning table all PASS (torch INFO) and `RESULT: PASS` from the regression check | Green on `335363d` (round 5): pull request run `36228654749` and push run `36228652324`, both jobs success. Earlier: `9016ee7` pull request `36163086560`; `033322b` pull request `36156782531`; `d35290b` pull request `36151741552`. Owner to confirm on the latest commit |
-| OC-0.0-01: Colab harness setup | Colab, fresh CPU runtime (x86_64) | Before the merge: in cell 1 of `docs/colab/HARNESS_SETUP.md` set `BRANCH = "claude/hopeful-noether-yinc4e"` (`main` has no provisioning script until the merge, audit F15). Run cells 1 to 6, then commit the downloaded file as `docs/environment/colab_harness_provision.txt` | A `platform / PASS / Ubuntu ... on Linux x86_64` row and every other row PASS (torch `INFO / not installed, decision R2-3`), `RESULT: PASS`, `exit code: 0`, `git status --porcelain: []`. A wrong branch stops cell 2 with `fatal: Remote branch <name> not found in upstream origin` and `RuntimeError: git clone of branch <name> from https://github.com/... failed (exit 128)`, with no command line shown | Pending (owner) |
+| OC-0.0-01: Colab harness setup | Colab, fresh CPU runtime (x86_64) | Before the merge: in cell 1 of `docs/colab/HARNESS_SETUP.md` set `BRANCH = "claude/hopeful-noether-yinc4e"` (`main` has no provisioning script until the merge, audit F15). Run cells 1 to 6, then commit the downloaded file as `docs/environment/colab_harness_provision.txt` | A `platform / PASS / Ubuntu ... on Linux x86_64` row and every other row PASS (torch `INFO / not installed, decision R2-3`), `RESULT: PASS`, `exit code: 0`, `git status --porcelain: []`. A wrong branch stops cell 2 with `fatal: Remote branch <name> not found in upstream origin` and `RuntimeError: git clone of branch <name> from https://github.com/... failed (exit 128)`, with no command line shown | Accepted by the owner under CONDITIONS in `docs/approvals/WP-0.0.md` on `main` (`7303ddd`): the summary in `docs/environment/colab_harness_provision.txt` and the report `OWNER_VERIFY_COLAB_WP-0.0_20260925T155908Z.md` (corrected for audit finding F45) |
 | Oracle VM (owner decision F16, approval conditions round 3) | Oracle VM, only if it is Debian or Ubuntu on x86_64 | `bash aqis_lab/deploy/harness_provision.sh` in a clone of the branch | **Debian or Ubuntu on x86_64:** as on Colab. **Arm (aarch64):** exit 1 at once, a single row `platform / FAIL / harness provisioning needs Debian or Ubuntu on Linux x86_64; this machine is Linux aarch64. TEN VAD at commit 22a3bcd4509d ships its native library only for Linux x86_64 ... no Arm (aarch64) binary ...`. **x86_64 with another distribution** (for example Oracle Linux, `ID=ol`): exit 1 at once, a single row `platform / FAIL / harness provisioning needs Debian or Ubuntu on Linux x86_64; this machine runs ol (...), not debian or ubuntu. the system step installs packages with apt-get ...`. In both FAIL cases: `Downloads this run: 0`, `RESULT: FAIL`. The harness is not supported there; this is the owner's decision, not a defect | Not needed unless the owner runs the harness on Oracle (`docs/environment/oracle_probe.txt` is still missing) |
 
 ## Round 2 audit gate
@@ -852,7 +852,7 @@ Root causes, change budget and baseline are in `docs/progress/WP-0.0/FIXES.md`, 
   - `test_FR_0_0_11_regression_check_rejects_table_without_readable_rows`: exit 2, `ERROR:`;
   - `test_FR_0_0_11_regression_check_reads_every_repository_baseline_row`: the real baseline is read independently, giving 22 rows and 21 passes. One pass is flipped to failed, and the tool reports exactly that `REGRESSION` with exit 1.
 - **F43, promised behaviours:**
-  - `test_FR_0_0_12_root_installs_without_sudo`: as uid 0, `apt-get` is called directly and never through `sudo`. When the test is not root, as in CI, it runs the script as uid 0 of an unprivileged user namespace (`unshare --map-root-user`), so it is never skipped.
+  - `test_FR_0_0_12_root_installs_without_sudo`: as uid 0, `apt-get` is called directly and never through `sudo`. (Corrected after BLK-007: the `unshare --map-root-user` approach failed on the CI runner. By owner decision, the test now sets `os.geteuid` to return 0 through `monkeypatch` and runs `step_system()` in-process; see "BLK-007 decision and minor fixes F45 and F46" below.)
   - `test_FR_0_0_12_rejects_probe_with_two_python_versions`;
   - `test_FR_0_0_12_install_stamp_covers_every_requirement_file`;
   - `test_FR_0_0_12_import_check_builds_ten_vad`: a stand-in `ten_vad`, installed with pip in a scratch venv, whose `TenVad` raises.
@@ -906,4 +906,36 @@ Root causes, change budget and baseline are in `docs/progress/WP-0.0/FIXES.md`, 
 
 - **L1 and L5.** They survived the first run. The scenarios `policy_leading_slash` and `question_mark_within_folder` were added, and the re-run fails each mutation.
 - **L8 is an equivalent mutation.** A blank line that is not skipped becomes the pattern `^$` in the current section, or nothing before the first section. No changed path is empty, so no input can tell the two versions apart.
-- **Open.** F45 and F46 (minor) are not in the owner's round 6 instruction and remain open.
+- **Open.** F45 and F46 (minor) are not in the owner's round 6 instruction and remain open. (Update: the owner approved them with the BLK-007 decision; see the next section.)
+
+## BLK-007 decision and minor fixes F45 and F46
+Root causes and change budget are in `docs/progress/WP-0.0/FIXES.md`, "BLK-007 decision and minor fixes F45 and F46". No gate, provisioning or `version` code changed.
+
+**BLK-007 (owner decision, option 1).** `test_FR_0_0_12_root_installs_without_sudo` sets `os.geteuid` to return 0 through `monkeypatch`, inside the test only. It runs `Provisioner.step_system()` in-process with stand-in `dpkg-query`, `apt-get` and `sudo` on PATH; the stand-in `sudo` exits 97 and logs its call. It asserts the row `("system", "PASS", "installed aqis-standin-package; already present: none")` and exactly two calls, `apt-get update -y` and `apt-get install -y aqis-standin-package`, never `sudo`. No real `apt-get` or `sudo` runs.
+
+**F45, documentation and records corrected.**
+- `docs/tools/AUDIT_GATE.md:6`: run from the repository root, or set `PYTHONPATH` to it. From `docs/`, `docs/tools/` shadows the `tools` package.
+- The `AUDIT_GATE.md` exit-2 row: a message about a file names `path:line`; a message about an argument (`--base`, `--wp`) or a failed git command names that argument or command.
+- Round 5 change-log dates: `2026-09-25` corrected to `2026-09-26` in `tools/audit/gate.py`, `aqis_lab/deploy/harness_provision.py` and `aqis_lab/commands/version.py`.
+- The exempted-files list in this file now names the 6 files the gate lists, and the OC-0.0-01 row records the owner's acceptance. Each has a correction note.
+
+**F46, new tests.**
+- `test_FR_0_0_08_detects_reordered_header_columns`: the registry header with `Functions` and `Module` swapped gives exactly one E2 at the header line (line 3), whose message says `header columns are`.
+- `test_FR_0_0_08_table_ends_at_first_non_table_line`: a note and a second, two-column table after the registry table give no E findings and `ok: true`.
+- `test_FR_0_0_05_a_fetches_missing_origin_main_once`: in a clone whose `refs/remotes/origin/main` was deleted, the gate fetches it from the reachable remote. The ref is back at the same commit, `approvals_ref` is `origin/main`, `approvals_commit` is that commit, and the `ALLOW-EDIT` approval on main is used (no findings).
+
+**Test-first.** Each new test passed against the correct code; none needed a code change. The mutations below prove each one fails when its behaviour is removed.
+
+**Mutations.** Each was applied alone in a scratch clone of this branch with the uncommitted changes copied in, then restored. The script checks that the file is byte-identical to the original after each one. The command was `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not network" -k <k>`, with `<k>` = `"FR_0_0_05 or FR_0_0_06 or FR_0_0_08"` for G13, G14 and G22, and `FR_0_0_12` for P12. Before any mutation, the same command with the combined `-k` gave `148 passed, 67 deselected in 35.05s`.
+```text
+G13 | F46 registry header columns must be the seven documented ones | 1 failed, 105 passed, 109 deselected in 21.23s | test_aqis_gate_registry.py::test_FR_0_0_08_detects_reordered_header_columns
+G14 | F46 registry table ends at the first non-table line | 1 failed, 105 passed, 109 deselected in 21.84s | test_aqis_gate_registry.py::test_FR_0_0_08_table_ends_at_first_non_table_line
+G22 | F46 missing origin/main is fetched once | 1 failed, 105 passed, 109 deselected in 21.46s | test_aqis_gate_checks.py::test_FR_0_0_05_a_fetches_missing_origin_main_once
+P12 | BLK-007 root calls apt-get without sudo | 1 failed, 41 passed, 173 deselected in 12.26s | test_aqis_harness_provision.py::test_FR_0_0_12_root_installs_without_sudo
+all mutated files restored
+```
+The mutations were:
+- G13: `if tuple(_cells(stripped)) != REGISTRY_COLUMNS:` changed to `if False:`;
+- G14: `break` at the first non-table line changed to `continue`;
+- G22: the `git fetch --quiet origin main:refs/remotes/origin/main` call removed;
+- P12: `if os.geteuid() != 0:` changed to `if True:`.

@@ -141,7 +141,7 @@ All four create a scratch venv with `python -m venv <dir>`, which runs `ensurepi
 **Owner answer:** Option 1 (session chat, 2026-09-25; recorded under CONDITIONS in `docs/approvals/WP-0.0.md` on `main`, `d403bad`): use `uv venv --seed` in shared test helpers for throwaway test environments. Changing the venv creation line in `test_FR_0_0_03_lock_installable_with_plain_pip` is approved, with its assertions unchanged.
 
 ## BLK-007 — The root-path provisioning test (audit F43, P12) cannot run as root on the CI runner
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.0  ·  Raised: 2026-09-26  ·  Session: https://claude.ai/code/session_01N7gtpxBMnXJe8XU2D1AzuM
 
 **What I need:** your choice of how `test_FR_0_0_12_root_installs_without_sudo` runs the script as root on a machine where the test itself is not root, as on the CI runner.
@@ -164,4 +164,6 @@ Everything else in round 6 is green locally (fast `204 passed` with git-lfs 3.4.
 
 **Paused until answered:** only this test, and the final round 6 records. STATUS stays AUDIT-FAIL until CI is green. Everything else for F39 to F44 is committed and pushed (`bbfd928`).
 
-**Owner answer:** 
+**Owner answer:** Option 1 (2026-09-26; `docs/approvals/WP-0.0.md` on `main`, `8f11ab0`): "In test_FR_0_0_12_root_installs_without_sudo, use pytest monkeypatch for os.geteuid to return 0. Include minor fixes F45 and F46."
+
+**Resolution:** the test now replaces `os.geteuid` with a function returning 0 through `monkeypatch`, inside the test only, and runs `Provisioner.step_system()` in-process with the stand-in commands on PATH. It passes here and fails under mutation P12 (`if os.geteuid() != 0:` changed to `if True:`). CI results are in EVIDENCE.md, "BLK-007 decision and minor fixes F45 and F46".

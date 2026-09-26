@@ -34,7 +34,7 @@ CHANGE LOG:
     in the FAIL detail for any exit code; F24 distribution check (Debian or Ubuntu); F27 venv_problem rebuilds a
     .venv-harness without a working pip.
   2026-09-25 WP-0.0 audit round 4 F30: header lists test_FR_0_0_12_asset_licences_recorded (header only).
-  2026-09-25 WP-0.0 audit round 5 F35/F37: header lists the occupied-target, hostile-archive and licence tests (header only).
+  2026-09-26 WP-0.0 audit round 5 F35/F37: header lists the occupied-target, hostile-archive and licence tests (header only).
   2026-09-26 WP-0.0 audit round 6 F41/F43: header lists the integrity-guard and promised-behaviour tests (header only).
 """
 import argparse

@@ -123,6 +123,21 @@ def test_FR_0_0_05_a_passes_guarded_path_with_main_approval(repo):
     assert report["approvals_ref"] == "origin/main"
 
 
+def test_FR_0_0_05_a_fetches_missing_origin_main_once(repo):
+    # Audit F46 (G22): a clone whose origin/main ref is gone fetches it once, then uses its approvals.
+    repo.approve_on_main("WP-9.9.md", "ALLOW-EDIT: vad_adapters/example.py\n")
+    repo.branch()
+    repo.append("vad_adapters/example.py", "\nEXTRA = 1\n")
+    main_commit = git(repo.path, "rev-parse", "origin/main").strip()
+    git(repo.path, "update-ref", "-d", "refs/remotes/origin/main")
+    proc = repo.gate("--base", "main")                    # the base is the local main; only origin/main is gone
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    report = json.loads(proc.stdout)
+    assert git(repo.path, "rev-parse", "origin/main").strip() == main_commit      # fetched back
+    assert report["approvals_ref"] == "origin/main" and report["approvals_commit"] == main_commit
+    assert report["findings"] == [] and report["ok"] is True
+
+
 def test_FR_0_0_05_a_ignores_approval_committed_only_on_branch(repo):
     repo.branch()
     repo.write("docs/approvals/WP-9.9.md", "STATUS: APPROVED\nALLOW-EDIT: vad_adapters/example.py\n")

@@ -3,7 +3,7 @@
 The audit gate checks a branch's changes for the rule violations the AQIS lab cares about. It exits `0` only when it finds nothing. It is built by WP-0.0 (FR-0.0-05 to FR-0.0-09, NFR-0.0-01 to NFR-0.0-03; FR-0.0-06 amended in round 2 to match Stop hook version 2/3). It runs in CI (with `--wp` taken from the pull request title), and the Stop hook (`.claude/hooks/stop_gate.py`) calls it at the end of every Claude turn.
 
 ## Usage
-Run from anywhere inside the repository, with the project environment:
+Run from the repository root, with the project environment. The `tools` package is imported from the current folder. From anywhere else, set `PYTHONPATH` to the repository root. From `docs/` that is not enough, because the folder `docs/tools/` shadows the package: `cd` to the root instead (corrected for audit finding F45):
 
 ```bash
 git fetch origin main                                   # approvals are read from origin/main
@@ -16,7 +16,7 @@ git fetch origin main                                   # approvals are read fro
 | --- | --- |
 | 0 | No findings |
 | 1 | At least one finding (listed) |
-| 2 | Gate error: bad `--base`, malformed `--wp`, not a git repository, a git command that failed, or a file the gate must check that cannot be read. The message is on stderr, starts with `ERROR:` and names `path:line`. The gate **fails closed**: an error is never reported as a clean pass |
+| 2 | Gate error: bad `--base`, malformed `--wp`, not a git repository, a git command that failed, or a file the gate must check that cannot be read. The message is on stderr and starts with `ERROR:`. A message about a file names `path:line`; a message about an argument (`--base`, `--wp`) or a failed git command names that argument or command instead (corrected for audit finding F45). The gate **fails closed**: an error is never reported as a clean pass |
 
 ## What "changes" means
 - **Diff base.** The gate uses `git merge-base <ref> HEAD`, not the tip of `<ref>`. It sees only what this branch changed since it left `<ref>`, the same as a GitHub pull request diff and the Stop hook (owner-approved default 5f).
