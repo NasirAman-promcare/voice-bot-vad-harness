@@ -939,3 +939,18 @@ The mutations were:
 - G14: `break` at the first non-table line changed to `continue`;
 - G22: the `git fetch --quiet origin main:refs/remotes/origin/main` call removed;
 - P12: `if os.geteuid() != 0:` changed to `if True:`.
+
+**Suites and gate on the clean committed tree (`18f3444`).** Command for the fast suite: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"`, run once with the system git-lfs and once with git-lfs 3.7.0 first on PATH. Slow suite: `-m "slow or network"`. Gate: `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0`.
+```text
+commit: 18f3444
+status lines before: 0
+fast git-lfs/3.4.1: 207 passed, 8 deselected in 42.18s
+fast git-lfs/3.7.0: 207 passed, 8 deselected in 38.75s
+slow/network: 8 passed, 207 deselected in 93.06s (0:01:33)
+gate: 0 findings: OK (0.2 s)
+git status lines after: 0
+```
+
+**CI on `18f3444`.** Push run `36241588866` and pull request run `36241592075` (workflow `aqis-lab-ci`). Both jobs, `lab` and `harness-regression`, concluded `success` in both runs. `test_FR_0_0_12_root_installs_without_sudo` now passes on the GitHub runner; runs `36231792360`, `36231766392` and `36231008660` had failed on it (BLK-007).
+
+**Open.** None. F39 to F46 and BLK-007 are addressed. WP-0.0 is ready for audit.
