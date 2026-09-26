@@ -186,6 +186,8 @@ APPROVAL_TEXTS = {
     "allow_edit_trailing_text": "STATUS: APPROVED\nALLOW-EDIT: vad_adapters/** (WP-0.1 only)\n",
     # audit round 6 (F39, line-by-line review of _protected.py:154): STATUS must end its line too
     "status_trailing_text": "STATUS: APPROVED (draft)\nALLOW-EDIT: vad_adapters/**\n",
+    # "?" is one character within a folder, never "/" (_protected.py:43)
+    "question_mark_within_folder": "STATUS: APPROVED\nALLOW-EDIT: vad_adapters?example.py\n",
 }
 
 
@@ -274,6 +276,15 @@ def s_policy_inline_comment(r):
     r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
 
 
+def s_policy_leading_slash(r):
+    # A leading "/" in a policy glob is ignored, so "/vad_adapters/**" still guards vad_adapters/ (_protected.py:28).
+    def change(text):
+        assert text.count("\nvad_adapters/**\n") == 1
+        return text.replace("\nvad_adapters/**\n", "\n/vad_adapters/**\n")
+    policy_on_main(r, change)
+    r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
+
+
 def s_unknown_policy_section(r):
     # An unknown [SECTION] ends the previous section: its lines belong to no section.
     policy_on_main(r, lambda text: text + "\n[RETIRED]\nvad_adapters/example.py\n")
@@ -351,6 +362,7 @@ SCENARIOS = {
     "allow_patterns_in_trailing_note": (s_allow_patterns_in_trailing_note, False),
     "non_md_approval": (s_non_md_approval, False), "policy_inline_comment": (s_policy_inline_comment, False),
     "unknown_policy_section": (s_unknown_policy_section, False), "header_at_line_80": (s_header_at_line_80, False),
+    "policy_leading_slash": (s_policy_leading_slash, False),
     "header_at_line_81": (s_header_at_line_81, False), "expires_today": (s_expires_today, False),
     "expires_with_note": (s_expires_with_note, False),
     "lab_test_replaced_by_symlink": (s_lab_test_replaced_by_symlink, True),
@@ -368,6 +380,7 @@ EXPECT_EXACT = {
     "non_md_approval": [("A2", "vad_adapters/example.py", "M")],
     "policy_inline_comment": [("A2", "vad_adapters/example.py", "M")],
     "unknown_policy_section": [("A2", "vad_adapters/example.py", "M")],
+    "policy_leading_slash": [("A2", "vad_adapters/example.py", "M")],
     "header_at_line_81": [("D1", "aqis_lab/header_81.py")],
 }
 

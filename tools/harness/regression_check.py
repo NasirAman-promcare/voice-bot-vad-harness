@@ -4,7 +4,7 @@ Usage:
   python -m tools.harness.regression_check --junit <report.xml> [--baseline docs/baselines/harness_tests_baseline.md]
 
 CAPABILITIES:
-  CAP-HARN-001: exits 1 when a test that passed in the provisioned baseline now fails, errors, is skipped or is missing; lists newly passing tests as information; exits 2 when an input cannot be read [tests: test_FR_0_0_11_regression_check_flags_newly_failing_baseline_pass, test_FR_0_0_11_regression_check_flags_newly_skipped_baseline_pass, test_FR_0_0_11_regression_check_flags_missing_baseline_pass, test_FR_0_0_11_regression_check_passes_same_or_better, test_FR_0_0_11_regression_check_rejects_unreadable_inputs, test_FR_0_0_11_regression_check_accepts_repository_baseline]
+  CAP-HARN-001: exits 1 when a test that passed in the provisioned baseline now fails, errors, is skipped or is missing; lists newly passing tests as information; exits 2 when an input cannot be read [tests: test_FR_0_0_11_regression_check_flags_newly_failing_baseline_pass, test_FR_0_0_11_regression_check_flags_newly_skipped_baseline_pass, test_FR_0_0_11_regression_check_flags_missing_baseline_pass, test_FR_0_0_11_regression_check_passes_same_or_better, test_FR_0_0_11_regression_check_rejects_unreadable_inputs, test_FR_0_0_11_regression_check_accepts_repository_baseline, test_FR_0_0_11_regression_check_rejects_table_without_readable_rows, test_FR_0_0_11_regression_check_reads_every_repository_baseline_row]
 INPUTS AND OUTPUTS: a pytest JUnit XML file and the baseline Markdown; a report on stdout; exit 0, 1 or 2.
 CONTRACTS: baseline section "## Provisioned baseline (round 2)" with a "### Results" table of
   | `tests/...py::test_name` | passed/failed/error/skipped | seconds | rows (docs/baselines/harness_tests_baseline.md).
@@ -16,6 +16,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-09-25 WP-0.0 round 2 FR-0.0-11 (amended) created.
   2026-09-25 WP-0.0 audit round 2 F13: header test list names the skipped-outcome test (header only).
+  2026-09-26 WP-0.0 audit round 6 F42: header lists the unreadable-table and repository-baseline tests (header only).
 """
 import argparse
 import re

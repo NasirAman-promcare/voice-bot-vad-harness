@@ -9,7 +9,7 @@ CAPABILITIES:
   CAP-AUDIT-003: check (c) compromise patterns in added lab code lines and test-integrity patterns in added lab test lines [tests: test_FR_0_0_05_c_detects_each_code_pattern, test_FR_0_0_05_c_detects_each_test_pattern, test_FR_0_0_05_c_scans_only_added_lines, test_FR_0_0_05_c_includes_uncommitted_and_untracked_work, test_FR_0_0_06_scans_v2_file_types_and_dirs, test_FR_0_0_06_flags_pytestmark_and_param_skips, test_FR_0_0_06_decodes_non_utf8_with_replacement, test_FR_0_0_06_fails_closed_on_unreadable_changed_file, test_FR_0_0_06_fails_closed_on_git_error, test_FR_0_0_05_c_indented_allow_patterns_in_exempts_nothing]
   CAP-AUDIT-004: check (d) CAPABILITIES header in new aqis_lab/ modules [tests: test_FR_0_0_05_d_detects_new_module_without_header, test_FR_0_0_05_d_passes_module_with_header_or_short_file]
   CAP-AUDIT-005: check (e) capability registry consistency [tests: test_FR_0_0_08_detects_row_with_missing_test, test_FR_0_0_08_detects_row_with_missing_module, test_FR_0_0_08_detects_row_removed_since_base, test_FR_0_0_08_detects_malformed_row, test_FR_0_0_08_detects_missing_registry, test_FR_0_0_08_passes_consistent_registry, test_FR_0_0_08_repository_registry_is_consistent]
-  CAP-AUDIT-006: check (f) requirement traceability for --wp [tests: test_FR_0_0_09_detects_id_missing_from_plan, test_FR_0_0_09_detects_id_missing_from_test_names, test_FR_0_0_09_detects_id_missing_from_evidence, test_FR_0_0_09_underscore_matching_respects_boundaries, test_FR_0_0_09_ignores_other_wp_ids_in_spec, test_FR_0_0_09_reports_unknown_wp, test_FR_0_0_09_passes_complete_traceability]
+  CAP-AUDIT-006: check (f) requirement traceability for --wp [tests: test_FR_0_0_09_detects_id_missing_from_plan, test_FR_0_0_09_detects_id_missing_from_test_names, test_FR_0_0_09_detects_id_missing_from_evidence, test_FR_0_0_09_underscore_matching_respects_boundaries, test_FR_0_0_09_ignores_other_wp_ids_in_spec, test_FR_0_0_09_reports_unknown_wp, test_FR_0_0_09_passes_complete_traceability, test_FR_0_0_09_detects_nfr_id_missing_from_test_names]
   CAP-AUDIT-007: lists every audit-allow line and every ALLOW-PATTERNS-IN exempted file [tests: test_FR_0_0_07_audit_allow_with_reason_exempts_and_is_listed, test_FR_0_0_07_audit_allow_without_reason_does_not_exempt, test_FR_0_0_07_audit_allow_exempts_only_its_line, test_FR_0_0_07_allow_patterns_in_exempts_file_and_is_listed]
   CAP-AUDIT-009: command line, merge-base diffing, text and JSON reports, exit codes 0/1/2 [tests: test_FR_0_0_05_clean_branch_exits_zero, test_FR_0_0_05_uses_merge_base_not_ref_tip, test_FR_0_0_05_json_output_schema, test_FR_0_0_05_bad_base_ref_exits_2, test_NFR_0_0_01_gate_runtime_under_60s, test_NFR_0_0_02_every_message_names_file_line_and_rule, test_NFR_0_0_03_imports_are_stdlib_or_pinned]
 INPUTS AND OUTPUTS: git state of the repository containing the cwd; a report on stdout; exit 0 (no findings),
@@ -28,6 +28,7 @@ CHANGE LOG:
              UTF-8 decoding with replacement; no approvals when origin/main is unverifiable; F1 cites the glob.
   2026-09-25 WP-0.0 audit round 4 F28: header lists the new rename, built-in NEVER and README tests (header only).
   2026-09-25 WP-0.0 audit round 5 F33: header lists the approval-line tests (header only).
+  2026-09-26 WP-0.0 audit round 6 F40: header lists the NFR traceability test (header only).
 """
 import argparse
 import ast
