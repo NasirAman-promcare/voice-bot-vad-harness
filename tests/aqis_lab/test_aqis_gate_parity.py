@@ -214,7 +214,8 @@ def s_modified_non_py_test_file(r):
 
 def s_non_py_lab_test_file(r):
     # Test patterns apply to .py files under tests/aqis_lab/ only.
-    r.branch(); r.write("tests/aqis_lab/README.md", "Lab tests never use xfail.\n")
+    # The text names an expected-failure marker, so it lives in the fixtures folder (PLAN.md test-data rule).
+    r.branch(); r.copy_fixture("lab_test_readme.md", "tests/aqis_lab/README.md")
 
 
 def s_guarded_added_then_deleted(r):
