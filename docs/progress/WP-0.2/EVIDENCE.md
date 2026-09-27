@@ -124,3 +124,14 @@ ContractValidationError | run card record is invalid (1 problem):
 ```
 - Fast suite: `947 passed, 8 deselected in 57.02s`. Gate (`--base origin/main`): `0 findings: OK (0.2 s)`.
 - Status: DONE
+
+### FR-0.2-07 — Documents match schemas
+- Tests (`tests/aqis_lab/test_aqis_contracts_docs.py`): `test_FR_0_2_07_documents_and_schemas_list_same_fields` (per kind; also requires the spec's fields, written out independently, to be among them, and one payload heading per event type), `test_FR_0_2_07_comparison_detects_missing_and_extra_fields` (a dropped document row, an added row, a field removed from a payload sub-schema, and a payload table under the wrong event type are all found, so the check cannot pass vacuously). The schema walker and the document parser are test code, independent of `aqis_lab/contracts`.
+- Tests first: the documents were written at FR-0.2-06, so this test passed on its first run. To show it fails for the right reason, I moved `docs/contracts/` aside and got `E       FileNotFoundError: [Errno 2] No such file or directory: '.../docs/contracts/EVENT_LOG.md'`; then I restored it. The must-catch proof (below) breaks one document and one schema in a copy.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_contracts_docs.py -q -p no:cacheprovider`
+- Output (real excerpt):
+```text
+4 passed in 0.03s
+```
+- Fast suite: `951 passed, 8 deselected in 56.96s`.
+- Status: DONE
