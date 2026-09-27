@@ -244,6 +244,25 @@ Findings: 0
 0 findings: OK (0.3 s)
 ```
 
+## CI
+Workflow `aqis-lab-ci` on commit `8fca4ba`; the two runs are the push run and the pull-request run for [NasirAman-promcare/voice-bot-vad-harness#4](https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/4):
+
+| Run | Job | Conclusion |
+| --- | --- | --- |
+| 36338636737 (pull_request) | `lab` | success |
+| 36338636737 (pull_request) | `harness-regression` | success |
+| 36338615911 (push) | `lab` | success |
+| 36338615911 (push) | `harness-regression` | success |
+
+Excerpt from job `lab`, run 36338636737. The gate ran with `--wp WP-0.4` taken from the pull request title, on the PR merge commit `3aad740`:
+```text
+1357 passed, 14 deselected in 117.04s (0:01:57)
+Work package from the pull request title: WP-0.4
+aqis-audit-gate: base origin/main (merge-base 655b4e175420), head 3aad740979d1, approvals origin/main 655b4e175420, wp WP-0.4
+Findings: 0
+0 findings: OK (0.3 s)
+```
+
 ## Owner-run checks
 None. The spec runs WP-0.4 on the cloud VM only, and everything in it ran here. Colab and Oracle use the committed pack (WP-0.5 copies it from the repository), and `pack verify` needs no sources or network there. Cross-machine Vosk parity on this pack is WP-0.7's exit criterion E1.
 
