@@ -1,0 +1,155 @@
+# AQIS lab source datasets and licence table, format 1. Documented in docs/data/REGISTRY_FORMAT.md.
+# data/registry/sources.csv is generated from this file with: python -m aqis_lab registry build
+# Pins were measured on 2026-09-27 (docs/progress/WP-0.4/PLAN.md, EVIDENCE.md); md5 values are the ones OpenSLR
+# publishes (resources/12/md5sum.txt, resources/17/checksum.md5).
+format_version: 1
+
+# Licence of clips the pack builder generates without any third-party material (digital silence).
+generated_licence: CC0-1.0
+
+licences:
+  CC-BY-4.0:
+    name: Creative Commons Attribution 4.0 International
+    url: https://creativecommons.org/licenses/by/4.0/
+    attribution_required: true
+    share_alike: false
+    non_commercial: false
+  CC-BY-3.0:
+    name: Creative Commons Attribution 3.0 Unported
+    url: https://creativecommons.org/licenses/by/3.0/
+    attribution_required: true
+    share_alike: false
+    non_commercial: false
+  LicenseRef-public-domain:
+    name: Public domain, as marked by the source (MUSAN noise/free-sound/LICENSE says all its recordings were marked as in the Public Domain on Freesound)
+    url: null
+    attribution_required: false
+    share_alike: false
+    non_commercial: false
+  CC0-1.0:
+    name: Creative Commons Zero v1.0 Universal
+    url: https://creativecommons.org/publicdomain/zero/1.0/
+    attribution_required: false
+    share_alike: false
+    non_commercial: false
+  Apache-2.0:
+    name: Apache License 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+    attribution_required: true
+    share_alike: false
+    non_commercial: false
+  LicenseRef-AQIS-owner-consent:
+    name: Recorded for AQIS lab use only; not for redistribution (consent reference required)
+    url: null
+    attribution_required: false
+    share_alike: false
+    non_commercial: true
+
+datasets:
+  librispeech-test-clean:
+    type: download
+    importer: librispeech
+    source: librispeech
+    kind: speech
+    split: test-clean
+    url: https://www.openslr.org/resources/12/test-clean.tar.gz
+    bytes: 346663984
+    sha256: 39fde525e59672dc6d1551919b1478f724438a95aa55f874b576be21967e6c23
+    md5: 32fa31d27d2e1cad72775fee3f4849a9
+    extract:
+      - LibriSpeech/*.TXT
+      - LibriSpeech/test-clean/**
+    licence: CC-BY-4.0
+    homepage: https://www.openslr.org/12/
+    attribution: >-
+      LibriSpeech ASR corpus (c) 2014 by Vassil Panayotov, licensed under a Creative Commons Attribution 4.0
+      International License (https://creativecommons.org/licenses/by/4.0/). Source: https://www.openslr.org/12/.
+      V. Panayotov, G. Chen, D. Povey and S. Khudanpur, "LibriSpeech: an ASR corpus based on public domain audio
+      books", ICASSP 2015. The audio comes from LibriVox public-domain audiobooks.
+    changes: >-
+      Utterances decoded from FLAC to 16-bit PCM WAV with the samples unchanged (checked against each file's
+      STREAMINFO MD5); some utterances are mixed with noise, as each such clip's recipe states.
+  librispeech-test-other:
+    type: download
+    importer: librispeech
+    source: librispeech
+    kind: speech
+    split: test-other
+    url: https://www.openslr.org/resources/12/test-other.tar.gz
+    bytes: 328757843
+    sha256: d09c181bba5cf717b3dee7d4d592af11a3ee3a09e08ae025c5506f6ebe961c29
+    md5: fb5a50374b501bb3bac4815ee91d3135
+    extract:
+      - LibriSpeech/*.TXT
+      - LibriSpeech/test-other/**
+    licence: CC-BY-4.0
+    homepage: https://www.openslr.org/12/
+    attribution: >-
+      LibriSpeech ASR corpus (c) 2014 by Vassil Panayotov, licensed under a Creative Commons Attribution 4.0
+      International License (https://creativecommons.org/licenses/by/4.0/). Source: https://www.openslr.org/12/.
+      V. Panayotov, G. Chen, D. Povey and S. Khudanpur, "LibriSpeech: an ASR corpus based on public domain audio
+      books", ICASSP 2015. The audio comes from LibriVox public-domain audiobooks.
+    changes: >-
+      Utterances decoded from FLAC to 16-bit PCM WAV with the samples unchanged (checked against each file's
+      STREAMINFO MD5).
+  musan:
+    type: download
+    importer: musan
+    source: musan
+    kind: non-speech
+    url: https://www.openslr.org/resources/17/musan.tar.gz
+    bytes: 11086114085
+    sha256: 86d1061c7e15b5c9e906777685c519701df51bfde3001e1070dcc9ffac955ee1
+    md5: 0c472d4fc0c5141eca47ad1ffeb2a7df
+    extract:
+      - musan/README
+      - musan/noise/README
+      - musan/music/README
+      - musan/noise/free-sound/**
+      - musan/music/rfm/**
+    licence: CC-BY-4.0
+    homepage: https://www.openslr.org/17/
+    attribution: >-
+      MUSAN: A Music, Speech, and Noise Corpus, by David Snyder, Guoguo Chen and Daniel Povey (arXiv:1510.08484),
+      released as a corpus under a Creative Commons Attribution 4.0 International License
+      (https://creativecommons.org/licenses/by/4.0/). Source: https://www.openslr.org/17/. Each file's own licence
+      is the one the LICENSE file of its MUSAN folder gives.
+    changes: >-
+      Excerpts cut at seeded offsets, or noise scaled and mixed with speech at a stated SNR, as each clip's recipe
+      states; written as 16-bit PCM WAV with a canonical header.
+    subsets:
+      noise/free-sound:
+        split: noise
+        licence: LicenseRef-public-domain
+        licence_file_sha256: 2976652933421a46f0d2099811529973adc385113b21802cc7b5c764829a672d
+        annotations: noise-background-list
+      music/rfm:
+        split: music
+        licence: CC-BY-3.0
+        licence_file_sha256: 85cce3e3a8435d2bf68ee588b4181571d9cd6948cc99fa3ce1d86cde53b1c423
+        annotations: music-table
+        titles: rfm-licence
+        attribution_template: '"{title}" {artist} (incompetech.com), Licensed under Creative Commons: By Attribution 3.0, http://creativecommons.org/licenses/by/3.0/'
+  tts-smoke:
+    type: local
+    importer: tts
+    source: tts
+    kind: speech
+    split: tts
+    folder: data/tts_smoke
+    generation_record: data/tts_smoke/GENERATION.md
+    clip_prefix: tts-smoke-
+    speaker_prefix: kokoro-
+    tags:
+      - synthetic
+      - tts
+    licence: Apache-2.0
+    homepage: https://huggingface.co/hexgrad/Kokoro-82M
+    attribution: >-
+      Synthetic speech generated with the Kokoro-82M text-to-speech model by hexgrad
+      (https://huggingface.co/hexgrad/Kokoro-82M), kokoro package 0.9.4, licensed under the Apache License 2.0
+      (https://www.apache.org/licenses/LICENSE-2.0). No person was recorded. These synthetic clips must never be
+      used to judge or compare models.
+    changes: >-
+      0.4 s of silence added at the start and the end and converted to 16 kHz mono 16-bit PCM WAV with ffmpeg
+      (data/tts_smoke/GENERATION.md); WAV header rewritten in the canonical form (samples unchanged).

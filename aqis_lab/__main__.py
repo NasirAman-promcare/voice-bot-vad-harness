@@ -12,6 +12,8 @@ CHANGE LOG:
   2026-09-25 WP-0.0 FR-0.0-01 created.
   2026-09-27 WP-0.2 FR-0.2-04: `contracts` command registered in COMMANDS.
   2026-09-27 WP-0.3 FR-0.3-06: `score` command registered in COMMANDS.
+  2026-09-27 WP-0.4 FR-0.4-01: `registry` command registered in COMMANDS.
+  2026-09-27 WP-0.4 FR-0.4-05: `pack` command registered in COMMANDS.
 """
 import argparse
 import importlib
@@ -22,6 +24,8 @@ COMMANDS = {
     "version": ("aqis_lab.commands.version", "print the package version, git commit and Python version"),
     "contracts": ("aqis_lab.commands.contracts", "validate event logs, run cards and pack manifests (docs/contracts/)"),
     "score": ("aqis_lab.commands.score", "score transcripts: corpus WER and CER, Parquet and CSV score table"),
+    "registry": ("aqis_lab.commands.registry", "fetch source datasets, build and validate the source registry"),
+    "pack": ("aqis_lab.commands.pack", "build a test pack from a pack spec, or verify a built pack"),
 }
 
 
