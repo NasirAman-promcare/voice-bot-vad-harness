@@ -362,13 +362,14 @@ Mutation results, suites, gate and CI runs are in EVIDENCE.md, "BLK-007 decision
 | `tools/audit/gate.py` | `test_functions`, with new private helpers `_decorator_name`, `_is_test_def`, `_sets_test_false`, `_may_have_constructor`, `_collect_class`, constants `TEST_FILE_GLOBS` and `NOT_TEST_DECORATORS`, `import fnmatch`; header test lists and change log | F47 | CAP-AUDIT-005, CAP-AUDIT-006 (both call `test_functions`) |
 | `aqis_lab/deploy/harness_provision.py` | `check_imports` only; header capability text, test list and change log | F52 (plus the F49 and F50 test lists) | CAP-ENV-003 |
 | `tests/aqis_lab/test_aqis_gate_registry.py`, `test_aqis_gate_trace.py`, `test_aqis_harness_provision.py` | New tests and helpers only (`COLLECTION_PROBE`, `pytest_collected_names`, `NOT_COLLECTED_PLACEMENTS`, `dpkg_standins`, `provisioned_once`, `import_check_provisioner`); no existing test changed | F47, F49, F50, F52 | none |
+| `tests/aqis_lab/test_aqis_gate_v2.py` | New tests `test_FR_0_0_06_fails_closed_when_branch_diff_fails` and `test_FR_0_0_06_fails_closed_when_git_status_fails` (commit `6e28f44`, added for the MC7.19 survivor; row added in round 9, audit finding F61) | must-catch 7 | none |
 | `docs/tools/AUDIT_GATE.md` | Line 6 (`PYTHONPATH`); the registry **Tests** rule and the traceability test-name rule (F47); the F44 approval quote | F47, F54 | none |
 | `docs/capabilities/REGISTRY.md` | CAP-AUDIT-005, CAP-AUDIT-006 and CAP-ENV-003: test lists and "What it does" wording | F47, F49, F50, F52 | none |
 | `docs/progress/DEBT.md` | Rows DEBT-001 to DEBT-003 | F48, F51, F53 | none |
 | `docs/progress/WP-0.0/EVIDENCE.md`, `FIXES.md`, `docs/progress/STATUS.md` | Records: must-catch proof, AT-0.0-04/07 row, round 8 section | all | none |
 
 ### What changed in code
-- **F47, `test_functions`.** It now follows pytest's default collection, and the tests check this against `pytest --collect-only` on the same files. A name counts only when all of these hold:
+- **F47, `test_functions`.** It now follows the main rules of pytest's default collection, and the tests check this against `pytest --collect-only` on the same files (**correction, round 9 F61:** not every rule; F55 lists the rules it does not model, accepted as debt DEBT-004). A name counts only when all of these hold:
   - The file is named `test_*.py` or `*_test.py`, and the module does not set `__test__ = False`.
   - The function is not decorated as a fixture or property.
   - For a method, the class name starts with `Test`, the class does not set `__test__ = False`, and it has no `__init__` or `__new__`, of its own or from a base class.
@@ -382,7 +383,7 @@ Mutation results, suites, gate and CI runs are in EVIDENCE.md, "BLK-007 decision
 - **F49, F50.** Tests only. The guards were already correct.
 
 ### Sibling cases covered (surgical-fix step 6)
-- **F47.** Besides G35 (methods of non-`Test` classes) and G36 (nested functions), the tests cover every other way a `test*` function can escape pytest:
+- **F47.** Besides G35 (methods of non-`Test` classes) and G36 (nested functions), the tests cover these other ways a `test*` function can escape pytest (**correction, round 9 F61:** not every way; see F55 and DEBT-004):
   - a file whose name pytest does not collect;
   - a `Test` class with `__init__`, with `__new__`, or with a constructor inherited from a base class;
   - a `Test` class with a base class from another module;
@@ -397,3 +398,41 @@ Mutation results, suites, gate and CI runs are in EVIDENCE.md, "BLK-007 decision
 
 ### Verification
 The red runs before the code changes, the must-catch battery, the suites, the gate and CI are in EVIDENCE.md, "Round 8 audit fixes and must-catch proof".
+
+## Round 9 audit fixes (F56 to F59, F61), closing WP-0.0
+
+**Source.** `docs/progress/WP-0.0/AUDIT.md` round 8 (`6aa54f3`, audited commit `d26abbe`), verdict FAIL: 4 CRITICAL, 1 MAJOR, 2 MINOR.
+
+**Owner approval.** `docs/approvals/WP-0.0.md` on `main` (`1a92788`): "Round 9 (final): fixes for WP-0.0-F56, F57, F58, F59 and F61 approved. F55 and F60 are accepted as debt in docs/progress/DEBT.md (target WP-0.9)."
+
+**Baseline.** Round 8 audited `d26abbe`, whose code is identical to `c4921ac`: fast `232 passed`, slow `8 passed`, gate `0 findings`, CI green on both jobs (AUDIT.md round 8).
+
+### Root causes
+| Finding | Root cause |
+| --- | --- |
+| F56 CRITICAL | Check (b) accepts only `ALLOW-EDIT`, but no test put an `ALLOW-PATTERNS-IN` approval over an existing test, so widening check (b) to pattern rules went unnoticed. |
+| F57 CRITICAL | The only unreadable-file test used a dangling symlink, which goes through the "not a regular file" branch. No test made a regular file unreadable, made the base registry blob unreadable, or made the matched spec unreadable. |
+| F58 CRITICAL | The weights tests damaged only a first download, never the cache before a second run. |
+| F59 CRITICAL | The Colab test checked that `"-c"` was on the clone line, not where. No test ran cells 1 to 3 on a successful clone, or proved cell 3's own check. |
+| F61 MINOR | Round 8 records generalised from the cases tested ("mirrors", "never accepts", "every other way", "every break"). A new test file was left out of the round 8 budget table. |
+
+### Change budget
+| File | Change | Finding |
+| --- | --- | --- |
+| `tests/aqis_lab/test_aqis_gate_checks.py` | New test `test_FR_0_0_05_b_allow_patterns_in_does_not_approve_test_edits` | F56 |
+| `tests/aqis_lab/test_aqis_gate_parity.py` | New scenario `s_allow_patterns_in_covers_existing_tests`, with its `SCENARIOS` and `EXPECT_EXACT` entries | F56 |
+| `tests/aqis_lab/test_aqis_gate_v2.py` | New tests `…fails_closed_on_changed_file_it_cannot_read`, `…fails_closed_when_base_registry_unreadable` and `…fails_closed_when_spec_unreadable`; added imports and the `REG` constant | F57 |
+| `tests/aqis_lab/test_aqis_harness_provision.py` | New test `test_FR_0_0_12_damaged_weights_cache_is_replaced` | F58 |
+| `tests/aqis_lab/test_aqis_colab_doc.py` | New test `test_FR_0_0_13_clone_cells_never_store_token` | F59 |
+| `tools/audit/gate.py` | `test_functions` docstring only (the rules it does not model), header test lists and change log | F61, F56, F57 |
+| `aqis_lab/deploy/harness_provision.py` | Header test list and change log only | F58 |
+| `docs/capabilities/REGISTRY.md` | Test lists of CAP-AUDIT-002, -003, -005, -006, CAP-ENV-003 and CAP-DOC-001 | all |
+| `docs/tools/AUDIT_GATE.md` | The "never accepts" sentence replaced by the known gaps (DEBT-004) | F61 |
+| `docs/progress/WP-0.0/FIXES.md`, `EVIDENCE.md` | Correction notes for the round 8 claims, the MC7.20 and MC15.56/57 labels, and the missing budget row; the round 9 sections | F61 |
+| `docs/progress/DEBT.md` | Rows DEBT-004 (F55) and DEBT-005 (F60) | F55, F60 |
+| `docs/progress/STATUS.md` | WP-0.0 set to READY-FOR-AUDIT | all |
+
+No production code changed; the only line changed in `gate.py`'s code body is the `test_functions` docstring. No existing test was modified. The tests that the owner's earlier conditions protected are unchanged: the stand-in commands on PATH and the non-root provisioning test.
+
+### Verification
+The breaks, suites, gate and CI are in EVIDENCE.md, "Round 9 audit fixes".

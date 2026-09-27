@@ -93,7 +93,15 @@ The table in `docs/capabilities/REGISTRY.md` has exactly the columns `Capability
   - The function name starts with `test` and is defined with `def` or `async def` at module level. It can also be a method of a class whose name starts with `Test`, including a class nested in such a class.
   - The class must not set `__test__ = False`. It must not define `__init__` or `__new__`, either itself or through a base class. Every base class must be defined in the same file (or be `object`). A base class imported from elsewhere cannot be read, so the class does not count; this is stricter than pytest.
   - Functions decorated with `fixture` or `property` are not tests. Functions nested inside other functions, and methods of any other class, are not tests either.
-  - Tests inherited from a base class, and tests bound by assignment (`test_x = f`), are not counted either. This is also stricter than pytest, so the gate can reject a name pytest runs, but never accepts one it does not.
+  - Tests inherited from a base class, and tests bound by assignment (`test_x = f`), are not counted either. This is also stricter than pytest.
+  - **Known gaps (accepted debt DEBT-004, audit finding F55):** some pytest rules are not modelled, so the gate can still accept a name pytest does not run. These rules cover:
+    - folders pytest skips, such as `build`, `dist`, `venv` and hidden folders;
+    - files a `conftest.py` ignores;
+    - a module or class switched off with a false `__test__` value other than `False`;
+    - abstract `Test` classes;
+    - a test name rebound after its `def`.
+
+    Each case needs an unusual layout or construct that is visible in review (corrected for audit finding F61).
 
 ## Traceability (check f, `--wp`)
 - The spec is the single file `docs/specs/**/<WP>-*.md`.

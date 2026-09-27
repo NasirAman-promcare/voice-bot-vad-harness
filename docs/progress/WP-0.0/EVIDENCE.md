@@ -991,7 +991,7 @@ The command for each break was `.venv/bin/python -m pytest tests/aqis_lab -q -p 
 
 The hook breaks (MC1.2 and MC2.4) change the clone's copy of the owner's hook, never this repository's.
 
-The battery script is `mustcatch_r8.py` in the scratchpad; its output is the table below. There are 63 breaks. The first run had 61 and one survivor, MC7.19, which is now caught. MC7.19b is the sibling break added with its test, and MC3.7b (approvals listed and read from the branch) was added while checking the table's examples. **Every break fails at least one named test.**
+The battery script is `mustcatch_r8.py` in the scratchpad; its output is the table below. There are 63 breaks. The first run had 61 and one survivor, MC7.19, which is now caught. MC7.19b is the sibling break added with its test, and MC3.7b (approvals listed and read from the branch) was added while checking the table's examples. **Every break in this table fails at least one named test.** (**Correction, round 9 F61:** the table was not a complete proof. The round 8 audit found breaks for must-catch 4, 7, 14 and 15 that no test caught (F56 to F59). Their tests and breaks are in "Round 9 audit fixes" below.)
 
 | Must-catch | Behaviour | Breaks | Tests that fail (examples) |
 | --- | --- | --- | --- |
@@ -1035,7 +1035,7 @@ The battery script is `mustcatch_r8.py` in the scratchpad; its output is the tab
 | MC6.18 | 6 | trivial-assert pattern never matches | `tools/audit/patterns.py` | 3 failed, 121 passed, 114 deselected in 26.09s | test_aqis_gate_checks.py::test_FR_0_0_05_c_detects_each_test_pattern; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[test_patterns]; test_aqis_gate_parity.py::test_FR_0_0_06_pattern_tables_identical_to_stop_hook |
 | MC7.19 | 7 | git diff failure ignored | `tools/audit/gate.py` | first run: 124 passed, 114 deselected in 26.91s, survived; after the new test: 1 failed, 125 passed, 114 deselected in 26.72s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_when_branch_diff_fails |
 | MC7.19b | 7 | git status failure ignored | `tools/audit/gate.py` | 1 failed, 125 passed, 114 deselected in 25.98s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_when_git_status_fails |
-| MC7.20 | 7 | unreadable changed file skipped | `tools/audit/gate.py` | 1 failed, 123 passed, 114 deselected in 26.91s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_on_unreadable_changed_file |
+| MC7.20 | 7 | a changed path that is not a regular file (dangling symlink) is skipped; label corrected in round 9 (F61): the read-error branch is K7.4 in round 9 | `tools/audit/gate.py` | 1 failed, 123 passed, 114 deselected in 26.91s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_on_unreadable_changed_file |
 | MC7.21 | 7 | per-file diff failure ignored | `tools/audit/gate.py` | 1 failed, 123 passed, 114 deselected in 30.70s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_on_git_error |
 | MC8.22 | 8 | header check (d) removed | `tools/audit/gate.py` | 6 failed, 118 passed, 114 deselected in 28.07s | test_aqis_gate_checks.py::test_FR_0_0_05_d_detects_new_module_without_header; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[code_patterns]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[header_at_line_81]; … 2 more |
 | MC9.23 | 9 | removed registry row not reported (E5) | `tools/audit/gate.py` | 2 failed, 122 passed, 114 deselected in 27.24s | test_aqis_gate_registry.py::test_FR_0_0_08_detects_row_removed_since_base; test_aqis_gate_registry.py::test_FR_0_0_08_detects_missing_registry |
@@ -1071,8 +1071,8 @@ The battery script is `mustcatch_r8.py` in the scratchpad; its output is the tab
 | MC15.53 | 15 | changed git status accepted | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 16.36s | test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_provisioning_dirties_tree |
 | MC15.54 | 15 | non-empty git status accepted | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 16.26s | test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_tree_was_dirty_before |
 | MC15.55 | 15 | data placed in a path git does not ignore | `aqis_lab/deploy/harness_provision.py` | 2 failed, 57 passed, 179 deselected in 15.36s | test_aqis_harness_provision.py::test_FR_0_0_12_refuses_target_that_git_does_not_ignore; test_aqis_harness_provision.py::test_FR_0_0_12_refuses_audio_dir_that_is_not_a_directory[symlink-corpus/audio/probe.wav is not ignored by git] |
-| MC15.56 | 15 | token written to the cache | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 16.04s | test_aqis_harness_provision.py::test_FR_0_0_12_never_writes_token |
-| MC15.57 | 15 | token printed | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 15.14s | test_aqis_harness_provision.py::test_FR_0_0_12_never_writes_token |
+| MC15.56 | 15 | token written to the cache (added code: `harness_provision.py` never touches the token; the Colab clone cell, the only code that holds it, is K15.5 and K15.6 in round 9) | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 16.04s | test_aqis_harness_provision.py::test_FR_0_0_12_never_writes_token |
+| MC15.57 | 15 | token printed (added code, as MC15.56) | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 15.14s | test_aqis_harness_provision.py::test_FR_0_0_12_never_writes_token |
 | MC16.58 | 16 | P53 only the first module imported | `aqis_lab/deploy/harness_provision.py` | 2 failed, 57 passed, 179 deselected in 16.34s | test_aqis_harness_provision.py::test_FR_0_0_12_import_check_names_each_failing_module; test_aqis_harness_provision.py::test_FR_0_0_12_import_check_reports_the_modules_it_imported |
 | MC16.59 | 16 | report not compared with the requested modules | `aqis_lab/deploy/harness_provision.py` | 3 failed, 56 passed, 179 deselected in 16.33s | test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null]]]; test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null], ["os", null], ["csv", null]]]; test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null], ["csv", null], ["csv", null]]] |
 | MC16.60 | 16 | failed modules not reported | `aqis_lab/deploy/harness_provision.py` | 2 failed, 57 passed, 179 deselected in 16.51s | test_aqis_harness_provision.py::test_FR_0_0_12_import_check_builds_ten_vad; test_aqis_harness_provision.py::test_FR_0_0_12_import_check_names_each_failing_module |
@@ -1097,3 +1097,45 @@ git status lines after: 0
 The final records commit, which sets STATUS to READY-FOR-AUDIT, changes only `EVIDENCE.md` and `STATUS.md`. Its CI result is reported to the owner in the session.
 
 **Open.** No fix is left open. F48, F51 and F53 are accepted debt (DEBT-001 to DEBT-003, target WP-0.9). One question from the round 7 report is still the owner's to decide: should provisioning re-hash each extracted clip on every run (AUDIT.md round 7, "For the owner")? The round 8 scope does not include it, so nothing was changed.
+
+## Round 9 audit fixes (F56 to F59, F61)
+Root causes and change budget are in `docs/progress/WP-0.0/FIXES.md`, "Round 9 audit fixes". F55 and F60 are accepted debt (DEBT-004, DEBT-005, target WP-0.9).
+
+**New tests.** Each passed against the unchanged code; the breaks below prove that each one fails when its behaviour is removed.
+- **F56 (must-catch 4):**
+  - `test_FR_0_0_05_b_allow_patterns_in_does_not_approve_test_edits`. An `ALLOW-PATTERNS-IN: tests/aqis_lab/**` approval on `main` covers three existing tests, a fixture file among them. The branch modifies two and deletes one, and the gate reports `B1`, `B1` and `B2`, all CRITICAL. The two modified files are still listed as exempted files, which shows the approval is active.
+  - The parity scenario `allow_patterns_in_covers_existing_tests` gives the same three findings from the gate and from the Stop hook (`EXPECT_EXACT`).
+- **F57 (must-catch 7):**
+  - `test_FR_0_0_06_fails_closed_on_changed_file_it_cannot_read`: a new `tools/unreadable_tool.py` holding `# TODO`, mode 000. The gate runs as uid 65534 through `setpriv` when the test is root, and directly otherwise. Result: exit 2, `ERROR: tools/unreadable_tool.py:1: cannot read changed file:`. The control run, made the same way while the file is readable, gives exactly one `C1`.
+  - `test_FR_0_0_06_fails_closed_when_base_registry_unreadable`: the branch drops registry row CAP-FIX-001, and the control gives `E5`. The base registry's loose object is then rewritten as an unfinished zlib stream that keeps the header, so `git cat-file -e` exits 0 and `git show` fails. Result: exit 2, `ERROR: docs/capabilities/REGISTRY.md:1: cannot read the registry at base`.
+  - `test_FR_0_0_06_fails_closed_when_spec_unreadable`: the only path matching `docs/specs/**/WP-9.9-*.md` is a folder. Result: exit 2, `ERROR: docs/specs/phase-9/WP-9.9-thing.md:1: cannot read the spec`.
+- **F58 (must-catch 14):** `test_FR_0_0_12_damaged_weights_cache_is_replaced[truncated|other_bytes]`. After a first run, the cached `Stream-VAD/model.pth.tar` is cut to half, or replaced by other bytes. The second run gives `weights` PASS, and both the cached and the linked model equal the pinned bytes again (re-cloned).
+- **F59 (must-catch 15):** `test_FR_0_0_13_clone_cells_never_store_token`. Cells 1 to 3 run against a local repository with a stand-in `google.colab` token.
+  - Cell 3 passes, and neither the token nor its base64 header is in any file of the clone.
+  - The `"-c"` option comes before `"clone"` on cell 2's command line.
+  - Cell 3 holds the `extraheader` assertion, and that assertion rejects a clone made with `git clone -c http.extraHeader=…`.
+
+**One correction while proving F57.** The seven breaks first ran in a clone under the scratchpad, which is under `/tmp/claude-0` (mode 700). There the unprivileged user could not import the gate, so `…cannot_read` failed under every break, including K4.4, K7.9 and K7.11, for that reason alone. I changed the test so its control run also goes through the unprivileged user; a checkout that user cannot read now fails the control with a clear message. I then re-ran the breaks in `/tmp/aqis-r9-mut/repo` (mode 755), a clone of `ff657b1`. With the corrected test and the readable clone, each break fails only its own test.
+
+**Must-catch proof for F56 to F59 (the round 8 audit's breaks).** Each break was applied alone in `/tmp/aqis-r9-mut/repo`, a clone of `ff657b1` with `.venv` linked to this repository's, then restored. The script (`mustcatch_r9.py` in the scratchpad) checks that each target text appears exactly once. After the breaks, the tracked files were clean.
+
+The command for each break was `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network" -k <k>`. The value of `<k>` is `"FR_0_0_05 or FR_0_0_06 or FR_0_0_07 or FR_0_0_08 or FR_0_0_09"` for the gate, `FR_0_0_12` for provisioning and `FR_0_0_13` for the Colab cells. Before the breaks, the unmutated `…cannot_read` test in that clone gave `1 passed`.
+
+| Break | Must-catch | What was broken | File | Result | Failing tests |
+| --- | --- | --- | --- | --- | --- |
+| K4.4 | 4 | ALLOW-PATTERNS-IN also approves edits to existing tests | `tools/audit/gate.py` | 2 failed, 129 passed, 117 deselected in 29.44s | test_aqis_gate_checks.py::test_FR_0_0_05_b_allow_patterns_in_does_not_approve_test_edits; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_patterns_in_covers_existing_tests] |
+| K7.4 | 7 | changed file that cannot be read is skipped | `tools/audit/gate.py` | 1 failed, 130 passed, 117 deselected in 29.26s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_on_changed_file_it_cannot_read |
+| K7.9 | 7 | unreadable base registry skips the removed-row check | `tools/audit/gate.py` | 1 failed, 130 passed, 117 deselected in 29.03s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_when_base_registry_unreadable |
+| K7.11 | 7 | unreadable spec ends traceability with no findings | `tools/audit/gate.py` | 1 failed, 130 passed, 117 deselected in 31.57s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_when_spec_unreadable |
+| K14.10 | 14 | existing weights cache trusted without re-hashing | `aqis_lab/deploy/harness_provision.py` | 2 failed, 59 passed, 187 deselected in 16.74s | test_aqis_harness_provision.py::test_FR_0_0_12_damaged_weights_cache_is_replaced[truncated]; test_aqis_harness_provision.py::test_FR_0_0_12_damaged_weights_cache_is_replaced[other_bytes] |
+| K15.5 | 15 | Colab cell 2: -c moved after clone (stored in .git/config) | `docs/colab/HARNESS_SETUP.md` | 1 failed, 5 passed, 242 deselected in 0.60s | test_aqis_colab_doc.py::test_FR_0_0_13_clone_cells_never_store_token |
+| K15.6 | 15 | Colab cell 3: extraheader check deleted | `docs/colab/HARNESS_SETUP.md` | 1 failed, 5 passed, 242 deselected in 0.56s | test_aqis_colab_doc.py::test_FR_0_0_13_clone_cells_never_store_token |
+
+**Records corrected (F61):**
+- `AUDIT_GATE.md`: "never accepts one it does not" is replaced by the list of rules not modelled (DEBT-004).
+- The `test_functions` docstring no longer says it mirrors pytest.
+- `FIXES.md`: the two F47 claims carry correction notes, and the round 8 budget now lists `test_aqis_gate_v2.py`.
+- In this file:
+  - the round 8 "every break" sentence is qualified;
+  - MC7.20 is relabelled (it covers the non-regular-file branch; the read-error branch is K7.4);
+  - MC15.56 and MC15.57 are marked as added code, with the real token holder covered by K15.5 and K15.6.
