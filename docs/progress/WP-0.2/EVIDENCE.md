@@ -341,3 +341,13 @@ F02 CB6-2 split_json_lines always drops the last line
 ### Checks after the fixes
 - Fast suite: `998 passed, 9 deselected in 57.68s` (baseline `952`, plus the 46 new cases).
 - Gate: `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.2` → `0 findings: OK (0.2 s)`.
+- CI on `5fbe983` (the round-2 fix commit): all four jobs green.
+
+  | Run | Event | Job | Result | Real log excerpt |
+  | --- | --- | --- | --- | --- |
+  | 36314464969 | pull_request | `lab` | success | `998 passed, 9 deselected in 47.12s`; `aqis-audit-gate: base origin/main (merge-base e3439be0c320), head 641cc04d4ac5, approvals origin/main e3439be0c320, wp WP-0.2` … `0 findings: OK (0.1 s)` |
+  | 36314464969 | pull_request | `harness-regression` | success | job conclusion `success` |
+  | 36314461977 | push | `lab` | success | job conclusion `success` |
+  | 36314461977 | push | `harness-regression` | success | job conclusion `success` |
+
+  The next commit, which records this and sets STATUS to READY-FOR-AUDIT, changes only `docs/progress/`.
