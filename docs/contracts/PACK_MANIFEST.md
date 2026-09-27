@@ -34,7 +34,7 @@ Paths are JSON Pointers from the record root; `*` means any array item.
 | `/clips/*/archive` | archive file name | yes | Name of the archive holding the clip; must be listed in `archives`. |
 | `/clips/*/member_path` | relative POSIX path | yes | Path of the clip inside its archive: no leading `/`, no `.`, `..` or empty segment, no backslash or control character. |
 | `/clips/*/transcript` | string or null | yes | Reference transcript; null when there is none (non-speech clips). |
-| `/clips/*/recipe` | object (any members) or null | yes | How a derived clip (such as a noisy mix) was made; null for clips taken as they are. Its members are fixed in a later minor version (WP-0.4 FR-0.4-04). |
+| `/clips/*/recipe` | object (any members) or null | yes | How a derived clip (such as a noisy mix) was made; null for clips taken as they are. The schema keeps it open; WP-0.4 fills it with recipe v1 (`aqis_lab/packs/schemas/recipe.v1.json`, documented in `docs/data/SMOKE_PACK.md`), which `pack build` and `pack verify` check (WP-0.4 plan deviation D2). |
 | `/clips/*/tags` | array of unique non-empty strings (may be empty) | yes | Free labels. |
 | `/archives` | array of archive objects, at least one | yes | The archives holding the clips. |
 | `/archives/*/name` | file name: one path segment, not `.` or `..`, no `/`, backslash or control character | yes | Archive file name; unique in the manifest. |
