@@ -1,7 +1,7 @@
 """pack verify: recompute every hash of a built pack and check every manifest entry, archive member and limit.
 
 CAPABILITIES:
-  CAP-PACK-006: verify_pack() checks a pack folder without any source file or network and reports every problem: the manifest parses strictly and passes the WP-0.2 contract and each recipe passes recipe v1; the folder holds exactly the manifest, LICENCES.md, build_record.json and the listed archives, and at most 1,000 entries; each archive matches its size and SHA-256, is at most 200,000,000 bytes, and holds exactly its manifest clips (a changed, missing, extra, duplicate or non-regular member, or an unsafe path, is a problem) with at most 1,000 entries in any folder; each member matches its clip's SHA-256 and is a canonical 16-bit PCM WAV whose rate, channels and duration equal the manifest; LICENCES.md lists every clip with its licence; build_record.json names the manifest's canonical SHA-256; the report ends with the clip counts per category [tests: test_FR_0_4_05_verify_passes_on_built_pack, test_FR_0_4_05_verify_fails_on_changed_member, test_FR_0_4_05_verify_fails_on_missing_member, test_FR_0_4_05_verify_fails_on_extra_member, test_FR_0_4_05_verify_fails_on_changed_or_missing_archive, test_FR_0_4_05_verify_fails_on_extra_file_in_pack_folder, test_FR_0_4_05_verify_fails_on_manifest_entry_mismatch, test_FR_0_4_05_verify_rejects_unsafe_member, test_FR_0_4_05_verify_reports_every_problem, test_FR_0_4_05_verify_checks_recipes_and_build_record, test_FR_0_4_06_verify_fails_on_oversized_archive, test_FR_0_4_06_verify_fails_on_crowded_folder, test_FR_0_4_07_verify_fails_when_a_clip_is_missing]
+  CAP-PACK-006: verify_pack() checks a pack folder without any source file or network and reports every problem: the manifest parses strictly and passes the WP-0.2 contract and each recipe passes recipe v1; the folder holds exactly the manifest, LICENCES.md, build_record.json and the listed archives, and at most 1,000 entries; an expected file that is a folder, a broken symbolic link or not a regular file is a problem, never skipped; each archive matches its size and SHA-256, is at most 200,000,000 bytes, and holds exactly its manifest clips (a changed, missing, extra, duplicate or non-regular member, an unsafe path, or a member path that more than one clip names, is a problem) with at most 1,000 entries in any folder; each member matches its clip's SHA-256 and is a canonical 16-bit PCM WAV whose rate, channels and duration equal the manifest; LICENCES.md lists every clip with its licence; build_record.json names the manifest's canonical SHA-256; the report ends with the clip counts per category [tests: test_FR_0_4_05_verify_passes_on_built_pack, test_FR_0_4_05_verify_fails_on_changed_member, test_FR_0_4_05_verify_fails_on_missing_member, test_FR_0_4_05_verify_fails_on_extra_member, test_FR_0_4_05_verify_fails_on_changed_or_missing_archive, test_FR_0_4_05_verify_fails_on_extra_file_in_pack_folder, test_FR_0_4_05_verify_fails_on_manifest_entry_mismatch, test_FR_0_4_05_verify_rejects_unsafe_member, test_FR_0_4_05_verify_reports_every_problem, test_FR_0_4_05_verify_checks_recipes_and_build_record, test_FR_0_4_06_verify_fails_on_oversized_archive, test_FR_0_4_06_verify_fails_on_crowded_folder, test_FR_0_4_07_verify_fails_when_a_clip_is_missing, test_FR_0_4_05_verify_fails_on_archive_that_is_not_a_file, test_FR_0_4_05_verify_fails_on_pack_file_that_is_not_a_file, test_FR_0_4_05_verify_accepts_link_to_a_real_archive, test_FR_0_4_05_verify_fails_on_duplicate_member_path]
 INPUTS AND OUTPUTS: a pack folder in; a VerifyReport (problems, counts per category, summary line) out;
   VerifyInputError when the folder itself cannot be read.
 CONTRACTS: pack-manifest v1; recipe v1 and the pack layout (docs/data/SMOKE_PACK.md).
@@ -12,10 +12,14 @@ NOT IN SCOPE:
   - Rebuilding the pack from its sources (aqis_lab/packs/build.py).
 CHANGE LOG:
   2026-09-27 WP-0.4 FR-0.4-05 created.
+  2026-09-27 WP-0.4 round 2 F01: an expected pack file that is a folder, a broken link or not a regular file is a
+             problem (it was skipped); F02: a member path named by more than one clip is a problem, and the member
+             is checked against every clip that names it.
 """
 import hashlib
 import io
 import json
+import os
 import tarfile
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
@@ -61,7 +65,13 @@ def _safe_member(name):
 
 def _check_members(report, archive_entry, data, clips):
     name = archive_entry["name"]
-    expected = {clip["member_path"]: clip for clip in clips}
+    expected = {}
+    for clip in clips:
+        expected.setdefault(clip["member_path"], []).append(clip)
+    for path, named in sorted(expected.items()):
+        if len(named) > 1:
+            report.problems.append(f"{name}: member {path!r} is named by {len(named)} clips "
+                                   f"({', '.join(c['clip_id'] for c in named)}); each clip needs its own member")
     seen = set()
     paths = []
     try:
@@ -80,16 +90,19 @@ def _check_members(report, archive_entry, data, clips):
                     continue
                 seen.add(member.name)
                 paths.append(member.name)
-                clip = expected.get(member.name)
-                if clip is None:
+                named = expected.get(member.name)
+                if named is None:
                     report.problems.append(f"{where}: extra member; no manifest clip names it")
                     continue
-                _check_clip_bytes(report, where, tf.extractfile(member).read(), clip)
+                data = tf.extractfile(member).read()
+                for clip in named:
+                    _check_clip_bytes(report, where, data, clip)
     except tarfile.TarError as exc:
         report.problems.append(f"{name}: not a readable tar file: {exc}")
         return
     for path in sorted(set(expected) - seen):
-        report.problems.append(f"{name}: missing member {path!r} (clip {expected[path]['clip_id']})")
+        for clip in expected[path]:
+            report.problems.append(f"{name}: missing member {path!r} (clip {clip['clip_id']})")
     if archive_entry["n_members"] != len(members):
         report.problems.append(f"{name}: has {len(members)} members, the manifest says {archive_entry['n_members']}")
     for folder, count in archive.folder_entry_counts(paths).items():
@@ -121,6 +134,18 @@ def _check_clip_bytes(report, where, data, clip):
         report.problems.append(f"{where}: lasts {duration} s, the manifest says {clip['duration_s']}")
 
 
+def _not_a_file(path):
+    """Why an existing pack entry cannot be read as a file (a folder, a broken link, a device), or None."""
+    if path.is_symlink() and not path.exists():
+        return (f"is a broken symbolic link (to {os.readlink(path)!r}); the file it points to is missing, so "
+                f"nothing in it can be checked")
+    if path.is_dir():
+        return "is a folder, not a file; nothing in it can be checked"
+    if not path.is_file():
+        return "is not a regular file; nothing in it can be checked"
+    return None
+
+
 def verify_pack(pack_dir):
     """Verify a pack folder; returns a VerifyReport (see the module header)."""
     pack = Path(pack_dir)
@@ -150,10 +175,17 @@ def verify_pack(pack_dir):
         report.problems.append(f"{name}: missing from the pack folder")
     if len(entries) > archive.MAX_FILES_PER_FOLDER:
         report.problems.append(f"pack folder has {len(entries)} entries, more than {archive.MAX_FILES_PER_FOLDER}")
+    readable = set()
+    for name in sorted(expected_files & set(entries)):
+        message = _not_a_file(pack / name)
+        if message:
+            report.problems.append(f"{name}: {message}")
+        else:
+            readable.add(name)
     for entry in manifest["archives"]:
         path = pack / entry["name"]
-        if not path.is_file():
-            continue
+        if entry["name"] not in readable:
+            continue  # reported above as missing or as not a file
         data = path.read_bytes()
         if len(data) > archive.MAX_ARCHIVE_BYTES:
             report.problems.append(f"{entry['name']}: {len(data)} bytes, more than {archive.MAX_ARCHIVE_BYTES}")
@@ -163,12 +195,12 @@ def verify_pack(pack_dir):
         if sha != entry["sha256"]:
             report.problems.append(f"{entry['name']}: SHA-256 {sha} differs from the manifest ({entry['sha256']})")
         _check_members(report, entry, data, [c for c in manifest["clips"] if c["archive"] == entry["name"]])
-    if (pack / LICENCES).is_file():
+    if LICENCES in readable:
         listed = listed_clips((pack / LICENCES).read_text(encoding="utf-8"))
         for clip in manifest["clips"]:
             if listed.get(clip["clip_id"]) != clip["licence"]:
                 report.problems.append(f"{LICENCES}: does not list clip {clip['clip_id']} with licence {clip['licence']}")
-    if (pack / BUILD_RECORD).is_file():
+    if BUILD_RECORD in readable:
         try:
             record = json.loads((pack / BUILD_RECORD).read_text(encoding="utf-8"))
             if record.get("manifest_sha256") != sha256_canonical(manifest):

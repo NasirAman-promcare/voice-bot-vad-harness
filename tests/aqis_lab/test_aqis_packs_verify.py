@@ -198,3 +198,67 @@ def test_FR_0_4_05_verify_input_errors(tmp_path):
         verify_pack(tmp_path / "missing")
     (tmp_path / "empty").mkdir()
     assert verify_pack(tmp_path / "empty").problems[0].startswith("manifest.json: cannot read")
+
+
+def _replace_with(pack, name, kind):
+    """Replace a pack file by a folder, or by a symbolic link that points nowhere."""
+    (pack / name).unlink()
+    if kind == "folder":
+        (pack / name).mkdir()
+    else:
+        (pack / name).symlink_to(pack.parent / "nowhere" / name)
+
+
+@pytest.mark.parametrize("kind", ["folder", "dangling_symlink"])
+def test_FR_0_4_05_verify_fails_on_archive_that_is_not_a_file(pack, kind):
+    """WP-0.4-F01: a listed archive that is a folder or a broken link is a problem, never skipped."""
+    manifest = _manifest(pack)
+    name = next(a["name"] for a in manifest["archives"] if "-tts-" in a["name"])
+    _replace_with(pack, name, kind)
+    report = verify_pack(pack)
+    assert not report.ok and "OK" not in report.summary()
+    expected = "is a folder, not a file" if kind == "folder" else "is a broken symbolic link"
+    assert any(p.startswith(f"{name}: ") and expected in p for p in report.problems), report.problems
+
+
+@pytest.mark.parametrize("kind", ["folder", "dangling_symlink"])
+@pytest.mark.parametrize("name", ["LICENCES.md", "build_record.json"])
+def test_FR_0_4_05_verify_fails_on_pack_file_that_is_not_a_file(pack, name, kind):
+    """WP-0.4-F01: LICENCES.md and build_record.json must be regular files too."""
+    _replace_with(pack, name, kind)
+    problems = verify_pack(pack).problems
+    expected = "is a folder, not a file" if kind == "folder" else "is a broken symbolic link"
+    assert [p for p in problems if p.startswith(f"{name}: ")] and any(expected in p for p in problems), problems
+
+
+def test_FR_0_4_05_verify_accepts_link_to_a_real_archive(pack, tmp_path):
+    """A pack file may be a symbolic link to the real file (for example on a mounted Drive)."""
+    name = _first_archive(pack)
+    elsewhere = tmp_path / "drive" / name
+    elsewhere.parent.mkdir()
+    (pack / name).rename(elsewhere)
+    (pack / name).symlink_to(elsewhere)
+    assert verify_pack(pack).ok
+
+
+def test_FR_0_4_05_verify_fails_on_duplicate_member_path(pack):
+    """WP-0.4-F02: two clips naming one member of an archive are a problem; neither is taken as checked."""
+    manifest = _manifest(pack)
+    first, second = manifest["clips"][0], manifest["clips"][1]
+    assert first["archive"] == second["archive"]
+    own_path = first["member_path"]
+    first["member_path"] = second["member_path"]
+    _write_manifest(pack, manifest)
+    _rewrite(pack, first["archive"], lambda members: [m for m in members if m[0].name != own_path])
+    manifest = _manifest(pack)
+    for entry in manifest["archives"]:
+        if entry["name"] == first["archive"]:
+            entry["n_members"] -= 1
+    _write_manifest(pack, manifest)
+    from aqis_lab.contracts.canonical import sha256_canonical
+    record = read_json(pack / "build_record.json")
+    record["manifest_sha256"] = sha256_canonical(manifest)
+    (pack / "build_record.json").write_text(json.dumps(record, sort_keys=True, indent=2) + "\n")
+    problems = _problems(pack)
+    assert any(f"member {second['member_path']!r} is named by 2 clips" in p and first["clip_id"] in p
+               and second["clip_id"] in p for p in problems), problems

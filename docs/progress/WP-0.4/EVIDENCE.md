@@ -113,6 +113,12 @@ PASSED tests/aqis_lab/test_aqis_registry_fetch.py::test_FR_0_4_02_dataset_pins_m
 9 passed, 1362 deselected in 0.56s
 ```
 - In the real smoke pack, every mix's `achieved_snr_db` equals its target (5.0, 10.0 and 20.0). `smoke-mix-06` was peak-limited, and its SNR stayed at 10.0.
+- Clip levels on the committed pack (F06; `SMOKE_PACK.md`, "Composition and selection"), measured by reading each clip's samples from its archive and computing the RMS and peak:
+```text
+smoke-mix-06: RMS -23.6 dBFS, peak 32767, peak_limited True, snr_db 10, achieved_snr_db 10.0
+smoke-music-03: RMS -48.9 dBFS, peak 1048
+smoke-noise-04: RMS -47.7 dBFS, peak 627
+```
 - Status: DONE
 
 ### FR-0.4-05 — pack build and pack verify
@@ -273,3 +279,13 @@ None. The spec runs WP-0.4 on the cloud VM only, and everything in it ran here. 
 
 ## audit-allow lines
 None.
+
+## Round 2 (audit round 1: F01, F02, F06 fixed; F03, F04, F05 accepted as debt)
+Approval: `docs/approvals/WP-0.4.md` on `main` (`458b1b3`), round 2 condition. Change budget, root causes and the reproduce-and-fix record are in `FIXES.md`.
+- **F01 and F02** (FR-0.4-05): `pack verify` now reports an expected pack file that is a folder, a broken symbolic link or not a regular file, and a member path named by more than one clip. New tests: `test_FR_0_4_05_verify_fails_on_archive_that_is_not_a_file` (2 cases), `test_FR_0_4_05_verify_fails_on_pack_file_that_is_not_a_file` (4 cases), `test_FR_0_4_05_verify_accepts_link_to_a_real_archive` and `test_FR_0_4_05_verify_fails_on_duplicate_member_path`. Before the fix: `7 failed, 1 passed`; after: `test_aqis_packs_verify.py` `27 passed`.
+- **F06**: `SMOKE_PACK.md` now gives the measured levels, and "Clip levels" above holds the measurement.
+- **Debt**: DEBT-010 (F03, WP-0.8), DEBT-011 (F04, WP-0.5) and DEBT-012 (F05, WP-0.8) in `docs/progress/DEBT.md`.
+- **Must-catch proof**: rerun with two new breaks (F01, F02); all 18 fail a named test (`FIXES.md`).
+- **AT-0.4-02 after the fix**: `pack verify data/packs/smoke/v1` gives `pack smoke 1.0.0: OK, 60 clips in 5 archives; test-clean 20, test-other 10, noisy 10, non-speech 10, tts 10`, `exit=0`.
+- **Fast suite**: `1365 passed, 14 deselected in 125.71s (0:02:05)`.
+- **Audit gate**: `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.4` gives `Findings: 0`, `0 findings: OK (0.3 s)`.

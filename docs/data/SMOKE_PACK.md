@@ -72,7 +72,7 @@ Clip IDs: clips taken as they are keep their registry `clip_id`. Derived clips a
 
 Every clip is a canonical 16 kHz mono 16-bit PCM WAV (44-byte header, then the samples). Clips taken as they are keep their samples exactly: FLAC decoding is proven against each file's STREAMINFO MD5, and WAV sources only lose extra chunks such as ffmpeg's `LIST` chunk. A source in another format is an error, never converted.
 
-What the build gives (checked in `EVIDENCE.md`): one mix (`smoke-mix-06`) needed the peak limit, which keeps the SNR; two excerpts (`smoke-music-03`, `smoke-noise-04`) are quiet passages of their sources (about −48 dBFS). No one listens to the clips in this WP, so "non-speech" rests on MUSAN's own labels.
+What the build gives (measured on the committed pack; the command and its output are in `EVIDENCE.md`, "Clip levels"): one mix (`smoke-mix-06`) needed the peak limit, which keeps the SNR (10.0 dB achieved); two excerpts are quiet passages of their sources, `smoke-music-03` at −48.9 dBFS RMS and `smoke-noise-04` at −47.7 dBFS RMS. No one listens to the clips in this WP, so "non-speech" rests on MUSAN's own labels.
 
 ## Recipe v1
 Every derived clip's manifest `recipe` is a recipe v1.0 object (schema `aqis_lab/packs/schemas/recipe.v1.json`; plan deviation D2: the pack manifest contract stays at 1.0, where `recipe` is an open object). `pack build` rebuilds every derived clip from its recipe before writing it, and `pack verify` checks every recipe. Clips taken as they are have `recipe: null`.
