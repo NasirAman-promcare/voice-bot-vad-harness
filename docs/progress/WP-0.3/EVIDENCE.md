@@ -149,3 +149,137 @@ $ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_scoring_crosscheck.py -q -
 23 passed, 1159 deselected in 3.63s
 ```
 - Status: DONE
+
+### NFR-0.3-01 — Deterministic; no network access
+- Tests (`tests/aqis_lab/test_aqis_scoring_nfr.py`, linked to CAP-SCORE-005):
+  - `test_NFR_0_3_01_repeat_runs_give_identical_files`: two command runs, the second with both input files' rows shuffled, `PYTHONHASHSEED` 1 against 4242, and a different `LC_ALL` and `TZ`. All three output files are byte-identical, and so is the printed report apart from its last line, which names the output folder.
+  - `test_NFR_0_3_01_no_network_during_scoring`: runs the command in a subprocess with a Python audit hook that records every `socket.*`, `urllib.*`, `http.*` and `ssl.*` event, and requires none while scoring. As a control, a `socket.getaddrinfo("localhost", 80)` after scoring must be recorded, which proves the hook works.
+  - `test_NFR_0_3_01_scoring_code_imports_no_network_modules`: an AST scan of the 5 lab modules and of the two Whisper files the normaliser runs (`whisper_normalizer/english.py`, `basic.py`).
+- Command and output (real): `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k NFR_0_3_01`
+```text
+3 passed, 1182 deselected in 1.75s
+```
+- Status: DONE
+
+## Must-catch proof
+Each break was made in a copy of the branch under `/tmp/wp03mut` (tracked and untracked files copied; the copy imports its own `aqis_lab`, checked with `aqis_lab.scoring.wer.__file__`). The named test modules were run with the project `.venv`, and the file was restored after each break. Script: `/tmp/wp03mut/mutate.py` (one exact-string replacement per break, asserted to match once). Real output:
+```text
+== 1a fixed point removed (one pass only): 4 failed, 33 passed, 1 deselected in 12.60s
+   FAILED test_FR_0_3_01_idempotent_on_generated_inputs
+   FAILED test_FR_0_3_01_known_non_idempotent_inputs_reach_fixed_point
+== 1b normaliser_version dropped from rows: 1 failed, 21 passed in 3.10s
+   FAILED test_FR_0_3_06_every_row_carries_trace_fields
+== 2a deletion and insertion preference swapped: 4 failed, 25 passed in 8.15s
+   FAILED test_FR_0_3_04_tie_break_follows_documented_rule
+   FAILED test_FR_0_3_07_char_counts_match_jiwer_on_generated_pairs
+   FAILED test_FR_0_3_07_corpus_totals_and_wer_match_jiwer
+   FAILED test_FR_0_3_07_tie_heavy_pairs_match_jiwer
+== 2b common prefix/suffix step removed: 4 failed, 25 passed in 8.47s
+   FAILED test_FR_0_3_07_char_counts_match_jiwer_on_generated_pairs
+   FAILED test_FR_0_3_07_corpus_totals_and_wer_match_jiwer
+   FAILED test_FR_0_3_07_tie_heavy_pairs_match_jiwer
+   FAILED test_FR_0_3_07_word_counts_match_jiwer_on_generated_pairs
+== 3 corpus_wer is the mean of per-utterance WERs: 6 failed, 30 passed in 12.82s
+   FAILED test_FR_0_3_04_empty_reference_enters_corpus_totals
+   FAILED test_FR_0_3_05_corpus_wer_is_total_errors_over_total_reference_words
+   FAILED test_FR_0_3_05_corpus_wer_undefined_without_reference_words
+   FAILED test_FR_0_3_05_mean_utterance_wer_excludes_undefined_and_is_labelled
+   FAILED test_FR_0_3_05_summary_totals_are_sums_of_utterances
+   FAILED test_FR_0_3_07_corpus_totals_and_wer_match_jiwer
+== 4a empty references left out of totals: 4 failed, 26 passed in 0.31s
+   FAILED test_FR_0_3_04_empty_reference_enters_corpus_totals
+   FAILED test_FR_0_3_05_corpus_wer_undefined_without_reference_words
+   FAILED test_FR_0_3_05_mean_utterance_wer_excludes_undefined_and_is_labelled
+   FAILED test_FR_0_3_05_summary_totals_are_sums_of_utterances
+== 4b empty reference gets WER 0: 5 failed, 18 passed in 0.27s
+   FAILED test_FR_0_3_04_both_texts_empty
+   FAILED test_FR_0_3_04_empty_reference_counts_insertions_and_wer_undefined
+   FAILED test_FR_0_3_04_empty_reference_enters_corpus_totals
+   FAILED test_FR_0_3_04_reference_empty_after_normalisation
+   FAILED test_FR_0_3_04_reference_length_is_hits_subs_dels
+== 5 disfluency-aware variant built with filler removal on: 12 failed, 99 passed, 1 deselected in 13.24s
+   FAILED test_FR_0_3_01_equals_whisper_where_whisper_is_idempotent
+   FAILED test_FR_0_3_02_documented_example
+   FAILED test_FR_0_3_03_disfluency_aware_keeps_each_listed_filler
+== 6a normalised text hashed instead of raw text: 2 failed, 20 passed in 3.02s
+   FAILED test_FR_0_3_06_accepts_bom_and_multiline_text
+   FAILED test_FR_0_3_06_hashes_are_sha256_of_raw_text
+== 6b hyp_sha256 dropped (reference hash written twice): 1 failed, 21 passed in 2.97s
+   FAILED test_FR_0_3_06_hashes_are_sha256_of_raw_text
+== N1 rows kept in input order (all three sorts removed): 2 failed, 23 passed in 3.37s
+   FAILED test_FR_0_3_06_rows_sorted_by_clip_and_variant
+   FAILED test_NFR_0_3_01_repeat_runs_give_identical_files
+== N2 network lookup during scoring: 2 failed, 1 passed in 0.75s
+   FAILED test_NFR_0_3_01_no_network_during_scoring
+   FAILED test_NFR_0_3_01_scoring_code_imports_no_network_modules
+```
+| # | Must-catch behaviour | Breaks | Caught by |
+| --- | --- | --- | --- |
+| 1 | Idempotent; name and version in every row | 1a, 1b | `test_FR_0_3_01_idempotent_on_generated_inputs`, `test_FR_0_3_01_known_non_idempotent_inputs_reach_fixed_point`; `test_FR_0_3_06_every_row_carries_trace_fields` |
+| 2 | S, D and I equal jiwer | 2a, 2b | `test_FR_0_3_07_*` (fast: char counts, corpus totals; slow: tie-heavy), `test_FR_0_3_04_tie_break_follows_documented_rule` |
+| 3 | Corpus WER is total errors over total reference words | 3 | `test_FR_0_3_05_corpus_wer_is_total_errors_over_total_reference_words` and 5 more |
+| 4 | Empty references follow the rule | 4a, 4b | `test_FR_0_3_04_empty_reference_enters_corpus_totals`, `test_FR_0_3_04_empty_reference_counts_insertions_and_wer_undefined` and more |
+| 5 | Main removes fillers; disfluency-aware keeps them | 5 | `test_FR_0_3_03_disfluency_aware_keeps_each_listed_filler`, `test_FR_0_3_02_documented_example` (disfluency rows) |
+| 6 | Every row carries `run_card_id`, `clip_id` and both hashes | 6a, 6b | `test_FR_0_3_06_hashes_are_sha256_of_raw_text`, `test_FR_0_3_06_every_row_carries_trace_fields` |
+
+Two gaps were found by this proof and closed before this record:
+- **Break 2a.** The first run of 2a failed only the jiwer character and corpus tests, not `test_FR_0_3_04_tie_break_follows_documented_rule` as the plan expected, because none of its hand cases had a cell where the order of the deletion and insertion checks matters. An exhaustive search over short pairs found the smallest such case: reference `a a b c` against hypothesis `b c b` (the lab rule and jiwer give 1 hit, 2 substitutions, 1 deletion; insertion-first gives 2 hits, 2 deletions, 1 insertion). It was added to the test with its distance matrix worked out by hand in the comments. The fast word-level cross-check still does not catch 2a on its own: its 212 pairs happen to contain no such cell. The character-level and corpus cross-checks and the hand case do.
+- **Break N1.** The first N1 removed only the sort in `table.py` and nothing failed, because `score_corpus` and the command sort as well. With all three sorts removed, the break is real and two tests fail.
+
+## Acceptance commands
+
+### AT-0.3-01 — Fast suite
+`.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"`
+```text
+1174 passed, 11 deselected in 108.38s (0:01:48)
+```
+The fast suite includes the 72 documented examples (`test_FR_0_3_02_documented_example`) and the jiwer cross-check (212 generated pairs). The baseline before this WP was `998 passed, 9 deselected in 69.84s`. The two new deselected tests are this WP's slow tests.
+
+Slow and network tests that can run on this VM: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "(slow or network) and not gpu and not colab and not oracle" -rA`
+- The first run was `2 failed, 9 passed`. The two failures were WP-0.0's `test_FR_0_0_12_provisions_harness_end_to_end` and `test_FR_0_0_12_second_run_downloads_nothing_within_60s`. Their only failing step was provisioning's `git-status` check: my working tree had uncommitted edits at the time (`[FAIL] git-status: git status --porcelain is not empty ...  M aqis_lab/commands/score.py ...`). Every provisioning step itself passed.
+- After committing (`git status --porcelain` empty), `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_harness_provision.py -q -p no:cacheprovider -m slow -rA`:
+```text
+PASSED tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_provisions_harness_end_to_end
+PASSED tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_second_run_downloads_nothing_within_60s
+PASSED tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_rebuilds_venv_left_without_pip
+3 passed, 61 deselected in 52.08s
+```
+- The other 9 of the first run passed, including this WP's `test_FR_0_3_07_tie_heavy_pairs_match_jiwer` and `test_FR_0_3_01_matches_openai_whisper_original`, and the lock tests `test_FR_0_0_03_regeneration_is_reproducible` and `test_FR_0_0_03_lock_installable_with_plain_pip`.
+
+### AT-0.3-02 — `score` writes both tables and prints corpus WER and CER
+`rm -rf /tmp/score && .venv/bin/python -m aqis_lab score --ref tests/aqis_lab/fixtures/scoring/ref.csv --hyp tests/aqis_lab/fixtures/scoring/hyp.csv --out /tmp/score`
+```text
+variant main (normaliser aqis-whisper-english 1+whisper-normalizer-0.1.1)
+  utterances 12, empty references 2
+  corpus WER 0.210526 = 8 errors / 38 reference words (S 1, D 5, I 2, H 32)
+  mean per-utterance WER 0.191667 over 10 utterances (not the corpus WER; 2 undefined)
+  corpus CER 0.196203 = 31 errors / 158 reference characters (S 1, D 20, I 10, H 137)
+variant disfluency_aware (normaliser aqis-whisper-english-keep-disfluencies 1+whisper-normalizer-0.1.1)
+  utterances 12, empty references 1
+  corpus WER 0.250000 = 10 errors / 40 reference words (S 1, D 7, I 2, H 32)
+  mean per-utterance WER 0.287879 over 11 utterances (not the corpus WER; 1 undefined)
+  corpus CER 0.220859 = 36 errors / 163 reference characters (S 1, D 25, I 10, H 137)
+wrote /tmp/score/scores.parquet, /tmp/score/scores.csv, /tmp/score/summary.json
+exit=0
+8b09fb32522320da98b84565cca80b841ec379aebaac26f76a59bb9d46ef895c  /tmp/score/scores.csv
+3440f26a934e09b9d10cceec5a85362b312b6f0f5b2e25f5ab668fb8e1aed695  /tmp/score/scores.parquet
+669efbf41dfed2e932c24d2b5fd31416c5e27a1a894a0c9948dcd13872184a2b  /tmp/score/summary.json
+```
+The word counts equal the hand counts written in `tests/aqis_lab/test_aqis_scoring_cli.py`: main 8 / 38, disfluency-aware 10 / 40.
+
+### AT-0.3-03 — Audit gate with `--wp WP-0.3`
+`git fetch origin main && .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.3`
+```text
+aqis-audit-gate: base origin/main (merge-base 2879cf4890c2), head 5c046a451ad5, approvals origin/main 2879cf4890c2, wp WP-0.3
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.3 s)
+(exit code 0; run with the working tree holding this section, head 5c046a4 plus uncommitted EVIDENCE.md)
+```
+
+## Owner-run checks
+None. The spec runs WP-0.3 on the cloud VM only, and every test runs here. CI (GitHub Actions, Ubuntu) runs the fast suite on a second machine; its results are below. The same scores on Colab and Oracle are proved by WP-0.7 (exit criterion E1).
+
+## audit-allow lines
+None (the gate reports `Exempted lines (# audit-allow): 0` and `Exempted files (ALLOW-PATTERNS-IN): 0`).
