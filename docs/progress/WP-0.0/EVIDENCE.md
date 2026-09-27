@@ -1139,3 +1139,23 @@ The command for each break was `.venv/bin/python -m pytest tests/aqis_lab -q -p 
   - the round 8 "every break" sentence is qualified;
   - MC7.20 is relabelled (it covers the non-regular-file branch; the read-error branch is K7.4);
   - MC15.56 and MC15.57 are marked as added code, with the real token holder covered by K15.5 and K15.6.
+
+**Suites and gate on the clean committed tree (`f1a4b0a`).** The commands are as in round 8.
+```text
+commit: f1a4b0a
+status lines before: 0
+fast git-lfs/3.4.1: 240 passed, 8 deselected in 47.50s
+fast git-lfs/3.7.0: 240 passed, 8 deselected in 49.80s
+slow/network: 8 passed, 240 deselected in 107.55s (0:01:47)
+gate: 0 findings: OK (0.2 s)
+git status lines after: 0
+```
+
+**CI (workflow `aqis-lab-ci`, both runs `completed success`).** On the GitHub runner, which is not root, `…fails_closed_on_changed_file_it_cannot_read` runs the gate directly and passes.
+- `f44adec`, the round 9 tests: push `36301695263`, pull request `36301697213`.
+- `ff657b1`, the F57 control run: push `36301873715`, pull request `36301875935`.
+- `f1a4b0a`, the round 9 records: push `36302105916`, pull request `36302109890`.
+
+The final commit, which sets STATUS to READY-FOR-AUDIT, changes only this file and `STATUS.md`. Its CI result is reported to the owner in the session.
+
+**Open.** None. F55 and F60 are accepted debt (DEBT-004, DEBT-005). Earlier debt is DEBT-001 to DEBT-003. All five rows target WP-0.9.
