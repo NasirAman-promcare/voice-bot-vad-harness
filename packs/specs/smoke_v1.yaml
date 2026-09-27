@@ -1,0 +1,68 @@
+# AQIS lab smoke pack, version 1 (WP-0.4 FR-0.4-03; plan questions 5 and 7; deviation D6).
+# Build:  python -m aqis_lab pack build packs/specs/smoke_v1.yaml --out data/packs/smoke/v1
+# Format and selection rules: docs/data/SMOKE_PACK.md. The seed was fixed in the plan before any build.
+spec_version: 1
+manifest_id: smoke
+version: 1.0.0
+purpose: >-
+  Phase 0 smoke pack: plumbing, cross-machine parity and traceability checks. It is not a benchmark: its 10 tts
+  clips are synthetic speech and must never be used to judge or compare models.
+created_utc: "2026-09-27T00:00:00Z"
+seed: 20260927
+limits:
+  max_files_per_folder: 1000
+  max_archive_bytes: 200000000
+licence_policy:
+  allow_share_alike: false
+  allow_non_commercial: false
+categories:
+  - name: test-clean
+    count: 20
+    tags: [clean, speech]
+    parts:
+      - kind: take
+        count: 20
+        from: {source: librispeech, split: test-clean, min_seconds: 3, max_seconds: 15, distinct_speakers: true}
+  - name: test-other
+    count: 10
+    tags: [other, speech]
+    parts:
+      - kind: take
+        count: 10
+        from: {source: librispeech, split: test-other, min_seconds: 3, max_seconds: 15, distinct_speakers: true}
+  - name: noisy
+    count: 10
+    tags: [noisy, speech]
+    parts:
+      - kind: mix
+        label: mix
+        snr_db: [5, 5, 5, 5, 10, 10, 10, 20, 20, 20]
+        speech: {source: librispeech, split: test-clean, min_seconds: 3, max_seconds: 15, distinct_speakers: true}
+        noise: {source: musan, split: noise, tags_all: [background]}
+  - name: non-speech
+    count: 10
+    tags: [non-speech]
+    parts:
+      - kind: excerpt
+        label: noise
+        count: 4
+        seconds: 10
+        tags: [noise]
+        from: {source: musan, split: noise, tags_none: [background]}
+      - kind: excerpt
+        label: music
+        count: 4
+        seconds: 10
+        tags: [music]
+        from: {source: musan, split: music}
+      - kind: silence
+        label: silence
+        seconds: [5, 10]
+        tags: [silence]
+  - name: tts
+    count: 10
+    tags: [speech, synthetic, tts]
+    parts:
+      - kind: take
+        count: 10
+        from: {source: tts, split: tts, min_seconds: 3, max_seconds: 8}

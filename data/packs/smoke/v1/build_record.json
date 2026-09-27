@@ -1,0 +1,20 @@
+{
+  "builder": "aqis_lab 0.0.1 pack builder (recipe 1.0)",
+  "datasets": {
+    "name": "datasets.yaml",
+    "sha256": "edd9167b64c737fcae00ff194ab909a1bef9bfeb8e472b6a0c9c897878a2e500"
+  },
+  "manifest_id": "smoke",
+  "manifest_sha256": "90df3820e368a5d67c9036be77dfd70a4f5cfcdbd57bd170e64abb08ed3692ef",
+  "pack_spec": {
+    "name": "smoke_v1.yaml",
+    "sha256": "442c9a86e956f7b349b28e529953be4f3efe4873be24e5fe462311885e34b988"
+  },
+  "record_version": "1.0",
+  "registry": {
+    "name": "sources.csv",
+    "sha256": "11c414dd9e9d6330bba872df9785a383c919298e91f9e46309f72645139be476"
+  },
+  "seed": 20260927,
+  "version": "1.0.0"
+}

@@ -1,0 +1,395 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aqis-lab:registry:datasets:1",
+  "title": "AQIS lab source datasets and licence table, format 1 (data/registry/datasets.yaml)",
+  "description": "Documented in docs/data/REGISTRY_FORMAT.md. Every object is closed. Each dataset is checked against $defs/dataset_<importer>.",
+  "type": "object",
+  "required": [
+    "format_version",
+    "generated_licence",
+    "licences",
+    "datasets"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format_version": {
+      "const": 1
+    },
+    "generated_licence": {
+      "$ref": "#/$defs/text"
+    },
+    "licences": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9.+-]+$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/licence"
+      }
+    },
+    "datasets": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/dataset"
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "licence": {
+      "type": "object",
+      "required": [
+        "name",
+        "url",
+        "attribution_required",
+        "share_alike",
+        "non_commercial"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/text"
+        },
+        "url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "attribution_required": {
+          "type": "boolean"
+        },
+        "share_alike": {
+          "type": "boolean"
+        },
+        "non_commercial": {
+          "type": "boolean"
+        }
+      }
+    },
+    "common": {
+      "required": [
+        "type",
+        "source",
+        "kind",
+        "importer",
+        "licence",
+        "homepage",
+        "attribution"
+      ],
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "speech",
+            "non-speech"
+          ]
+        },
+        "licence": {
+          "$ref": "#/$defs/text"
+        },
+        "homepage": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "attribution": {
+          "$ref": "#/$defs/text"
+        },
+        "changes": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "dataset": {
+      "type": "object",
+      "required": [
+        "importer"
+      ],
+      "properties": {
+        "importer": {
+          "enum": [
+            "librispeech",
+            "musan",
+            "tts",
+            "owner"
+          ]
+        }
+      },
+      "description": "Checked against $defs/dataset_<importer> by aqis_lab.registry.datasets."
+    },
+    "musan_subset": {
+      "type": "object",
+      "required": [
+        "split",
+        "licence",
+        "licence_file_sha256",
+        "annotations"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "split": {
+          "$ref": "#/$defs/id"
+        },
+        "licence": {
+          "$ref": "#/$defs/text"
+        },
+        "licence_file_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "annotations": {
+          "enum": [
+            "noise-background-list",
+            "music-table"
+          ]
+        },
+        "titles": {
+          "const": "rfm-licence"
+        },
+        "attribution_template": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "dataset_librispeech": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        }
+      ],
+      "type": "object",
+      "required": [
+        "url",
+        "bytes",
+        "sha256",
+        "md5",
+        "extract",
+        "split"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "download"
+        },
+        "importer": {
+          "const": "librispeech"
+        },
+        "source": true,
+        "kind": true,
+        "licence": true,
+        "homepage": true,
+        "attribution": true,
+        "changes": true,
+        "url": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "md5": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "extract": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "split": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "dataset_musan": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        }
+      ],
+      "type": "object",
+      "required": [
+        "url",
+        "bytes",
+        "sha256",
+        "md5",
+        "extract",
+        "subsets"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "download"
+        },
+        "importer": {
+          "const": "musan"
+        },
+        "source": true,
+        "kind": true,
+        "licence": true,
+        "homepage": true,
+        "attribution": true,
+        "changes": true,
+        "url": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "md5": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "extract": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "subsets": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z0-9-]+/[a-z0-9-]+$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/musan_subset"
+          }
+        }
+      }
+    },
+    "dataset_tts": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        }
+      ],
+      "type": "object",
+      "required": [
+        "folder",
+        "split",
+        "clip_prefix",
+        "generation_record",
+        "speaker_prefix",
+        "tags"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "local"
+        },
+        "importer": {
+          "const": "tts"
+        },
+        "source": true,
+        "kind": true,
+        "licence": true,
+        "homepage": true,
+        "attribution": true,
+        "changes": true,
+        "folder": {
+          "$ref": "#/$defs/text"
+        },
+        "split": {
+          "$ref": "#/$defs/id"
+        },
+        "clip_prefix": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+-$"
+        },
+        "generation_record": {
+          "$ref": "#/$defs/text"
+        },
+        "speaker_prefix": {
+          "$ref": "#/$defs/text"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "dataset_owner": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        }
+      ],
+      "type": "object",
+      "required": [
+        "folder",
+        "split",
+        "clip_prefix",
+        "consent_file",
+        "speaker_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "local"
+        },
+        "importer": {
+          "const": "owner"
+        },
+        "source": true,
+        "kind": true,
+        "licence": true,
+        "homepage": true,
+        "attribution": true,
+        "changes": true,
+        "folder": {
+          "$ref": "#/$defs/text"
+        },
+        "split": {
+          "$ref": "#/$defs/id"
+        },
+        "clip_prefix": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+-$"
+        },
+        "consent_file": {
+          "$ref": "#/$defs/text"
+        },
+        "speaker_id": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    }
+  }
+}

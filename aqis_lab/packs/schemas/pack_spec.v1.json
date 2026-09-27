@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aqis-lab:packs:pack_spec:1",
+  "title": "AQIS lab pack spec, version 1 (packs/specs/*.yaml)",
+  "description": "Documented in docs/data/SMOKE_PACK.md. Every object is closed. Each part is checked against $defs/part_<kind> by aqis_lab.packs.spec.",
+  "type": "object",
+  "required": ["spec_version", "manifest_id", "version", "purpose", "created_utc", "seed", "limits", "licence_policy", "categories"],
+  "additionalProperties": false,
+  "properties": {
+    "spec_version": {"const": 1},
+    "manifest_id": {"$ref": "#/$defs/id"},
+    "version": {"type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\\+[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?$"},
+    "purpose": {"type": "string", "minLength": 1},
+    "created_utc": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "seed": {"type": "integer", "minimum": 0},
+    "limits": {
+      "type": "object", "required": ["max_files_per_folder", "max_archive_bytes"], "additionalProperties": false,
+      "properties": {
+        "max_files_per_folder": {"type": "integer", "minimum": 1},
+        "max_archive_bytes": {"type": "integer", "minimum": 1}
+      }
+    },
+    "licence_policy": {
+      "type": "object", "required": ["allow_share_alike", "allow_non_commercial"], "additionalProperties": false,
+      "properties": {"allow_share_alike": {"type": "boolean"}, "allow_non_commercial": {"type": "boolean"}}
+    },
+    "categories": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/category"}}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+    "tags": {"type": "array", "items": {"$ref": "#/$defs/id"}, "uniqueItems": true},
+    "seconds": {"type": "number", "exclusiveMinimum": 0},
+    "count": {"type": "integer", "minimum": 1},
+    "filter": {
+      "type": "object", "required": ["source", "split"], "additionalProperties": false,
+      "properties": {
+        "source": {"$ref": "#/$defs/id"},
+        "split": {"$ref": "#/$defs/id"},
+        "tags_all": {"$ref": "#/$defs/tags"},
+        "tags_none": {"$ref": "#/$defs/tags"},
+        "min_seconds": {"$ref": "#/$defs/seconds"},
+        "max_seconds": {"$ref": "#/$defs/seconds"},
+        "distinct_speakers": {"type": "boolean"}
+      }
+    },
+    "category": {
+      "type": "object", "required": ["name", "count", "tags", "parts"], "additionalProperties": false,
+      "properties": {
+        "name": {"$ref": "#/$defs/id"},
+        "count": {"$ref": "#/$defs/count"},
+        "tags": {"$ref": "#/$defs/tags"},
+        "parts": {"type": "array", "minItems": 1,
+                  "items": {"type": "object", "required": ["kind"],
+                            "properties": {"kind": {"enum": ["take", "mix", "excerpt", "silence"]}}}}
+      }
+    },
+    "part_take": {
+      "type": "object", "required": ["kind", "count", "from"], "additionalProperties": false,
+      "properties": {"kind": {"const": "take"}, "count": {"$ref": "#/$defs/count"}, "from": {"$ref": "#/$defs/filter"}}
+    },
+    "part_mix": {
+      "type": "object", "required": ["kind", "label", "snr_db", "speech", "noise"], "additionalProperties": false,
+      "properties": {
+        "kind": {"const": "mix"}, "label": {"$ref": "#/$defs/id"},
+        "snr_db": {"type": "array", "minItems": 1, "items": {"type": "number", "minimum": -30, "maximum": 60}},
+        "speech": {"$ref": "#/$defs/filter"}, "noise": {"$ref": "#/$defs/filter"}
+      }
+    },
+    "part_excerpt": {
+      "type": "object", "required": ["kind", "label", "count", "seconds", "tags", "from"], "additionalProperties": false,
+      "properties": {
+        "kind": {"const": "excerpt"}, "label": {"$ref": "#/$defs/id"}, "count": {"$ref": "#/$defs/count"},
+        "seconds": {"$ref": "#/$defs/seconds"}, "tags": {"$ref": "#/$defs/tags"}, "from": {"$ref": "#/$defs/filter"}
+      }
+    },
+    "part_silence": {
+      "type": "object", "required": ["kind", "label", "seconds", "tags"], "additionalProperties": false,
+      "properties": {
+        "kind": {"const": "silence"}, "label": {"$ref": "#/$defs/id"},
+        "seconds": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/seconds"}},
+        "tags": {"$ref": "#/$defs/tags"}
+      }
+    }
+  }
+}

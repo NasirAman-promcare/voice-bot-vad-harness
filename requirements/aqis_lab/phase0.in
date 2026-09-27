@@ -21,3 +21,7 @@ whisper-normalizer==0.1.1
 pyarrow
 # Independent cross-check of the alignment counts, used by tests only (FR-0.3-07).
 jiwer==4.0.0
+# Audio for the source registry and pack builder (WP-0.4, owner approval docs/approvals/WP-0.4.md, question 8):
+# soundfile decodes LibriSpeech FLAC (checked against each file's STREAMINFO MD5); numpy holds the samples.
+soundfile
+numpy
