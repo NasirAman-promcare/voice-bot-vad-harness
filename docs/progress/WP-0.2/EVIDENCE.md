@@ -163,3 +163,105 @@ validated 100000 events in 5.20 s (validating 100000 records with 4 worker proce
 - Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_contracts_nfr.py -q -p no:cacheprovider -k NFR_0_2_02` (also part of the fast suite).
 - Fast suite: `952 passed, 9 deselected in 57.55s`.
 - Status: DONE
+
+## Must-catch proof
+Each break was made in a scratch copy of the repository (`git ls-files` plus the fixtures, under the session scratchpad in `/tmp`), one at a time and restored after its run. The named tests ran with `-x -m "not slow"`. The working tree was untouched (`git status --porcelain` empty afterwards).
+
+| # | Behaviour (spec) | Break in the copy | First failing test (real output) |
+| --- | --- | --- | --- |
+| 1 | Omitting each required field is rejected, naming it by JSON Pointer | `seq` removed from the event `required` list | `test_FR_0_2_01_rejects_missing_required_field[seq-run_started]` |
+| 1 | same | `notes` removed from the run card `required` list | `test_FR_0_2_02_rejects_missing_required_field[notes]` |
+| 1 | same | `licence` removed from the clip `required` list | `test_FR_0_2_03_rejects_missing_required_field[clips/0/licence]` |
+| 1 | same (pointer names the field) | missing field reported at its parent's pointer | `test_FR_0_2_01_rejects_missing_required_field[run_id-run_started]` |
+| 2 | Wrong types and values outside enums are rejected | `asr` added to the `component` enum | `test_FR_0_2_01_rejects_wrong_type_or_enum[final-path18-asr]` |
+| 2 | same | `fast` added to the `mode` enum | `test_FR_0_2_02_rejects_wrong_type_or_enum[('mode',)-'fast']` |
+| 2 | same | clip `channels` type `integer` → `number` | `test_FR_0_2_03_rejects_wrong_type_or_enum[('clips', 0, 'channels')-1.0]` |
+| 2 | same | strict integer type checker made to accept `1.0` | `test_FR_0_2_01_rejects_wrong_type_or_enum[final-path14-1.0]` |
+| 3 | An unknown major schema version is rejected | major-version check disabled (`if False:`) | `test_FR_0_2_06_rejects_unknown_major_version[2.0-2-event]` |
+| 4 | `run_card_id` equals the SHA-256 of the canonical card, computed independently | `seed` added to the excluded fields | `test_FR_0_2_05_run_card_id_computed_independently` |
+| 4 | same | canonical separators `", "` and `": "` | `test_FR_0_2_05_canonical_bytes_match_definition` |
+| 4 | same | canonical output escapes non-ASCII (`ensure_ascii=True`) | `test_FR_0_2_05_canonical_bytes_match_definition` |
+| 5 | Documents and schemas list exactly the same fields | `/model/checksum` row removed from `RUN_CARD.md` | `test_FR_0_2_07_documents_and_schemas_list_same_fields[run_card]` |
+| 5 | same | undocumented `reason` field added to the `run_finished` payload schema | `test_FR_0_2_07_documents_and_schemas_list_same_fields[event]` |
+| 6 | `contracts validate` exits non-zero on any invalid record in a JSON Lines file | command always returns 0 | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` |
+| 6 | same | command counts only the first record | `test_FR_0_2_04_cli_one_invalid_line_anywhere_fails[middle]` |
+
+Command: `.venv/bin/python <scratchpad>/mustcatch.py "$PWD" <scratchpad>/mc "$PWD/.venv/bin/python"`. Output excerpt:
+```text
+MC1a event: 'seq' dropped from required
+  FAILED tests/aqis_lab/test_aqis_contracts_event_log.py::test_FR_0_2_01_rejects_missing_required_field[seq-run_started]
+  1 failed, 30 passed, 841 deselected in 0.79s
+MC3 unknown major version accepted by the version check
+  FAILED tests/aqis_lab/test_aqis_contracts_versioning.py::test_FR_0_2_06_rejects_unknown_major_version[2.0-2-event]
+  1 failed, 949 deselected in 0.26s
+MC4a run_card_id excludes 'seed' too
+  FAILED tests/aqis_lab/test_aqis_contracts_canonical.py::test_FR_0_2_05_run_card_id_computed_independently
+  1 failed, 2 passed, 946 deselected in 0.22s
+MC5a RUN_CARD.md loses the /model/checksum row
+  FAILED tests/aqis_lab/test_aqis_contracts_docs.py::test_FR_0_2_07_documents_and_schemas_list_same_fields[run_card]
+  1 failed, 2 passed, 958 deselected in 0.23s
+MC6b command counts only the first record
+  FAILED tests/aqis_lab/test_aqis_contracts_cli.py::test_FR_0_2_04_cli_one_invalid_line_anywhere_fails[middle]
+  1 failed, 1 passed, 958 deselected in 0.61s
+```
+All 16 breaks were caught; no test had to be added.
+
+## Acceptance commands
+
+### AT-0.2-01 — the fast suite passes, including valid and invalid fixtures for every event type and field
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network"
+952 passed, 9 deselected in 56.53s
+```
+Slow suite as well: `.venv/bin/python -m pytest tests/aqis_lab -q -m "slow and not gpu and not colab and not oracle" -p no:cacheprovider` → `9 passed, 952 deselected in 118.45s (0:01:58)` (8 WP-0.0 slow tests and NFR-0.2-01).
+
+### AT-0.2-02 — `contracts validate` on the valid and the invalid event fixture
+```text
+$ .venv/bin/python -m aqis_lab contracts validate tests/aqis_lab/fixtures/contracts/valid_events.jsonl --kind event
+line 1: OK
+...
+line 23: OK
+event: 23 records, 23 valid, 0 invalid
+exit=0
+$ .venv/bin/python -m aqis_lab contracts validate tests/aqis_lab/fixtures/contracts/invalid_events.jsonl --kind event
+line 1: INVALID /schema_version: required field is missing; without it the record's contract version is unknown
+line 2: INVALID /run_id: required field is missing
+line 3: INVALID /run_card_id: required field is missing
+...
+line 96: INVALID /seq: seq 1 is out of order for run_id 'run-seq-b': expected 0 (seq counts 0, 1, 2, ... per run, in file order)
+event: 96 records, 2 valid, 94 invalid
+exit=1
+```
+
+### AT-0.2-03 — the audit gate passes with `--wp WP-0.2`
+See "Audit gate" below.
+
+## Audit gate
+The first run, before this section existed, reported exactly the three missing AT entries (`[F4] MAJOR: AT-0.2-0N does not appear in docs/progress/WP-0.2/EVIDENCE.md`, `3 findings: FAIL`). The run after this section was written is pasted below.
+```text
+$ git fetch origin main && .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.2
+aqis-audit-gate: base origin/main (merge-base 6f897411d876), head 3459ffab0612, approvals origin/main 6f897411d876, wp WP-0.2
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.2 s)
+exit=0
+```
+
+## Owner-run checks
+| Check | Where | Command | Expected output | Result report |
+| --- | --- | --- | --- | --- |
+| None | — | — | The spec runs WP-0.2 on the cloud VM only; CI runs the fast suite on GitHub's Ubuntu runner | — |
+
+## audit-allow lines
+None.
+
+## Deviations and decisions applied
+- D1 (approved, question 1): `schema_version` added to the run card and the pack manifest.
+- Questions 2 to 7 applied as recommended. Question 2: worker pool. Question 3: payload fields and the nullable `pack`, `normaliser` and `speaker_id`. Question 4: `owner`/`campaign` sources need `consent_ref`. Question 5: per-run `seq` check. Question 6: nested `.gitignore`. Question 7: the pure-Python reading.
+- Differences from the plan text, all inside the approved scope:
+  - FR-0.2-05 was built before FR-0.2-02, because the run card's ID check needs it.
+  - The three contract documents were written with FR-0.2-06.
+  - `validate_event_lines` takes the file's bytes, not a path.
+  - CAP-CONTRACTS-007 is an extra registry row for the validator API.
+  - Cross-field rule messages carry their `Rule:` text.
