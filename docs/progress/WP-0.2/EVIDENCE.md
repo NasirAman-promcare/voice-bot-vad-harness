@@ -265,3 +265,15 @@ None.
   - `validate_event_lines` takes the file's bytes, not a path.
   - CAP-CONTRACTS-007 is an extra registry row for the validator API.
   - Cross-field rule messages carry their `Rule:` text.
+
+## CI
+Pull request: https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/2 (title `WP-0.2 Contracts: event log, run card, pack manifest`). Every job is green on commit `45c4fe8`, the last commit with code, tests or fixtures:
+
+| Run | Event | Job | Result | Real log excerpt |
+| --- | --- | --- | --- | --- |
+| 36310205390 | pull_request | `lab` | success | `952 passed, 9 deselected in 34.98s`; `Work package from the pull request title: WP-0.2`; gate `aqis-audit-gate: base origin/main (merge-base 6f897411d876), head 6170c2cb59ef, approvals origin/main 6f897411d876, wp WP-0.2` … `0 findings: OK (0.1 s)` |
+| 36310205390 | pull_request | `harness-regression` | success | `1 failed, 21 passed in 4.26s` (the baseline's known failing test, `test_packet_loss_category_applies_drop_impairment_in_bridge`); `baseline: 22 tests, 21 passed; this run: 22 tests, 21 passed`; `RESULT: PASS` |
+| 36310189503 | push | `lab` | success | (same commit) |
+| 36310189503 | push | `harness-regression` | success | (same commit) |
+
+Every earlier WP-0.2 commit's push run was also green (runs 126 to 130: `cb96d44`, `2527f84`, `616fddd`, `0a4e2ef`, `3459ffa`). The commit that adds this section and sets STATUS changes only `docs/progress/`.
