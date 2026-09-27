@@ -233,6 +233,11 @@ PASSED tests/aqis_lab/test_aqis_registry_fetch.py::test_FR_0_4_02_dataset_pins_m
 3 passed, 1368 deselected in 124.84s (0:02:04)
 ```
 
+Full slow CPU suite, every WP (`.venv/bin/python -m pytest tests/aqis_lab -q -m "slow and not gpu and not colab and not oracle"`):
+```text
+14 passed, 1357 deselected in 268.09s (0:04:28)
+```
+
 ## Audit gate
 AT-0.4-03, after `git fetch origin main`:
 ```text
