@@ -27,3 +27,16 @@ Baseline before any change (change-control step 3, for `aqis_lab/__main__.py`): 
   Lines 92 and 95 are valid on purpose: they set up the sequence cases (a run's first record, and the record that continues after a gap).
 - Fast suite after FR-0.2-01: `498 passed, 8 deselected in 46.73s`.
 - Status: DONE
+- Correction (found while building FR-0.2-05): the FR-0.2-01 commit `4f752e0` was pushed with a `validate.py` header that listed 7 of the 13 tests in the CAP-CONTRACTS-001 registry row. The fast-suite run quoted above was taken before I appended that row, so it did not show the problem. The existing WP-0.0 test `test_FR_0_0_08_module_headers_match_registry` then failed (`1 failed, 512 passed`). I changed the header only, to list all 13 tests. After the fix: `513 passed, 8 deselected in 46.53s`.
+
+### FR-0.2-05 — Canonical JSON and IDs
+Built before FR-0.2-02, because the run card's ID check (FR-0.2-02) uses it.
+- Tests (`tests/aqis_lab/test_aqis_contracts_canonical.py`, 15 cases): `test_FR_0_2_05_canonical_bytes_match_definition` (hand-written byte literal: sorted keys, `,`/`:`, raw UTF-8 `\xc3\xa9`, escapes, number forms), `test_FR_0_2_05_key_order_does_not_change_bytes`, `test_FR_0_2_05_run_card_id_computed_independently` (the test's own recursive encoder plus `hashlib`; never calls `canonical.py` for the expected value), `test_FR_0_2_05_run_card_id_ignores_only_the_three_excluded_fields`, `test_FR_0_2_05_canonical_rejects_nan_infinity_and_non_json` (NaN, ±Infinity, tuple, set, bytes, object, non-string key, unpaired surrogates, with pointers).
+- Tests first: `E   ModuleNotFoundError: No module named 'aqis_lab.contracts.canonical'` (re-shown by moving the module aside after implementation).
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_contracts_canonical.py -q -p no:cacheprovider`
+- Output (real excerpt):
+```text
+15 passed in 0.03s
+```
+- Fast suite: `513 passed, 8 deselected in 46.53s`. Gate (`--base origin/main`, no `--wp`): `0 findings: OK (0.1 s)`.
+- Status: DONE
