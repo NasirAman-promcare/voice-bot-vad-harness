@@ -1,0 +1,58 @@
+{
+  "_comment": "Hand-written expectations for the gate fixtures: line number -> pattern label (labels as defined for the Stop hook).",
+  "code_patterns.py": {
+    "2": "TODO/FIXME/XXX marker",
+    "3": "placeholder wording",
+    "4": "simplification wording",
+    "5": "'for now' wording",
+    "6": "temporary wording",
+    "7": "hack wording",
+    "8": "dummy or fake wording",
+    "12": "NotImplementedError",
+    "18": "swallowed exception",
+    "24": "bare except",
+    "28": "type-check suppression",
+    "29": "mocking in production code",
+    "30": "errors silenced in shell"
+  },
+  "test_patterns.py": {
+    "7": "test skip",
+    "12": "test skip",
+    "18": "test skip",
+    "21": "test skip",
+    "27": "test skip",
+    "30": "expected-failure marker",
+    "36": "trivial assertion",
+    "40": "trivial assertion"
+  },
+  "allow_lines.py": {
+    "3": "dummy or fake wording",
+    "4": "dummy or fake wording"
+  },
+  "allow_lines.py exempted": {
+    "2": "fixture shows an exempted line with a reason"
+  },
+  "shell_patterns.sh": {
+    "4": "errors silenced in shell",
+    "5": "errors silenced in shell",
+    "6": "errors silenced in shell",
+    "7": "TODO/FIXME/XXX marker"
+  },
+  "lab_ci.yml": {
+    "7": "errors silenced in shell",
+    "8": "hack wording"
+  },
+  "requirements.in": {
+    "2": "TODO/FIXME/XXX marker"
+  },
+  "config.toml": {
+    "2": "placeholder wording"
+  },
+  "test_pytestmark.py": {
+    "4": "test skip",
+    "8": "test skip"
+  },
+  "non_utf8.py": {
+    "2": "TODO/FIXME/XXX marker"
+  }
+}

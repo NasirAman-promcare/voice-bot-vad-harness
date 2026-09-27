@@ -1,0 +1,1161 @@
+# EVIDENCE — WP-0.0
+
+Environment: cloud VM (Ubuntu 24.04.4 LTS, x86_64), Python 3.13.12 in `.venv` (Colab probe: 3.13), uv 0.8.17, lock `requirements/aqis_lab/phase0.txt` sha256 `5c9a64eb0ded6484a9bb7bf9b0fad9c5aa3ca321abfca499e24ceabd5461d422`. Git commits are given per section.
+
+## Requirements
+
+### FR-0.0-01 — `python -m aqis_lab version`
+- Tests: `test_FR_0_0_01_version_prints_package_commit_python`, `test_FR_0_0_01_version_marks_dirty_tree`, `test_FR_0_0_01_version_fails_loudly_outside_git`, `test_FR_0_0_01_dispatcher_rejects_unknown_command`
+- Tests first: all four failed before implementation (`No module named aqis_lab.__main__; 'aqis_lab' is a package and cannot be directly executed`; exit code 1 instead of 2).
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_version.py -v -p no:cacheprovider`, then `.venv/bin/python -m aqis_lab version`
+- Output (real excerpt):
+```text
+tests/aqis_lab/test_aqis_version.py::test_FR_0_0_01_version_prints_package_commit_python PASSED
+tests/aqis_lab/test_aqis_version.py::test_FR_0_0_01_version_marks_dirty_tree PASSED
+tests/aqis_lab/test_aqis_version.py::test_FR_0_0_01_version_fails_loudly_outside_git PASSED
+tests/aqis_lab/test_aqis_version.py::test_FR_0_0_01_dispatcher_rejects_unknown_command PASSED
+============================== 4 passed in 0.54s ===============================
+aqis_lab 0.0.1 commit=7c2c2bb+dirty python=3.13.12
+EXIT=0
+```
+- Status: DONE
+
+### FR-0.0-02 — dev_bootstrap.sh
+- Tests: `test_FR_0_0_02_fails_when_probe_missing`, `test_FR_0_0_02_fails_when_probe_unreadable[directory|no_version_line|conflicting_versions]`, `test_FR_0_0_02_fails_when_uv_missing`; slow+network: `test_FR_0_0_02_creates_venv_with_probe_python`, `test_FR_0_0_02_second_run_changes_nothing_within_30s`, `test_FR_0_0_02_rejects_lock_with_wrong_hash`
+- Tests first: before the script existed, all fast FR-0.0-02 tests failed with `FileNotFoundError: ... aqis_lab/deploy/dev_bootstrap.sh` (run with a throwaway `uv run --with pytest==9.1.1` interpreter, since no lock existed yet).
+- Command: `bash aqis_lab/deploy/dev_bootstrap.sh` (first run, then `time` on a second run)
+- Output (real excerpt):
+```text
+Colab probe requires Python 3.13 (docs/environment/colab_probe.txt)
+Using uv 0.8.17 at /root/.local/bin/uv
+Using CPython 3.13.12 interpreter at: /usr/bin/python3.13
+Creating virtual environment at: .venv
+...
+Installed 11 packages in 7ms
+OK: .venv ready: Python 3.13.12, lock sha256 5c9a64eb0ded6484a9bb7bf9b0fad9c5aa3ca321abfca499e24ceabd5461d422
+---
+Colab probe requires Python 3.13 (docs/environment/colab_probe.txt)
+Using uv 0.8.17 at /root/.local/bin/uv
+Reusing .venv (Python 3.13)
+Resolved 11 packages in 8ms
+Audited 11 packages in 0.11ms
+OK: .venv ready: Python 3.13.12, lock sha256 5c9a64eb0ded6484a9bb7bf9b0fad9c5aa3ca321abfca499e24ceabd5461d422
+
+real	0m0.095s
+```
+- Tampered lock (pytest hashes zeroed), real output tail:
+```text
+      Expected:
+        sha256:0000000000000000000000000000000000000000000000000000000000000000
+      Computed:
+        sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c
+ERROR: hash-checked install of requirements/aqis_lab/phase0.txt failed (see the uv message above).
+```
+- Command: `.venv/bin/python -m pytest tests/aqis_lab -v -p no:cacheprovider -k "FR_0_0_02 or FR_0_0_03 or FR_0_0_04"` (no marker filter, so slow and network tests ran)
+```text
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_fails_when_probe_missing PASSED
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_fails_when_probe_unreadable[directory] PASSED
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_fails_when_probe_unreadable[no_version_line] PASSED
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_fails_when_probe_unreadable[conflicting_versions] PASSED
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_fails_when_uv_missing PASSED
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_creates_venv_with_probe_python PASSED
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_second_run_changes_nothing_within_30s PASSED
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_rejects_lock_with_wrong_hash PASSED
+```
+- Status: DONE
+
+### FR-0.0-03 — phase0 lock
+- Tests: `test_FR_0_0_03_every_pin_has_hashes`, `test_FR_0_0_03_lock_generated_from_in_file`, `test_FR_0_0_03_regeneration_command_documented`, `test_FR_0_0_03_environment_matches_lock`; slow+network: `test_FR_0_0_03_regeneration_is_reproducible`, `test_FR_0_0_03_lock_installable_with_plain_pip`
+- Tests first: all four fast tests failed with `FileNotFoundError: ... requirements/aqis_lab/phase0.txt` before the lock existed.
+- Regeneration command (documented in `phase0.in` and recorded in the `phase0.txt` header): `uv pip compile requirements/aqis_lab/phase0.in --universal --python-version 3.13 --generate-hashes --output-file requirements/aqis_lab/phase0.txt` (run with the same string as `--custom-compile-command`).
+- Pins (real `grep -E '^[a-z]' requirements/aqis_lab/phase0.txt`): attrs 26.1.0, colorama 0.4.6 (`sys_platform == 'win32'` only), iniconfig 2.3.0, jsonschema 4.26.0, jsonschema-specifications 2025.9.1, packaging 26.3, pluggy 1.6.0, pygments 2.21.0, pytest 9.1.1, pyyaml 6.0.3, referencing 0.37.0, rpds-py 2026.6.3.
+- Output (same command as FR-0.0-02):
+```text
+tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_every_pin_has_hashes PASSED
+tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_lock_generated_from_in_file PASSED
+tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_regeneration_command_documented PASSED
+tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_environment_matches_lock PASSED
+tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_regeneration_is_reproducible PASSED
+tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_lock_installable_with_plain_pip PASSED
+```
+- Status: DONE
+
+### FR-0.0-04 — lab test discovery and markers
+- Tests: `test_FR_0_0_04_all_five_markers_registered`, `test_FR_0_0_04_lab_tests_use_only_registered_markers`, `test_FR_0_0_04_harness_collection_unchanged`, `test_FR_0_0_04_no_pytest_config_outside_lab`, `test_FR_0_0_04_no_test_basename_collisions`
+- Output (same command as FR-0.0-02):
+```text
+tests/aqis_lab/test_aqis_markers.py::test_FR_0_0_04_all_five_markers_registered PASSED
+tests/aqis_lab/test_aqis_markers.py::test_FR_0_0_04_lab_tests_use_only_registered_markers PASSED
+tests/aqis_lab/test_aqis_markers.py::test_FR_0_0_04_harness_collection_unchanged PASSED
+tests/aqis_lab/test_aqis_markers.py::test_FR_0_0_04_no_pytest_config_outside_lab PASSED
+tests/aqis_lab/test_aqis_markers.py::test_FR_0_0_04_no_test_basename_collisions PASSED
+```
+- Harness re-run with every lab file present (commit `5a8c50b`, same harness venv and command as FR-0.0-11), real output:
+```text
+=================== 1 failed, 21 passed, 1 warning in 6.00s ====================
+GIT STATUS (incl. ignored) IDENTICAL
+identical per-test outcomes: True 22 22
+```
+(the last line compares the per-test outcomes in the two JUnit files, baseline vs re-run)
+- Status: DONE
+
+### FR-0.0-11 — harness regression baseline
+- Record: `docs/baselines/harness_tests_baseline.md` (commit `e223af1`, taken before any lab file existed). The two tests were written after the record (they check it); the mutation check below shows they fail when the record is incomplete.
+- Tests: `test_FR_0_0_11_baseline_records_command_and_environment`, `test_FR_0_0_11_baseline_lists_every_harness_test` (expected list computed by AST from `tests/regression`)
+- Command (full form in the baseline document): `PYTHONDONTWRITEBYTECODE=1 "$HARNESS_VENV/bin/python" -m pytest tests/regression -rA -p no:cacheprovider --junitxml=...`
+- Output (real excerpt):
+```text
+FAILED tests/regression/test_loss_category.py::test_packet_loss_category_applies_drop_impairment_in_bridge
+=================== 1 failed, 21 passed, 1 warning in 6.33s ====================
+EXIT=1
+GIT STATUS (incl. ignored) IDENTICAL
+```
+- Mutation check: deleting the `test_rtp_sequence_reset` row from the baseline made the test fail: `AssertionError: missing ['tests/regression/test_sequence_unwrapper.py::test_rtp_sequence_reset'], unknown []` (file restored afterwards).
+- Status: DONE (the one failure is recorded, not fixed, as the spec requires)
+
+### FR-0.0-05 — audit gate checks (a) to (d), CLI, merge-base, JSON
+- Tests (`tests/aqis_lab/test_aqis_gate_checks.py`, fixture repositories with a bare origin): `test_FR_0_0_05_a_detects_never_path`, `test_FR_0_0_05_a_detects_guarded_path_without_approval`, `test_FR_0_0_05_a_passes_guarded_path_with_main_approval`, `test_FR_0_0_05_a_ignores_approval_committed_only_on_branch`, `test_FR_0_0_05_a_ignores_expired_or_withdrawn_approval[WITHDRAWN-|APPROVED-EXPIRES]`, `test_FR_0_0_05_b_detects_modified_existing_test`, `test_FR_0_0_05_b_detects_deleted_existing_test`, `test_FR_0_0_05_b_passes_new_test_and_approved_edit`, `test_FR_0_0_05_c_detects_each_code_pattern`, `test_FR_0_0_05_c_detects_each_test_pattern`, `test_FR_0_0_05_c_scans_only_added_lines`, `test_FR_0_0_05_c_includes_uncommitted_and_untracked_work`, `test_FR_0_0_05_d_detects_new_module_without_header`, `test_FR_0_0_05_d_passes_module_with_header_or_short_file`, `test_FR_0_0_05_clean_branch_exits_zero`, `test_FR_0_0_05_uses_merge_base_not_ref_tip`, `test_FR_0_0_05_json_output_schema`, `test_FR_0_0_05_bad_base_ref_exits_2`
+- Expected pattern hits come from the hand-written `tests/aqis_lab/fixtures/gate/expected.json`, not from gate output.
+- Tests first: all 19 failed before `tools/audit/gate.py` existed (`No module named tools.audit.gate`, and the resulting empty JSON output).
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_gate_checks.py -q -p no:cacheprovider` → `19 passed in 2.88s`. After the registry check was added, `test_FR_0_0_05_b_detects_deleted_existing_test` also asserts the registry finding E3: deleting the only test named by a registry row is correctly reported by check (e) too.
+- Status: DONE
+
+### FR-0.0-06 — parity with the Stop hook
+- Tests (`tests/aqis_lab/test_aqis_gate_parity.py`): `test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos` × 16 scenarios. Each runs the real `.claude/hooks/stop_gate.py` (subprocess, `CLAUDE_PROJECT_DIR` = fixture) and the gate on the same repository and compares normalised (a) to (d) findings; every scenario except the 3 clean ones must produce findings. Also `test_FR_0_0_06_pattern_tables_identical_to_stop_hook` (labels, regex sources and flags, allow and header regexes, lab directories, hunk regex) and `test_FR_0_0_06_path_classification_identical_to_hook` (27 paths, 7 globs × 13 probes, compared with `_protected.py`, run with `python -B` so no bytecode is written in `.claude/`).
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_gate_exemptions.py tests/aqis_lab/test_aqis_gate_parity.py -q -p no:cacheprovider` → `22 passed in 4.49s`
+- These tests were written after the (a) to (d) code; mutation checks M1, M3, M7 and M12 below show they fail when the gate diverges.
+- Status: DONE. Accepted difference (owner decision 2): the gate reads approvals at `origin/main`; the hook reads them at the merge-base.
+
+### FR-0.0-07 — exemptions listed
+- Tests: `test_FR_0_0_07_audit_allow_with_reason_exempts_and_is_listed`, `test_FR_0_0_07_audit_allow_without_reason_does_not_exempt`, `test_FR_0_0_07_audit_allow_exempts_only_its_line`, `test_FR_0_0_07_allow_patterns_in_exempts_file_and_is_listed`
+- Real gate output on this branch (exemptions section):
+```text
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 4
+  tests/aqis_lab/fixtures/gate/allow_lines.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/code_patterns.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/test_patterns.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tools/audit/patterns.py: tools/audit/patterns.py (WP-0.0.md)
+```
+- Mutation M2 (an audit-allow comment without a reason exempts the line) makes 3 of these tests fail.
+- Status: DONE
+
+### FR-0.0-08 — registry consistency
+- Tests: `test_FR_0_0_08_detects_row_with_missing_test`, `test_FR_0_0_08_detects_row_with_missing_module`, `test_FR_0_0_08_detects_row_removed_since_base`, `test_FR_0_0_08_detects_malformed_row`, `test_FR_0_0_08_detects_missing_registry`, `test_FR_0_0_08_passes_consistent_registry`, `test_FR_0_0_08_repository_registry_is_consistent`
+- Tests first: before check (e) existed, the detection tests failed (`assert [] == [('E3', 6), ('E3', 7)]`, `assert [] == [('E4', 6), ('E4', 7)]`, `assert [] == [('E5', 5)]`, `assert [] == [('E2', 6), ('E2', 7)]`, `assert [] == ['E1']`).
+- `test_FR_0_0_08_detects_missing_registry` first expected only E1. The gate also reported E5, because every row present at the base is missing when the file is deleted, which is what FR-0.0-08 requires. The expectation of this new test was corrected to `["E1", "E5"]`.
+- Status: DONE
+
+### FR-0.0-09 — requirement traceability (`--wp`)
+- Tests: `test_FR_0_0_09_detects_id_missing_from_plan`, `test_FR_0_0_09_detects_id_missing_from_test_names`, `test_FR_0_0_09_detects_id_missing_from_evidence`, `test_FR_0_0_09_underscore_matching_respects_boundaries`, `test_FR_0_0_09_ignores_other_wp_ids_in_spec`, `test_FR_0_0_09_reports_unknown_wp`, `test_FR_0_0_09_passes_complete_traceability`
+- Rules as agreed (owner decision 1): FR/NFR IDs must be in PLAN.md, a test function name and EVIDENCE.md; AT/OC IDs in PLAN.md and EVIDENCE.md; only the WP's own IDs count.
+- Tests first: before check (f) existed they failed (`assert [] == [('F3', 5)]`, `assert [] == [('F3', 4), ('F4', 4)]`, `assert [] == ['F1']`, ...).
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_gate_registry.py tests/aqis_lab/test_aqis_gate_trace.py -q -p no:cacheprovider` → `14 passed` (after the E1/E5 correction above).
+- Status: DONE
+
+### FR-0.0-10 — CI
+- Tests: `test_FR_0_0_10_ci_triggers_push_and_pull_request`, `test_FR_0_0_10_ci_bootstraps_probe_python_and_hashed_lock`, `test_FR_0_0_10_ci_runs_fast_suite_with_exact_markers`, `test_FR_0_0_10_ci_gate_base_selection`, `test_FR_0_0_10_ci_cannot_change_or_trigger_other_workflows`
+- Tests first: all 5 failed with `FileNotFoundError: ... .github/workflows/aqis-lab-ci.yml` before the file existed.
+- Real CI run on push: https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/36121608490 (run 1, commit `5a8c50b`, conclusion **success**). Real log excerpt:
+```text
+aqis_lab 0.0.1 commit=5a8c50b python=3.13.7
+83 passed, 5 deselected in 11.99s
+  EVENT_NAME: push
+aqis-audit-gate: base origin/main (merge-base 475890df5238), head 5a8c50b65324, approvals origin/main 475890df5238, wp -
+Findings: 0
+0 findings: OK (0.1 s)
+```
+- The runner warns that `actions/checkout@v4` and `astral-sh/setup-uv@v6` target the deprecated Node.js 20 and are forced to run on Node.js 24. This is informational; both steps succeeded.
+- The pull-request run is AT-0.0-04 (owner check).
+- Status: DONE for the push event; the pull-request run is confirmed by the owner (AT-0.0-04).
+
+### NFR-0.0-01 — gate runtime under 60 s
+- Test: `test_NFR_0_0_01_gate_runtime_under_60s` (the real repository, `--base origin/main --wp WP-0.0`)
+- Real runtime: the gate reports `(0.1 s)` on this repository (see "Audit gate" below).
+- Status: DONE
+
+### NFR-0.0-02 — file:line and rule in every message
+- Test: `test_NFR_0_0_02_every_message_names_file_line_and_rule`. A single fixture repository triggers A1, A2, B1, B2, C1, C2, D1, E3, E4, F2, F3 and F4, and every finding line must match `path:line: [RULE] SEVERITY: message`. Mutation M4 (drop the rule from the message) makes it fail.
+- Status: DONE
+
+### NFR-0.0-03 — standard library plus pinned dependencies
+- Test: `test_NFR_0_0_03_imports_are_stdlib_or_pinned`. An AST scan of every import in `aqis_lab/` and `tools/` checks it against `sys.stdlib_module_names`, first-party packages and the import names of packages pinned in `phase0.txt`. `tools/` must use the standard library only. Mutation M9 (`import yaml` in the gate) makes it fail.
+- Status: DONE
+
+## Mutation spot-checks (builder self-check, in a scratch clone outside the repository)
+Each mutation was applied alone and reverted afterwards (real output):
+```text
+M1 drop 'hack' pattern => 5 failed, 18 passed, 65 deselected in 5.23s
+M2 audit-allow without reason exempts => 3 failed, 1 passed, 84 deselected in 1.05s
+M3 ignore STATUS: APPROVED => 1 failed, 23 passed, 64 deselected in 5.78s
+M4 message without rule => 1 failed, 87 deselected in 0.45s
+M5 no lookbehind boundary => 1 failed, 6 passed, 81 deselected in 1.84s
+M6 skip removed-row check => 2 failed, 5 passed, 81 deselected in 1.35s
+M7 ignore untracked in changes => 9 failed, 14 passed, 65 deselected in 5.93s
+M8 version ignores untracked => 1 failed, 4 passed, 83 deselected in 0.93s
+M9 gate imports yaml => 1 failed, 87 deselected in 0.12s
+M10 bootstrap always recreates venv => 1 failed, 87 deselected in 0.46s
+M11 bootstrap skips hash requirement => 1 failed, 87 deselected in 0.30s
+M12 d-check threshold off-by-one => 3 failed, 17 passed, 68 deselected in 5.54s
+```
+M10 fails for the right reason: the `.venv` snapshot differs after the second run.
+
+## Acceptance commands
+### AT-0.0-01 — `bash aqis_lab/deploy/dev_bootstrap.sh && .venv/bin/python -m aqis_lab version`
+```text
+Colab probe requires Python 3.13 (docs/environment/colab_probe.txt)
+Using uv 0.8.17 at /root/.local/bin/uv
+Reusing .venv (Python 3.13)
+Resolved 11 packages in 25ms
+Audited 11 packages in 0.19ms
+OK: .venv ready: Python 3.13.12, lock sha256 5c9a64eb0ded6484a9bb7bf9b0fad9c5aa3ca321abfca499e24ceabd5461d422
+aqis_lab 0.0.1 commit=5a8c50b python=3.13.12
+EXIT=0
+```
+In a fresh clone (first run, creating `.venv`), the same command gave `Installed 11 packages` and `aqis_lab 0.0.1 commit=5a8c50b python=3.13.12`.
+
+### AT-0.0-02 — `.venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network"`
+```text
+83 passed, 5 deselected in 15.04s
+```
+Slow and network CPU tests: `.venv/bin/python -m pytest tests/aqis_lab -q -m "slow or network"` → `5 passed, 83 deselected in 6.41s`. Whole lab suite: `.venv/bin/python -m pytest tests/aqis_lab -q` → `88 passed in 19.86s`.
+
+### AT-0.0-03 — `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0`
+See "Audit gate" below.
+
+### AT-0.0-04 — CI green on the pull request
+Owner-run check; see below. The push-event run on the same workflow is green (FR-0.0-10).
+
+## Audit gate
+Command: `git fetch origin main && .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0` (real output, exit code 0):
+```text
+aqis-audit-gate: base origin/main (merge-base 475890df5238), head 5a8c50b65324, approvals origin/main 475890df5238, wp WP-0.0
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 4
+  tests/aqis_lab/fixtures/gate/allow_lines.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/code_patterns.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/test_patterns.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tools/audit/patterns.py: tools/audit/patterns.py (WP-0.0.md)
+Findings: 0
+0 findings: OK (0.2 s)
+EXIT=0
+```
+The Stop hook also reports no problems on this branch (`echo '{"stop_hook_active": true}' | CLAUDE_PROJECT_DIR=$PWD python3 -B .claude/hooks/stop_gate.py` prints nothing).
+
+## Owner-run checks
+| Check | Where | Command | Expected output | Result report |
+| --- | --- | --- | --- | --- |
+| AT-0.0-04 CI green on the PR | GitHub → the WP-0.0 pull request → Checks (or the Actions tab) | Open the `aqis-lab-ci` run for the PR's latest commit (`pull_request` event) | Every step green; "Version" prints `python=3.13.x`; "Fast lab test suite" ends `83 passed, 5 deselected` (or more passed, no failures); the "Audit gate" step shows `EVENT_NAME: pull_request` and ends `0 findings: OK` | Pending (owner) |
+
+Round 1 had no Colab or Oracle checks. Round 2 adds the Colab check OC-0.0-01, and the audit round 2 fixes settle Oracle (owner decision on F16). Both are listed under "Round 2 owner-run checks" below. (Corrected for audit finding F22.)
+
+## audit-allow lines
+None. No line in the repository carries an `audit-allow` exemption; the gate reports `Exempted lines (# audit-allow): 0`. Files exempted by the owner approval (`ALLOW-PATTERNS-IN`, `docs/approvals/WP-0.0.md`), as the gate lists them now: `tests/aqis_lab/fixtures/gate/allow_lines.py`, `tests/aqis_lab/fixtures/gate/code_patterns.py`, `tests/aqis_lab/fixtures/gate/non_utf8.py`, `tests/aqis_lab/fixtures/gate/test_patterns.py`, `tests/aqis_lab/fixtures/gate/test_pytestmark.py`, `tools/audit/patterns.py` (6 files). Round 1 listed 4; the two later fixture files were added in round 2 (corrected for audit finding F45). The non-`.py` fixture `lab_test_readme.md` is also covered by the approval glob, but the gate lists only files inside the scan scope.
+
+## Differences from the plan's file list (no behaviour deviations)
+- Added `tests/aqis_lab/aqis_testutil.py`: shared test helpers (an independent probe and lock parser, hermetic git environment). It is not a test module.
+- Added `test_FR_0_0_08_detects_missing_registry` (registry file deleted), beyond the planned FR-0.0-08 tests.
+- Registry rows added beyond the plan's list:
+  - `CAP-CLI-003`: `aqis_lab.__version__`.
+  - `CAP-BASE-001`: the harness baseline record.
+  - `CAP-AUDIT-009`: gate CLI and reports.
+- Scope check: `git diff --stat origin/main...HEAD` touches only new lab files plus these existing files:
+  - `docs/progress/STATUS.md`: WP-0.0 row only.
+  - `docs/capabilities/REGISTRY.md`: appended rows only.
+  - `docs/progress/BLOCKERS.md`: BLK-001 appended, then resolved.
+  - No GUARDED or NEVER path is changed, and no path carries an absolute filesystem location.
+
+---
+
+# Round 2 (after audit round 1, Amendment 1)
+
+- **Environment:** cloud VM (Ubuntu 24.04.4 LTS, x86_64).
+  - Lab `.venv`: Python 3.13.12, uv 0.8.17, `phase0.txt` sha256 `5c9a64eb0ded6484…`.
+  - Harness `.venv-harness`: Python 3.13.12, `harness-extras.txt` sha256 `339abead3e1b65b9…`.
+- **Base:** `origin/main` `e4b38ac` (kit patch 2, Stop hook v3), with Round 2 approval `2528e74`.
+- **Owner decisions:** R2-1 as amended by BLK-005 (option 1), R2-2, R2-3 A, R2-4, BLK-004 option 1.
+- **Commits:** Round 2 commits run from `1ede332` to the end of this branch. Each requirement's tests were committed before its implementation, so the order can be checked with `git log --stat` (F07).
+
+## Findings F01 to F10 (AT-0.0-08)
+| Finding | Proof | Result |
+| --- | --- | --- |
+| F01 | `test_FR_0_0_02_uses_version_named_by_probe` (probe says 3.99, expects exit 1, `Python 3.99` in stderr, no `.venv`) | Auditor mutation `PY="3.13"`: `F01 PY=3.13 hard-coded => 1 failed, 9 passed, 93 deselected` |
+| F02 | `test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point`, `test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point` (`approve_on_main(..., merge_into_branch=False)`) | Auditor mutation `load_approvals(git, base)`: `F02 approvals at merge-base => 2 failed, 19 passed, 82 deselected` |
+| F03 | `test_FR_0_0_01_version_marks_dirty_tree` now stages an edit and a deletion | Auditor mutation (`git diff --name-only` plus untracked): `F03 +dirty misses staged => 1 failed, 4 passed, 98 deselected` |
+| F04 | `gate.py`: `read_changed_file`, `diff_against_base`, `load_protected`, registry, spec and test-file reads now raise `GateError` (exit 2). Tests: `test_FR_0_0_06_fails_closed_on_unreadable_changed_file`, `test_FR_0_0_06_fails_closed_when_protected_paths_unreadable[missing/directory]`, `test_FR_0_0_06_fails_closed_on_git_error` (the last also shows the Stop hook reports `GATE ERROR`) | Round 2 mutation R3 (dangling symlink skipped silently): `1 failed` |
+| F05 | Docstring of `test_FR_0_0_04_harness_collection_unchanged` states its limits; its pytest subprocesses use `PYTHONDONTWRITEBYTECODE=1`. The combined run in `.venv-harness` is recorded under FR-0.0-04 below | Harness outcomes identical alone and combined (22 of 22) |
+| F06 | `test_FR_0_0_08_module_headers_match_registry`, added before the fix (commit `9897ce2` fails, `7fb578d` passes). Headers and registry synced; the three package markers have full headers. Correction (audit F20): `ALLOW_REASON_RE` was not in the CAP-AUDIT-008 row until the round 2 audit fixes, which also added `LAB_CODE_DIRS`, `LAB_CI_FILES`, `LAB_TEST_DIR`, `SCANNED_SUFFIXES` and `glob_to_regex` | Passes; it caught one more mismatch during round 2 (the `harness_provision.py` header), which was fixed |
+| F07 | NFR commands and output below. **History, stated accurately:** in round 1, the check (e), check (f) and FR-0.0-07 code landed in `3f7d52a` together with checks (a) to (d), **before** their tests were committed. The titles of `b8bbe52`, `65be1e1`, `6fe8c71` and `b2067a0` describe test files only. Pushed history is not rewritten. In round 2, tests and implementation are separate commits; example checked in a scratch clone: `1ede332` (tests only) `17 failed, 32 passed`, `5ae3ce3` (fix) `49 passed` | See below |
+| F08 | Owner approved the round-1 additions (`docs/approvals/WP-0.0.md`, condition R2-4) | Approved |
+| F09 | Replacement decoding everywhere; `repository_root` catches `TimeoutExpired`; F1 cites `docs/specs/**/<WP>-*.md:1`. Test: `test_FR_0_0_06_decodes_non_utf8_with_replacement` (a Latin-1 byte in a new and in a modified lab file gives the finding, exit 1, no traceback) | Passes |
+| F10 | `test_FR_0_0_01_version_prints_package_commit_python` compares only with the AST-read `__version__`; the literal is gone | Passes |
+
+## FR-0.0-06 (amended) — the gate matches Stop hook v2/v3, fails closed, wider scan
+- **Tests** (`tests/aqis_lab/test_aqis_gate_v2.py` and `test_aqis_gate_parity.py`):
+  - `test_FR_0_0_06_scans_v2_file_types_and_dirs`
+  - `test_FR_0_0_06_flags_pytestmark_and_param_skips`
+  - `test_FR_0_0_06_decodes_non_utf8_with_replacement`
+  - the three `test_FR_0_0_06_fails_closed_*` tests
+  - `test_FR_0_0_06_approvals_none_when_origin_main_unverifiable`
+  - `test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos`, 20 scenarios; new: `v2_file_types`, `pytestmark`, `added_then_deleted_in_worktree`, `non_utf8`
+  - `test_FR_0_0_06_pattern_tables_identical_to_stop_hook`, which also compares the suffixes and the CI-file glob
+- **Tests first:** before the fix, `13 failed, 17 passed` (for example, `JSONDecodeError` when the gate crashed on non-UTF-8, `AttributeError: module 'tools.audit.patterns' has no attribute 'LAB_CODE_DIRS'`, AD file reported as `D` instead of `A`). After the fix: `30 passed in 7.62s`.
+- **Stop hook v3** (`e4b38ac`) changes only memory and reporting ("Detection rules are unchanged from version 2"); the parity tests run against v3.
+- **Round 2 mutations** (scratch clone, one at a time, real output):
+```text
+R1 old status mapping (AD as deleted) => 1 failed, 29 passed, 98 deselected in 7.01s
+R2 drop shell pattern => 7 failed, 28 passed, 93 deselected in 8.02s
+R3 dangling symlink skipped silently => 1 failed, 29 passed, 98 deselected in 7.60s
+```
+- **Status:** DONE. Differences G1 and G2 are accepted (R2-2) and documented in `docs/tools/AUDIT_GATE.md`.
+
+## FR-0.0-10 (amended) — WP ID from the pull request title
+- **Tests:**
+  - `test_FR_0_0_10_ci_takes_wp_from_pr_title`
+  - `test_FR_0_0_10_pr_title_parser`, which runs the workflow's own shell step with `PR_TITLE`/`GITHUB_ENV`:
+    - accepts `WP-0.0 …`, `WP-0.12: …`, `WP-1.3`;
+    - rejects a missing ID, `WP-0.0x`, lower case, brackets, `WP-0`, and a two-line title that tries to write its own `WP_ID=`;
+  - `test_FR_0_0_10_ci_gate_base_selection` (updated to the amended gate step).
+- **Tests first:** `6 failed, 2 passed` before the workflow change; `8 passed in 0.20s` after it.
+- **Mutation:** R8 (title regex without the trailing boundary) gives `1 failed`.
+- **Status:** DONE locally. The pull-request run is AT-0.0-04 / AT-0.0-07 (owner).
+
+## FR-0.0-11 (amended) — provisioned baseline and the regression job
+- **Record:** `docs/baselines/harness_tests_baseline.md`, with "Provisioned baseline (round 2)" (commit tested `d6b2364`) first and the round 1 baseline kept under "History (round 1)".
+- **Tool:** `tools/harness/regression_check.py`.
+- **CI job:** `harness-regression` (provision, run tests with JUnit output, regression check).
+- **Tests:**
+  - `test_FR_0_0_11_regression_check_flags_newly_failing_baseline_pass`
+  - `test_FR_0_0_11_regression_check_flags_missing_baseline_pass`
+  - `test_FR_0_0_11_regression_check_passes_same_or_better`
+  - `test_FR_0_0_11_regression_check_rejects_unreadable_inputs`
+  - `test_FR_0_0_11_regression_check_accepts_repository_baseline`
+  - `test_FR_0_0_11_ci_has_harness_regression_job`
+  - `test_FR_0_0_11_baseline_records_command_and_environment` and `test_FR_0_0_11_baseline_lists_every_harness_test`, both now requiring both sections
+- **Tests first:** `5 failed` (module missing; no Round 2 section yet) before the implementation; `7 passed` after.
+- **Mutation:** R7 (missing baseline tests tolerated) gives `1 failed`.
+- **AT-0.0-06:** `PYTHONDONTWRITEBYTECODE=1 .venv-harness/bin/python -m pytest tests/regression -rA -p no:cacheprovider --junitxml=<scratch>`. Real output:
+```text
+FAILED tests/regression/test_loss_category.py::test_packet_loss_category_applies_drop_impairment_in_bridge
+========================= 1 failed, 21 passed in 5.07s =========================
+GIT STATUS (incl. ignored) IDENTICAL
+```
+  No import or collection errors.
+- **Regression check on that report:** `.venv-harness/bin/python -B -m tools.harness.regression_check --junit <scratch>/r2_junit.xml`
+```text
+baseline: 22 tests, 21 passed; this run: 22 tests, 21 passed
+RESULT: PASS
+EXIT=0
+```
+- **Status:** DONE locally. AT-0.0-07 (the CI job green on the PR) is for the owner to confirm.
+
+## FR-0.0-04 — combined run in the harness environment (F05)
+`PYTHONDONTWRITEBYTECODE=1 .venv-harness/bin/python -m pytest tests/regression tests/aqis_lab -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider -q --junitxml=<scratch>`, then a comparison of the harness test cases with the harness-only run:
+Re-run after the round 2 audit fixes (audit F22: the earlier excerpt `2 failed, 128 passed` predated later tests):
+```text
+2 failed, 152 passed, 7 deselected in 41.75s
+harness outcomes identical alone vs combined with lab tests: True 22 22 21 passed
+FAILED tests/regression/test_loss_category.py::test_packet_loss_category_applies_drop_impairment_in_bridge
+FAILED tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_environment_matches_lock
+```
+The lab failure is expected in that environment: `test_FR_0_0_03_environment_matches_lock` asserts that the running interpreter is the lab `.venv`, and `.venv-harness` is not.
+
+## FR-0.0-12 — harness provisioning
+- **Files:**
+  - `aqis_lab/deploy/harness_provision.sh`, a wrapper around `harness_provision.py` (standard library, system `python3` 3.10 or newer);
+  - `requirements/aqis_lab/harness-extras.in` and `harness-extras.txt`, hash-checked;
+  - `requirements/aqis_lab/harness-vcs.txt`, the TEN VAD commit `22a3bcd4…` (BLK-004 option 1);
+  - `config/aqis_lab/harness_assets.json`: corpus commit `14796262a824…` (BLK-005 option 1), sha256 `ef4d5da1…`; FireRedVAD commit `7990aac…` with per-file sha256; torch not installed (R2-3).
+- **Tests:**
+  - Fast, each running the real script in a throwaway git tree with local sources:
+    - `test_FR_0_0_12_places_data_only_in_ignored_paths`
+    - `test_FR_0_0_12_second_data_run_downloads_nothing`
+    - `test_FR_0_0_12_reads_corpus_at_pinned_commit`
+    - `test_FR_0_0_12_fails_on_asset_checksum_mismatch`
+    - `test_FR_0_0_12_rejects_lfs_pointer_file`
+    - `test_FR_0_0_12_manifest_mismatch_is_an_error`
+    - `test_FR_0_0_12_refuses_target_that_git_does_not_ignore`
+    - `test_FR_0_0_12_never_writes_token` (sentinel `GITHUB_TOKEN` found nowhere in the tree, `.git` or the cache)
+    - `test_FR_0_0_12_rejects_unknown_step`
+    - `test_FR_0_0_12_harness_extras_lock_is_hash_pinned`
+    - `test_FR_0_0_12_asset_pins_match_repository`
+  - Slow and network, on this repository: `test_FR_0_0_12_provisions_harness_end_to_end`, `test_FR_0_0_12_second_run_downloads_nothing_within_60s`.
+- **Tests first:** `8 failed` (script missing) before the implementation; later `6 failed` (`KeyError: 'tag'`) before the pin-by-commit change.
+- **Mutations** (one at a time, real output):
+```text
+R4 corpus sha not verified => 1 failed, 10 passed, 117 deselected in 2.97s
+R5 LFS pointer accepted => 1 failed, 10 passed, 117 deselected in 2.83s
+R6 ignore check skipped => 1 failed, 10 passed, 117 deselected in 2.72s
+R9 corpus read from working tree, not pinned commit => 1 failed, 10 passed, 117 deselected in 2.73s
+```
+- **First real run:** it found that tag `corpus-v1` does not contain the archive (BLK-005). My Round 2 plan had stated otherwise; the correction is in `PLAN.md`.
+- **Where the harness expects its data, and how it is provided:**
+  - clips at `corpus/audio/<name>.wav`: 229 symlinks into `~/.cache/aqis/corpus/<sha256>/extracted/`, inside the ignored real directory `corpus/audio/`;
+  - weights at `pretrained_models/FireRedVAD/Stream-VAD`: a symlink into `~/.cache/aqis/firered/<commit>/repo/Stream-VAD`, inside the ignored `pretrained_models/`;
+  - the tracked `corpus/manifest.json` is compared with the archive's copy (byte-identical) and never written.
+
+### AT-0.0-05 — provision twice from scratch
+Command: remove `.venv-harness`, `~/.cache/aqis`, `corpus/audio` and `pretrained_models` (all created by provisioning), then run `bash aqis_lab/deploy/harness_provision.sh` twice. Real output:
+```text
+run 1: exit=0 elapsed=44.2s Downloads this run: 5 RESULT: PASS git-status=[]
+run 2: exit=0 elapsed=0.7s Downloads this run: 0 RESULT: PASS git-status=[]
+```
+Run 1 table (real):
+```text
+| system | PASS | already installed: git-lfs, libc++1, libopus0 |
+| python | PASS | .venv-harness Python 3.13; installed run_phase.py install all, requirements/aqis_lab/harness-extras.txt (hash-checked), requirements/aqis_lab/harness-vcs.txt |
+| ten-vad | PASS | ten_vad 1.0.6.8 at commit 22a3bcd4509d (pinned) |
+| imports | PASS | imported numpy, scipy, soundfile, yaml, aiortc, av, websockets, opuslib, pytest, pytest_asyncio, webrtcvad, kaldi_native_fbank, ten_vad; TenVad native library loaded |
+| torch | INFO | not installed, decision R2-3 |
+| corpus | PASS | corpus-v1 from git at commit 14796262a824, sha256 ef4d5da1e30f verified; 229 manifest clips available under corpus/audio/ (229 links created) |
+| weights | PASS | https://huggingface.co/FireRedTeam/FireRedVAD at 7990aaccc6b7: Stream-VAD/model.pth.tar, Stream-VAD/cmvn.ark sha256 verified, no LFS pointers; available at pretrained_models/FireRedVAD/Stream-VAD |
+| git-status | PASS | git status --porcelain is empty |
+```
+The system packages were installed by the first provisioning attempt in this session. Its real output: `[PASS] system: installed git-lfs, libc++1; already present: libopus0`.
+
+- **Slow and network suite:** `.venv/bin/python -m pytest tests/aqis_lab -v -p no:cacheprovider -m "slow or network"`
+```text
+tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_provisions_harness_end_to_end PASSED
+tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_second_run_downloads_nothing_within_60s PASSED
+====================== 7 passed, 121 deselected in 8.09s =======================
+```
+- **Status:** DONE.
+
+## FR-0.0-13 — Colab harness setup
+- **Doc:** `docs/colab/HARNESS_SETUP.md`, cells 1 to 6:
+  1. settings;
+  2. clone with the `GITHUB_TOKEN` secret in a one-off `-c http.extraHeader` for the clone command only;
+  3. assert there is no extraheader in git config and the remote is unchanged;
+  4. uv 0.8.17 if missing;
+  5. provision and write the report;
+  6. download the report.
+- **Tests:** `test_FR_0_0_13_colab_doc_cells_are_valid_python`, `test_FR_0_0_13_token_used_only_for_the_clone_command`, `test_FR_0_0_13_one_provisioning_command_and_report`.
+- **Tests first:** `3 failed` (`FileNotFoundError`) before the doc; `3 passed` after.
+- **Owner-run check:** OC-0.0-01, below.
+- **Status:** DONE, pending OC-0.0-01.
+
+## NFR-0.0-01/02/03 — commands and output (F07)
+- **Command:** `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_gate_nfr.py -v -p no:cacheprovider`
+```text
+tests/aqis_lab/test_aqis_gate_nfr.py::test_NFR_0_0_01_gate_runtime_under_60s PASSED
+tests/aqis_lab/test_aqis_gate_nfr.py::test_NFR_0_0_02_every_message_names_file_line_and_rule PASSED
+tests/aqis_lab/test_aqis_gate_nfr.py::test_NFR_0_0_03_imports_are_stdlib_or_pinned PASSED
+============================== 3 passed in 0.62s ===============================
+```
+- **NFR-0.0-01:** the gate on this repository reports its own time: `0 findings: OK (0.2 s)`, see "Round 2 audit gate" below.
+- **Mutations:** round 1 M4 (rule missing from the message) and M9 (`import yaml` in the gate) each made the NFR tests fail. `tools/harness/` and `aqis_lab/deploy/harness_provision.py` are also covered by `test_NFR_0_0_03_imports_are_stdlib_or_pinned` (standard library only).
+
+## Round 2 fast suite
+`.venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network"` (AT-0.0-02): `121 passed, 7 deselected in 20.40s`.
+
+## Round 2 owner-run checks
+| Check | Where | Command | Expected output | Result report |
+| --- | --- | --- | --- | --- |
+| AT-0.0-04 and AT-0.0-07: CI green on the PR | GitHub, PR #1, Checks | Open the `aqis-lab-ci` run for the latest commit (`pull_request` event) | Job `lab` green, with the step "Work package ID from pull request title" printing `WP-0.0` and the gate running with `--wp WP-0.0`, ending `0 findings: OK`. Job `harness-regression` green, with the provisioning table all PASS (torch INFO) and `RESULT: PASS` from the regression check | Confirmed green by the owner in the Actions tab (approval condition in `docs/approvals/WP-0.0.md` on `main`, `cd5543d`). Latest recorded runs, both jobs success: `57ba8b7` (round 8 fixes) pull request `36258771848`, push `36258768589`; `0430acd` pull request `36241783198`, push `36241780177`; `18f3444` pull request `36241592075`, push `36241588866`. The final round 8 commit is recorded in "Round 8 audit fixes and must-catch proof" (corrected for audit finding F54; this row said `335363d` until round 8) |
+| OC-0.0-01: Colab harness setup | Colab, fresh CPU runtime (x86_64) | Before the merge: in cell 1 of `docs/colab/HARNESS_SETUP.md` set `BRANCH = "claude/hopeful-noether-yinc4e"` (`main` has no provisioning script until the merge, audit F15). Run cells 1 to 6, then commit the downloaded file as `docs/environment/colab_harness_provision.txt` | A `platform / PASS / Ubuntu ... on Linux x86_64` row and every other row PASS (torch `INFO / not installed, decision R2-3`), `RESULT: PASS`, `exit code: 0`, `git status --porcelain: []`. A wrong branch stops cell 2 with `fatal: Remote branch <name> not found in upstream origin` and `RuntimeError: git clone of branch <name> from https://github.com/... failed (exit 128)`, with no command line shown | Accepted by the owner under CONDITIONS in `docs/approvals/WP-0.0.md` on `main` (`7303ddd`): the summary in `docs/environment/colab_harness_provision.txt` and the report `OWNER_VERIFY_COLAB_WP-0.0_20260925T155908Z.md` (corrected for audit finding F45) |
+| Oracle VM (owner decision F16, approval conditions round 3) | Oracle VM, only if it is Debian or Ubuntu on x86_64 | `bash aqis_lab/deploy/harness_provision.sh` in a clone of the branch | **Debian or Ubuntu on x86_64:** as on Colab. **Arm (aarch64):** exit 1 at once, a single row `platform / FAIL / harness provisioning needs Debian or Ubuntu on Linux x86_64; this machine is Linux aarch64. TEN VAD at commit 22a3bcd4509d ships its native library only for Linux x86_64 ... no Arm (aarch64) binary ...`. **x86_64 with another distribution** (for example Oracle Linux, `ID=ol`): exit 1 at once, a single row `platform / FAIL / harness provisioning needs Debian or Ubuntu on Linux x86_64; this machine runs ol (...), not debian or ubuntu. the system step installs packages with apt-get ...`. In both FAIL cases: `Downloads this run: 0`, `RESULT: FAIL`. The harness is not supported there; this is the owner's decision, not a defect | Not needed unless the owner runs the harness on Oracle (`docs/environment/oracle_probe.txt` is still missing) |
+
+## Round 2 audit gate
+Command: `git fetch origin main && .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0` (AT-0.0-03). Real output:
+```text
+aqis-audit-gate: base origin/main (merge-base e4b38ac63d3f), head caa9a1e8fb03, approvals origin/main e4b38ac63d3f, wp WP-0.0
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 6
+  tests/aqis_lab/fixtures/gate/allow_lines.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/code_patterns.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/non_utf8.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/test_patterns.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tests/aqis_lab/fixtures/gate/test_pytestmark.py: tests/aqis_lab/fixtures/** (WP-0.0.md)
+  tools/audit/patterns.py: tools/audit/patterns.py (WP-0.0.md)
+Findings: 0
+0 findings: OK (0.2 s)
+EXIT=0
+```
+
+AT-0.0-01 re-run: `bash aqis_lab/deploy/dev_bootstrap.sh && .venv/bin/python -m aqis_lab version` (last lines):
+```text
+OK: .venv ready: Python 3.13.12, lock sha256 5c9a64eb0ded6484a9bb7bf9b0fad9c5aa3ca321abfca499e24ceabd5461d422
+aqis_lab 0.0.1 commit=caa9a1e+dirty python=3.13.12
+EXIT=0
+```
+The commit shown is `+dirty` because this evidence file was being edited when the command ran.
+
+## Round 2 audit fixes (F11 to F22)
+Root causes, change budget and baseline are in `docs/progress/WP-0.0/FIXES.md`. The owner decisions on F16 (Linux x86_64 only, fail fast elsewhere) and F17 (approval conditions updated on `main` at `227dac4`) are recorded there. `origin/main` was merged first (`d0b387b`).
+
+**Baseline before any change:**
+- Fast suite: `121 passed, 7 deselected in 20.64s`.
+- Slow and network suite: `7 passed, 121 deselected in 8.67s`.
+
+**Test-first, red run.**
+- Command: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not network" -k "FR_0_0_12 or FR_0_0_13"`.
+- Run after the new tests and the config pins, before any code or doc fix. Result: `6 failed, 18 passed, 115 deselected in 9.71s`.
+- The failures, each for the named reason:
+```text
+E   subprocess.CalledProcessError: Command '['git', '-c', 'http.extraHeader=Authorization: Basic eC1hY2Nlc3MtdG9rZW46Z2hwX0FVRElUX0YxNF90b2tlbl92YWx1ZV8wMTIzNDU2Nzg5YWJjZGVm', 'clone', '--branch', 'main', ...   (F14 reproduced: the base64 token is in the error)
+E   assert '`BRANCH = "claude/hopeful-noether-yinc4e"`' in 'Run cells 1 to 6 on a fresh runtime.'   (F15)
+E   assert 0 == 1  ... setarch linux32 ... RESULT: PASS   (F16: provisioning ran every step on an i686 machine)
+E   AssertionError: ('system_packages', ... RESULT: PASS ...)  assert 0 == 2   (F21: a missing key gave PASS)
+E   AssertionError: Stream-VAD/model.pth.tar is a Git LFS pointer, not content   (F21: no git lfs pull detail)
+E   AttributeError: 'Provisioner' object has no attribute 'reinstall_reason'   (F18: no pip check in the skip)
+```
+
+**Guard code that was already correct (F11, F12, F13, F19).** For these findings the new tests pass as they should. Proof that they guard the code is the auditor's own mutations, applied one at a time in a scratch copy and reverted. Script: `scratchpad/mutate.py`; each line is `-m "not slow and not network" -k <filter>`.
+```text
+### F11 PR-title regex without ^ (.github/workflows/aqis-lab-ci.yml) -k 'FR_0_0_10': 1 failed, 6 passed, 132 deselected in 0.55s
+### F12 step_verify blinded (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 2 failed, 17 passed, 120 deselected in 11.15s
+### F13 skipped accepted (tools/harness/regression_check.py) -k 'FR_0_0_11': 1 failed, 8 passed, 130 deselected in 0.49s
+### F13 TEN VAD commit never compared (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 1 failed, 18 passed, 120 deselected in 10.91s
+### F19 F1 cites docs/specs (tools/audit/gate.py) -k 'FR_0_0_09 or NFR_0_0_02': 1 failed, 7 passed, 131 deselected in 2.09s
+### F16 platform check removed (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 1 failed, 18 passed, 120 deselected in 11.24s
+### F18 pip check removed (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 1 failed, 18 passed, 120 deselected in 11.46s
+### F21 lfs detail dropped (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 1 failed, 18 passed, 120 deselected in 11.65s
+### F21 required keys not checked (aqis_lab/deploy/harness_provision.py) -k 'FR_0_0_12': 1 failed, 18 passed, 120 deselected in 11.42s
+### F14 clone with check=True (docs/colab/HARNESS_SETUP.md) -k 'FR_0_0_13': 1 failed, 4 passed, 134 deselected in 0.15s
+```
+The failing test in each case:
+- F11: `test_FR_0_0_10_pr_title_parser`.
+- F12: `test_FR_0_0_12_fails_when_tree_was_dirty_before` and `test_FR_0_0_12_fails_when_provisioning_dirties_tree`.
+- F13: `test_FR_0_0_11_regression_check_flags_newly_skipped_baseline_pass` and `test_FR_0_0_12_rejects_ten_vad_at_other_commit`.
+- F19: `test_FR_0_0_09_reports_unknown_wp`.
+- F16: `test_FR_0_0_12_fails_fast_on_machine_without_ten_vad_binary`.
+- F18: `test_FR_0_0_12_reinstalls_when_pip_check_fails`.
+- F21: `test_FR_0_0_12_reports_lfs_pull_failure_detail` and `test_FR_0_0_12_rejects_config_missing_required_key`.
+- F14: `test_FR_0_0_13_clone_failure_never_shows_token`.
+
+| Finding | Fix | Tests (requirement) |
+| --- | --- | --- |
+| F11 | Rejected titles with the ID later in the title: `Guardrails WP-0.0`, `Fix typo, see WP-0.3 notes`, ` WP-0.0 leading space` | `test_FR_0_0_10_pr_title_parser` (FR-0.0-10) |
+| F12 | Tests only; `step_verify` was already correct. (1) An untracked file exists before the run: `git-status` FAIL, `RESULT: FAIL`, exit 1. (2) The cache is inside the tree: `git status changed during provisioning`, `?? cache-in-tree/`, exit 1 | `test_FR_0_0_12_fails_when_tree_was_dirty_before`, `test_FR_0_0_12_fails_when_provisioning_dirties_tree` (FR-0.0-12) |
+| F13 | (1) A skipped outcome of a baseline pass is a regression. (2) A real offline `pip install` of a local git package, built by an in-tree PEP 517 backend in a scratch venv: the pinned commit gives PASS; another commit gives `ten_vad commit is <first>, pinned <second>`; a plain-folder install gives `commit is None` | `test_FR_0_0_11_regression_check_flags_newly_skipped_baseline_pass` (FR-0.0-11), `test_FR_0_0_12_rejects_ten_vad_at_other_commit` (FR-0.0-12) |
+| F14 | Cell 2 keeps only the exit code (no `check=True`), sets `GIT_TERMINAL_PROMPT=0`, deletes the token and header before checking the result, and raises `RuntimeError` naming only the branch and the repository | `test_FR_0_0_13_clone_failure_never_shows_token` runs cells 1 and 2 for real, with a failing clone and a stand-in for `google.colab.userdata`. The token and its base64 form are in neither the traceback, the output nor any variable left behind (FR-0.0-13) |
+| F15 | The OC-0.0-01 steps start with `BRANCH = "claude/hopeful-noether-yinc4e"` and state the output for a wrong branch. The EVIDENCE owner-run row matches | `test_FR_0_0_13_oc_steps_use_pull_request_branch` (FR-0.0-13) |
+| F16 | Owner decision: a `platform` pin (`Linux`, `["x86_64"]`, with the reason) in `harness_assets.json`. `check_platform` runs before any step. Elsewhere there is a single `platform` FAIL row naming the machine and saying TEN VAD has no Arm binary, with 0 downloads and nothing written. Documented in both script headers, `docs/colab/HARNESS_SETUP.md` and the owner-run table | `test_FR_0_0_12_platform_pin_is_linux_x86_64`, `test_FR_0_0_12_fails_fast_on_machine_without_ten_vad_binary`, which uses `setarch linux32`, a real non-x86_64 machine type (FR-0.0-12) |
+| F17 | Owner updated `docs/approvals/WP-0.0.md` on `main` (`227dac4`): corpus at commit `1479626`, TEN VAD pinned in `harness-vcs.txt`. Merged at `d0b387b` | Gate below reads approvals at `227dac4` |
+| F18 | `pip check` added to the install skip, as the plan says (`reinstall_reason`). The `dev_bootstrap.sh` change log line was added. Remaining differences are listed below | `test_FR_0_0_12_reinstalls_when_pip_check_fails` (FR-0.0-12) |
+| F19 | Assertion that F1 cites `docs/specs/**/WP-8.8-*.md` at line 1 | `test_FR_0_0_09_reports_unknown_wp` (FR-0.0-09) |
+| F20 | CAP-AUDIT-008 lists `ALLOW_REASON_RE`, `LAB_CODE_DIRS`, `LAB_CI_FILES`, `LAB_TEST_DIR`, `SCANNED_SUFFIXES`, `glob_to_regex`, with a matching description. The F06 line above is corrected | `test_FR_0_0_08_module_headers_match_registry`, gate check (e) |
+| F21 | Required config keys: a missing key gives exit 2, `ERROR: ... has no '<key>' key`. The `git lfs pull` exit code and last stderr lines go into the weights FAIL detail. `git cat-file blob` gets a 3600 s timeout, with `TimeoutExpired`/`OSError` turned into a FAIL row | `test_FR_0_0_12_rejects_config_missing_required_key`, `test_FR_0_0_12_reports_lfs_pull_failure_detail` (FR-0.0-12). There is no test for the timeout itself: a git read of more than an hour cannot be produced in a test |
+| F22 | Corrected: the owner-run note, the provisioning test docstring, `AUDIT_GATE.md` (an unreadable approval does not count; that is the one read that does not exit 2), and the FR-0.0-04 combined run excerpt (re-run: `2 failed, 152 passed`, harness outcomes identical). The FireRedVAD licence (`Apache-2.0`, from `license: apache-2.0` in `README.md` at the pinned commit) is recorded in `harness_assets.json` | Documentation |
+
+### Differences from the Round 2 plan (audit F18; for the owner's acknowledgement)
+1. **Python module.** `aqis_lab/deploy/harness_provision.py` holds the provisioning logic. The plan listed only `harness_provision.sh`, which is now a thin wrapper. Registry rows CAP-ENV-005 (the `.sh`) and CAP-ENV-006 (the pins file) were added for them.
+2. **Test files.** `tests/aqis_lab/test_aqis_gate_v2.py` and `tests/aqis_lab/test_aqis_colab_doc.py` are new test files the plan did not name.
+3. **`tools/audit/gate.py`.** `load_approvals` changed to take the approvals ref, and `check_registry` changed to fail closed on the base read. `glob_to_regex` moved to `tools/audit/patterns.py` so the gate and the pattern tables share one copy. None of these were in the budget table.
+4. **`dev_bootstrap.sh`.** Its header test list changed (F06), although the plan said "Unchanged". The missing change log line has now been added. No code changed.
+5. **CI `harness-regression` job.** It runs `tests/regression` alone, not together with the lab tests. The reasons:
+   - In `.venv-harness`, `test_FR_0_0_03_environment_matches_lock` fails by design, because it asserts the lab `.venv`.
+   - Every lab test would show up as "newly passing" in the regression check.
+
+   The combined run is recorded above instead ("FR-0.0-04 — combined run", `True 22 22 21 passed`), and job `lab` runs the lab suite. **The owner is asked to acknowledge this, or to ask for the combined run in CI.**
+6. **Round 2 audit fixes.**
+   - New functions `check_platform`, `reinstall_reason` and `report`, and the `platform` and `firered.licence` config keys, listed in FIXES.md.
+   - The Arm fail-fast is the owner's F16 decision, given in chat. The approval file on `main` does not record it yet.
+
+**Suites after the fixes.**
+- Fast suite: `132 passed, 7 deselected in 31.55s`.
+- Slow and network suite, on the committed tree `a6c78af`: `7 passed, 132 deselected in 9.93s`, including `test_FR_0_0_12_provisions_harness_end_to_end` and `test_FR_0_0_12_second_run_downloads_nothing_within_60s`; `git status --porcelain` empty afterwards.
+- Before that commit, the two provisioning slow tests failed because the working tree held the uncommitted fixes. Provisioning reported `git-status | FAIL | git status --porcelain is not empty (it was not empty before provisioning either)`: the F12 behaviour, working as specified.
+
+**AT-0.0-05 re-run after the fixes.** A fresh `git clone --no-local` of `a6c78af` with no `.venv-harness`, `corpus/audio` or `pretrained_models`, and an empty `AQIS_CACHE`. Command: `bash aqis_lab/deploy/harness_provision.sh`, run twice:
+```text
+run 1 exit=0 elapsed=48.3s git-status=[]
+run 2 exit=0 elapsed=1.1s git-status=[]
+```
+Run 1 table (real output):
+```text
+| Step | Result | Detail |
+| --- | --- | --- |
+| platform | PASS | Linux x86_64 |
+| system | PASS | already installed: git-lfs, libc++1, libopus0 |
+| python | PASS | .venv-harness Python 3.13; installed (first install) run_phase.py install all, requirements/aqis_lab/harness-extras.txt (hash-checked), requirements/aqis_lab/harness-vcs.txt |
+| ten-vad | PASS | ten_vad 1.0.6.8 at commit 22a3bcd4509d (pinned) |
+| imports | PASS | imported numpy, scipy, soundfile, yaml, aiortc, av, websockets, opuslib, pytest, pytest_asyncio, webrtcvad, kaldi_native_fbank, ten_vad; TenVad native library loaded |
+| torch | INFO | not installed, decision R2-3 |
+| corpus | PASS | corpus-v1 from git at commit 14796262a824, sha256 ef4d5da1e30f verified; 229 manifest clips available under corpus/audio/ (229 links created) |
+| weights | PASS | https://huggingface.co/FireRedTeam/FireRedVAD at 7990aaccc6b7: Stream-VAD/model.pth.tar, Stream-VAD/cmvn.ark sha256 verified, no LFS pointers; available at pretrained_models/FireRedVAD/Stream-VAD |
+| git-status | PASS | git status --porcelain is empty |
+Downloads this run: 5
+RESULT: PASS
+```
+Run 2 ends with `| python | PASS | .venv-harness Python 3.13; requirements unchanged and pip check passes, nothing installed |`, `Downloads this run: 0` and `RESULT: PASS`.
+
+## Round 3 audit fixes (F23 to F27)
+Root causes and the change budget are in `docs/progress/WP-0.0/FIXES.md`, "Round 3 audit fixes". The owner's go-ahead and the new conditions are in `docs/approvals/WP-0.0.md` on `main` (`1bade2d`), merged here at `8a5383a`. Difference 5 above (the `harness-regression` job runs the harness tests on their own) is acknowledged there.
+
+**Baseline before any change** (`8a5383a`), fast suite:
+- git-lfs 3.4.1 (this VM): `132 passed, 7 deselected in 34.52s`.
+- git-lfs 3.7.0 on PATH (the version on the GitHub runner, downloaded to the scratchpad): `1 failed, 131 passed, 7 deselected in 29.92s`. This reproduces the CI failure. The real CI log (job `lab`, run `36149406313`) shows the same: `FAILED tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_reports_lfs_pull_failure_detail - AssertionError: Stream-VAD/model.pth.tar is a Git LFS pointer, not content`, `1 failed, 131 passed, 7 deselected in 17.81s`.
+
+**Root cause checks** (scratch repositories, `GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1`):
+```text
+pointer, no .gitattributes:  lfs 3.7.0 rc=0 "Skipping object checkout, Git LFS is not installed for this repository."   lfs 3.4.1 rc=2 "remote missing object"
+pointer, LFS .gitattributes: lfs 3.7.0 rc=2 "remote missing object"   lfs 3.4.1 rc=2 "remote missing object"
+real LFS content, no install:    lfs 3.7.0 rc=0 "Skipping object checkout ..." content: version https://git-lfs.g...   lfs 3.4.1 the same
+real LFS content, install --local: lfs 3.7.0 rc=0 content: real model content   lfs 3.4.1 the same
+```
+
+**Test-first, red run.** New tests added, before any code change. `-m "not slow and not network"`, `test_aqis_harness_provision.py`: `5 failed, 20 passed` with git-lfs 3.4.1, and the same 5 with 3.7.0. The failures:
+```text
+E   [FAIL] weights: Stream-VAD/model.pth.tar is a Git LFS pointer, not content   (F23: real LFS content not checked out without a global LFS install)
+E   AssertionError: Stream-VAD/model.pth.tar is a Git LFS pointer, not content   (F26: no git lfs output when the pull exits 0)
+E   KeyError: 'distributions'   (F24: no distribution pin)
+E   assert 0 == 1 ... | platform | PASS | Linux x86_64 | ... RESULT: PASS   (F24: a distribution outside the pin ran every step)
+E   AttributeError: 'Provisioner' object has no attribute 'venv_problem'   (F27)
+```
+With the realistic `.gitattributes` in the fixture, `test_FR_0_0_12_reports_lfs_pull_failure_detail` (the CI failure) passes on both git-lfs versions. It did not need to change.
+
+**After the fixes** (`test_aqis_harness_provision.py`, fast): `25 passed, 3 deselected` with git-lfs 3.4.1 and `25 passed, 3 deselected` with git-lfs 3.7.0.
+
+**Mutations.** Each fix was removed in turn in a scratch copy, then restored. Script: `scratchpad/mutate3.py`.
+```text
+### F23 no git lfs install --local (git-lfs 3.4.1) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 16.47s
+### F23 no git lfs install --local (git-lfs 3.7.0) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 15.13s
+### F26 no output when pull exits 0 (git-lfs 3.4.1) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 15.09s
+### F26 no output when pull exits 0 (git-lfs 3.7.0) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 15.00s
+### F24 distribution not checked (git-lfs 3.4.1) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 15.99s
+### F25 no sudo prefix (git-lfs 3.4.1) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 15.92s
+### F27 venv_problem ignores pip (git-lfs 3.4.1) -m 'not slow and not network' -k 'FR_0_0_12': 1 failed, 24 passed, 121 deselected in 13.12s
+### F27 step_python ignores venv_problem (git-lfs 3.4.1) -m 'slow or network' -k 'rebuilds_venv': 1 failed, 145 deselected in 2.18s
+```
+The F27 step mutation fails for the named reason: `[FAIL] python: python scripts/run_phase.py install failed (exit 1): .../.venv-harness/bin/python: No module named pip`.
+
+| Finding | Fix | Tests (requirement) |
+| --- | --- | --- |
+| F23 | `step_weights` runs `git lfs install --local` in the weights cache clone before `git lfs pull`, so Git LFS works whatever the machine's global or system git config says. The fixture's weights repository carries the LFS `.gitattributes` rule of the real Hugging Face repository (`*.tar filter=lfs ...`) | `test_FR_0_0_12_fetches_lfs_content_without_global_lfs_install`: a real LFS repository in the test's folder, a hermetic git config, and the content checked out. The CI test `test_FR_0_0_12_reports_lfs_pull_failure_detail` now passes on git-lfs 3.4.1 and 3.7.0 (FR-0.0-12) |
+| F24 | `check_platform` also requires the `/etc/os-release` ID to be `debian` or `ubuntu` (the new `distributions` pin, owner decision F16). Otherwise there is a single `platform` FAIL row naming the distribution and the reason, with nothing run, downloaded or written. The Oracle owner-run row reads "Debian or Ubuntu on x86_64" and gives the expected FAIL rows for Arm and for other distributions. The platform notes in the Colab doc and the script headers are updated | `test_FR_0_0_12_platform_pin_is_debian_or_ubuntu`, `test_FR_0_0_12_fails_fast_on_unsupported_distribution` (FR-0.0-12) |
+| F25 | Test only; `step_system` was correct. The test runs the script as an unprivileged user: as uid 65534 through `setpriv` when root, directly otherwise. Stand-in `dpkg-query`, `sudo` and `apt-get` sit in the test's temporary folder, and the test asserts the exact calls `sudo -n apt-get update -y` and `sudo -n apt-get install -y aqis-standin-package`, run with a non-zero uid. It is never skipped. As the conditions require, the slow real-repository tests put stand-ins on PATH for `apt-get` and `sudo` that refuse to run. **Real non-root evidence from CI:** job `harness-regression`, run `36149406313` (runner user, not root) printed `DOWNLOAD: sudo -n apt-get update -y`, `DOWNLOAD: sudo -n apt-get install -y libc++1 libopus0` and `| system | PASS | installed libc++1, libopus0; already present: git-lfs |` | `test_FR_0_0_12_non_root_uses_sudo_for_missing_package` (FR-0.0-12) |
+| F26 | Whenever pointer files remain after `git lfs pull`, the FAIL row carries git-lfs's exit code and last output lines: `git lfs pull failed (exit N): ...`, or `git lfs pull finished (exit 0) but left pointer files: ...` | `test_FR_0_0_12_reports_lfs_output_when_pull_leaves_pointers` (a pointer with an invalid oid; git-lfs exits 0) (FR-0.0-12) |
+| F27 | New `venv_problem`: no working Python, the wrong Python, or no working pip means the venv is broken. `step_python` then prints `rebuilding .venv-harness: <reason>` and rebuilds it with `uv venv --seed --clear`, and fails only if it is still broken afterwards | `test_FR_0_0_12_venv_problem_detects_venv_without_pip` (fast), `test_FR_0_0_12_rebuilds_venv_left_without_pip` (slow, network: a clone whose `.venv-harness` has no pip is repaired, and `python`, `ten-vad` and `imports` PASS) (FR-0.0-12) |
+
+**Suites after the fixes** (commit `d35290b`, clean tree):
+```text
+fast git-lfs 3.4.1: 138 passed, 8 deselected in 35.82s
+fast git-lfs 3.7.0: 138 passed, 8 deselected in 32.45s
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_creates_venv_with_probe_python PASSED [ 12%]
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_second_run_changes_nothing_within_30s PASSED [ 25%]
+tests/aqis_lab/test_aqis_bootstrap.py::test_FR_0_0_02_rejects_lock_with_wrong_hash PASSED [ 37%]
+tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_provisions_harness_end_to_end PASSED [ 50%]
+tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_second_run_downloads_nothing_within_60s PASSED [ 62%]
+tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_rebuilds_venv_left_without_pip PASSED [ 75%]
+tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_regeneration_is_reproducible PASSED [ 87%]
+tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_lock_installable_with_plain_pip PASSED [100%]
+================= 8 passed, 138 deselected in 91.49s (0:01:31) =================
+git status lines after: 0
+```
+
+**CI on `d35290b`** (AT-0.0-04, AT-0.0-07; logs read through the GitHub API):
+- Push run `36151733422` (run 39): `success`.
+- Pull request run `36151741552` (run 40): job `lab` `success`, job `harness-regression` `success`.
+- Job `lab` (`108126423593`), steps "Work package ID from pull request title" and "Audit gate":
+```text
+PR_TITLE: WP-0.0 Guardrails and audit tooling
+Work package from the pull request title: WP-0.0
+aqis-audit-gate: base origin/main (merge-base 1bade2dc66cc), head bceb1bbc4f40, approvals origin/main 1bade2dc66cc, wp WP-0.0
+Findings: 0
+0 findings: OK (0.2 s)
+```
+- The earlier red runs (`a6c78af`, `202c440`, `5cdf131`) all failed on the one git-lfs version test fixed here.
+
+**Gate** (local): `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0` → `Findings: 0`, `0 findings: OK (0.2 s)`. The Stop hook prints nothing.
+
+## Colab owner check fix (BLK-006)
+The owner's Colab verification (`docs/progress/WP-0.0/OWNER_VERIFY_COLAB_WP-0.0_20260925T151855Z.md`, on `aa9e74c`) failed on four tests. All four made scratch venvs with `python -m venv`, and `ensurepip` fails there: Colab's Python 3.13 is Ubuntu's, without `python3.13-venv`.
+
+The owner's decision (BLK-006 option 1, CONDITIONS in `docs/approvals/WP-0.0.md`):
+- The shared helper `pip_venv` in `tests/aqis_lab/aqis_testutil.py` makes those venvs with `uv venv --seed`, as provisioning does.
+- `scratch_venv` in `test_aqis_harness_provision.py` and the venv creation line of `test_FR_0_0_03_lock_installable_with_plain_pip` use it. Assertions are unchanged.
+
+Reproduction and proof, on a Colab-like Python (uv-installed CPython 3.13.7 with its `ensurepip` wheels removed; details in FIXES.md):
+```text
+before:  4 failed   (test_FR_0_0_12_rejects_ten_vad_at_other_commit, test_FR_0_0_12_reinstalls_when_pip_check_fails,
+                     test_FR_0_0_12_venv_problem_detects_venv_without_pip, test_FR_0_0_03_lock_installable_with_plain_pip)
+after:   4 passed, 142 deselected in 10.85s
+```
+On this VM the fast suite gives `138 passed, 8 deselected in 27.53s`.
+
+The owner's Colab report also shows every other check as PASS or INFO. Version, gate and a clean `git status` passed. The harness tests gave `1 failed, 21 passed`, the recorded baseline.
+
+### BLK-006 records completed (audit finding F32)
+- **Gate** on `033322b` (the BLK-006 commit, run locally before pushing): `0 findings: OK (0.2 s)`. The Stop hook printed nothing.
+- **Slow suite** on `033322b`, clean tree: `8 passed, 138 deselected in 60.39s`, `git status lines: 0`.
+- **CI on `033322b`:** pull request run `36156782531` (`lab` success, including the "Work package ID from pull request title" and "Audit gate" steps; `harness-regression` success) and push run `36156776526` (both jobs success).
+- **Owner's Colab re-run on `033322b`:** `docs/progress/WP-0.0/OWNER_VERIFY_COLAB_WP-0.0_20260925T155908Z.md` shows every check PASS (fast `138 passed`, slow `8 passed`, gate `0 findings`, clean tree), and harness tests INFO `1 failed, 21 passed`, the recorded baseline.
+- **Difference not listed in round 3:** the `_about` text of `config/aqis_lab/harness_assets.json` was also edited in round 3 (`d35290b`) to name the round 3 platform conditions. That is text only; no key a program reads changed.
+- **Status history:** STATUS stayed READY-FOR-AUDIT while BLK-006 was open (`8099955` to `d403bad`). It should have been marked blocked.
+
+## Round 4 audit fixes (F28 to F32)
+Root causes, change budget and the F31 system fix are in `docs/progress/WP-0.0/FIXES.md`, "Round 4 audit fixes". No gate or provisioning code changed: F28 and F29 add tests, F30 adds pins, and F31 and F32 correct the system and the records.
+
+**New tests.**
+- **Parity scenarios** in `test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos`:
+  - `never_section_stripped`, `renamed_lab_test`, `renamed_harness_test`, `readme_approval`, `expired_approval` and `unapproved_status`, which cover checks (a) and (b);
+  - `multi_pattern_line`, `late_header` and `modified_headerless_module`, which cover checks (c) and (d).
+
+  Every rule in PLAN.md "Parity with the Stop hook" now has a scenario. **Correction (audit round 5, F34):** this was not true. The added-then-deleted rule's scenario could not detect a change, and three other hook rules had no scenario. See "Round 5 audit fixes" for the rule-by-rule mutation table.
+- **FR-0.0-05 detection tests:** `test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed`, `test_FR_0_0_05_a_approvals_readme_approves_nothing`, `test_FR_0_0_05_a_detects_renamed_guarded_harness_test` (A2 `D`, A2 `A`, B2) and `test_FR_0_0_05_b_detects_renamed_existing_lab_test` (B2).
+- **FR-0.0-12:** `test_FR_0_0_12_asset_licences_recorded`.
+
+**Test-first.** Against the current code, the 13 new F28 and F29 tests passed (`1 failed, 13 passed`). The gate is correct, so these tests prove themselves through the mutations below. The one failure was the F30 licence test: `E       KeyError: 'licence'`.
+
+**Mutations** (the auditor's M26, M23, M24, M16, M17 and M18, plus the EXPIRES and STATUS rules). Each was applied alone to `tools/audit/gate.py` in a scratch copy, then restored. Command: `-m "not slow and not network" -k "FR_0_0_05 or FR_0_0_06"`.
+```text
+### M26 built-in NEVER list removed: 2 failed, 62 passed, 96 deselected in 15.09s
+### M23 --no-renames removed from the committed diff: 4 failed, 60 passed, 96 deselected in 14.54s
+### M24 README.md counted as an approval: 2 failed, 62 passed, 96 deselected in 14.61s
+### M16 every matching pattern reported: 1 failed, 63 passed, 96 deselected in 15.18s
+### M17 header searched in the whole module: 1 failed, 63 passed, 96 deselected in 15.03s
+### M18 header required for modified modules too: 1 failed, 63 passed, 96 deselected in 14.73s
+### MX EXPIRES ignored: 2 failed, 62 passed, 96 deselected in 15.88s
+### MS any STATUS counts as approved: 3 failed, 61 passed, 96 deselected in 16.17s
+```
+Each mutation fails at least one named new test (FIXES.md lists them).
+
+| Finding | Fix | Tests (requirement) |
+| --- | --- | --- |
+| F28 | Tests only. The built-in NEVER list survives a stripped `[NEVER]` section; `--no-renames` makes a renamed test a deleted test; `docs/approvals/README.md` approves nothing | 3 parity scenarios and 4 detection tests above (FR-0.0-05, FR-0.0-06) |
+| F29 | Tests only. First pattern wins; header within the first 80 lines; header required only for new modules. EXPIRES and STATUS rules also added to parity | 5 parity scenarios above (FR-0.0-06) |
+| F30 | `licence` for `ten_vad`: Apache-2.0 with Agora's additional conditions, condition 1 quoted, pointing to the LICENSE at commit `22a3bcd4509d`. `licence` for `corpus`: LibriSpeech CC BY 4.0 (https://www.openslr.org/12/) and MUSAN CC BY 4.0 (https://www.openslr.org/17/), both read from those OpenSLR pages on 2026-09-25 (`License: CC BY 4.0`, `License: Attribution 4.0 International (CC BY 4.0)`). The per-source registry belongs to WP-0.4 | `test_FR_0_0_12_asset_licences_recorded` (FR-0.0-12) |
+| F31 | The `python3.13` link in `/root/.local/bin` was removed with `uv python uninstall`, and `command -v python3.13` now gives `/usr/bin/python3.13`. The two false sentences in FIXES.md and BLOCKERS.md now carry a correction note | System check commands in FIXES.md |
+| F32 | The records above: BLK-006 gate, slow suite and CI; the CI row; the `_about` difference; the owner's Colab reports | Records |
+
+**Suites after the fixes** (commit `9016ee7`, clean tree; git-lfs 3.7.0 from the scratchpad on PATH for the second line):
+```text
+fast git-lfs 3.4.1: 152 passed, 8 deselected in 32.97s
+fast git-lfs 3.7.0: 152 passed, 8 deselected in 34.09s
+slow/network: 8 passed, 152 deselected in 58.93s
+gate: 0 findings: OK (0.3 s)
+git status lines after: 0
+commit: 9016ee7
+```
+**CI on `9016ee7`:** pull request run `36163086560`, success; push run `36163080671`, success; both jobs in each.
+
+
+## Round 5 audit fixes (F33 to F38)
+Root causes, change budget and baseline are in `docs/progress/WP-0.0/FIXES.md`, "Round 5 audit fixes". No gate, provisioning or version code changed; every fix is a test addition, except the F37 licence text.
+
+**Baseline (F38), on the unchanged `1676b0f` before any edit:** fast `152 passed`, slow `8 passed`, gate `0 findings`, tree clean.
+
+**New tests.**
+- **F33, approval lines:**
+  - `test_FR_0_0_05_a_approval_lines_must_start_the_line`, with bulleted and indented `ALLOW-EDIT`, bulleted and indented `STATUS`, and trailing text after the glob. Each expects A2.
+  - `test_FR_0_0_05_a_standard_approval_lines_still_approve`, a positive control that also covers a bulleted `EXPIRES`, which is not an expiry.
+  - `test_FR_0_0_05_c_indented_allow_patterns_in_exempts_nothing`.
+  - Parity scenarios `bulleted_allow_edit`, `indented_allow_edit`, `bulleted_status`, `allow_edit_trailing_text`, `indented_allow_patterns_in` and `bulleted_expires`, the first four with exact expected findings (`EXPECT_EXACT`).
+- **F34, gate/hook agreement:** parity scenarios, each with its expected findings:
+  - `modified_non_py_test_file`: no B1;
+  - `non_py_lab_test_file`: no C2; the text lives in `fixtures/gate/lab_test_readme.md`;
+  - `guarded_added_then_deleted`: only the `tools/z.py` C finding;
+  - `flagged_word_in_path`: `tools/fake.py`, no finding from the diff header;
+  - `staged_rename_of_harness_test`: A2 `D`, A2 `A` and B2, for a staged, uncommitted rename;
+  - `unscanned_suffix_in_lab_dirs`: no C1 for `.md` and `.json` in the lab folders.
+- **F35, provisioning:** `test_FR_0_0_12_refuses_clip_occupied_by_different_content`, `test_FR_0_0_12_fails_when_manifest_clip_missing_from_archive`, `test_FR_0_0_12_refuses_audio_dir_that_is_not_a_directory[symlink, file]`, `test_FR_0_0_12_refuses_weights_link_pointing_elsewhere`, `test_FR_0_0_12_refuses_real_folder_at_weights_link` and `test_FR_0_0_12_rejects_hostile_archive_member[escaping_path, symlink]`. Each expects a FAIL row and exit 1 and checks that the existing data is untouched and nothing is written outside the cache.
+  - A symlinked `corpus/audio` is refused by the first guard: git matches no ignore rule through a symlink, so the row reads `corpus/audio/probe.wav is not ignored by git`. A regular file there reaches the "not a real directory" guard. My first draft of this new test expected the second message in both cases; I corrected it to the real, safe behaviour before the test was committed.
+- **F36, `version` command:** `test_FR_0_0_01_version_reports_package_repository_not_cwd`, run from another checkout, from a subfolder of it and from a plain folder, with `PYTHONPATH` set to the package's repository. `test_FR_0_0_01_version_rejects_package_below_checkout_top` expects exit 1 and `ERROR: … is not its top level`.
+- **F37, licence:** `test_FR_0_0_12_ten_vad_licence_states_all_conditions`, with the `ten_vad.licence` text updated. It quotes condition 1 in full and summarises all six additional conditions, checked against `ten_vad-1.0.6.8.dist-info/licenses/LICENSE` lines 3-33 in `.venv-harness`.
+
+**Test-first.** With only the new tests added, before any config change: `2 failed, 28 passed`.
+- The F37 licence test failed as expected: the condition 1 text was missing.
+- The symlink case of the `corpus/audio` test failed because of my wrong expected message, described above.
+
+Every other new guard passed against the correct code. They prove themselves through the mutations below.
+
+**Rule-by-rule mutation table (F34 request).** It covers the Stop hook's `stop_gate.py:90-170` and `:280-310` and the approval and NEVER rules in `_protected.py` listed in the table (**correction, round 6 F39:** not every rule of `_protected.py`; the round 6 table below covers `_protected.py:26-164` line by line, with the round 8 correction noted there), together with the provisioning (P) and `version` (V) guards of F35 and F36. Each mutation was applied alone in a scratch copy, then restored. The command was `-m "not slow and not network"` with `-k "FR_0_0_05 or FR_0_0_06"` (gate), `-k FR_0_0_12` (P) or `-k FR_0_0_01` (V).
+| Mutation | Rule | Result | Failing tests |
+| --- | --- | --- | --- |
+| H1/M23 | stop_gate:92 committed diff --no-renames | 4 failed, 79 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_detects_renamed_guarded_harness_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_renamed_existing_lab_test; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[renamed_harness_test]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[renamed_lab_test] |
+| H2 | stop_gate:98 committed state is the status letter | 12 failed, 71 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed; test_aqis_gate_checks.py::test_FR_0_0_05_a_detects_renamed_guarded_harness_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_deleted_existing_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_renamed_existing_lab_test; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[branch_only_approval]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[guarded_added_then_deleted]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[headers]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never_section_stripped]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[renamed_harness_test]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[renamed_lab_test] |
+| H3 | stop_gate:100 status --no-renames | 1 failed, 82 passed, 107 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[staged_rename_of_harness_test] |
+| H4 | stop_gate:100 --untracked-files=all | 8 failed, 75 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_c_detects_each_test_pattern; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[guarded]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[pytestmark]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[v2_file_types]; test_aqis_gate_v2.py::test_FR_0_0_06_scans_v2_file_types_and_dirs; test_aqis_gate_v2.py::test_FR_0_0_06_flags_pytestmark_and_param_skips |
+| H5 | stop_gate:108 untracked or staged-added counts as added | 8 failed, 75 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_detects_never_path; test_aqis_gate_checks.py::test_FR_0_0_05_d_detects_new_module_without_header; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[code_patterns]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[guarded]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[late_header]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[v2_file_types] |
+| H6 | stop_gate:110 deleted stays deleted | 4 failed, 79 passed, 107 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[deleted_lab_test]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[guarded_added_then_deleted]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[staged_rename_of_harness_test] |
+| H7/N3 | stop_gate:115 added on the branch then deleted is ignored | 1 failed, 82 passed, 107 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[guarded_added_then_deleted] |
+| H8 | stop_gate:129 new file: every line is added | 18 failed, 65 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_c_indented_allow_patterns_in_exempts_nothing; test_aqis_gate_checks.py::test_FR_0_0_05_c_detects_each_code_pattern; test_aqis_gate_checks.py::test_FR_0_0_05_c_detects_each_test_pattern; test_aqis_gate_checks.py::test_FR_0_0_05_c_includes_uncommitted_and_untracked_work; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[added_then_deleted_in_worktree]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_lines]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_patterns_in]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[code_patterns]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[guarded_added_then_deleted]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[indented_allow_patterns_in]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[multi_pattern_line]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[non_utf8]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[pytestmark]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[v2_file_types]; test_aqis_gate_v2.py::test_FR_0_0_06_scans_v2_file_types_and_dirs; test_aqis_gate_v2.py::test_FR_0_0_06_flags_pytestmark_and_param_skips; test_aqis_gate_v2.py::test_FR_0_0_06_decodes_non_utf8_with_replacement |
+| H9 | stop_gate:143 hunk line numbers | 4 failed, 79 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_c_scans_only_added_lines; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[added_then_removed]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[non_utf8]; test_aqis_gate_v2.py::test_FR_0_0_06_decodes_non_utf8_with_replacement |
+| H10/N11 | stop_gate:151 +++/--- header lines skipped | 1 failed (re-run after the scenario fix) | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[flagged_word_in_path] |
+| H11 | stop_gate:157 audit-allow line exempt | 1 failed, 82 passed, 107 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_lines] |
+| H12/M16 | stop_gate:163 first matching pattern wins | 1 failed, 82 passed, 107 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[multi_pattern_line] |
+| H13 | stop_gate:284 NEVER path is A1 | 7 failed, 76 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed; test_aqis_gate_checks.py::test_FR_0_0_05_a_detects_never_path; test_aqis_gate_checks.py::test_FR_0_0_05_a_ignores_approval_committed_only_on_branch; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[branch_only_approval]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never_section_stripped] |
+| H14 | stop_gate:286 GUARDED path needs ALLOW-EDIT | 7 failed, 76 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_standard_approval_lines_still_approve; test_aqis_gate_checks.py::test_FR_0_0_05_a_passes_guarded_path_with_main_approval; test_aqis_gate_checks.py::test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point; test_aqis_gate_checks.py::test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[bulleted_expires]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[guarded_approved]; test_aqis_gate_v2.py::test_FR_0_0_06_approvals_none_when_origin_main_unverifiable |
+| H15/N1 | stop_gate:288 check (b) only for .py under tests/ | 1 failed, 82 passed, 107 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[modified_non_py_test_file] |
+| H16a | stop_gate:289 test existed at the base | 83 passed, 107 deselected | none: equivalent mutation (see below) |
+| H16b | stop_gate:289 ALLOW-EDIT unlocks an existing test | 2 failed, 81 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_b_passes_new_test_and_approved_edit; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[approved_lab_test_edit] |
+| H17 | stop_gate:292 ALLOW-PATTERNS-IN skips the scan | 1 failed, 82 passed, 107 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_patterns_in] |
+| H18/N2 | stop_gate:295 test patterns only for .py under tests/aqis_lab/ | 1 failed, 82 passed, 107 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[non_py_lab_test_file] |
+| H19 | stop_gate:297 code patterns only for scanned suffixes | 1 failed, 82 passed, 107 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[unscanned_suffix_in_lab_dirs] |
+| H20a/M17 | stop_gate:306 header within the first 80 lines | 1 failed, 82 passed, 107 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[late_header] |
+| H20b/M18 | stop_gate:302 header only for new modules | 1 failed, 82 passed, 107 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[modified_headerless_module] |
+| H20c | stop_gate:305 header only for more than 5 non-blank lines | 3 failed, 80 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_d_passes_module_with_header_or_short_file; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[headers]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[non_utf8] |
+| A1/M24 | _protected:152 README.md is not an approval | 2 failed, 81 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_approvals_readme_approves_nothing; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[readme_approval] |
+| A2/N13 | _protected:154 STATUS: APPROVED at line start | 3 failed, 80 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[bulleted_status]; test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[indented_status]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[bulleted_status] |
+| A3/MX | _protected:156 EXPIRES in the past ends the approval | 2 failed, 81 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_ignores_expired_or_withdrawn_approval[APPROVED-EXPIRES: 2020-01-01\n]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[expired_approval] |
+| A4/NE | _protected:156 EXPIRES at line start | 2 failed, 81 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_standard_approval_lines_still_approve; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[bulleted_expires] |
+| A5/N12 | _protected:160 ALLOW-EDIT at line start | 4 failed, 79 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[bulleted_allow_edit]; test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[indented_allow_edit]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[bulleted_allow_edit]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[indented_allow_edit] |
+| A6/N16 | _protected:160 ALLOW-EDIT value ends the line | 2 failed, 81 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[trailing_text]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_edit_trailing_text] |
+| A7/N14 | _protected:162 ALLOW-PATTERNS-IN at line start | 2 failed, 81 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_c_indented_allow_patterns_in_exempts_nothing; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[indented_allow_patterns_in] |
+| A8/M26 | _protected:68 built-in NEVER list | 2 failed, 81 passed, 107 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never_section_stripped] |
+| P1 | archive member escaping the cache | 1 failed, 34 passed, 155 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_rejects_hostile_archive_member[escaping_path] |
+| P2 | archive member not a file or folder | 1 failed, 34 passed, 155 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_rejects_hostile_archive_member[symlink] |
+| P3 | occupied clip kept | 1 failed, 34 passed, 155 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_refuses_clip_occupied_by_different_content |
+| P4 | missing manifest clips | 1 failed, 34 passed, 155 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_manifest_clip_missing_from_archive |
+| P5 | weights link pointing elsewhere | 1 failed, 34 passed, 155 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_refuses_weights_link_pointing_elsewhere |
+| P6 | corpus/audio not a real directory | 1 failed, 34 passed, 155 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_refuses_audio_dir_that_is_not_a_directory[file-corpus/audio exists and is not a real directory; not touching it] |
+| P7 | real folder at the weights link | 1 failed, 34 passed, 155 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_refuses_real_folder_at_weights_link |
+| V1 | package must be at the top of its checkout | 1 failed, 6 passed, 183 deselected | test_aqis_version.py::test_FR_0_0_01_version_rejects_package_below_checkout_top |
+| V2 | git queried in the package's repository, not the cwd | 2 failed, 5 passed, 183 deselected | test_aqis_version.py::test_FR_0_0_01_version_reports_package_repository_not_cwd; test_aqis_version.py::test_FR_0_0_01_version_rejects_package_below_checkout_top |
+
+- **H10.** In the first run H10 survived: the first `flagged_word_in_path` scenario used `tools/fake_clock.py`, and "fake" followed by "_" has no word boundary, so the pattern cannot match. The scenario now uses `tools/fake.py`, and the re-run fails it.
+- **H16a is an equivalent mutation.** The "existed at the base" condition is reached only for a `tests/**.py` path in state `M` or `D`, and both states mean the file exists at the base:
+  - A committed `M` or `D` from `git diff base HEAD` implies the file was at the base.
+  - A working-tree `M` or `D` with no committed entry means the file is unchanged since the base, so it is present there.
+  - A file added on the branch keeps state `A` on later edits, or is dropped when deleted (`changed_files`).
+
+  No input can tell the two versions apart, so no test can fail. The condition is kept because it mirrors the hook (`stop_gate.py:289`).
+
+**Suites after the round 5 fixes** (commit `335363d`, clean tree; git-lfs 3.7.0 from the scratchpad on PATH for the second line):
+```text
+commit: 335363d
+fast git-lfs 3.4.1: 182 passed, 8 deselected in 36.35s
+fast git-lfs 3.7.0: 182 passed, 8 deselected in 36.77s
+slow/network: 8 passed, 182 deselected in 54.39s
+gate: 0 findings: OK (0.2 s)
+git status lines after: 0
+```
+**CI on `335363d`:** pull request run `36228654749` and push run `36228652324`, both success (jobs `lab` and `harness-regression`).
+
+**OC-0.0-01:** accepted by the owner under CONDITIONS in `docs/approvals/WP-0.0.md` on `main` (`7303ddd`): "The Colab harness provisioning verification summary recorded in docs/environment/colab_harness_provision.txt and OWNER_VERIFY_COLAB_WP-0.0_20260925T155908Z.md is accepted."
+
+## Round 6 audit fixes (F39 to F44)
+Root causes, change budget and baseline are in `docs/progress/WP-0.0/FIXES.md`, "Round 6 audit fixes". No gate, provisioning or regression-check code changed.
+
+**Baseline, on the unchanged `ad5abe2` before any edit:** fast `182 passed`, slow `8 passed`, gate `0 findings`, tree clean.
+
+**New tests.**
+- **F39, gate/hook parity scenarios**, most with exact expected findings:
+  - `allow_patterns_in_trailing_note`: exempts nothing, 13 C findings in both tools;
+  - `non_md_approval`: A2;
+  - `policy_inline_comment`: A2;
+  - `unknown_policy_section`: A2;
+  - `header_at_line_80`: none; `header_at_line_81`: D1;
+  - `expires_today`: none; `expires_with_note`: none.
+
+  The line-by-line review of `_protected.py` added three more:
+  - `status_trailing_text`: A2;
+  - `question_mark_within_folder`: A2;
+  - `policy_leading_slash`: A2.
+- **F40:** `test_FR_0_0_09_detects_nfr_id_missing_from_test_names`, which expects F3 at the NFR's spec line.
+- **F41, provisioning integrity:**
+  - `test_FR_0_0_12_fails_on_weights_with_wrong_content`: the FAIL names the file and both hashes, and no link is made;
+  - `test_FR_0_0_12_damaged_corpus_cache_is_replaced_from_git`: the pinned `a.wav` is restored, never the damaged one;
+  - `test_FR_0_0_12_fails_when_apt_get_installs_nothing`: `apt-get finished but these are not installed: aqis-standin-package`.
+- **F42, regression check:**
+  - `test_FR_0_0_11_regression_check_rejects_table_without_readable_rows`: exit 2, `ERROR:`;
+  - `test_FR_0_0_11_regression_check_reads_every_repository_baseline_row`: the real baseline is read independently, giving 22 rows and 21 passes. One pass is flipped to failed, and the tool reports exactly that `REGRESSION` with exit 1.
+- **F43, promised behaviours:**
+  - `test_FR_0_0_12_root_installs_without_sudo`: as uid 0, `apt-get` is called directly and never through `sudo`. (Corrected after BLK-007: the `unshare --map-root-user` approach failed on the CI runner. By owner decision, the test now sets `os.geteuid` to return 0 through `monkeypatch` and runs `step_system()` in-process; see "BLK-007 decision and minor fixes F45 and F46" below.)
+  - `test_FR_0_0_12_rejects_probe_with_two_python_versions`;
+  - `test_FR_0_0_12_install_stamp_covers_every_requirement_file`;
+  - `test_FR_0_0_12_import_check_builds_ten_vad`: a stand-in `ten_vad`, installed with pip in a scratch venv, whose `TenVad` raises.
+- **F44:** the parity scenario `lab_test_replaced_by_symlink` records the owner-accepted limit: gate and hook both report nothing for a committed typechange `T`. `docs/tools/AUDIT_GATE.md` now has an "Accepted limits" section.
+
+**Test-first.** Every new test passed against the correct code; none needed a code change. Each one proves itself through a mutation in the table below.
+
+**Line-by-line mutation table.** It covers `_protected.py:26-164` (glob conversion, policy parsing, classification, approval reading) with one mutation per line (**correction, round 8:** a line with more than one rule got one mutation only. The letter-case part of the README rule on `_protected.py:152` was not broken separately. Audit finding F48 found it untested, and the owner accepted it as debt DEBT-001, target WP-0.9), the header boundary (`stop_gate.py:309`) and the round 6 guards G19, P8, P9, P11, R3 and P12 to P16. Each mutation was applied alone in a scratch copy, then restored. The command was `-m "not slow and not network"` with `-k "FR_0_0_05 or FR_0_0_06"` (gate), `FR_0_0_09` (G19), `FR_0_0_12` (P) or `FR_0_0_11` (R3).
+| Mutation | Rule | Result | Failing tests |
+| --- | --- | --- | --- |
+| L1 | _protected:28 glob stripped of spaces and a leading / | 1 failed (re-run after the new scenario) | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[policy_leading_slash] |
+| L2 | _protected:33 **/ matches zero or more folders | 1 failed, 92 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_path_classification_identical_to_hook |
+| L3 | _protected:37 ** matches across folders | 8 failed, 85 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_detects_renamed_guarded_harness_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_modified_existing_test; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[guarded]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[modified_harness_test]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[renamed_harness_test]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[staged_rename_of_harness_test]; test_aqis_gate_parity.py::test_FR_0_0_06_path_classification_identical_to_hook |
+| L4 | _protected:41 * stays within one folder | 2 failed, 91 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_pattern_tables_identical_to_stop_hook; test_aqis_gate_parity.py::test_FR_0_0_06_path_classification_identical_to_hook |
+| L5 | _protected:43 ? is one character within a folder | 1 failed (re-run after the new scenario) | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[question_mark_within_folder] |
+| L6 | _protected:45 other characters are literal | 2 failed, 91 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_pattern_tables_identical_to_stop_hook; test_aqis_gate_parity.py::test_FR_0_0_06_path_classification_identical_to_hook |
+| L7 | _protected:47 anchored at both ends | 1 failed, 92 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_pattern_tables_identical_to_stop_hook |
+| G5 | _protected:59 # starts a comment | 1 failed, 92 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[policy_inline_comment] |
+| L8 | _protected:60 blank lines are skipped | 93 passed, 117 deselected | none: equivalent mutation (see below) |
+| L9 | _protected:62 section headers may contain '-' | 17 failed, 76 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_deleted_existing_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_renamed_existing_lab_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_passes_new_test_and_approved_edit; test_aqis_gate_checks.py::test_FR_0_0_05_c_detects_each_test_pattern; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[approved_lab_test_edit]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[deleted_lab_test]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[guarded]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[lab_test_replaced_by_symlink]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[modified_non_py_test_file]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[non_py_lab_test_file]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[pytestmark]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[renamed_lab_test]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[test_patterns]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[v2_file_types]; test_aqis_gate_parity.py::test_FR_0_0_06_path_classification_identical_to_hook; test_aqis_gate_v2.py::test_FR_0_0_06_scans_v2_file_types_and_dirs; test_aqis_gate_v2.py::test_FR_0_0_06_flags_pytestmark_and_param_skips |
+| G6 | _protected:64 an unknown section ends the previous one | 1 failed, 92 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[unknown_policy_section] |
+| L10 | _protected:67 a glob belongs to the current section | 17 failed, 76 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_deleted_existing_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_renamed_existing_lab_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_passes_new_test_and_approved_edit; test_aqis_gate_checks.py::test_FR_0_0_05_c_detects_each_test_pattern; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[approved_lab_test_edit]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[deleted_lab_test]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[guarded]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[lab_test_replaced_by_symlink]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[modified_non_py_test_file]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[non_py_lab_test_file]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[pytestmark]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[renamed_lab_test]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[test_patterns]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[v2_file_types]; test_aqis_gate_parity.py::test_FR_0_0_06_path_classification_identical_to_hook; test_aqis_gate_v2.py::test_FR_0_0_06_scans_v2_file_types_and_dirs; test_aqis_gate_v2.py::test_FR_0_0_06_flags_pytestmark_and_param_skips |
+| A8/M26 | _protected:68 built-in NEVER list | 2 failed, 91 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never_section_stripped] |
+| L11 | _protected:75 NEVER is checked first | 8 failed, 85 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed; test_aqis_gate_checks.py::test_FR_0_0_05_a_detects_never_path; test_aqis_gate_checks.py::test_FR_0_0_05_a_ignores_approval_committed_only_on_branch; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[branch_only_approval]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never_section_stripped]; test_aqis_gate_parity.py::test_FR_0_0_06_path_classification_identical_to_hook |
+| L12 | _protected:77 LAB-OWNED before GUARDED | 17 failed, 76 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_deleted_existing_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_renamed_existing_lab_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_passes_new_test_and_approved_edit; test_aqis_gate_checks.py::test_FR_0_0_05_c_detects_each_test_pattern; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[approved_lab_test_edit]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[deleted_lab_test]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[guarded]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[lab_test_replaced_by_symlink]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[modified_non_py_test_file]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[non_py_lab_test_file]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[pytestmark]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[renamed_lab_test]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[test_patterns]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[v2_file_types]; test_aqis_gate_parity.py::test_FR_0_0_06_path_classification_identical_to_hook; test_aqis_gate_v2.py::test_FR_0_0_06_scans_v2_file_types_and_dirs; test_aqis_gate_v2.py::test_FR_0_0_06_flags_pytestmark_and_param_skips |
+| G1 | _protected:130 only .md files are approvals | 1 failed, 92 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[non_md_approval] |
+| L13 | _protected:129 approvals are read at the approvals ref, not HEAD | 1 failed, 92 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point |
+| L14 | _protected:133 approval text is read at the approvals ref, not HEAD | 2 failed, 91 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point; test_aqis_gate_checks.py::test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point |
+| A1/M24 | _protected:152 README.md is not an approval | 2 failed, 91 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_approvals_readme_approves_nothing; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[readme_approval] |
+| A2/N13 | _protected:154 STATUS: APPROVED at line start | 3 failed, 90 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[bulleted_status]; test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[indented_status]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[bulleted_status] |
+| L15 | _protected:154 STATUS value ends the line | 1 failed, 92 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[status_trailing_text] |
+| A4/NE | _protected:156 EXPIRES at line start | 2 failed, 91 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_standard_approval_lines_still_approve; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[bulleted_expires] |
+| G2 | _protected:156 EXPIRES value ends the line | 1 failed, 92 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[expires_with_note] |
+| G3 | _protected:157 still valid on the expiry date | 1 failed, 92 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[expires_today] |
+| A3/MX | _protected:157 a past EXPIRES ends the approval | 2 failed, 91 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_ignores_expired_or_withdrawn_approval[APPROVED-EXPIRES: 2020-01-01\n]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[expired_approval] |
+| A5/N12 | _protected:160 ALLOW-EDIT at line start | 4 failed, 89 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[bulleted_allow_edit]; test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[indented_allow_edit]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[bulleted_allow_edit]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[indented_allow_edit] |
+| A6/N16 | _protected:160 ALLOW-EDIT value ends the line | 2 failed, 91 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[trailing_text]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_edit_trailing_text] |
+| A7/N14 | _protected:162 ALLOW-PATTERNS-IN at line start | 2 failed, 91 passed, 117 deselected | test_aqis_gate_checks.py::test_FR_0_0_05_c_indented_allow_patterns_in_exempts_nothing; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[indented_allow_patterns_in] |
+| G4 | _protected:162 ALLOW-PATTERNS-IN value ends the line | 1 failed, 92 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_patterns_in_trailing_note] |
+| G21a | stop_gate:309 header on line 81 is too late | 1 failed, 92 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[header_at_line_81] |
+| G21b | stop_gate:309 header on line 80 is in time | 1 failed, 92 passed, 117 deselected | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[header_at_line_80] |
+| G19 | FR-0.0-09 NFR IDs must be in test names | 1 failed, 7 passed, 202 deselected | test_aqis_gate_trace.py::test_FR_0_0_09_detects_nfr_id_missing_from_test_names |
+| P8 | per-file SHA-256 of the weights | 1 failed, 41 passed, 168 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_fails_on_weights_with_wrong_content |
+| P9 | cached corpus archive re-checked | 1 failed, 41 passed, 168 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_damaged_corpus_cache_is_replaced_from_git |
+| P11 | packages really installed after apt-get | 1 failed, 41 passed, 168 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_apt_get_installs_nothing |
+| R3 | Results table with no readable rows is an error | 1 failed, 10 passed, 199 deselected | test_aqis_harness_regression.py::test_FR_0_0_11_regression_check_rejects_table_without_readable_rows |
+| P12 | root calls apt-get without sudo | 1 failed, 41 passed, 168 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_root_installs_without_sudo |
+| P14 | probe must name exactly one Python version | 1 failed, 41 passed, 168 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_rejects_probe_with_two_python_versions |
+| P15 | install stamp covers harness-vcs.txt | 1 failed, 41 passed, 168 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_install_stamp_covers_every_requirement_file |
+| P16 | import check builds TenVad | 1 failed, 41 passed, 168 deselected | test_aqis_harness_provision.py::test_FR_0_0_12_import_check_builds_ten_vad |
+
+- **L1 and L5.** They survived the first run. The scenarios `policy_leading_slash` and `question_mark_within_folder` were added, and the re-run fails each mutation.
+- **L8 is an equivalent mutation.** A blank line that is not skipped becomes the pattern `^$` in the current section, or nothing before the first section. No changed path is empty, so no input can tell the two versions apart.
+- **Open.** F45 and F46 (minor) are not in the owner's round 6 instruction and remain open. (Update: the owner approved them with the BLK-007 decision; see the next section.)
+
+## BLK-007 decision and minor fixes F45 and F46
+Root causes and change budget are in `docs/progress/WP-0.0/FIXES.md`, "BLK-007 decision and minor fixes F45 and F46". No gate, provisioning or `version` code changed.
+
+**BLK-007 (owner decision, option 1).** `test_FR_0_0_12_root_installs_without_sudo` sets `os.geteuid` to return 0 through `monkeypatch`, inside the test only. It runs `Provisioner.step_system()` in-process with stand-in `dpkg-query`, `apt-get` and `sudo` on PATH; the stand-in `sudo` exits 97 and logs its call. It asserts the row `("system", "PASS", "installed aqis-standin-package; already present: none")` and exactly two calls, `apt-get update -y` and `apt-get install -y aqis-standin-package`, never `sudo`. No real `apt-get` or `sudo` runs.
+
+**F45, documentation and records corrected.**
+- `docs/tools/AUDIT_GATE.md:6`: run from the repository root, or set `PYTHONPATH` to it. From `docs/`, `docs/tools/` shadows the `tools` package.
+- The `AUDIT_GATE.md` exit-2 row: a message about a file names `path:line`; a message about an argument (`--base`, `--wp`) or a failed git command names that argument or command.
+- Round 5 change-log dates: `2026-09-25` corrected to `2026-09-26` in `tools/audit/gate.py`, `aqis_lab/deploy/harness_provision.py` and `aqis_lab/commands/version.py`.
+- The exempted-files list in this file now names the 6 files the gate lists, and the OC-0.0-01 row records the owner's acceptance. Each has a correction note.
+
+**F46, new tests.**
+- `test_FR_0_0_08_detects_reordered_header_columns`: the registry header with `Functions` and `Module` swapped gives exactly one E2 at the header line (line 3), whose message says `header columns are`.
+- `test_FR_0_0_08_table_ends_at_first_non_table_line`: a note and a second, two-column table after the registry table give no E findings and `ok: true`.
+- `test_FR_0_0_05_a_fetches_missing_origin_main_once`: in a clone whose `refs/remotes/origin/main` was deleted, the gate fetches it from the reachable remote. The ref is back at the same commit, `approvals_ref` is `origin/main`, `approvals_commit` is that commit, and the `ALLOW-EDIT` approval on main is used (no findings).
+
+**Test-first.** Each new test passed against the correct code; none needed a code change. The mutations below prove each one fails when its behaviour is removed.
+
+**Mutations.** Each was applied alone in a scratch clone of this branch with the uncommitted changes copied in, then restored. The script checks that the file is byte-identical to the original after each one. The command was `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not network" -k <k>`, with `<k>` = `"FR_0_0_05 or FR_0_0_06 or FR_0_0_08"` for G13, G14 and G22, and `FR_0_0_12` for P12. Before any mutation, the same command with the combined `-k` gave `148 passed, 67 deselected in 35.05s`.
+```text
+G13 | F46 registry header columns must be the seven documented ones | 1 failed, 105 passed, 109 deselected in 21.23s | test_aqis_gate_registry.py::test_FR_0_0_08_detects_reordered_header_columns
+G14 | F46 registry table ends at the first non-table line | 1 failed, 105 passed, 109 deselected in 21.84s | test_aqis_gate_registry.py::test_FR_0_0_08_table_ends_at_first_non_table_line
+G22 | F46 missing origin/main is fetched once | 1 failed, 105 passed, 109 deselected in 21.46s | test_aqis_gate_checks.py::test_FR_0_0_05_a_fetches_missing_origin_main_once
+P12 | BLK-007 root calls apt-get without sudo | 1 failed, 41 passed, 173 deselected in 12.26s | test_aqis_harness_provision.py::test_FR_0_0_12_root_installs_without_sudo
+all mutated files restored
+```
+The mutations were:
+- G13: `if tuple(_cells(stripped)) != REGISTRY_COLUMNS:` changed to `if False:`;
+- G14: `break` at the first non-table line changed to `continue`;
+- G22: the `git fetch --quiet origin main:refs/remotes/origin/main` call removed;
+- P12: `if os.geteuid() != 0:` changed to `if True:`.
+
+**Suites and gate on the clean committed tree (`18f3444`).** Command for the fast suite: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"`, run once with the system git-lfs and once with git-lfs 3.7.0 first on PATH. Slow suite: `-m "slow or network"`. Gate: `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0`.
+```text
+commit: 18f3444
+status lines before: 0
+fast git-lfs/3.4.1: 207 passed, 8 deselected in 42.18s
+fast git-lfs/3.7.0: 207 passed, 8 deselected in 38.75s
+slow/network: 8 passed, 207 deselected in 93.06s (0:01:33)
+gate: 0 findings: OK (0.2 s)
+git status lines after: 0
+```
+
+**CI on `18f3444`.** Push run `36241588866` and pull request run `36241592075` (workflow `aqis-lab-ci`). Both jobs, `lab` and `harness-regression`, concluded `success` in both runs. `test_FR_0_0_12_root_installs_without_sudo` now passes on the GitHub runner; runs `36231792360`, `36231766392` and `36231008660` had failed on it (BLK-007).
+
+**Open.** None. F39 to F46 and BLK-007 are addressed. WP-0.0 is ready for audit.
+
+## Round 8 audit fixes and must-catch proof
+Root causes, change budget and sibling cases are in `docs/progress/WP-0.0/FIXES.md`, "Round 8 audit fixes". Accepted debt for F48, F51 and F53 is in `docs/progress/DEBT.md` (DEBT-001 to DEBT-003, target WP-0.9).
+
+**Test-first, red runs before the code changes.**
+- **F47.** The new tests ran against the unchanged `test_functions`. The nested-function and helper-class placements (G35, G36) already passed; the file-name and `__init__` cases failed:
+```text
+FAILED tests/aqis_lab/test_aqis_gate_registry.py::test_FR_0_0_08_row_names_only_tests_pytest_collects
+FAILED tests/aqis_lab/test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_only_in_uncollected_test[file_pytest_does_not_collect]
+FAILED tests/aqis_lab/test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_only_in_uncollected_test[test_class_with_init]
+3 failed, 3 passed, 18 deselected in 1.33s
+```
+- **F52.** The new tests ran against the unchanged `check_imports`. The first failure showed the old message naming only the first missing module (`import check failed:   File "<frozen importlib._bootstrap>" … No module named 'aqis_no_such_module_one'`):
+```text
+>       assert message == ("import check failed: " + "; ".join(
+E         - import check failed: aqis_no_such_module_one: ModuleNotFoundError: No module named 'aqis_no_such_module_one'; aqis_no_such_module_two: ModuleNotFoundError: No module named 'aqis_no_such_module_two'
+E         + import check failed:   File "<frozen importlib._bootstrap>", line 1324, in _find_and_load_unlocked / ModuleNotFoundError: No module named 'aqis_no_such_module_one'
+FAILED tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_import_check_names_each_failing_module
+FAILED tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null]]]
+FAILED tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null], ["os", null], ["csv", null]]]
+FAILED tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null], ["csv", null], ["csv", null]]]
+FAILED tests/aqis_lab/test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[imports ok]
+5 failed, 2 passed, 55 deselected in 2.91s
+```
+- **F49 and F50.** The new tests passed against the unchanged code. The guards were correct but untested, and the breaks MC13.43, MC13.44, MC14.50 and MC14.51 below show that each new test fails when its guard is removed.
+- **Must-catch 7.** The first battery run found one survivor, MC7.19: a failing branch-wide `git diff` was not stopped. `test_FR_0_0_06_fails_closed_when_branch_diff_fails` and its sibling `…when_git_status_fails` were added. Both passed against the unchanged gate, and each fails under its break (MC7.19 and MC7.19b below).
+
+**Must-catch proof (spec Amendment 2, protocol version 2, item A6).** Every break was applied alone in a throwaway clone of `57ba8b7` under `/tmp` (`…/scratchpad/mut8`, `.venv` linked to this repository's), then restored. The script checks that each break's target text appears exactly once, and restores the file byte for byte. After the battery, the tracked files were clean except for the copied new test file used in the re-run.
+
+The command for each break was `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network" -k <k>`. The value of `<k>` is:
+- `"FR_0_0_05 or FR_0_0_06 or FR_0_0_07 or FR_0_0_08 or FR_0_0_09"` for the gate and hook breaks;
+- `FR_0_0_02` for the bootstrap breaks;
+- `FR_0_0_01` for the `version` breaks;
+- `FR_0_0_12` for the provisioning breaks.
+
+The hook breaks (MC1.2 and MC2.4) change the clone's copy of the owner's hook, never this repository's.
+
+The battery script is `mustcatch_r8.py` in the scratchpad; its output is the table below. There are 63 breaks. The first run had 61 and one survivor, MC7.19, which is now caught. MC7.19b is the sibling break added with its test, and MC3.7b (approvals listed and read from the branch) was added while checking the table's examples. **Every break in this table fails at least one named test.** (**Correction, round 9 F61:** the table was not a complete proof. The round 8 audit found breaks for must-catch 4, 7, 14 and 15 that no test caught (F56 to F59). Their tests and breaks are in "Round 9 audit fixes" below.)
+
+| Must-catch | Behaviour | Breaks | Tests that fail (examples) |
+| --- | --- | --- | --- |
+| 1 | NEVER paths blocked, hook and gate | MC1.1 (gate), MC1.2 (hook) | `test_FR_0_0_05_a_detects_never_path`, `…parity_with_stop_hook_on_fixture_repos[never]` |
+| 2 | GUARDED paths need an approved ALLOW-EDIT on origin/main | MC2.3, MC2.4 (hook), MC2.5 | `test_FR_0_0_05_a_approval_lines_must_start_the_line`, `test_FR_0_0_07_allow_patterns_in_exempts_file_and_is_listed`, `…parity_with_stop_hook_on_fixture_repos[branch_only_approval]` |
+| 3 | Approvals only from origin/main; branch, expired, unapproved ignored | MC3.6 to MC3.9, MC3.7b | `test_FR_0_0_05_a_ignores_approval_committed_only_on_branch`, `…uses_approval_added_on_main_after_branch_point`, `…ignores_expired_or_withdrawn_approval` |
+| 4 | Existing tests modified or deleted are reported | MC4.10, MC4.11 | `test_FR_0_0_05_b_detects_modified_existing_test`, `…detects_deleted_existing_test` |
+| 5 | Compromise patterns in every scanned type; audit-allow needs a reason and is listed | MC5.12 to MC5.15 | `test_FR_0_0_06_scans_v2_file_types_and_dirs`, `test_FR_0_0_05_c_detects_each_code_pattern`, `test_FR_0_0_07_audit_allow_*` |
+| 6 | Skips, xfails, pytestmark skips, trivial asserts detected | MC6.16 to MC6.18 | `test_FR_0_0_05_c_detects_each_test_pattern`, `…parity_with_stop_hook_on_fixture_repos[pytestmark]` |
+| 7 | Fail closed: git or read errors give exit 2 | MC7.19, MC7.19b, MC7.20, MC7.21 | `test_FR_0_0_06_fails_closed_when_branch_diff_fails` (new), `…when_git_status_fails` (new), `…on_unreadable_changed_file`, `…on_git_error` |
+| 8 | New lab module without CAPABILITIES header reported | MC8.22 | `test_FR_0_0_05_d_detects_new_module_without_header` |
+| 9 | Registry rows kept; named tests exist and pytest collects them | MC9.23 to MC9.33 | `test_FR_0_0_08_detects_row_removed_since_base`, `test_FR_0_0_08_row_names_only_tests_pytest_collects` (new) |
+| 10 | Traceability in PLAN.md, a collected test name, EVIDENCE.md | MC10.34 to MC10.36, and MC9.25 to MC9.33 through F3 | `test_FR_0_0_09_detects_id_missing_from_*`, `test_FR_0_0_09_detects_id_only_in_uncollected_test` (new) |
+| 11 | Bootstrap uses the probe's Python; fails fast on a missing or unreadable probe | MC11.37 to MC11.39 | `test_FR_0_0_02_uses_version_named_by_probe`, `…fails_when_probe_missing`, `…fails_when_probe_unreadable` |
+| 12 | `version` shows +dirty for staged, unstaged and untracked changes | MC12.40 to MC12.42 | `test_FR_0_0_01_version_marks_dirty_tree` |
+| 13 | No PASS for a package not installed or a failed install | MC13.43 to MC13.45 | `test_FR_0_0_12_installs_package_dpkg_knows_but_not_installed` (new), `…fails_when_status_stays_not_installed_after_apt_get` (new), `…fails_when_apt_get_installs_nothing` |
+| 14 | No PASS for wrong or partial corpus or weights | MC14.46 to MC14.52 | `test_FR_0_0_12_fails_on_weights_with_wrong_content`, `…rejects_lfs_pointer_file`, `…refuses_clip_link_pointing_elsewhere` (new), `…interrupted_extraction_is_redone` (new) |
+| 15 | git status left clean; token never written | MC15.53 to MC15.57 | `test_FR_0_0_12_fails_when_provisioning_dirties_tree`, `…fails_when_tree_was_dirty_before`, `…never_writes_token` |
+| 16 | Import check reports each module; cannot report modules it did not import | MC16.58 to MC16.61 | `test_FR_0_0_12_import_check_names_each_failing_module` (new), `…cannot_report_modules_it_did_not_import` (new), `…builds_ten_vad` |
+
+| Break | Must-catch | What was broken | File | Result | Failing tests (first four) |
+| --- | --- | --- | --- | --- | --- |
+| MC1.1 | 1 | gate: NEVER classification removed | `tools/audit/gate.py` | 8 failed, 116 passed, 114 deselected in 26.14s | test_aqis_gate_checks.py::test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed; test_aqis_gate_checks.py::test_FR_0_0_05_a_detects_never_path; test_aqis_gate_checks.py::test_FR_0_0_05_a_ignores_approval_committed_only_on_branch; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[branch_only_approval]; … 4 more |
+| MC1.2 | 1 | hook: NEVER classification removed | `.claude/hooks/_protected.py` | 5 failed, 119 passed, 114 deselected in 24.97s | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[branch_only_approval]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[never_section_stripped]; … 1 more |
+| MC2.3 | 2 | gate: GUARDED change never reported | `tools/audit/gate.py` | 37 failed, 87 passed, 114 deselected in 26.71s | test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[bulleted_allow_edit]; test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[indented_allow_edit]; test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[bulleted_status]; test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[indented_status]; … 33 more |
+| MC2.4 | 2 | hook: GUARDED change never reported | `.claude/hooks/stop_gate.py` | 21 failed, 103 passed, 114 deselected in 25.96s | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[added_then_deleted_in_worktree]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_edit_trailing_text]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[branch_only_approval]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[bulleted_allow_edit]; … 17 more |
+| MC2.5 | 2 | gate: any approval file approves every path | `tools/audit/gate.py` | 3 failed, 121 passed, 114 deselected in 26.99s | test_aqis_gate_exemptions.py::test_FR_0_0_07_allow_patterns_in_exempts_file_and_is_listed; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_patterns_in]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[question_mark_within_folder] |
+| MC3.6 | 3 | gate: approvals read at the merge base (F02) | `tools/audit/gate.py` | 3 failed, 121 passed, 114 deselected in 26.93s | test_aqis_gate_checks.py::test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point; test_aqis_gate_checks.py::test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point; test_aqis_gate_v2.py::test_FR_0_0_06_approvals_none_when_origin_main_unverifiable |
+| MC3.7 | 3 | gate: approvals read from HEAD (branch) | `tools/audit/gate.py` | 2 failed, 122 passed, 114 deselected in 27.28s | test_aqis_gate_checks.py::test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point; test_aqis_gate_checks.py::test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point |
+| MC3.7b | 3 | approvals listed and read from HEAD (the branch) | `tools/audit/gate.py` | 4 failed, 122 passed, 114 deselected in 27.61s | test_aqis_gate_checks.py::test_FR_0_0_05_a_ignores_approval_committed_only_on_branch; test_aqis_gate_checks.py::test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point; test_aqis_gate_checks.py::test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[branch_only_approval] |
+| MC3.8 | 3 | gate: EXPIRES ignored | `tools/audit/gate.py` | 2 failed, 122 passed, 114 deselected in 30.21s | test_aqis_gate_checks.py::test_FR_0_0_05_a_ignores_expired_or_withdrawn_approval[APPROVED-EXPIRES: 2020-01-01\n]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[expired_approval] |
+| MC3.9 | 3 | gate: STATUS: APPROVED not required | `tools/audit/gate.py` | 7 failed, 117 passed, 114 deselected in 29.92s | test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[bulleted_status]; test_aqis_gate_checks.py::test_FR_0_0_05_a_approval_lines_must_start_the_line[indented_status]; test_aqis_gate_checks.py::test_FR_0_0_05_a_ignores_expired_or_withdrawn_approval[WITHDRAWN-]; test_aqis_gate_checks.py::test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point; … 3 more |
+| MC4.10 | 4 | gate: modified existing test not reported | `tools/audit/gate.py` | 2 failed, 122 passed, 114 deselected in 29.04s | test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_modified_existing_test; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[modified_harness_test] |
+| MC4.11 | 4 | gate: deleted existing test not reported | `tools/audit/gate.py` | 8 failed, 116 passed, 114 deselected in 29.01s | test_aqis_gate_checks.py::test_FR_0_0_05_a_detects_renamed_guarded_harness_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_deleted_existing_test; test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_renamed_existing_lab_test; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; … 4 more |
+| MC5.12 | 5 | patterns: only .py files scanned | `tools/audit/gate.py` | 2 failed, 122 passed, 114 deselected in 30.66s | test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[v2_file_types]; test_aqis_gate_v2.py::test_FR_0_0_06_scans_v2_file_types_and_dirs |
+| MC5.13 | 5 | patterns: swallowed-exception pattern never matches | `tools/audit/patterns.py` | 7 failed, 117 passed, 114 deselected in 32.12s | test_aqis_gate_checks.py::test_FR_0_0_05_c_detects_each_code_pattern; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_patterns_in]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_patterns_in_trailing_note]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[code_patterns]; … 3 more |
+| MC5.14 | 5 | audit-allow without a reason exempts | `tools/audit/patterns.py` | 5 failed, 119 passed, 114 deselected in 30.99s | test_aqis_gate_exemptions.py::test_FR_0_0_07_audit_allow_with_reason_exempts_and_is_listed; test_aqis_gate_exemptions.py::test_FR_0_0_07_audit_allow_without_reason_does_not_exempt; test_aqis_gate_exemptions.py::test_FR_0_0_07_audit_allow_exempts_only_its_line; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_lines]; … 1 more |
+| MC5.15 | 5 | audit-allow lines not listed | `tools/audit/gate.py` | 2 failed, 122 passed, 114 deselected in 30.96s | test_aqis_gate_exemptions.py::test_FR_0_0_07_audit_allow_with_reason_exempts_and_is_listed; test_aqis_gate_exemptions.py::test_FR_0_0_07_audit_allow_exempts_only_its_line |
+| MC6.16 | 6 | test-skip pattern never matches (incl. pytestmark) | `tools/audit/patterns.py` | 5 failed, 119 passed, 114 deselected in 27.92s | test_aqis_gate_checks.py::test_FR_0_0_05_c_detects_each_test_pattern; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[pytestmark]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[test_patterns]; test_aqis_gate_parity.py::test_FR_0_0_06_pattern_tables_identical_to_stop_hook; … 1 more |
+| MC6.17 | 6 | xfail pattern never matches | `tools/audit/patterns.py` | 3 failed, 121 passed, 114 deselected in 26.03s | test_aqis_gate_checks.py::test_FR_0_0_05_c_detects_each_test_pattern; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[test_patterns]; test_aqis_gate_parity.py::test_FR_0_0_06_pattern_tables_identical_to_stop_hook |
+| MC6.18 | 6 | trivial-assert pattern never matches | `tools/audit/patterns.py` | 3 failed, 121 passed, 114 deselected in 26.09s | test_aqis_gate_checks.py::test_FR_0_0_05_c_detects_each_test_pattern; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[test_patterns]; test_aqis_gate_parity.py::test_FR_0_0_06_pattern_tables_identical_to_stop_hook |
+| MC7.19 | 7 | git diff failure ignored | `tools/audit/gate.py` | first run: 124 passed, 114 deselected in 26.91s, survived; after the new test: 1 failed, 125 passed, 114 deselected in 26.72s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_when_branch_diff_fails |
+| MC7.19b | 7 | git status failure ignored | `tools/audit/gate.py` | 1 failed, 125 passed, 114 deselected in 25.98s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_when_git_status_fails |
+| MC7.20 | 7 | a changed path that is not a regular file (dangling symlink) is skipped; label corrected in round 9 (F61): the read-error branch is K7.4 in round 9 | `tools/audit/gate.py` | 1 failed, 123 passed, 114 deselected in 26.91s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_on_unreadable_changed_file |
+| MC7.21 | 7 | per-file diff failure ignored | `tools/audit/gate.py` | 1 failed, 123 passed, 114 deselected in 30.70s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_on_git_error |
+| MC8.22 | 8 | header check (d) removed | `tools/audit/gate.py` | 6 failed, 118 passed, 114 deselected in 28.07s | test_aqis_gate_checks.py::test_FR_0_0_05_d_detects_new_module_without_header; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[code_patterns]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[combined]; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[header_at_line_81]; … 2 more |
+| MC9.23 | 9 | removed registry row not reported (E5) | `tools/audit/gate.py` | 2 failed, 122 passed, 114 deselected in 27.24s | test_aqis_gate_registry.py::test_FR_0_0_08_detects_row_removed_since_base; test_aqis_gate_registry.py::test_FR_0_0_08_detects_missing_registry |
+| MC9.24 | 9 | named tests never checked (E3) | `tools/audit/gate.py` | 3 failed, 121 passed, 114 deselected in 28.96s | test_aqis_gate_checks.py::test_FR_0_0_05_b_detects_deleted_existing_test; test_aqis_gate_registry.py::test_FR_0_0_08_detects_row_with_missing_test; test_aqis_gate_registry.py::test_FR_0_0_08_row_names_only_tests_pytest_collects |
+| MC9.25 | 9 | G35 methods of any class count | `tools/audit/gate.py` | 2 failed, 122 passed, 114 deselected in 29.57s | test_aqis_gate_registry.py::test_FR_0_0_08_row_names_only_tests_pytest_collects; test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_only_in_uncollected_test[method_of_non_test_class] |
+| MC9.26 | 9 | G36 nested functions count | `tools/audit/gate.py` | 4 failed, 120 passed, 114 deselected in 29.03s | test_aqis_gate_registry.py::test_FR_0_0_08_row_names_only_tests_pytest_collects; test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_only_in_uncollected_test[method_of_non_test_class]; test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_only_in_uncollected_test[nested_function]; test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_only_in_uncollected_test[test_class_with_init] |
+| MC9.27 | 9 | any .py file under tests/ counts | `tools/audit/gate.py` | 2 failed, 122 passed, 114 deselected in 28.07s | test_aqis_gate_registry.py::test_FR_0_0_08_row_names_only_tests_pytest_collects; test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_only_in_uncollected_test[file_pytest_does_not_collect] |
+| MC9.28 | 9 | classes with a constructor count | `tools/audit/gate.py` | 2 failed, 122 passed, 114 deselected in 29.58s | test_aqis_gate_registry.py::test_FR_0_0_08_row_names_only_tests_pytest_collects; test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_only_in_uncollected_test[test_class_with_init] |
+| MC9.29 | 9 | classes with __new__ count | `tools/audit/gate.py` | 1 failed, 123 passed, 114 deselected in 29.56s | test_aqis_gate_registry.py::test_FR_0_0_08_row_names_only_tests_pytest_collects |
+| MC9.30 | 9 | classes with an imported base count | `tools/audit/gate.py` | 1 failed, 123 passed, 114 deselected in 29.42s | test_aqis_gate_registry.py::test_FR_0_0_08_row_names_only_tests_pytest_collects |
+| MC9.31 | 9 | __test__ = False in a module ignored | `tools/audit/gate.py` | 1 failed, 123 passed, 114 deselected in 28.69s | test_aqis_gate_registry.py::test_FR_0_0_08_row_names_only_tests_pytest_collects |
+| MC9.32 | 9 | __test__ = False in a class ignored | `tools/audit/gate.py` | 1 failed, 123 passed, 114 deselected in 27.63s | test_aqis_gate_registry.py::test_FR_0_0_08_row_names_only_tests_pytest_collects |
+| MC9.33 | 9 | fixtures and properties count | `tools/audit/gate.py` | 1 failed, 123 passed, 114 deselected in 26.87s | test_aqis_gate_registry.py::test_FR_0_0_08_row_names_only_tests_pytest_collects |
+| MC10.34 | 10 | PLAN.md and EVIDENCE.md never checked (F2, F4) | `tools/audit/gate.py` | 3 failed, 121 passed, 114 deselected in 27.30s | test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_missing_from_plan; test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_missing_from_evidence; test_aqis_gate_trace.py::test_FR_0_0_09_underscore_matching_respects_boundaries |
+| MC10.35 | 10 | test names never checked (F3) | `tools/audit/gate.py` | 7 failed, 117 passed, 114 deselected in 27.38s | test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_missing_from_test_names; test_aqis_gate_trace.py::test_FR_0_0_09_detects_nfr_id_missing_from_test_names; test_aqis_gate_trace.py::test_FR_0_0_09_underscore_matching_respects_boundaries; test_aqis_gate_trace.py::test_FR_0_0_09_detects_id_only_in_uncollected_test[file_pytest_does_not_collect]; … 3 more |
+| MC10.36 | 10 | NFR IDs not required in test names | `tools/audit/gate.py` | 1 failed, 123 passed, 114 deselected in 27.70s | test_aqis_gate_trace.py::test_FR_0_0_09_detects_nfr_id_missing_from_test_names |
+| MC11.37 | 11 | F01 Python version hard-coded | `aqis_lab/deploy/dev_bootstrap.sh` | 1 failed, 6 passed, 231 deselected in 1.91s | test_aqis_bootstrap.py::test_FR_0_0_02_uses_version_named_by_probe |
+| MC11.38 | 11 | missing probe does not stop the script | `aqis_lab/deploy/dev_bootstrap.sh` | 1 failed, 6 passed, 231 deselected in 1.03s | test_aqis_bootstrap.py::test_FR_0_0_02_fails_when_probe_missing |
+| MC11.39 | 11 | probe without a version accepted | `aqis_lab/deploy/dev_bootstrap.sh` | 1 failed, 6 passed, 231 deselected in 0.93s | test_aqis_bootstrap.py::test_FR_0_0_02_fails_when_probe_unreadable[no_version_line] |
+| MC12.40 | 12 | staged changes not dirty (F03) | `aqis_lab/commands/version.py` | 1 failed, 6 passed, 231 deselected in 1.30s | test_aqis_version.py::test_FR_0_0_01_version_marks_dirty_tree |
+| MC12.41 | 12 | untracked files not dirty | `aqis_lab/commands/version.py` | 1 failed, 6 passed, 231 deselected in 1.13s | test_aqis_version.py::test_FR_0_0_01_version_marks_dirty_tree |
+| MC12.42 | 12 | unstaged changes not dirty | `aqis_lab/commands/version.py` | 1 failed, 6 passed, 231 deselected in 1.26s | test_aqis_version.py::test_FR_0_0_01_version_marks_dirty_tree |
+| MC13.43 | 13 | P30 status text ignored before install | `aqis_lab/deploy/harness_provision.py` | 7 failed, 52 passed, 179 deselected in 14.55s | test_aqis_harness_provision.py::test_FR_0_0_12_installs_package_dpkg_knows_but_not_installed[deinstall ok config-files]; test_aqis_harness_provision.py::test_FR_0_0_12_installs_package_dpkg_knows_but_not_installed[unknown ok not-installed]; test_aqis_harness_provision.py::test_FR_0_0_12_installs_package_dpkg_knows_but_not_installed[install ok half-configured]; test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_status_stays_not_installed_after_apt_get[deinstall ok config-files]; … 3 more |
+| MC13.44 | 13 | P31 status text ignored after install | `aqis_lab/deploy/harness_provision.py` | 3 failed, 56 passed, 179 deselected in 14.68s | test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_status_stays_not_installed_after_apt_get[deinstall ok config-files]; test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_status_stays_not_installed_after_apt_get[unknown ok not-installed]; test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_status_stays_not_installed_after_apt_get[install ok half-configured] |
+| MC13.45 | 13 | P11 failed install accepted | `aqis_lab/deploy/harness_provision.py` | 4 failed, 55 passed, 179 deselected in 14.49s | test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_apt_get_installs_nothing; test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_status_stays_not_installed_after_apt_get[deinstall ok config-files]; test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_status_stays_not_installed_after_apt_get[unknown ok not-installed]; test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_status_stays_not_installed_after_apt_get[install ok half-configured] |
+| MC14.46 | 14 | P8 weights hash not compared | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 14.97s | test_aqis_harness_provision.py::test_FR_0_0_12_fails_on_weights_with_wrong_content |
+| MC14.47 | 14 | LFS pointer accepted | `aqis_lab/deploy/harness_provision.py` | 3 failed, 56 passed, 179 deselected in 14.62s | test_aqis_harness_provision.py::test_FR_0_0_12_rejects_lfs_pointer_file; test_aqis_harness_provision.py::test_FR_0_0_12_reports_lfs_pull_failure_detail; test_aqis_harness_provision.py::test_FR_0_0_12_reports_lfs_output_when_pull_leaves_pointers |
+| MC14.48 | 14 | P9 cached archive not re-checked | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 14.91s | test_aqis_harness_provision.py::test_FR_0_0_12_damaged_corpus_cache_is_replaced_from_git |
+| MC14.49 | 14 | archive from git not hash-checked | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 15.36s | test_aqis_harness_provision.py::test_FR_0_0_12_fails_on_asset_checksum_mismatch |
+| MC14.50 | 14 | P35 any existing clip link accepted | `aqis_lab/deploy/harness_provision.py` | 2 failed, 57 passed, 179 deselected in 15.12s | test_aqis_harness_provision.py::test_FR_0_0_12_refuses_clip_link_pointing_elsewhere[other_content]; test_aqis_harness_provision.py::test_FR_0_0_12_refuses_clip_link_pointing_elsewhere[missing_file] |
+| MC14.51 | 14 | P48 interrupted extraction reused | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 15.51s | test_aqis_harness_provision.py::test_FR_0_0_12_interrupted_extraction_is_redone |
+| MC14.52 | 14 | weights link pointing elsewhere accepted | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 15.57s | test_aqis_harness_provision.py::test_FR_0_0_12_refuses_weights_link_pointing_elsewhere |
+| MC15.53 | 15 | changed git status accepted | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 16.36s | test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_provisioning_dirties_tree |
+| MC15.54 | 15 | non-empty git status accepted | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 16.26s | test_aqis_harness_provision.py::test_FR_0_0_12_fails_when_tree_was_dirty_before |
+| MC15.55 | 15 | data placed in a path git does not ignore | `aqis_lab/deploy/harness_provision.py` | 2 failed, 57 passed, 179 deselected in 15.36s | test_aqis_harness_provision.py::test_FR_0_0_12_refuses_target_that_git_does_not_ignore; test_aqis_harness_provision.py::test_FR_0_0_12_refuses_audio_dir_that_is_not_a_directory[symlink-corpus/audio/probe.wav is not ignored by git] |
+| MC15.56 | 15 | token written to the cache (added code: `harness_provision.py` never touches the token; the Colab clone cell, the only code that holds it, is K15.5 and K15.6 in round 9) | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 16.04s | test_aqis_harness_provision.py::test_FR_0_0_12_never_writes_token |
+| MC15.57 | 15 | token printed (added code, as MC15.56) | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 15.14s | test_aqis_harness_provision.py::test_FR_0_0_12_never_writes_token |
+| MC16.58 | 16 | P53 only the first module imported | `aqis_lab/deploy/harness_provision.py` | 2 failed, 57 passed, 179 deselected in 16.34s | test_aqis_harness_provision.py::test_FR_0_0_12_import_check_names_each_failing_module; test_aqis_harness_provision.py::test_FR_0_0_12_import_check_reports_the_modules_it_imported |
+| MC16.59 | 16 | report not compared with the requested modules | `aqis_lab/deploy/harness_provision.py` | 3 failed, 56 passed, 179 deselected in 16.33s | test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null]]]; test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null], ["os", null], ["csv", null]]]; test_aqis_harness_provision.py::test_FR_0_0_12_import_check_cannot_report_modules_it_did_not_import[[["json", null], ["csv", null], ["csv", null]]] |
+| MC16.60 | 16 | failed modules not reported | `aqis_lab/deploy/harness_provision.py` | 2 failed, 57 passed, 179 deselected in 16.51s | test_aqis_harness_provision.py::test_FR_0_0_12_import_check_builds_ten_vad; test_aqis_harness_provision.py::test_FR_0_0_12_import_check_names_each_failing_module |
+| MC16.61 | 16 | P16 TenVad not built | `aqis_lab/deploy/harness_provision.py` | 1 failed, 58 passed, 179 deselected in 16.45s | test_aqis_harness_provision.py::test_FR_0_0_12_import_check_builds_ten_vad |
+
+**Suites and gate on the clean committed tree (`6e28f44`).** The fast suite is `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"`. It ran once with the system git-lfs, and once with git-lfs 3.7.0 first on PATH. The slow suite is `-m "slow or network"`. The gate is `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.0`.
+```text
+commit: 6e28f44
+status lines before: 0
+fast git-lfs/3.4.1: 232 passed, 8 deselected in 44.05s
+fast git-lfs/3.7.0: 232 passed, 8 deselected in 42.61s
+slow/network: 8 passed, 232 deselected in 56.20s
+gate: 0 findings: OK (0.3 s)
+git status lines after: 0
+```
+
+**CI (workflow `aqis-lab-ci`, both runs `completed success`):**
+- `57ba8b7`, the round 8 fixes: push `36258768589`, pull request `36258771848`.
+- `c45259e`, records: push `36258982662`, pull request `36258986216`.
+- `6e28f44`, the must-catch proof and fail-closed tests: push `36260431925`, pull request `36260437433`.
+
+The final records commit, which sets STATUS to READY-FOR-AUDIT, changes only `EVIDENCE.md` and `STATUS.md`. Its CI result is reported to the owner in the session.
+
+**Open.** No fix is left open. F48, F51 and F53 are accepted debt (DEBT-001 to DEBT-003, target WP-0.9). One question from the round 7 report is still the owner's to decide: should provisioning re-hash each extracted clip on every run (AUDIT.md round 7, "For the owner")? The round 8 scope does not include it, so nothing was changed.
+
+## Round 9 audit fixes (F56 to F59, F61)
+Root causes and change budget are in `docs/progress/WP-0.0/FIXES.md`, "Round 9 audit fixes". F55 and F60 are accepted debt (DEBT-004, DEBT-005, target WP-0.9).
+
+**New tests.** Each passed against the unchanged code; the breaks below prove that each one fails when its behaviour is removed.
+- **F56 (must-catch 4):**
+  - `test_FR_0_0_05_b_allow_patterns_in_does_not_approve_test_edits`. An `ALLOW-PATTERNS-IN: tests/aqis_lab/**` approval on `main` covers three existing tests, a fixture file among them. The branch modifies two and deletes one, and the gate reports `B1`, `B1` and `B2`, all CRITICAL. The two modified files are still listed as exempted files, which shows the approval is active.
+  - The parity scenario `allow_patterns_in_covers_existing_tests` gives the same three findings from the gate and from the Stop hook (`EXPECT_EXACT`).
+- **F57 (must-catch 7):**
+  - `test_FR_0_0_06_fails_closed_on_changed_file_it_cannot_read`: a new `tools/unreadable_tool.py` holding `# TODO`, mode 000. The gate runs as uid 65534 through `setpriv` when the test is root, and directly otherwise. Result: exit 2, `ERROR: tools/unreadable_tool.py:1: cannot read changed file:`. The control run, made the same way while the file is readable, gives exactly one `C1`.
+  - `test_FR_0_0_06_fails_closed_when_base_registry_unreadable`: the branch drops registry row CAP-FIX-001, and the control gives `E5`. The base registry's loose object is then rewritten as an unfinished zlib stream that keeps the header, so `git cat-file -e` exits 0 and `git show` fails. Result: exit 2, `ERROR: docs/capabilities/REGISTRY.md:1: cannot read the registry at base`.
+  - `test_FR_0_0_06_fails_closed_when_spec_unreadable`: the only path matching `docs/specs/**/WP-9.9-*.md` is a folder. Result: exit 2, `ERROR: docs/specs/phase-9/WP-9.9-thing.md:1: cannot read the spec`.
+- **F58 (must-catch 14):** `test_FR_0_0_12_damaged_weights_cache_is_replaced[truncated|other_bytes]`. After a first run, the cached `Stream-VAD/model.pth.tar` is cut to half, or replaced by other bytes. The second run gives `weights` PASS, and both the cached and the linked model equal the pinned bytes again (re-cloned).
+- **F59 (must-catch 15):** `test_FR_0_0_13_clone_cells_never_store_token`. Cells 1 to 3 run against a local repository with a stand-in `google.colab` token.
+  - Cell 3 passes, and neither the token nor its base64 header is in any file of the clone.
+  - The `"-c"` option comes before `"clone"` on cell 2's command line.
+  - Cell 3 holds the `extraheader` assertion, and that assertion rejects a clone made with `git clone -c http.extraHeader=…`.
+
+**One correction while proving F57.** The seven breaks first ran in a clone under the scratchpad, which is under `/tmp/claude-0` (mode 700). There the unprivileged user could not import the gate, so `…cannot_read` failed under every break, including K4.4, K7.9 and K7.11, for that reason alone. I changed the test so its control run also goes through the unprivileged user; a checkout that user cannot read now fails the control with a clear message. I then re-ran the breaks in `/tmp/aqis-r9-mut/repo` (mode 755), a clone of `ff657b1`. With the corrected test and the readable clone, each break fails only its own test.
+
+**Must-catch proof for F56 to F59 (the round 8 audit's breaks).** Each break was applied alone in `/tmp/aqis-r9-mut/repo`, a clone of `ff657b1` with `.venv` linked to this repository's, then restored. The script (`mustcatch_r9.py` in the scratchpad) checks that each target text appears exactly once. After the breaks, the tracked files were clean.
+
+The command for each break was `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network" -k <k>`. The value of `<k>` is `"FR_0_0_05 or FR_0_0_06 or FR_0_0_07 or FR_0_0_08 or FR_0_0_09"` for the gate, `FR_0_0_12` for provisioning and `FR_0_0_13` for the Colab cells. Before the breaks, the unmutated `…cannot_read` test in that clone gave `1 passed`.
+
+| Break | Must-catch | What was broken | File | Result | Failing tests |
+| --- | --- | --- | --- | --- | --- |
+| K4.4 | 4 | ALLOW-PATTERNS-IN also approves edits to existing tests | `tools/audit/gate.py` | 2 failed, 129 passed, 117 deselected in 29.44s | test_aqis_gate_checks.py::test_FR_0_0_05_b_allow_patterns_in_does_not_approve_test_edits; test_aqis_gate_parity.py::test_FR_0_0_06_parity_with_stop_hook_on_fixture_repos[allow_patterns_in_covers_existing_tests] |
+| K7.4 | 7 | changed file that cannot be read is skipped | `tools/audit/gate.py` | 1 failed, 130 passed, 117 deselected in 29.26s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_on_changed_file_it_cannot_read |
+| K7.9 | 7 | unreadable base registry skips the removed-row check | `tools/audit/gate.py` | 1 failed, 130 passed, 117 deselected in 29.03s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_when_base_registry_unreadable |
+| K7.11 | 7 | unreadable spec ends traceability with no findings | `tools/audit/gate.py` | 1 failed, 130 passed, 117 deselected in 31.57s | test_aqis_gate_v2.py::test_FR_0_0_06_fails_closed_when_spec_unreadable |
+| K14.10 | 14 | existing weights cache trusted without re-hashing | `aqis_lab/deploy/harness_provision.py` | 2 failed, 59 passed, 187 deselected in 16.74s | test_aqis_harness_provision.py::test_FR_0_0_12_damaged_weights_cache_is_replaced[truncated]; test_aqis_harness_provision.py::test_FR_0_0_12_damaged_weights_cache_is_replaced[other_bytes] |
+| K15.5 | 15 | Colab cell 2: -c moved after clone (stored in .git/config) | `docs/colab/HARNESS_SETUP.md` | 1 failed, 5 passed, 242 deselected in 0.60s | test_aqis_colab_doc.py::test_FR_0_0_13_clone_cells_never_store_token |
+| K15.6 | 15 | Colab cell 3: extraheader check deleted | `docs/colab/HARNESS_SETUP.md` | 1 failed, 5 passed, 242 deselected in 0.56s | test_aqis_colab_doc.py::test_FR_0_0_13_clone_cells_never_store_token |
+
+**Records corrected (F61):**
+- `AUDIT_GATE.md`: "never accepts one it does not" is replaced by the list of rules not modelled (DEBT-004).
+- The `test_functions` docstring no longer says it mirrors pytest.
+- `FIXES.md`: the two F47 claims carry correction notes, and the round 8 budget now lists `test_aqis_gate_v2.py`.
+- In this file:
+  - the round 8 "every break" sentence is qualified;
+  - MC7.20 is relabelled (it covers the non-regular-file branch; the read-error branch is K7.4);
+  - MC15.56 and MC15.57 are marked as added code, with the real token holder covered by K15.5 and K15.6.
+
+**Suites and gate on the clean committed tree (`f1a4b0a`).** The commands are as in round 8.
+```text
+commit: f1a4b0a
+status lines before: 0
+fast git-lfs/3.4.1: 240 passed, 8 deselected in 47.50s
+fast git-lfs/3.7.0: 240 passed, 8 deselected in 49.80s
+slow/network: 8 passed, 240 deselected in 107.55s (0:01:47)
+gate: 0 findings: OK (0.2 s)
+git status lines after: 0
+```
+
+**CI (workflow `aqis-lab-ci`, both runs `completed success`).** On the GitHub runner, which is not root, `…fails_closed_on_changed_file_it_cannot_read` runs the gate directly and passes.
+- `f44adec`, the round 9 tests: push `36301695263`, pull request `36301697213`.
+- `ff657b1`, the F57 control run: push `36301873715`, pull request `36301875935`.
+- `f1a4b0a`, the round 9 records: push `36302105916`, pull request `36302109890`.
+
+The final commit, which sets STATUS to READY-FOR-AUDIT, changes only this file and `STATUS.md`. Its CI result is reported to the owner in the session.
+
+**Open.** None. F55 and F60 are accepted debt (DEBT-004, DEBT-005). Earlier debt is DEBT-001 to DEBT-003. All five rows target WP-0.9.

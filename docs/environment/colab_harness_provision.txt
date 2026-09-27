@@ -1,0 +1,21 @@
+--- COLAB HARNESS PROVISIONING REPORT ---
+Environment: Google Colab (CPU Runtime)
+Date: 2026-09-25
+Python: 3.13.15
+Branch: claude/hopeful-noether-yinc4e
+
+[Setup Steps]
+- install uv: PASS
+- lab environment (dev_bootstrap.sh): PASS
+- harness environment (harness_provision.sh): PASS
+
+[Provisioning Verification]
+- System packages (git-lfs, libc++1, libopus0): PASS
+- Pinned harness packages (.venv-harness): PASS
+- TEN VAD commit (22a3bcd4...): PASS
+- PyTorch: not installed, decision R2-3 (INFO)
+- Corpus v1 sha256 (ef4d5da1...): PASS
+- FireRedVAD weights sha256: PASS
+- Git status porcelain: clean (PASS)
+
+RESULT: PASS

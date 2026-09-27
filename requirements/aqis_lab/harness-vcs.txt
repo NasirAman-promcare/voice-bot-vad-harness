@@ -1,0 +1,6 @@
+# TEN VAD pinned to one git commit (owner decision BLK-004, option 1). The commit SHA is the integrity check:
+# pip cannot hash-check a git requirement, so this file is installed separately with
+#   pip install --no-deps --force-reinstall -r requirements/aqis_lab/harness-vcs.txt
+# and aqis_lab/deploy/harness_provision.sh then verifies the installed commit (direct_url.json) equals the pin.
+# 22a3bcd4509d0faaa8eef4881e8af5f39c178950 is the commit requirements/tier1.txt resolved to on 2026-09-25 (ten_vad 1.0.6.8).
+ten_vad @ git+https://github.com/TEN-framework/ten-vad.git@22a3bcd4509d0faaa8eef4881e8af5f39c178950
