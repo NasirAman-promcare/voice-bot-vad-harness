@@ -51,6 +51,13 @@ def test_FR_0_3_04_tie_break_follows_documented_rule():
     alignment = W.align(["a", "b"], ["c", "a"])
     assert counts(alignment) == (1, 0, 1, 1)
     assert [op.kind for op in alignment.ops] == ["insertion", "hit", "deletion"]
+    # A cell where both a deletion and an insertion qualify, so the order of the two checks matters.
+    # ref [a, a, b, c], hyp [b, c, b] (no common prefix or suffix):
+    #   D = [[0,1,2,3], [1,1,2,3], [2,2,2,3], [3,2,3,2], [4,3,2,3]]
+    # (4,3): D[3][3]+1 = 3 == 3 -> delete c; (at this cell D[4][2] = 2 = D[3][2]-1 too, so an insertion-first
+    # rule would insert b here instead). (3,3): no deletion (D[2][3]+1 = 4), no insertion (D[3][2] = 3 != D[2][2]-1)
+    # -> hit b/b. (2,2) and (1,1): diagonal -> substitutions a/c and a/b. Counts: 1 hit, 2 substitutions, 1 deletion.
+    assert counts(W.align(["a", "a", "b", "c"], ["b", "c", "b"])) == (1, 2, 1, 0)
     # The common prefix and suffix are hits before anything else is aligned.
     assert [op.kind for op in W.align(["x", "a", "y"], ["x", "b", "c", "y"]).ops][0] == "hit"
 

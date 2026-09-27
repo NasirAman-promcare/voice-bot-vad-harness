@@ -1,7 +1,7 @@
 """The `score` command: score hypotheses against references and write the score table.
 
 CAPABILITIES:
-  CAP-SCORE-005: `python -m aqis_lab score --ref REF.csv --hyp HYP.csv --out DIR` reads strict UTF-8 CSV inputs (references `clip_id,text`; hypotheses `run_card_id,clip_id,text`, one run card, the same clips), scores every clip under both normaliser variants, writes DIR/scores.parquet, DIR/scores.csv and DIR/summary.json without ever overwriting, and prints per variant the corpus WER and CER and the separately labelled mean per-utterance WER; exit 0 when written, 2 on any usage, input or output error [tests: test_FR_0_3_06_input_errors_exit_2, test_FR_0_3_06_non_utf8_input_exit_2, test_FR_0_3_06_accepts_bom_and_multiline_text, test_FR_0_3_06_refuses_to_overwrite_output, test_FR_0_3_06_summary_matches_rows, test_FR_0_3_06_score_listed_by_dispatcher, test_FR_0_3_06_cli_lists_written_files, test_FR_0_3_03_cli_prints_both_labelled_variants, test_FR_0_3_05_cli_prints_corpus_and_mean_labelled, test_FR_0_3_05_cli_prints_undefined_rates]
+  CAP-SCORE-005: `python -m aqis_lab score --ref REF.csv --hyp HYP.csv --out DIR` reads strict UTF-8 CSV inputs (references `clip_id,text`; hypotheses `run_card_id,clip_id,text`, one run card, the same clips), scores every clip under both normaliser variants, writes DIR/scores.parquet, DIR/scores.csv and DIR/summary.json without ever overwriting, and prints per variant the corpus WER and CER and the separately labelled mean per-utterance WER; exit 0 when written, 2 on any usage, input or output error [tests: test_FR_0_3_06_input_errors_exit_2, test_FR_0_3_06_non_utf8_input_exit_2, test_FR_0_3_06_accepts_bom_and_multiline_text, test_FR_0_3_06_refuses_to_overwrite_output, test_FR_0_3_06_summary_matches_rows, test_FR_0_3_06_score_listed_by_dispatcher, test_FR_0_3_06_cli_lists_written_files, test_FR_0_3_03_cli_prints_both_labelled_variants, test_FR_0_3_05_cli_prints_corpus_and_mean_labelled, test_FR_0_3_05_cli_prints_undefined_rates, test_NFR_0_3_01_repeat_runs_give_identical_files, test_NFR_0_3_01_no_network_during_scoring, test_NFR_0_3_01_scoring_code_imports_no_network_modules]
 INPUTS AND OUTPUTS: two CSV files and an output folder in; three files in that folder and a report on stdout
   out; `ERROR: ...` on stderr and exit 2 on failure.
 CONTRACTS: docs/contracts/SCORE_TABLE.md (input formats, score table, summary file, report);
@@ -11,6 +11,7 @@ INVARIANTS:
   - Nothing is written unless every input is valid; an existing output file is never replaced, and on an
     error no output file is left behind.
   - Output files are complete when they appear: each is written under a `.part` name first, then renamed.
+  - Deterministic and offline: the same inputs, in any row order, give byte-identical files; no network access.
 NOT IN SCOPE:
   - Normalising, aligning and the table layout (aqis_lab/scoring/); reading event logs or pack manifests.
 CHANGE LOG:
