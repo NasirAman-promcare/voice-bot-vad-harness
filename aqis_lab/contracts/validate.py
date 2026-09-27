@@ -4,6 +4,7 @@ CAPABILITIES:
   CAP-CONTRACTS-001: validate_event checks one event-log record against event_log.v1.json (dispatched by event type) plus the word-timing order rule; validate_event_lines checks a JSON Lines file record by record, including the per-run seq order [tests: test_FR_0_2_01_schema_is_valid_draft_2020_12, test_FR_0_2_01_valid_fixture_covers_every_event_type, test_FR_0_2_01_valid_fixture_passes, test_FR_0_2_01_rejects_missing_required_field, test_FR_0_2_01_rejects_missing_required_payload_field, test_FR_0_2_01_rejects_missing_required_word_field, test_FR_0_2_01_rejects_wrong_type_or_enum, test_FR_0_2_01_clip_id_null_only_for_run_level_events, test_FR_0_2_01_null_audio_time_needs_reason, test_FR_0_2_01_final_word_timings, test_FR_0_2_01_error_payload_fields, test_FR_0_2_01_rejects_unknown_field, test_FR_0_2_01_invalid_fixture_names_expected_pointers]
   CAP-CONTRACTS-002: validate_run_card checks a run card against run_card.v1.json (pack null only for human_session, a model version or checksum) and that run_card_id is the SHA-256 of the canonical card without run_card_id, created_utc and notes [tests: test_FR_0_2_02_schema_is_valid_draft_2020_12, test_FR_0_2_02_valid_fixture_passes, test_FR_0_2_02_rejects_missing_required_field, test_FR_0_2_02_rejects_wrong_type_or_enum, test_FR_0_2_02_model_needs_version_or_checksum, test_FR_0_2_02_pack_null_only_for_human_session, test_FR_0_2_02_processing_keeps_step_order_per_path, test_FR_0_2_02_rejects_run_card_id_mismatch, test_FR_0_2_02_rejects_unknown_field, test_FR_0_2_02_open_objects_accept_any_members]
   CAP-CONTRACTS-003: validate_manifest checks a pack manifest against pack_manifest.v1.json (consent_ref for owner and campaign clips, safe archive names and member paths) plus unique clip_id and archive names and every clip's archive listed in archives [tests: test_FR_0_2_03_schema_is_valid_draft_2020_12, test_FR_0_2_03_valid_fixture_passes, test_FR_0_2_03_rejects_missing_required_field, test_FR_0_2_03_rejects_wrong_type_or_enum, test_FR_0_2_03_version_must_be_semver, test_FR_0_2_03_owner_and_campaign_clips_need_consent_ref, test_FR_0_2_03_rejects_duplicate_clip_id, test_FR_0_2_03_rejects_duplicate_archive_name, test_FR_0_2_03_clip_archive_must_be_listed, test_FR_0_2_03_rejects_unsafe_archive_name, test_FR_0_2_03_rejects_unsafe_member_path, test_FR_0_2_03_rejects_unknown_field, test_FR_0_2_03_recipe_accepts_any_members, test_FR_0_2_03_invalid_fixture_names_expected_pointers]
+  CAP-CONTRACTS-007: the validator API: one ContractValidationError naming every failing field by RFC 6901 pointer (missing fields at their own pointer, 'Rule:' text for cross-field rules), strict JSON (UTF-8, no NaN or Infinity, no duplicate keys, integers without a fraction), per-run seq order in JSON Lines, and a worker-process pool for large event files giving the same reports as one process [tests: test_FR_0_2_04_error_names_every_failing_pointer, test_FR_0_2_04_pointer_escapes_tilde_and_slash, test_FR_0_2_04_missing_field_pointer_names_the_field, test_FR_0_2_04_rejects_nan_infinity_and_overflow, test_FR_0_2_04_rejects_duplicate_keys, test_FR_0_2_04_rejects_integer_written_as_float, test_FR_0_2_04_patterns_reject_trailing_newline_and_non_ascii_digits, test_FR_0_2_04_non_json_python_values_rejected, test_FR_0_2_04_non_object_record_rejected, test_FR_0_2_04_rule_errors_explain_the_rule, test_FR_0_2_04_dispatch_matches_full_schema_on_all_fixtures, test_FR_0_2_04_seq_counts_from_zero_per_run, test_FR_0_2_04_worker_pool_report_identical_to_single_process]
 INPUTS AND OUTPUTS: parsed JSON values (or raw JSON text for the parsers) in; None when valid, otherwise
   ContractValidationError listing (JSON Pointer, message) for every failing field.
 CONTRACTS: event-log v1 (docs/contracts/EVENT_LOG.md), run-card v1 (docs/contracts/RUN_CARD.md),
@@ -21,12 +22,16 @@ CHANGE LOG:
   2026-09-27 WP-0.2 FR-0.2-01 created.
   2026-09-27 WP-0.2 FR-0.2-02 run cards: validate_run_card and the run_card_id check.
   2026-09-27 WP-0.2 FR-0.2-03 pack manifests: validate_manifest and the checks across clips.
+  2026-09-27 WP-0.2 FR-0.2-04 validate_document, the worker pool (question 2), 'Rule:' messages.
 """
 import datetime
 import functools
 import json
 import math
+import multiprocessing
 import re
+from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -40,6 +45,10 @@ SCHEMA_DIR = Path(__file__).resolve().parent / "schemas"
 KINDS = {"event": ("event log", "event_log"), "run_card": ("run card", "run_card"),
          "manifest": ("pack manifest", "pack_manifest")}
 ROOT_POINTER_LABEL = "(document)"
+# Event files with at least this many records are split over worker processes when more than one is allowed
+# (NFR-0.2-01, plan question 2); each chunk is validated in one worker, and results keep the file order.
+POOL_MIN_RECORDS = 5000
+POOL_CHUNK_RECORDS = 2000
 UTC_RE = re.compile(r"([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.[0-9]{1,9})?Z")
 
 
@@ -52,6 +61,10 @@ class FieldError:
 
 class ContractSchemaError(RuntimeError):
     """A packaged schema file is not in the form this validator relies on."""
+
+
+class WorkerPoolError(RuntimeError):
+    """Worker processes for bulk validation could not be started or died."""
 
 
 class ContractValidationError(ValueError):
@@ -179,7 +192,8 @@ def _field_errors(error):
     if error.validator == "required":
         instance = error.instance
         missing = [p for p in error.validator_value if isinstance(instance, dict) and p not in instance]
-        return [FieldError(json_pointer(path + [p]), "required field is missing") for p in missing]
+        return [FieldError(json_pointer(path + [p]), _with_rule("required field is missing", error.schema))
+                for p in missing]
     if error.validator == "additionalProperties" and error.validator_value is False:
         allowed = set(error.schema.get("properties", {}))
         return [FieldError(json_pointer(path + [key]), "field is not part of the contract")
@@ -189,7 +203,7 @@ def _field_errors(error):
         leaves = [leaf for sub in error.context if len(sub.absolute_path) == depth for leaf in _field_errors(sub)]
         return [FieldError(leaf.pointer, f"no allowed alternative matched: {leaf.message}") for leaf in leaves]
     if error.validator == "not" and error.validator_value == {}:
-        return [FieldError(json_pointer(path), "field is not allowed here")]
+        return [FieldError(json_pointer(path), _with_rule("field is not allowed here", error.schema))]
     if error.validator == "not" and error.validator_value == {"type": "null"}:
         return [FieldError(json_pointer(path), _with_rule("must not be null here", error.schema))]
     return [FieldError(json_pointer(path), _with_rule(error.message, error.schema))]
@@ -325,7 +339,9 @@ def _json_type_name(value):
 
 def _validate(kind, record, validator, rules):
     if not isinstance(record, dict):
-        raise ContractValidationError(kind, [FieldError("", f"a {KINDS[kind][0]} record must be a JSON object, "
+        label = KINDS[kind][0]
+        article = "an" if label[0] in "aeiou" else "a"
+        raise ContractValidationError(kind, [FieldError("", f"{article} {label} record must be a JSON object, "
                                                             f"got {_json_type_name(record)}")])
     errors = _schema_errors(validator, record)
     _json_value_errors(record, (), errors)
@@ -431,9 +447,46 @@ def _sequence_errors(results):
     return out
 
 
-def validate_event_lines(data):
-    """Validate a JSON Lines event log given as bytes; one RecordReport per line, in order."""
-    results = [_check_event_line(raw) for raw in split_json_lines(data)]
+def uses_worker_pool(n_records, workers):
+    """True when validate_event_lines splits n_records over worker processes."""
+    return workers > 1 and n_records >= POOL_MIN_RECORDS
+
+
+def _check_event_chunk(raws):
+    return [_check_event_line(raw) for raw in raws]
+
+
+def validate_event_lines(data, workers=1):
+    """Validate a JSON Lines event log given as bytes; one RecordReport per line, in file order.
+
+    workers > 1 splits files of at least POOL_MIN_RECORDS records over that many worker processes; the reports
+    are identical to one process. The per-run seq order is checked afterwards, in file order.
+    """
+    if not isinstance(workers, int) or isinstance(workers, bool) or workers < 1:
+        raise ValueError(f"workers must be a whole number of at least 1, got {workers!r}")
+    lines = split_json_lines(data)
+    if uses_worker_pool(len(lines), workers):
+        chunks = [lines[i:i + POOL_CHUNK_RECORDS] for i in range(0, len(lines), POOL_CHUNK_RECORDS)]
+        try:
+            with ProcessPoolExecutor(max_workers=min(workers, len(chunks)),
+                                     mp_context=multiprocessing.get_context("spawn")) as pool:
+                results = [result for chunk in pool.map(_check_event_chunk, chunks) for result in chunk]
+        except (OSError, BrokenProcessPool) as exc:
+            raise WorkerPoolError(f"cannot run {workers} worker processes: {exc}") from exc
+    else:
+        results = _check_event_chunk(lines)
     sequence = _sequence_errors(results)
     return [RecordReport(number, tuple(sorted(set(errors) | set(extra))))
             for number, ((errors, _, _), extra) in enumerate(zip(results, sequence), start=1)]
+
+
+VALIDATORS = {"event": validate_event, "run_card": validate_run_card, "manifest": validate_manifest}
+
+
+def validate_document(kind, data):
+    """Parse and validate one JSON document (bytes) of kind; RecordReport number 1."""
+    try:
+        VALIDATORS[kind](parse_json(data, kind))
+    except ContractValidationError as exc:
+        return RecordReport(1, exc.errors)
+    return RecordReport(1, ())

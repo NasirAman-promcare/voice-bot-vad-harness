@@ -75,3 +75,35 @@ pack manifest record is invalid (4 problems):
 ```
 - Fast suite: `858 passed, 8 deselected in 47.79s`.
 - Status: DONE
+
+### FR-0.2-04 — Validators and the `contracts validate` command
+- Tests, API (`tests/aqis_lab/test_aqis_contracts_validate.py`): `test_FR_0_2_04_error_names_every_failing_pointer`, `test_FR_0_2_04_pointer_escapes_tilde_and_slash`, `test_FR_0_2_04_missing_field_pointer_names_the_field`, `test_FR_0_2_04_rejects_nan_infinity_and_overflow`, `test_FR_0_2_04_rejects_duplicate_keys`, `test_FR_0_2_04_rejects_integer_written_as_float`, `test_FR_0_2_04_patterns_reject_trailing_newline_and_non_ascii_digits`, `test_FR_0_2_04_non_json_python_values_rejected`, `test_FR_0_2_04_non_object_record_rejected`, `test_FR_0_2_04_rule_errors_explain_the_rule`, `test_FR_0_2_04_dispatch_matches_full_schema_on_all_fixtures` (per-type validators give the same errors as the full schema on more than 200 records: every fixture record, every event type with each field removed, and wrong values), `test_FR_0_2_04_seq_counts_from_zero_per_run` (question 5), `test_FR_0_2_04_worker_pool_report_identical_to_single_process` (question 2).
+- Tests, command (`tests/aqis_lab/test_aqis_contracts_cli.py`): `test_FR_0_2_04_cli_valid_events_exit_0`, `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` (every line's pointers equal the hand-written `invalid_events.expected.json`), `test_FR_0_2_04_cli_one_invalid_line_anywhere_fails` (first, middle, last), `test_FR_0_2_04_cli_unparsable_and_blank_lines_are_invalid_records` (non-UTF-8, blank, BOM, array, duplicate key, NaN, truncated; CRLF accepted), `test_FR_0_2_04_cli_empty_file_fails`, `test_FR_0_2_04_cli_run_card_and_manifest_kinds`, `test_FR_0_2_04_cli_missing_file_exit_2`, `test_FR_0_2_04_cli_listed_by_dispatcher`, `test_FR_0_2_04_cli_uses_worker_pool_only_for_large_files`.
+- Tests first: 12 of the 29 failed before the command and the pool existed. The dispatcher answered `python -m aqis_lab: error: argument command: invalid choice: 'contracts' (choose from version)` with exit 2, and the pool tests failed with `ImportError: cannot import name 'POOL_MIN_RECORDS'`. The other 17 API tests passed at once: FR-0.2-01 to FR-0.2-03 had already built those validator properties (pointers, strict parsing, the `seq` check), and these tests pin them down as FR-0.2-04 behaviour.
+- After implementation, 1 failure came from my own test: a spot-check expected `line 5: INVALID /seq`, but `/seq` is the fourth field removed, so it is line 4 (the full comparison against `invalid_events.expected.json` in the same test passed). I corrected the literal to line 4. I also gave the event-log `clip_id` and `audio_time_reason` rules `Rule:` text and extended `test_FR_0_2_04_rule_errors_explain_the_rule` to cover them.
+- Change budget: `git diff -U0 aqis_lab/__main__.py` shows exactly two added lines, the `COMMANDS` entry and a CHANGE LOG line; `build_parser` and `main` are unchanged. `-k FR_0_0_01` still passes (part of the fast suite below).
+- Commands: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_contracts_validate.py tests/aqis_lab/test_aqis_contracts_cli.py -q -p no:cacheprovider`, then the command on both event fixtures.
+- Output (real excerpt):
+```text
+29 passed in 10.89s
+$ .venv/bin/python -m aqis_lab contracts validate tests/aqis_lab/fixtures/contracts/valid_events.jsonl --kind event
+line 22: OK
+line 23: OK
+event: 23 records, 23 valid, 0 invalid
+exit=0
+$ .venv/bin/python -m aqis_lab contracts validate tests/aqis_lab/fixtures/contracts/invalid_events.jsonl --kind event
+line 1: INVALID /schema_version: required field is missing
+line 2: INVALID /run_id: required field is missing
+line 3: INVALID /run_card_id: required field is missing
+line 4: INVALID /seq: required field is missing
+...
+line 94: INVALID /seq: seq 2 is out of order for run_id 'run-seq-a': expected 3 (seq counts 0, 1, 2, ... per run, in file order)
+line 95: OK
+line 96: INVALID /seq: seq 1 is out of order for run_id 'run-seq-b': expected 0 (seq counts 0, 1, 2, ... per run, in file order)
+event: 96 records, 2 valid, 94 invalid
+exit=1
+```
+- Registry: CAP-CONTRACTS-006 (the command) and CAP-CONTRACTS-007 (the validator API). CAP-CONTRACTS-007 is a row the plan's list did not name: FR-0.2-04's API guarantees live in `validate.py` and belong to none of the three per-contract rows. The first gate run found my CAP-CONTRACTS-006 row malformed (`[E2] ... 9 cells, expected 7`: `\|` inside a cell splits the row), so I reworded that cell.
+- Untested branch (stated here, not hidden): the `WorkerPoolError` path, taken when worker processes cannot start or die, which gives exit 2 with "rerun with --workers 1". Making process creation fail needs a resource limit that root ignores, or a test double for the OS, which the rules allow only for external services.
+- Fast suite: `887 passed, 8 deselected in 56.43s`. Gate (`--base origin/main`): `0 findings: OK (0.1 s)`.
+- Status: DONE
