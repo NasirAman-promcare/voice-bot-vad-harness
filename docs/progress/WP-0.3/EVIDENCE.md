@@ -307,3 +307,7 @@ The one harness failure is the recorded baseline failure (`docs/baselines/harnes
 
 ## Status
 Every requirement (FR-0.3-01 to FR-0.3-07, NFR-0.3-01) is DONE, and AT-0.3-01 to AT-0.3-03 pass. There are no owner-run checks and no open blockers. WP-0.3 is READY-FOR-AUDIT.
+
+## Round 2 (audit findings; approval `20ba9ba`)
+- **WP-0.3-F01 (MAJOR), fixed with tests only.** Two new tests cover the ways a clip can be on one side only: `test_FR_0_3_06_one_sided_clip_is_an_input_error` (3 cases) and `test_FR_0_3_06_more_input_and_output_errors_exit_2` (5 cases, sibling checks in the same functions that had no test). The details, the reproduction and the mutation proof are in `docs/progress/WP-0.3/FIXES.md`, "Round 2". Summary: the auditor's breaks X2 and X2m each now fail a named new test, and so do 5 sibling breaks (S1 to S5). Fast suite `1182 passed, 11 deselected`; gate `0 findings: OK`.
+- **WP-0.3-F02 and WP-0.3-F03 (MINOR)** are accepted debt: `docs/progress/DEBT.md` rows DEBT-008 (target WP-0.6) and DEBT-009 (target WP-0.5).

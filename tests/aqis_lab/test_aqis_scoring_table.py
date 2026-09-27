@@ -264,3 +264,78 @@ def test_FR_0_3_06_score_listed_by_dispatcher():
     assert proc.returncode == 0 and re.search(r"^\s+score\s+\S", proc.stdout, re.M), proc.stdout
     usage = run_score("--help")
     assert usage.returncode == 0 and "--ref" in usage.stdout and "--hyp" in usage.stdout and "--out" in usage.stdout
+
+
+# WP-0.3-F01: each direction of a clip-set mismatch on its own. A clip with no hypothesis must never be scored
+# as an empty text, and a hypothesis for a clip that is not in the reference file must never be dropped.
+ONE_SIDED = {
+    "clip-only-in-ref": ([["c-1", "a b c"], ["c-2", "d e f"]], [[RUN, "c-1", "a b c"]], "ref", "c-2"),
+    "clip-only-in-hyp": ([["c-1", "a b c"]], [[RUN, "c-1", "a b c"], [RUN, "c-3", "x"]], "hyp", "c-3"),
+    "ref-empty-hyp-has-clip": ([], [[RUN, "c-1", "a b c"]], "hyp", "c-1"),
+}
+
+
+@pytest.mark.parametrize("case", sorted(ONE_SIDED))
+def test_FR_0_3_06_one_sided_clip_is_an_input_error(tmp_path, case):
+    ref_rows, hyp_rows, side, clip = ONE_SIDED[case]
+    ref = write_csv(tmp_path / "ref.csv", ["clip_id", "text"], ref_rows)
+    hyp = write_csv(tmp_path / "hyp.csv", ["run_card_id", "clip_id", "text"], hyp_rows)
+    out = tmp_path / "out"
+    proc = run_score("--ref", ref, "--hyp", hyp, "--out", out)
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert proc.stderr.startswith("ERROR:") and proc.stdout == ""
+    # The one-sided clip is named after the file it appears in, and the other file lists none.
+    only_in = {"ref": ref, "hyp": hyp}
+    assert f"only in {only_in[side]}: {clip}" in proc.stderr, proc.stderr
+    assert f"only in {only_in['hyp' if side == 'ref' else 'ref']}: none" in proc.stderr, proc.stderr
+    assert not out.exists()
+
+
+# Same gap in the same functions (surgical-fix step 6): input and output errors that had no test of their own.
+def _hyp_bad_clip(tmp_path):
+    ref = write_csv(tmp_path / "ref.csv", ["clip_id", "text"], [["c-1", "a"]])
+    hyp = write_csv(tmp_path / "hyp.csv", ["run_card_id", "clip_id", "text"], [[RUN, "C_1", "a"]])
+    return ref, hyp, hyp, "line 2: invalid clip_id 'C_1'"
+
+
+def _hyp_missing(tmp_path):
+    ref = write_csv(tmp_path / "ref.csv", ["clip_id", "text"], [["c-1", "a"]])
+    return ref, tmp_path / "missing.csv", tmp_path / "missing.csv", "cannot read"
+
+
+def _ref_unterminated_quote(tmp_path):
+    ref = tmp_path / "ref.csv"
+    ref.write_text('clip_id,text\nc-1,"unterminated\n', encoding="utf-8")
+    hyp = write_csv(tmp_path / "hyp.csv", ["run_card_id", "clip_id", "text"], [[RUN, "c-1", "a"]])
+    return ref, hyp, ref, "line 2: unexpected end of data"
+
+
+def _ref_empty_file(tmp_path):
+    ref = tmp_path / "ref.csv"
+    ref.write_bytes(b"")
+    hyp = write_csv(tmp_path / "hyp.csv", ["run_card_id", "clip_id", "text"], [[RUN, "c-1", "a"]])
+    return ref, hyp, ref, "line 1: the header must be exactly clip_id,text, got 'nothing'"
+
+
+MORE_INPUT_ERRORS = {"hyp-bad-clip-id": _hyp_bad_clip, "hyp-missing-file": _hyp_missing,
+                     "ref-unterminated-quote": _ref_unterminated_quote, "ref-empty-file": _ref_empty_file}
+
+
+@pytest.mark.parametrize("case", sorted(MORE_INPUT_ERRORS) + ["out-is-a-file"])
+def test_FR_0_3_06_more_input_and_output_errors_exit_2(tmp_path, case):
+    if case == "out-is-a-file":
+        ref, hyp = REF_FIXTURE, HYP_FIXTURE
+        out = tmp_path / "afile"
+        out.write_text("keep me\n", encoding="utf-8")
+        named, message = out, "exists and is not a folder"
+    else:
+        ref, hyp, named, message = MORE_INPUT_ERRORS[case](tmp_path)
+        out = tmp_path / "out"
+    proc = run_score("--ref", ref, "--hyp", hyp, "--out", out)
+    assert proc.returncode == 2, (proc.stdout, proc.stderr)
+    assert proc.stderr.startswith("ERROR:") and proc.stdout == ""
+    assert str(named) in proc.stderr and message in proc.stderr, proc.stderr
+    if case == "out-is-a-file":
+        assert out.read_text(encoding="utf-8") == "keep me\n"
+    else:
+        assert not out.exists()
