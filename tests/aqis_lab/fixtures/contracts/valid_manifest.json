@@ -1,0 +1,132 @@
+{
+  "schema_version": "1.0",
+  "manifest_id": "smoke",
+  "version": "1.0.0",
+  "purpose": "Example pack manifest for the WP-0.2 contract tests. Hashes, sizes and durations are illustrative, not a built pack.",
+  "created_utc": "2026-09-27T09:30:00Z",
+  "clips": [
+    {
+      "clip_id": "ls-test-clean-0001",
+      "source": "librispeech",
+      "source_ref": "test-clean/1089/134686/1089-134686-0000.flac",
+      "licence": "CC-BY-4.0",
+      "speaker_id": "1089",
+      "consent_ref": null,
+      "split": "test-clean",
+      "duration_s": 10.435,
+      "sample_rate_hz": 16000,
+      "channels": 1,
+      "sha256": "aac1ba481da468f5c28db1221417ed0135b13013bc390eef5e8101c7df275283",
+      "archive": "smoke-v1-000.tar",
+      "member_path": "speech/ls-test-clean-0001.wav",
+      "transcript": "example reference transcript",
+      "recipe": null,
+      "tags": [
+        "speech",
+        "clean"
+      ]
+    },
+    {
+      "clip_id": "musan-noise-0001",
+      "source": "musan",
+      "source_ref": "noise/free-sound/noise-free-sound-0001.wav",
+      "licence": "CC-BY-4.0",
+      "speaker_id": null,
+      "consent_ref": null,
+      "split": "non-speech",
+      "duration_s": 6.0,
+      "sample_rate_hz": 16000,
+      "channels": 1,
+      "sha256": "356a23add9bd8b259b13a32d3ff19920e4cb5f1ab906f24c8fa9e6837aaeccc3",
+      "archive": "smoke-v1-000.tar",
+      "member_path": "non-speech/musan-noise-0001.wav",
+      "transcript": null,
+      "recipe": null,
+      "tags": [
+        "non-speech",
+        "noise"
+      ]
+    },
+    {
+      "clip_id": "mix-0001-snr10",
+      "source": "mix",
+      "source_ref": "aqis_lab pack builder",
+      "licence": "CC-BY-4.0",
+      "speaker_id": "1089",
+      "consent_ref": null,
+      "split": "noisy",
+      "duration_s": 10.435,
+      "sample_rate_hz": 16000,
+      "channels": 1,
+      "sha256": "7d6e10c2b52264cb9cb9f662160e6bed1f3d4438f61f765fed35c1f41323d6ba",
+      "archive": "smoke-v1-001.tar",
+      "member_path": "noisy/mix-0001-snr10.wav",
+      "transcript": "example reference transcript",
+      "recipe": {
+        "source_clip_ids": [
+          "ls-test-clean-0001",
+          "musan-noise-0001"
+        ],
+        "snr_db": 10,
+        "seed": 7
+      },
+      "tags": [
+        "speech",
+        "noisy"
+      ]
+    },
+    {
+      "clip_id": "owner-smoke-0003",
+      "source": "owner",
+      "source_ref": "data/owner_smoke/0003.wav",
+      "licence": "owner-consent",
+      "speaker_id": "owner",
+      "consent_ref": "data/owner_smoke/CONSENT.md",
+      "split": "owner",
+      "duration_s": 4.25,
+      "sample_rate_hz": 16000,
+      "channels": 1,
+      "sha256": "be6b7dd5b450f1ac463148fd1d4ff5b191d7d4f6c93ee6f6706f88220a871ff9",
+      "archive": "smoke-v1-001.tar",
+      "member_path": "owner/owner-smoke-0003.wav",
+      "transcript": "example owner transcript",
+      "recipe": null,
+      "tags": [
+        "speech",
+        "owner"
+      ]
+    },
+    {
+      "clip_id": "campaign-0001",
+      "source": "campaign",
+      "source_ref": "campaign/2026-10/session-01.wav",
+      "licence": "campaign-consent",
+      "speaker_id": "speaker-01",
+      "consent_ref": "consent/campaign-2026-10-speaker-01",
+      "split": "campaign",
+      "duration_s": 3.5,
+      "sample_rate_hz": 48000,
+      "channels": 2,
+      "sha256": "f05c36778d4499f22fab74d8979b42d13b967e764038aabd496621e4b5d701e2",
+      "archive": "smoke-v1-001.tar",
+      "member_path": "campaign/campaign-0001.wav",
+      "transcript": null,
+      "recipe": null,
+      "tags": []
+    }
+  ],
+  "archives": [
+    {
+      "name": "smoke-v1-000.tar",
+      "sha256": "fd58072ce7b6d8b229ec4e9b4e03e1b29b8b2504eb50aeec1699dcf7c70013a5",
+      "bytes": 526336,
+      "n_members": 2
+    },
+    {
+      "name": "smoke-v1-001.tar",
+      "sha256": "b9f9b2bfce6ce7e856455c3c754ff14f96ac0e25665991179c6aac0e2ab24ae4",
+      "bytes": 1024000,
+      "n_members": 3
+    }
+  ]
+}

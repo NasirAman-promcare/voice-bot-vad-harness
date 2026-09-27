@@ -1,0 +1,17 @@
+{
+ "invalid_run_card_fields.json": [
+  "/mode",
+  "/model/family",
+  "/run_card_id",
+  "/seed"
+ ],
+ "invalid_run_card_id.json": [
+  "/run_card_id"
+ ],
+ "invalid_manifest_fields.json": [
+  "/archives/0/n_members",
+  "/clips/1/clip_id",
+  "/clips/2/archive",
+  "/clips/3/consent_ref"
+ ]
+}

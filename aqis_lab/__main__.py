@@ -10,6 +10,7 @@ NOT IN SCOPE:
   - Argument parsing for individual commands (each command parses its own arguments).
 CHANGE LOG:
   2026-09-25 WP-0.0 FR-0.0-01 created.
+  2026-09-27 WP-0.2 FR-0.2-04: `contracts` command registered in COMMANDS.
 """
 import argparse
 import importlib
@@ -18,6 +19,7 @@ import sys
 # name -> (module exposing main(argv), one-line help)
 COMMANDS = {
     "version": ("aqis_lab.commands.version", "print the package version, git commit and Python version"),
+    "contracts": ("aqis_lab.commands.contracts", "validate event logs, run cards and pack manifests (docs/contracts/)"),
 }
 
 
