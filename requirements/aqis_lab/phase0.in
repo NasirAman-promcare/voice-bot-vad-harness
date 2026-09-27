@@ -14,3 +14,10 @@ pytest
 jsonschema
 # Parsing the CI workflow in tests (FR-0.0-10; owner-approved default 5e).
 pyyaml
+# Text normaliser and scorer (WP-0.3, owner approval docs/approvals/WP-0.3.md, questions 2 and 5).
+# Exact pin: whisper-normalizer 0.1.1 is Whisper's English normaliser unchanged; 0.1.2 and later add rules.
+whisper-normalizer==0.1.1
+# Parquet score tables (FR-0.3-06).
+pyarrow
+# Independent cross-check of the alignment counts, used by tests only (FR-0.3-07).
+jiwer==4.0.0
