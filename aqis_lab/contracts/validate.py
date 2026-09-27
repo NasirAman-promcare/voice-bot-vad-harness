@@ -2,9 +2,10 @@
 
 CAPABILITIES:
   CAP-CONTRACTS-001: validate_event checks one event-log record against event_log.v1.json (dispatched by event type) plus the word-timing order rule; validate_event_lines checks a JSON Lines file record by record, including the per-run seq order [tests: test_FR_0_2_01_schema_is_valid_draft_2020_12, test_FR_0_2_01_valid_fixture_covers_every_event_type, test_FR_0_2_01_valid_fixture_passes, test_FR_0_2_01_rejects_missing_required_field, test_FR_0_2_01_rejects_missing_required_payload_field, test_FR_0_2_01_rejects_missing_required_word_field, test_FR_0_2_01_rejects_wrong_type_or_enum, test_FR_0_2_01_clip_id_null_only_for_run_level_events, test_FR_0_2_01_null_audio_time_needs_reason, test_FR_0_2_01_final_word_timings, test_FR_0_2_01_error_payload_fields, test_FR_0_2_01_rejects_unknown_field, test_FR_0_2_01_invalid_fixture_names_expected_pointers]
+  CAP-CONTRACTS-002: validate_run_card checks a run card against run_card.v1.json (pack null only for human_session, a model version or checksum) and that run_card_id is the SHA-256 of the canonical card without run_card_id, created_utc and notes [tests: test_FR_0_2_02_schema_is_valid_draft_2020_12, test_FR_0_2_02_valid_fixture_passes, test_FR_0_2_02_rejects_missing_required_field, test_FR_0_2_02_rejects_wrong_type_or_enum, test_FR_0_2_02_model_needs_version_or_checksum, test_FR_0_2_02_pack_null_only_for_human_session, test_FR_0_2_02_processing_keeps_step_order_per_path, test_FR_0_2_02_rejects_run_card_id_mismatch, test_FR_0_2_02_rejects_unknown_field, test_FR_0_2_02_open_objects_accept_any_members]
 INPUTS AND OUTPUTS: parsed JSON values (or raw JSON text for the parsers) in; None when valid, otherwise
   ContractValidationError listing (JSON Pointer, message) for every failing field.
-CONTRACTS: event-log v1 (docs/contracts/EVENT_LOG.md).
+CONTRACTS: event-log v1 (docs/contracts/EVENT_LOG.md), run-card v1 (docs/contracts/RUN_CARD.md).
 INVARIANTS:
   - The schema files are the single source of the structural rules; the per-event-type validators are derived
     from event_log.v1.json at load time by dropping the other types' if/then blocks, which cannot apply.
@@ -16,6 +17,7 @@ NOT IN SCOPE:
   - Writing records; the command line (aqis_lab/commands/contracts.py).
 CHANGE LOG:
   2026-09-27 WP-0.2 FR-0.2-01 created.
+  2026-09-27 WP-0.2 FR-0.2-02 run cards: validate_run_card and the run_card_id check.
 """
 import datetime
 import functools
@@ -27,9 +29,12 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker, validators
 
+from aqis_lab.contracts.canonical import CanonicalJSONError, compute_run_card_id
+
+SHA256_RE = re.compile(r"[0-9a-f]{64}")
 SCHEMA_DIR = Path(__file__).resolve().parent / "schemas"
 # kind -> (label used in messages, schema file stem)
-KINDS = {"event": ("event log", "event_log")}
+KINDS = {"event": ("event log", "event_log"), "run_card": ("run card", "run_card")}
 ROOT_POINTER_LABEL = "(document)"
 UTC_RE = re.compile(r"([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.[0-9]{1,9})?Z")
 
@@ -181,6 +186,8 @@ def _field_errors(error):
         return [FieldError(leaf.pointer, f"no allowed alternative matched: {leaf.message}") for leaf in leaves]
     if error.validator == "not" and error.validator_value == {}:
         return [FieldError(json_pointer(path), "field is not allowed here")]
+    if error.validator == "not" and error.validator_value == {"type": "null"}:
+        return [FieldError(json_pointer(path), "must not be null here (see the contract's rules across fields)")]
     return [FieldError(json_pointer(path), error.message)]
 
 
@@ -245,6 +252,25 @@ def _event_rules(record):
     return errors
 
 
+def _run_card_rules(card):
+    claimed = card.get("run_card_id")
+    if not isinstance(claimed, str) or SHA256_RE.fullmatch(claimed) is None:
+        return []  # the schema reports a missing or malformed run_card_id
+    try:
+        defined = compute_run_card_id(card)
+    except CanonicalJSONError:
+        return []  # _json_value_errors reports the value canonical JSON cannot hold
+    if claimed == defined:
+        return []
+    return [FieldError("/run_card_id", f"does not match the SHA-256 of the canonical run card without run_card_id, "
+                                       f"created_utc and notes ({defined})")]
+
+
+@functools.cache
+def _validator_for(kind):
+    return _make_validator(load_schema(kind))
+
+
 # ---------------------------------------------------------------------------------------------
 # public validators
 # ---------------------------------------------------------------------------------------------
@@ -270,6 +296,11 @@ def validate_event(record):
     event_type = record.get("event_type") if isinstance(record, dict) else None
     validator = per_type.get(event_type, full) if isinstance(event_type, str) else full
     _validate("event", record, validator, _event_rules)
+
+
+def validate_run_card(card):
+    """Validate one run card, including its run_card_id; return None or raise ContractValidationError."""
+    _validate("run_card", card, _validator_for("run_card"), _run_card_rules)
 
 
 # ---------------------------------------------------------------------------------------------

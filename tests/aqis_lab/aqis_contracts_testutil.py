@@ -101,3 +101,17 @@ def get_path(record, parts):
     for p in parts[:-1]:
         record = record[p]
     return record, parts[-1]
+
+
+def spec_run_card_id(card):
+    """run_card_id from the FR-0.2-05 definition, computed with the standard library only."""
+    import hashlib
+    body = {k: v for k, v in card.items() if k not in ("run_card_id", "created_utc", "notes")}
+    text = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def rehash(card):
+    """Give a mutated run card the ID its content defines, so only the intended field fails."""
+    card["run_card_id"] = spec_run_card_id(card)
+    return card

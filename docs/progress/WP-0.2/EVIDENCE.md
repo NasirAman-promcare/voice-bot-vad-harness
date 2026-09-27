@@ -40,3 +40,19 @@ Built before FR-0.2-02, because the run card's ID check (FR-0.2-02) uses it.
 ```
 - Fast suite: `513 passed, 8 deselected in 46.53s`. Gate (`--base origin/main`, no `--wp`): `0 findings: OK (0.1 s)`.
 - Status: DONE
+
+### FR-0.2-02 — Run card v1
+- Tests (`tests/aqis_lab/test_aqis_contracts_run_card.py`, 180 cases): `test_FR_0_2_02_schema_is_valid_draft_2020_12`, `test_FR_0_2_02_valid_fixture_passes` (every mode and platform, human session without pack, no normaliser, checksum-only model, GPU run, SHA-256 git commit), `test_FR_0_2_02_rejects_missing_required_field` (all 13 top-level fields, every nested member, step fields), `test_FR_0_2_02_rejects_wrong_type_or_enum` (every field), `test_FR_0_2_02_model_needs_version_or_checksum`, `test_FR_0_2_02_pack_null_only_for_human_session`, `test_FR_0_2_02_processing_keeps_step_order_per_path`, `test_FR_0_2_02_rejects_run_card_id_mismatch` (including fixtures `invalid_run_card_id.json` and `invalid_run_card_fields.json`, expected pointers written by hand in `invalid_expected.json`), `test_FR_0_2_02_rejects_unknown_field`, `test_FR_0_2_02_open_objects_accept_any_members`. Mutated cards get the ID their content defines from `rehash`, which uses the standard library directly, so each case shows only its intended field.
+- Tests first: `E   ImportError: cannot import name 'validate_run_card' from 'aqis_lab.contracts.validate'`. The first implementation then failed 2 cases (`rejects_missing_required_field[model/version]`, `rejects_wrong_type_or_enum[('model', 'version')-1]`): the `anyOf` form of "version or checksum" also reported `/model/checksum`. The rule is now "when both are null, both are reported", written as an `if`/`then` in the schema; the tests are unchanged.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_contracts_run_card.py -q -p no:cacheprovider`, then `validate_run_card` on `invalid_run_card_fields.json`.
+- Output (real excerpt):
+```text
+180 passed in 0.46s
+run card record is invalid (4 problems):
+  /mode: 'fast' is not one of ['batch', 'realspeed_cpu', 'gpu_compute_delay', 'tier2_live', 'nearlive_replay', 'human_session']
+  /model/family: required field is missing
+  /run_card_id: does not match the SHA-256 of the canonical run card without run_card_id, created_utc and notes (751b4eccf873cf9fd8a2f41969d4e5b4213b81800d7ac3e2bcfe1c63232673ca)
+  /seed: required field is missing
+```
+- Fast suite: `693 passed, 8 deselected in 48.11s`.
+- Status: DONE
