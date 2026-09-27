@@ -3,9 +3,11 @@
 CAPABILITIES:
   CAP-CONTRACTS-001: validate_event checks one event-log record against event_log.v1.json (dispatched by event type) plus the word-timing order rule; validate_event_lines checks a JSON Lines file record by record, including the per-run seq order [tests: test_FR_0_2_01_schema_is_valid_draft_2020_12, test_FR_0_2_01_valid_fixture_covers_every_event_type, test_FR_0_2_01_valid_fixture_passes, test_FR_0_2_01_rejects_missing_required_field, test_FR_0_2_01_rejects_missing_required_payload_field, test_FR_0_2_01_rejects_missing_required_word_field, test_FR_0_2_01_rejects_wrong_type_or_enum, test_FR_0_2_01_clip_id_null_only_for_run_level_events, test_FR_0_2_01_null_audio_time_needs_reason, test_FR_0_2_01_final_word_timings, test_FR_0_2_01_error_payload_fields, test_FR_0_2_01_rejects_unknown_field, test_FR_0_2_01_invalid_fixture_names_expected_pointers]
   CAP-CONTRACTS-002: validate_run_card checks a run card against run_card.v1.json (pack null only for human_session, a model version or checksum) and that run_card_id is the SHA-256 of the canonical card without run_card_id, created_utc and notes [tests: test_FR_0_2_02_schema_is_valid_draft_2020_12, test_FR_0_2_02_valid_fixture_passes, test_FR_0_2_02_rejects_missing_required_field, test_FR_0_2_02_rejects_wrong_type_or_enum, test_FR_0_2_02_model_needs_version_or_checksum, test_FR_0_2_02_pack_null_only_for_human_session, test_FR_0_2_02_processing_keeps_step_order_per_path, test_FR_0_2_02_rejects_run_card_id_mismatch, test_FR_0_2_02_rejects_unknown_field, test_FR_0_2_02_open_objects_accept_any_members]
+  CAP-CONTRACTS-003: validate_manifest checks a pack manifest against pack_manifest.v1.json (consent_ref for owner and campaign clips, safe archive names and member paths) plus unique clip_id and archive names and every clip's archive listed in archives [tests: test_FR_0_2_03_schema_is_valid_draft_2020_12, test_FR_0_2_03_valid_fixture_passes, test_FR_0_2_03_rejects_missing_required_field, test_FR_0_2_03_rejects_wrong_type_or_enum, test_FR_0_2_03_version_must_be_semver, test_FR_0_2_03_owner_and_campaign_clips_need_consent_ref, test_FR_0_2_03_rejects_duplicate_clip_id, test_FR_0_2_03_rejects_duplicate_archive_name, test_FR_0_2_03_clip_archive_must_be_listed, test_FR_0_2_03_rejects_unsafe_archive_name, test_FR_0_2_03_rejects_unsafe_member_path, test_FR_0_2_03_rejects_unknown_field, test_FR_0_2_03_recipe_accepts_any_members, test_FR_0_2_03_invalid_fixture_names_expected_pointers]
 INPUTS AND OUTPUTS: parsed JSON values (or raw JSON text for the parsers) in; None when valid, otherwise
   ContractValidationError listing (JSON Pointer, message) for every failing field.
-CONTRACTS: event-log v1 (docs/contracts/EVENT_LOG.md), run-card v1 (docs/contracts/RUN_CARD.md).
+CONTRACTS: event-log v1 (docs/contracts/EVENT_LOG.md), run-card v1 (docs/contracts/RUN_CARD.md),
+  pack-manifest v1 (docs/contracts/PACK_MANIFEST.md).
 INVARIANTS:
   - The schema files are the single source of the structural rules; the per-event-type validators are derived
     from event_log.v1.json at load time by dropping the other types' if/then blocks, which cannot apply.
@@ -18,6 +20,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-09-27 WP-0.2 FR-0.2-01 created.
   2026-09-27 WP-0.2 FR-0.2-02 run cards: validate_run_card and the run_card_id check.
+  2026-09-27 WP-0.2 FR-0.2-03 pack manifests: validate_manifest and the checks across clips.
 """
 import datetime
 import functools
@@ -34,7 +37,8 @@ from aqis_lab.contracts.canonical import CanonicalJSONError, compute_run_card_id
 SHA256_RE = re.compile(r"[0-9a-f]{64}")
 SCHEMA_DIR = Path(__file__).resolve().parent / "schemas"
 # kind -> (label used in messages, schema file stem)
-KINDS = {"event": ("event log", "event_log"), "run_card": ("run card", "run_card")}
+KINDS = {"event": ("event log", "event_log"), "run_card": ("run card", "run_card"),
+         "manifest": ("pack manifest", "pack_manifest")}
 ROOT_POINTER_LABEL = "(document)"
 UTC_RE = re.compile(r"([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.[0-9]{1,9})?Z")
 
@@ -187,8 +191,14 @@ def _field_errors(error):
     if error.validator == "not" and error.validator_value == {}:
         return [FieldError(json_pointer(path), "field is not allowed here")]
     if error.validator == "not" and error.validator_value == {"type": "null"}:
-        return [FieldError(json_pointer(path), "must not be null here (see the contract's rules across fields)")]
-    return [FieldError(json_pointer(path), error.message)]
+        return [FieldError(json_pointer(path), _with_rule("must not be null here", error.schema))]
+    return [FieldError(json_pointer(path), _with_rule(error.message, error.schema))]
+
+
+def _with_rule(message, schema):
+    """Append the text of a cross-field rule (a subschema described as 'Rule: ...') to its error message."""
+    description = schema.get("description", "") if isinstance(schema, dict) else ""
+    return f"{message}. {description}" if description.startswith("Rule: ") else message
 
 
 def _schema_errors(validator, record):
@@ -266,6 +276,40 @@ def _run_card_rules(card):
                                        f"created_utc and notes ({defined})")]
 
 
+def _unique_errors(items, key, path, label):
+    """Errors at path/<i>/key for each later item repeating an earlier item's string key."""
+    first, errors = {}, []
+    for index, item in enumerate(items):
+        value = item.get(key) if isinstance(item, dict) else None
+        if not isinstance(value, str):
+            continue
+        if value in first:
+            errors.append(FieldError(json_pointer((path, index, key)),
+                                     f"duplicate {label} {value!r}: already used by {json_pointer((path, first[value]))}"))
+        else:
+            first[value] = index
+    return errors
+
+
+def _manifest_rules(manifest):
+    clips, archives = manifest.get("clips"), manifest.get("archives")
+    errors = []
+    if isinstance(clips, list):
+        errors += _unique_errors(clips, "clip_id", "clips", "clip_id")
+    if isinstance(archives, list):
+        errors += _unique_errors(archives, "name", "archives", "archive name")
+    names = [a.get("name") if isinstance(a, dict) else None for a in archives] if isinstance(archives, list) else []
+    # References are judged only against a complete, non-empty list of archive names: a nameless entry might be
+    # the one a clip names, and the schema already reports the entry itself.
+    if isinstance(clips, list) and names and all(isinstance(n, str) for n in names):
+        for index, clip in enumerate(clips):
+            archive = clip.get("archive") if isinstance(clip, dict) else None
+            if isinstance(archive, str) and archive not in names:
+                errors.append(FieldError(json_pointer(("clips", index, "archive")),
+                                         f"archive {archive!r} is not listed in /archives"))
+    return errors
+
+
 @functools.cache
 def _validator_for(kind):
     return _make_validator(load_schema(kind))
@@ -301,6 +345,11 @@ def validate_event(record):
 def validate_run_card(card):
     """Validate one run card, including its run_card_id; return None or raise ContractValidationError."""
     _validate("run_card", card, _validator_for("run_card"), _run_card_rules)
+
+
+def validate_manifest(manifest):
+    """Validate one pack manifest, including the checks across clips; return None or raise ContractValidationError."""
+    _validate("manifest", manifest, _validator_for("manifest"), _manifest_rules)
 
 
 # ---------------------------------------------------------------------------------------------

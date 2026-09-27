@@ -25,7 +25,8 @@
               "if": {"description": "Both version and checksum are null.", "required": ["version", "checksum"],
                      "properties": {"version": {"type": "null"}, "checksum": {"type": "null"}}},
               "then": {"description": "At least one of version and checksum must identify the model.",
-                       "properties": {"version": {"not": {"type": "null"}}, "checksum": {"not": {"type": "null"}}}}},
+                       "properties": {"version": {"description": "Rule: version and checksum cannot both be null.", "not": {"type": "null"}},
+                                      "checksum": {"description": "Rule: version and checksum cannot both be null.", "not": {"type": "null"}}}}},
     "processing": {"description": "Ordered fix steps applied before each path's component.", "type": "object",
                    "required": ["vad", "stt", "emotion"], "additionalProperties": false,
                    "properties": {"vad": {"description": "Steps before voice activity detection, in order.", "$ref": "#/$defs/steps"},
@@ -59,7 +60,7 @@
   },
   "allOf": [
     {"if": {"required": ["mode"], "properties": {"mode": {"const": "human_session"}}},
-     "else": {"properties": {"pack": {"type": "object"}}}}
+     "else": {"properties": {"pack": {"description": "Rule: pack may be null only when mode is human_session.", "type": "object"}}}}
   ],
   "$defs": {
     "text": {"type": "string", "minLength": 1},

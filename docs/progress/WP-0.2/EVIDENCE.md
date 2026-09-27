@@ -56,3 +56,22 @@ run card record is invalid (4 problems):
 ```
 - Fast suite: `693 passed, 8 deselected in 48.11s`.
 - Status: DONE
+
+### FR-0.2-03 — Pack manifest v1
+- Tests (`tests/aqis_lab/test_aqis_contracts_manifest.py`, 165 cases): `test_FR_0_2_03_schema_is_valid_draft_2020_12`, `test_FR_0_2_03_valid_fixture_passes`, `test_FR_0_2_03_rejects_missing_required_field` (7 manifest, 16 clip and 4 archive fields), `test_FR_0_2_03_rejects_wrong_type_or_enum`, `test_FR_0_2_03_version_must_be_semver`, `test_FR_0_2_03_owner_and_campaign_clips_need_consent_ref`, `test_FR_0_2_03_rejects_duplicate_clip_id`, `test_FR_0_2_03_rejects_duplicate_archive_name`, `test_FR_0_2_03_clip_archive_must_be_listed`, `test_FR_0_2_03_rejects_unsafe_archive_name`, `test_FR_0_2_03_rejects_unsafe_member_path`, `test_FR_0_2_03_rejects_unknown_field`, `test_FR_0_2_03_recipe_accepts_any_members`, `test_FR_0_2_03_invalid_fixture_names_expected_pointers`.
+- Tests first: `E   ImportError: cannot import name 'validate_manifest' from 'aqis_lab.contracts.validate'`.
+- Test corrections before any implementation run (authoring slips, no code had been run against them): a wrong tag *element* is reported at `/clips/0/tags/0`, not `/clips/0/tags`, so those values moved to their own row; the clip `archive` field was missing from the wrong-value table and was added.
+- First implementation run: 1 failure, `rejects_missing_required_field[archives/1/name]`. It showed that two of my expectations disagreed about clips that name an archive whose name is missing or not a string. The rule is now: references are judged only when every archive has a string name, because a nameless entry might be the clip's archive and the schema already reports that entry. `test_FR_0_2_03_rejects_unsafe_archive_name` was changed to state that rule for the `None` and `1` cases (its other cases are unchanged); the code was changed to match.
+- Messages: a cross-field rule subschema described as `Rule: ...` now has that text appended to its error (consent, `pack` null, version or checksum).
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_contracts_manifest.py -q -p no:cacheprovider`, then `validate_manifest` on `invalid_manifest_fields.json`.
+- Output (real excerpt):
+```text
+165 passed in 0.55s
+pack manifest record is invalid (4 problems):
+  /archives/0/n_members: required field is missing
+  /clips/1/clip_id: duplicate clip_id 'ls-test-clean-0001': already used by /clips/0
+  /clips/2/archive: archive 'smoke-v1-009.tar' is not listed in /archives
+  /clips/3/consent_ref: None is not of type 'string'. Rule: owner and campaign recordings need a consent reference.
+```
+- Fast suite: `858 passed, 8 deselected in 47.79s`.
+- Status: DONE

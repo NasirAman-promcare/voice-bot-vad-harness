@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aqis-lab:contracts:pack_manifest:1.0",
+  "title": "AQIS lab pack manifest, version 1.0",
+  "description": "A test pack: its clips and the archives holding them. Contract document: docs/contracts/PACK_MANIFEST.md. The validator also checks that clip_id and archive names are unique and that every clip's archive is listed. Patterns end in $(?!\\n) so that they mean 'end of text' in both ECMA-262 and Python.",
+  "type": "object",
+  "required": ["schema_version", "manifest_id", "version", "purpose", "created_utc", "clips", "archives"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"description": "Contract version, '<major>.<minor>'.", "enum": ["1.0"]},
+    "manifest_id": {"description": "Stable pack name, such as smoke.", "$ref": "#/$defs/id"},
+    "version": {"description": "Pack version (semantic version 2.0.0).",
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\\+[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?$(?!\\n)"},
+    "purpose": {"description": "What the pack is for.", "$ref": "#/$defs/text"},
+    "created_utc": {"description": "When the manifest was written, UTC ISO 8601 with Z.", "type": "string", "format": "date-time",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$(?!\\n)"},
+    "clips": {"description": "The clips of the pack; clip_id unique.", "type": "array", "minItems": 1, "items": {"$ref": "#/$defs/clip"}},
+    "archives": {"description": "The archives holding the clips; name unique.", "type": "array", "minItems": 1, "items": {"$ref": "#/$defs/archive"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1},
+    "id": {"type": "string", "pattern": "^[a-z0-9-]+$(?!\\n)"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$(?!\\n)"},
+    "file_name": {"description": "One path segment: not '.' or '..', no '/', backslash or control character.",
+                  "type": "string", "pattern": "^(?!\\.{1,2}$)[^/\\\\\\x00-\\x1f]+$(?!\\n)"},
+    "relative_path": {"description": "Relative POSIX path: no leading '/', no '.', '..' or empty segment, no backslash or control character.",
+                      "type": "string", "pattern": "^(?!(.*/)?\\.{1,2}(/|$))[^/\\\\\\x00-\\x1f]+(/[^/\\\\\\x00-\\x1f]+)*$(?!\\n)"},
+    "clip": {
+      "type": "object",
+      "required": ["clip_id", "source", "source_ref", "licence", "speaker_id", "consent_ref", "split", "duration_s",
+                   "sample_rate_hz", "channels", "sha256", "archive", "member_path", "transcript", "recipe", "tags"],
+      "additionalProperties": false,
+      "properties": {
+        "clip_id": {"description": "Clip identifier, unique across the registry.", "$ref": "#/$defs/id"},
+        "source": {"description": "Where the clip comes from; owner and campaign mark owner and campaign recordings.", "$ref": "#/$defs/id"},
+        "source_ref": {"description": "Reference inside the source, such as the original file.", "$ref": "#/$defs/text"},
+        "licence": {"description": "Licence of the clip.", "$ref": "#/$defs/text"},
+        "speaker_id": {"description": "Speaker identifier, or null for non-speech clips.", "type": ["string", "null"], "minLength": 1},
+        "consent_ref": {"description": "Consent reference; required (not null) for owner and campaign recordings.", "type": ["string", "null"], "minLength": 1},
+        "split": {"description": "Split or category of the clip.", "$ref": "#/$defs/id"},
+        "duration_s": {"description": "Duration in seconds.", "type": "number", "exclusiveMinimum": 0},
+        "sample_rate_hz": {"description": "Sample rate in Hz.", "type": "integer", "minimum": 1},
+        "channels": {"description": "Number of audio channels.", "type": "integer", "minimum": 1},
+        "sha256": {"description": "SHA-256 of the clip file's bytes.", "$ref": "#/$defs/sha256"},
+        "archive": {"description": "Name of the archive holding the clip; listed in archives.", "$ref": "#/$defs/file_name"},
+        "member_path": {"description": "Path of the clip inside its archive.", "$ref": "#/$defs/relative_path"},
+        "transcript": {"description": "Reference transcript, or null.", "type": ["string", "null"]},
+        "recipe": {"description": "How a derived clip was made, or null; members not fixed in v1.0.", "type": ["object", "null"]},
+        "tags": {"description": "Free labels; unique.", "type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}}
+      },
+      "if": {"required": ["source"], "properties": {"source": {"enum": ["owner", "campaign"]}}},
+      "then": {"properties": {"consent_ref": {"description": "Rule: owner and campaign recordings need a consent reference.", "type": "string"}}}
+    },
+    "archive": {
+      "type": "object",
+      "required": ["name", "sha256", "bytes", "n_members"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"description": "Archive file name; unique in the manifest.", "$ref": "#/$defs/file_name"},
+        "sha256": {"description": "SHA-256 of the archive file's bytes.", "$ref": "#/$defs/sha256"},
+        "bytes": {"description": "Archive size in bytes.", "type": "integer", "minimum": 0},
+        "n_members": {"description": "Number of members in the archive.", "type": "integer", "minimum": 0}
+      }
+    }
+  }
+}
