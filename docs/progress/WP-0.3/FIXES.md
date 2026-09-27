@@ -24,7 +24,7 @@ Owner condition: "Round 2: fix WP-0.3-F01 (add asymmetric clip-set input error t
   - `ERROR: the two files must list the same clips; only in …/ref2.csv: c-2; only in …/hyp1.csv: none`;
   - `ERROR: …/refq.csv line 2: unexpected end of data`;
   - `ERROR: --out …/afile exists and is not a folder`.
-- **Tests added** (`tests/aqis_lab/test_aqis_scoring_table.py`, appended; `diff` of the first 208 lines against the copy taken before the change shows no difference):
+- **Tests added** (`tests/aqis_lab/test_aqis_scoring_table.py`, appended; `diff` of the first 266 lines, which were the whole file before, against a copy taken before the change shows no difference, and `git diff bc669b4 HEAD -- tests/aqis_lab/test_aqis_scoring_table.py` has 0 removed lines):
   - `test_FR_0_3_06_one_sided_clip_is_an_input_error`, with 3 cases:
     - `clip-only-in-ref`;
     - `clip-only-in-hyp`;
