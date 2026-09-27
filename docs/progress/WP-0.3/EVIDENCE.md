@@ -33,3 +33,39 @@ tests/aqis_lab/test_aqis_lock.py::test_FR_0_0_03_lock_installable_with_plain_pip
 - Registry: CAP-ENV-002 "What it does" now names the added packages (only that cell changed).
 
 ## Requirements
+
+### FR-0.3-01 — Wrapped, pinned, idempotent Whisper English normaliser
+- Module: `aqis_lab/scoring/normalise.py` (CAP-SCORE-001), package marker `aqis_lab/scoring/__init__.py`.
+- Tests (`tests/aqis_lab/test_aqis_scoring_normalise.py`): `test_FR_0_3_01_exposes_name_and_version`, `test_FR_0_3_01_identity_fits_the_run_card_contract` (the identity put into the WP-0.2 run card fixture, ID recomputed, `validate_run_card` passes), `test_FR_0_3_01_installed_package_is_the_pinned_version`, `test_FR_0_3_01_refuses_other_package_version` (0.1.15, 0.1.2, 0.0.10, 0.1.1.post1), `test_FR_0_3_01_refuses_missing_package`, `test_FR_0_3_01_equals_whisper_where_whisper_is_idempotent` (20,000 seeded inputs, seed 20260927, both variants), `test_FR_0_3_01_idempotent_on_generated_inputs` (the same 20,000 inputs, both variants), `test_FR_0_3_01_known_non_idempotent_inputs_reach_fixed_point` (`minus five`, `oh one`, `double oh seven`, `$1.50`), `test_FR_0_3_01_fixed_point_raises_when_not_reached`, `test_FR_0_3_01_rejects_non_text_input`, `test_FR_0_3_01_output_has_single_spaces_and_no_edge_spaces`, `test_FR_0_3_01_typographic_apostrophes_fold_to_ascii` (approved question 4), `test_FR_0_3_01_module_functions_are_the_two_variants`, and `test_FR_0_3_01_matches_openai_whisper_original` (marked `slow` and `network`: downloads `openai_whisper-20250625.tar.gz`, checks sha256 `37a91a39…eb96`, loads only its `whisper/normalizers` files and compares with the pinned package on 20,000 inputs, seed 20260928).
+- Tests first: before `aqis_lab/scoring/` existed, collection failed with `E   ModuleNotFoundError: No module named 'aqis_lab.scoring'`.
+- Correction to two new tests during the build (both written in this build, never committed before the fix; the code was not changed to fit them):
+  - The `$1.50` case asserted `whisper(first_pass).strip() != first_pass.strip()`. That is false: plain Whisper differs from its own second pass there only by the leading space (`' one.50'` → `'one.50'`). The premise now compares the untrimmed texts (`whisper(first_pass) != first_pass`), which is what plan finding 4 states.
+  - The U+02BC case asserted that plain Whisper gives `don t`. It gives `donʼt`, because Unicode classes U+02BC as a letter, so Whisper keeps it. The premise now names both outputs. Folding is still needed, because neither output is `do not`.
+- Import warning: the wrapper ignores only the `SyntaxWarning` that Python 3.13 raises while compiling `whisper_normalizer/basic.py` (an invalid `\X` escape in a docstring, plan risk 3), and only during that import. It is listed under INVARIANTS in the module header.
+- Commands and output (real):
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_scoring_normalise.py -q -p no:cacheprovider -m "not slow" -k FR_0_3_01
+24 passed, 14 deselected in 27.51s
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_scoring_normalise.py -q -p no:cacheprovider -k matches_openai
+1 passed, 37 deselected in 4.28s
+```
+- Status: DONE
+
+### FR-0.3-02 — NORMALISATION.md with at least 30 examples, each a test
+- Document: `docs/contracts/NORMALISATION.md` (CAP-DOC-005): normalisers with names and versions, the steps (lab rules and Whisper's own), the filler list, variants, surprising behaviours, 72 examples (every FR-0.3-02 category at least 3 times, plus British spelling and fixed-point rows), usage, and the change policy.
+- Tests (`tests/aqis_lab/test_aqis_scoring_examples.py`): `test_FR_0_3_02_documented_example` (72 cases: main output, disfluency-aware output, both settled), `test_FR_0_3_02_at_least_30_examples_cover_every_category`, `test_FR_0_3_02_parser_reads_every_table_row`.
+- Independent confirmation of the expected outputs: each expected output was written from Whisper's rules (most were first seen while planning), then checked with a scratch script that runs OpenAI's original `openai-whisper` 20250625 `whisper/normalizers` files (from the source archive, sha256 `37a91a39…eb96`) with the approved lab rules (fold apostrophes, trim, repeat until settled), and also runs `aqis_lab`:
+```text
+72 examples, 0 disagreements (OpenAI original openai-whisper 20250625 with the lab rules, and aqis_lab)
+```
+- The tests fail for the right reasons. With the document moved aside, collection fails (`FileNotFoundError` from `read_text`). With one expected output changed (T05 `at 90 clock` → `at 9 oclock`) in a copy:
+```text
+FAILED tests/aqis_lab/test_aqis_scoring_examples.py::test_FR_0_3_02_documented_example[T05]
+1 failed, 73 passed in 0.15s
+```
+  The document was then restored (`cmp` identical).
+- Command and output (real): `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_scoring_examples.py -q -p no:cacheprovider`
+```text
+74 passed in 0.16s
+```
+- Status: DONE
