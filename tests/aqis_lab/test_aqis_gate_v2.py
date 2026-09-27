@@ -152,7 +152,8 @@ def test_FR_0_0_06_fails_closed_when_git_status_fails(repo):
 def test_FR_0_0_06_fails_closed_on_changed_file_it_cannot_read(tmp_path):
     # Audit F57 (K7.4, must-catch 7): a changed regular file that the gate's user cannot read gives exit 2,
     # never a clean pass. Root reads any file, so as root the gate runs as an unprivileged user (setpriv), the
-    # same way the non-root provisioning test does; when the test is not root it runs the gate directly.
+    # same way the non-root provisioning test does; when the test is not root it runs the gate directly. The
+    # control run, made the same way while the file is readable, proves that this user can run the gate here.
     as_root = os.geteuid() == 0
     setpriv = shutil.which("setpriv")
     if as_root:
@@ -162,18 +163,25 @@ def test_FR_0_0_06_fails_closed_on_changed_file_it_cannot_read(tmp_path):
         repo = FixtureRepo(base)
         repo.branch()
         repo.write("tools/unreadable_tool.py", "# TODO: the gate must not pass this file unread\n")
-        control = repo.gate_json()
-        assert [(f["rule"], f["path"]) for f in control["findings"]] == [("C1", "tools/unreadable_tool.py")]
         target = repo.path / "tools" / "unreadable_tool.py"
-        target.chmod(0)
-        command = [sys.executable, "-B", "-m", "tools.audit.gate", "--base", "origin/main"]
+        prefix = []
         if as_root:
             nobody = 65534
             for path in [base, *base.rglob("*")]:
                 os.lchown(path, nobody, nobody)
-            command = [setpriv, f"--reuid={nobody}", f"--regid={nobody}", "--clear-groups", *command]
+            prefix = [setpriv, f"--reuid={nobody}", f"--regid={nobody}", "--clear-groups"]
         env = hermetic_git_env({"PYTHONPATH": str(ROOT), "HOME": str(base)})
-        proc = subprocess.run(command, cwd=repo.path, capture_output=True, text=True, env=env, timeout=300)
+
+        def run_gate(*extra):
+            return subprocess.run([*prefix, sys.executable, "-B", "-m", "tools.audit.gate", "--base", "origin/main",
+                                   *extra], cwd=repo.path, capture_output=True, text=True, env=env, timeout=300)
+
+        control = run_gate("--json")
+        assert control.returncode == 1, control.stdout + control.stderr
+        found = [(f["rule"], f["path"]) for f in json.loads(control.stdout)["findings"]]
+        assert found == [("C1", "tools/unreadable_tool.py")]
+        target.chmod(0)
+        proc = run_gate()
         assert proc.returncode == 2, proc.stdout + proc.stderr
         assert proc.stderr.startswith("ERROR: tools/unreadable_tool.py:1: cannot read changed file:"), proc.stderr
         assert "0 findings" not in proc.stdout
