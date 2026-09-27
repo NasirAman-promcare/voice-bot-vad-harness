@@ -283,3 +283,27 @@ None. The spec runs WP-0.3 on the cloud VM only, and every test runs here. CI (G
 
 ## audit-allow lines
 None (the gate reports `Exempted lines (# audit-allow): 0` and `Exempted files (ALLOW-PATTERNS-IN): 0`).
+
+## CI (GitHub Actions, `aqis-lab-ci`) on commit `6a11552`
+All four jobs succeeded:
+- **Push run** [36324281656](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/36324281656): job `lab` success, job `harness-regression` success.
+- **Pull request run** [36324308658](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/36324308658), for PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/3 with title "WP-0.3 Text normaliser and scorer": job `lab` success, job `harness-regression` success.
+
+Excerpts from the pull request run (real):
+```text
+[lab] 1174 passed, 11 deselected in 86.45s (0:01:26)
+[lab] Work package from the pull request title: WP-0.3
+[lab] aqis-audit-gate: base origin/main (merge-base 2879cf4890c2), head bcbada67ec7b, approvals origin/main 2879cf4890c2, wp WP-0.3
+[lab] Exempted lines (# audit-allow): 0
+[lab] Exempted files (ALLOW-PATTERNS-IN): 0
+[lab] Findings: 0
+[lab] 0 findings: OK (0.2 s)
+[harness-regression] FAILED tests/regression/test_loss_category.py::test_packet_loss_category_applies_drop_impairment_in_bridge - ... did not complete within 3.0s
+[harness-regression] ========================= 1 failed, 21 passed in 4.26s =========================
+[harness-regression] baseline: 22 tests, 21 passed; this run: 22 tests, 21 passed
+[harness-regression] RESULT: PASS
+```
+The one harness failure is the recorded baseline failure (`docs/baselines/harness_tests_baseline.md`, lines 186 and 377), so the harness regression baseline is unchanged. `head bcbada67ec7b` is GitHub's merge commit of the PR head `6a11552` into `main`.
+
+## Status
+Every requirement (FR-0.3-01 to FR-0.3-07, NFR-0.3-01) is DONE, and AT-0.3-01 to AT-0.3-03 pass. There are no owner-run checks and no open blockers. WP-0.3 is READY-FOR-AUDIT.
