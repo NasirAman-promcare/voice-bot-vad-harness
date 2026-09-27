@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aqis-lab:packs:recipe:1.0",
+  "title": "AQIS lab clip recipe, version 1.0 (the manifest's clips/*/recipe object)",
+  "description": "Documented in docs/data/SMOKE_PACK.md, 'Recipe v1'. Checked by aqis_lab.packs.mix.recipe_problems, which dispatches on kind.",
+  "type": "object",
+  "required": ["recipe_version", "kind"],
+  "properties": {"recipe_version": {"const": "1.0"}, "kind": {"enum": ["mix", "excerpt", "silence"]}},
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+    "count": {"type": "integer", "minimum": 0},
+    "mix": {
+      "type": "object",
+      "required": ["recipe_version", "kind", "source_clip_ids", "speech_clip_id", "noise_clip_id", "snr_db", "seed",
+                   "noise_offset_samples", "length_samples", "snr_definition", "speech_gain", "noise_gain",
+                   "speech_gain_q24", "noise_gain_q24", "peak_limited", "achieved_snr_db"],
+      "additionalProperties": false,
+      "properties": {
+        "recipe_version": {"const": "1.0"}, "kind": {"const": "mix"},
+        "source_clip_ids": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/id"}},
+        "speech_clip_id": {"$ref": "#/$defs/id"}, "noise_clip_id": {"$ref": "#/$defs/id"},
+        "snr_db": {"type": "number"}, "seed": {"type": "integer", "minimum": 0},
+        "noise_offset_samples": {"$ref": "#/$defs/count"}, "length_samples": {"type": "integer", "minimum": 1},
+        "snr_definition": {"type": "string", "minLength": 1},
+        "speech_gain": {"type": "number", "exclusiveMinimum": 0}, "noise_gain": {"type": "number", "exclusiveMinimum": 0},
+        "speech_gain_q24": {"type": "integer", "minimum": 1}, "noise_gain_q24": {"type": "integer", "minimum": 1},
+        "peak_limited": {"type": "boolean"}, "achieved_snr_db": {"type": "number"}
+      }
+    },
+    "excerpt": {
+      "type": "object",
+      "required": ["recipe_version", "kind", "source_clip_ids", "seed", "offset_samples", "length_samples"],
+      "additionalProperties": false,
+      "properties": {
+        "recipe_version": {"const": "1.0"}, "kind": {"const": "excerpt"},
+        "source_clip_ids": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"$ref": "#/$defs/id"}},
+        "seed": {"type": "integer", "minimum": 0}, "offset_samples": {"$ref": "#/$defs/count"},
+        "length_samples": {"type": "integer", "minimum": 1}
+      }
+    },
+    "silence": {
+      "type": "object",
+      "required": ["recipe_version", "kind", "source_clip_ids", "length_samples"],
+      "additionalProperties": false,
+      "properties": {
+        "recipe_version": {"const": "1.0"}, "kind": {"const": "silence"},
+        "source_clip_ids": {"type": "array", "maxItems": 0},
+        "length_samples": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

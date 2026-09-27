@@ -390,3 +390,70 @@ def make_world(tmp, clean=(12, 3), other=(6, 2), musan_kwargs=None, owner=False,
             if dataset["type"] == "download":
                 fetch_dataset(dataset, cache, repo)
     return World(repo, cache, datasets_path, utterances, musan)
+
+
+# ---------------------------------------------------------------------------------------------
+# a pack spec with the smoke spec's structure and smaller counts, and a helper to build it
+# ---------------------------------------------------------------------------------------------
+def spec_dict(**changes):
+    spec = {
+        "spec_version": 1, "manifest_id": "tpack", "version": "1.0.0",
+        "purpose": "Test pack built by the WP-0.4 tests from generated inputs.",
+        "created_utc": "2026-09-27T00:00:00Z", "seed": 20260927,
+        "limits": {"max_files_per_folder": 1000, "max_archive_bytes": 200000000},
+        "licence_policy": {"allow_share_alike": False, "allow_non_commercial": False},
+        "categories": [
+            {"name": "test-clean", "count": 4, "tags": ["clean", "speech"], "parts": [
+                {"kind": "take", "count": 4, "from": {"source": "librispeech", "split": "test-clean", "min_seconds": 1,
+                                                      "max_seconds": 2, "distinct_speakers": True}}]},
+            {"name": "test-other", "count": 2, "tags": ["other", "speech"], "parts": [
+                {"kind": "take", "count": 2, "from": {"source": "librispeech", "split": "test-other",
+                                                      "distinct_speakers": True}}]},
+            {"name": "noisy", "count": 3, "tags": ["noisy", "speech"], "parts": [
+                {"kind": "mix", "label": "mix", "snr_db": [5, 10, 20],
+                 "speech": {"source": "librispeech", "split": "test-clean", "min_seconds": 1, "max_seconds": 2,
+                            "distinct_speakers": True},
+                 "noise": {"source": "musan", "split": "noise", "tags_all": ["background"]}}]},
+            {"name": "non-speech", "count": 3, "tags": ["non-speech"], "parts": [
+                {"kind": "excerpt", "label": "noise", "count": 1, "seconds": 1.0, "tags": ["noise"],
+                 "from": {"source": "musan", "split": "noise", "tags_none": ["background"]}},
+                {"kind": "excerpt", "label": "music", "count": 1, "seconds": 2.0, "tags": ["music"],
+                 "from": {"source": "musan", "split": "music"}},
+                {"kind": "silence", "label": "silence", "seconds": [0.5], "tags": ["silence"]}]},
+            {"name": "tts", "count": 2, "tags": ["speech", "synthetic", "tts"], "parts": [
+                {"kind": "take", "count": 2, "from": {"source": "tts", "split": "tts", "min_seconds": 3,
+                                                      "max_seconds": 8}}]},
+        ],
+    }
+    spec.update(changes)
+    return spec
+
+
+def write_spec(path, spec=None, **changes):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(spec or spec_dict(**changes), sort_keys=False), encoding="utf-8")
+    return path
+
+
+def write_registry(world, path=None):
+    """Build the world's registry with the real importer and write it; returns its path."""
+    from aqis_lab.registry.importers import build_registry
+    from aqis_lab.registry.registry import registry_bytes
+    path = Path(path or world.repo / "data" / "registry" / "sources.csv")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(registry_bytes(build_registry(world.datasets(), world.cache, world.repo)))
+    return path
+
+
+def build_test_pack(world, out, spec_path=None, registry_path=None, **spec_changes):
+    from aqis_lab.packs.build import build_pack
+    spec_path = spec_path or write_spec(Path(out).parent / f"{Path(out).name}-spec.yaml", **spec_changes)
+    registry_path = registry_path or write_registry(world)
+    return build_pack(spec_path, out, registry_path, world.datasets_path, world.cache, world.repo)
+
+
+def tar_members(path):
+    """{name: bytes} of a tar file, read with the standard library."""
+    with tarfile.open(path) as tf:
+        return {m.name: tf.extractfile(m).read() for m in tf.getmembers() if m.isfile()}
