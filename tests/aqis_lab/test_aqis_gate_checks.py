@@ -217,6 +217,29 @@ def test_FR_0_0_05_b_passes_new_test_and_approved_edit(tmp_path):
     assert repo.gate_json()["findings"] == []
 
 
+def test_FR_0_0_05_b_allow_patterns_in_does_not_approve_test_edits(tmp_path):
+    # Audit F56 (must-catch 4): only ALLOW-EDIT approves a change to an existing test. An ALLOW-PATTERNS-IN
+    # approval covering existing tests, fixture files included, exempts them from check (c), yet a modified and a
+    # deleted existing test are still reported (B1, B2).
+    repo = FixtureRepo(tmp_path, with_lab_test=True)
+    repo.write("tests/aqis_lab/test_second.py", "def test_second():\n    assert 2 * 2 == 4\n")
+    repo.write("tests/aqis_lab/fixtures/gate/sample_fixture.py", "def fixture_value():\n    return 1\n")
+    repo.commit("more existing tests on main")
+    git(repo.path, "push", "-q", "origin", "main")
+    repo.approve_on_main("WP-9.9.md", "ALLOW-PATTERNS-IN: tests/aqis_lab/**\n")
+    repo.branch()
+    repo.append("tests/aqis_lab/test_existing.py", "\n\ndef test_zero():\n    assert add(0, 0) == 0\n")
+    repo.append("tests/aqis_lab/fixtures/gate/sample_fixture.py", "\nEXTRA = 2\n")
+    repo.delete("tests/aqis_lab/test_second.py")
+    report = repo.gate_json()
+    assert report["ok"] is False
+    assert rules(report) == [("B1", "tests/aqis_lab/fixtures/gate/sample_fixture.py"),
+                             ("B1", "tests/aqis_lab/test_existing.py"), ("B2", "tests/aqis_lab/test_second.py")]
+    assert all(f["severity"] == "CRITICAL" for f in report["findings"])
+    assert sorted(e["path"] for e in report["exempted_files"]) == [
+        "tests/aqis_lab/fixtures/gate/sample_fixture.py", "tests/aqis_lab/test_existing.py"]
+
+
 # ---- (c) compromise patterns -------------------------------------------------------------
 def test_FR_0_0_05_c_detects_each_code_pattern(repo):
     repo.branch()

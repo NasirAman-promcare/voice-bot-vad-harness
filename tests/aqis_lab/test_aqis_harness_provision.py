@@ -580,6 +580,25 @@ def test_FR_0_0_12_fails_on_weights_with_wrong_content(tmp_path):
     assert not (tree / "pretrained_models").exists()
 
 
+@pytest.mark.parametrize("damage", ["truncated", "other_bytes"])
+def test_FR_0_0_12_damaged_weights_cache_is_replaced(tmp_path, damage):
+    # Audit F58 (must-catch 14): the cached weights are hashed before every reuse. A cached file cut short or
+    # replaced by other bytes is cloned again, so the next run never reports PASS on the damaged bytes.
+    tree, cfg = make_tree(tmp_path)
+    cache = tmp_path / "cache"
+    first = run(tree, cfg, cache, *DATA)
+    assert first.returncode == 0, first.stdout + first.stderr
+    config = json.loads(cfg.read_text(encoding="utf-8"))
+    cached = cache / "firered" / config["firered"]["commit"] / "repo" / "Stream-VAD" / "model.pth.tar"
+    assert cached.read_bytes() == MODEL
+    cached.write_bytes(MODEL[:len(MODEL) // 2] if damage == "truncated" else b"\x80\x02other-weights" * 40)
+    proc = run(tree, cfg, cache, *DATA)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert table(proc.stdout)["weights"][0] == "PASS"
+    linked = tree / config["firered"]["link"] / "model.pth.tar"
+    assert linked.read_bytes() == MODEL and cached.read_bytes() == MODEL
+
+
 def test_FR_0_0_12_damaged_corpus_cache_is_replaced_from_git(tmp_path):
     # A cached archive that no longer has the pinned SHA-256 is read again from git, never used.
     tree, cfg = make_tree(tmp_path)

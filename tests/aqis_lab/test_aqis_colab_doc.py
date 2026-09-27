@@ -95,3 +95,45 @@ def test_FR_0_0_13_oc_steps_use_pull_request_branch():
     # the result of a wrong branch is stated
     assert f"Remote branch {namespace['BRANCH']}" not in oc
     assert "not found in upstream origin" in oc and "RuntimeError: git clone of branch" in oc
+
+
+def test_FR_0_0_13_clone_cells_never_store_token(tmp_path, monkeypatch):
+    # Audit F59 (must-catch 15): cells 1 to 3 run against a local repository with a stand-in token. The token and
+    # its header never reach the clone's files (git keeps a `-c` option placed after `clone` in .git/config),
+    # and cell 3 passes. Cell 3's own check is proven to reject a clone whose config holds the header.
+    token = "ghp_AUDIT_F59_token_value_0123456789abcdef"
+    header_b64 = base64.b64encode(("x-access-token:" + token).encode()).decode()
+    colab = types.ModuleType("google.colab")
+    colab.userdata = types.SimpleNamespace(get=lambda name: token if name == "GITHUB_TOKEN" else None)
+    monkeypatch.setitem(sys.modules, "google", types.ModuleType("google"))
+    monkeypatch.setitem(sys.modules, "google.colab", colab)
+    for key, value in hermetic_git_env().items():
+        monkeypatch.setenv(key, value)
+    source = tmp_path / "source"
+    source.mkdir()
+    git(source, "init", "-q", "-b", "main")
+    (source / "README.md").write_text("fixture\n", encoding="utf-8")
+    git(source, "add", "-A")
+    git(source, "commit", "-q", "-m", "fixture")
+    cell1, cell2, cell3 = cells()[:3]
+    namespace = {}
+    exec(compile(cell1, "cell 1", "exec"), namespace)
+    namespace["REPO"] = str(source)
+    namespace["BRANCH"] = "main"
+    namespace["WORKDIR"] = str(tmp_path / "clone")
+    exec(compile(cell2, "cell 2", "exec"), namespace)
+    exec(compile(cell3, "cell 3", "exec"), namespace)          # raises AssertionError if the header was kept
+    for path in (tmp_path / "clone").rglob("*"):
+        if path.is_file():
+            data = path.read_bytes()
+            assert token.encode() not in data and header_b64.encode() not in data, path
+    # The header option comes before "clone", so it applies to that command only.
+    clone = [line for line in cell2.splitlines() if '"clone"' in line]
+    assert len(clone) == 1 and clone[0].index('"-c"') < clone[0].index('"clone"')
+    # Cell 3 holds the check, and the check works: a clone that stored the header is rejected.
+    assert 'assert "extraheader" not in config.lower()' in cell3
+    stored = tmp_path / "stored"
+    git(tmp_path, "clone", "-q", "-c", "http.extraHeader=Authorization: Basic c3RhbmQtaW4=", str(source), str(stored))
+    namespace["WORKDIR"] = str(stored)
+    with pytest.raises(AssertionError, match="an authorization header is in git config"):
+        exec(compile(cell3, "cell 3", "exec"), namespace)

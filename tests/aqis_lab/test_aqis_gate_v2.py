@@ -3,11 +3,19 @@ decodes non-UTF-8 content with replacement, scans the wider lab scope, and uses 
 origin/main cannot be verified. Also covers audit findings WP-0.0-F04 and WP-0.0-F09."""
 import json
 import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import zlib
+from pathlib import Path
 
 import pytest
 
-from aqis_testutil import git
-from fixture_repo import FIXTURES, FixtureRepo
+from aqis_testutil import ROOT, git, hermetic_git_env
+from fixture_repo import FIXTURES, REGISTRY_HEAD, FixtureRepo
+
+REG = "docs/capabilities/REGISTRY.md"
 
 EXPECTED = json.loads((FIXTURES / "expected.json").read_text(encoding="utf-8"))
 
@@ -138,4 +146,76 @@ def test_FR_0_0_06_fails_closed_when_git_status_fails(repo):
     proc = repo.gate("--base", "origin/main", json_output=False)
     assert proc.returncode == 2, proc.stdout + proc.stderr
     assert proc.stderr.startswith("ERROR:") and "git status failed" in proc.stderr
+    assert "0 findings" not in proc.stdout
+
+
+def test_FR_0_0_06_fails_closed_on_changed_file_it_cannot_read(tmp_path):
+    # Audit F57 (K7.4, must-catch 7): a changed regular file that the gate's user cannot read gives exit 2,
+    # never a clean pass. Root reads any file, so as root the gate runs as an unprivileged user (setpriv), the
+    # same way the non-root provisioning test does; when the test is not root it runs the gate directly.
+    as_root = os.geteuid() == 0
+    setpriv = shutil.which("setpriv")
+    if as_root:
+        assert setpriv, "setpriv (util-linux) is needed to run the gate as an unprivileged user"
+    base = Path(tempfile.mkdtemp(prefix="aqis-unreadable-")) if as_root else tmp_path
+    try:
+        repo = FixtureRepo(base)
+        repo.branch()
+        repo.write("tools/unreadable_tool.py", "# TODO: the gate must not pass this file unread\n")
+        control = repo.gate_json()
+        assert [(f["rule"], f["path"]) for f in control["findings"]] == [("C1", "tools/unreadable_tool.py")]
+        target = repo.path / "tools" / "unreadable_tool.py"
+        target.chmod(0)
+        command = [sys.executable, "-B", "-m", "tools.audit.gate", "--base", "origin/main"]
+        if as_root:
+            nobody = 65534
+            for path in [base, *base.rglob("*")]:
+                os.lchown(path, nobody, nobody)
+            command = [setpriv, f"--reuid={nobody}", f"--regid={nobody}", "--clear-groups", *command]
+        env = hermetic_git_env({"PYTHONPATH": str(ROOT), "HOME": str(base)})
+        proc = subprocess.run(command, cwd=repo.path, capture_output=True, text=True, env=env, timeout=300)
+        assert proc.returncode == 2, proc.stdout + proc.stderr
+        assert proc.stderr.startswith("ERROR: tools/unreadable_tool.py:1: cannot read changed file:"), proc.stderr
+        assert "0 findings" not in proc.stdout
+    finally:
+        if as_root:
+            shutil.rmtree(base)
+
+
+def test_FR_0_0_06_fails_closed_when_base_registry_unreadable(repo):
+    # Audit F57 (K7.9, must-catch 7): the registry at the base exists (`git cat-file -e` succeeds) but cannot be
+    # read. The gate exits 2 instead of skipping the removed-row check (E5). The base registry's loose object keeps
+    # its header and loses half its content, and its compressed stream is never finished.
+    repo.branch()
+    repo.write(REG, REGISTRY_HEAD)
+    repo.commit("drop registry row CAP-FIX-001")
+    control = repo.gate_json()
+    assert [f["rule"] for f in control["findings"]] == ["E5"]
+    blob = git(repo.path, "rev-parse", f"origin/main:{REG}").strip()
+    obj = repo.path / ".git" / "objects" / blob[:2] / blob[2:]
+    raw = zlib.decompress(obj.read_bytes())
+    header, content = raw.split(b"\0", 1)
+    obj.chmod(0o644)
+    stream = zlib.compressobj()
+    obj.write_bytes(stream.compress(header + b"\0") + stream.flush(zlib.Z_SYNC_FLUSH)
+                    + stream.compress(content[:len(content) // 2]) + stream.flush(zlib.Z_SYNC_FLUSH))  # never finished
+    exists = subprocess.run(["git", "cat-file", "-e", f"origin/main:{REG}"], cwd=repo.path, env=hermetic_git_env(),
+                            capture_output=True, text=True, timeout=60)
+    shown = subprocess.run(["git", "show", f"origin/main:{REG}"], cwd=repo.path, env=hermetic_git_env(),
+                           capture_output=True, text=True, timeout=60)
+    assert exists.returncode == 0 and shown.returncode != 0, (exists.stderr, shown.stderr)
+    proc = repo.gate("--base", "origin/main", json_output=False)
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert proc.stderr.startswith(f"ERROR: {REG}:1: cannot read the registry at base"), proc.stderr
+    assert "0 findings" not in proc.stdout
+
+
+def test_FR_0_0_06_fails_closed_when_spec_unreadable(repo):
+    # Audit F57 (K7.11, must-catch 7): the one path matching docs/specs/**/<WP>-*.md cannot be read (here it is a
+    # folder). Traceability exits 2 instead of ending with no findings.
+    repo.branch()
+    (repo.path / "docs" / "specs" / "phase-9" / "WP-9.9-thing.md").mkdir(parents=True)
+    proc = repo.gate("--base", "origin/main", "--wp", "WP-9.9", json_output=False)
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    assert proc.stderr.startswith("ERROR: docs/specs/phase-9/WP-9.9-thing.md:1: cannot read the spec"), proc.stderr
     assert "0 findings" not in proc.stdout

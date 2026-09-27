@@ -319,6 +319,21 @@ def s_expires_with_note(r):
     r.branch(); r.append("vad_adapters/example.py", "\nY = 2\n")
 
 
+# ---- audit round 8 (F56): ALLOW-PATTERNS-IN never approves edits to existing tests ---------------------
+def s_allow_patterns_in_covers_existing_tests(r):
+    # ALLOW-PATTERNS-IN exempts files from checks (c) and (d) only. Existing tests it covers, fixture files
+    # included, stay reported when modified or deleted, by the hook and the gate alike (must-catch 4).
+    r.write("tests/aqis_lab/test_second.py", "def test_second():\n    assert 2 * 2 == 4\n")
+    r.write("tests/aqis_lab/fixtures/gate/sample_fixture.py", "def fixture_value():\n    return 1\n")
+    r.commit("more existing tests on main")
+    git(r.path, "push", "-q", "origin", "main")
+    r.approve_on_main("WP-9.9.md", "ALLOW-PATTERNS-IN: tests/aqis_lab/**\n")
+    r.branch()
+    r.append("tests/aqis_lab/test_existing.py", "\n\ndef test_zero():\n    assert add(0, 0) == 0\n")
+    r.append("tests/aqis_lab/fixtures/gate/sample_fixture.py", "\nEXTRA = 2\n")
+    r.delete("tests/aqis_lab/test_second.py")
+
+
 # ---- audit round 6 (F44): accepted limit, identical in the gate and the owner's hook ------------------
 def s_lab_test_replaced_by_symlink(r):
     # A committed typechange (T) of an existing lab test is reported by neither the hook nor the gate. The owner
@@ -366,6 +381,8 @@ SCENARIOS = {
     "header_at_line_81": (s_header_at_line_81, False), "expires_today": (s_expires_today, False),
     "expires_with_note": (s_expires_with_note, False),
     "lab_test_replaced_by_symlink": (s_lab_test_replaced_by_symlink, True),
+    # audit round 8 (F56)
+    "allow_patterns_in_covers_existing_tests": (s_allow_patterns_in_covers_existing_tests, True),
 }
 EXPECT_NONE = {"guarded_approved", "approved_lab_test_edit", "clean", "modified_headerless_module", "bulleted_expires",
                "modified_non_py_test_file", "non_py_lab_test_file", "flagged_word_in_path", "unscanned_suffix_in_lab_dirs",
@@ -382,6 +399,9 @@ EXPECT_EXACT = {
     "unknown_policy_section": [("A2", "vad_adapters/example.py", "M")],
     "policy_leading_slash": [("A2", "vad_adapters/example.py", "M")],
     "header_at_line_81": [("D1", "aqis_lab/header_81.py")],
+    "allow_patterns_in_covers_existing_tests": [("B1", "tests/aqis_lab/fixtures/gate/sample_fixture.py"),
+                                                ("B1", "tests/aqis_lab/test_existing.py"),
+                                                ("B2", "tests/aqis_lab/test_second.py")],
 }
 
 
