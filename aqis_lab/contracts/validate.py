@@ -4,6 +4,7 @@ CAPABILITIES:
   CAP-CONTRACTS-001: validate_event checks one event-log record against event_log.v1.json (dispatched by event type) plus the word-timing order rule; validate_event_lines checks a JSON Lines file record by record, including the per-run seq order [tests: test_FR_0_2_01_schema_is_valid_draft_2020_12, test_FR_0_2_01_valid_fixture_covers_every_event_type, test_FR_0_2_01_valid_fixture_passes, test_FR_0_2_01_rejects_missing_required_field, test_FR_0_2_01_rejects_missing_required_payload_field, test_FR_0_2_01_rejects_missing_required_word_field, test_FR_0_2_01_rejects_wrong_type_or_enum, test_FR_0_2_01_clip_id_null_only_for_run_level_events, test_FR_0_2_01_null_audio_time_needs_reason, test_FR_0_2_01_final_word_timings, test_FR_0_2_01_error_payload_fields, test_FR_0_2_01_rejects_unknown_field, test_FR_0_2_01_invalid_fixture_names_expected_pointers]
   CAP-CONTRACTS-002: validate_run_card checks a run card against run_card.v1.json (pack null only for human_session, a model version or checksum) and that run_card_id is the SHA-256 of the canonical card without run_card_id, created_utc and notes [tests: test_FR_0_2_02_schema_is_valid_draft_2020_12, test_FR_0_2_02_valid_fixture_passes, test_FR_0_2_02_rejects_missing_required_field, test_FR_0_2_02_rejects_wrong_type_or_enum, test_FR_0_2_02_model_needs_version_or_checksum, test_FR_0_2_02_pack_null_only_for_human_session, test_FR_0_2_02_processing_keeps_step_order_per_path, test_FR_0_2_02_rejects_run_card_id_mismatch, test_FR_0_2_02_rejects_unknown_field, test_FR_0_2_02_open_objects_accept_any_members]
   CAP-CONTRACTS-003: validate_manifest checks a pack manifest against pack_manifest.v1.json (consent_ref for owner and campaign clips, safe archive names and member paths) plus unique clip_id and archive names and every clip's archive listed in archives [tests: test_FR_0_2_03_schema_is_valid_draft_2020_12, test_FR_0_2_03_valid_fixture_passes, test_FR_0_2_03_rejects_missing_required_field, test_FR_0_2_03_rejects_wrong_type_or_enum, test_FR_0_2_03_version_must_be_semver, test_FR_0_2_03_owner_and_campaign_clips_need_consent_ref, test_FR_0_2_03_rejects_duplicate_clip_id, test_FR_0_2_03_rejects_duplicate_archive_name, test_FR_0_2_03_clip_archive_must_be_listed, test_FR_0_2_03_rejects_unsafe_archive_name, test_FR_0_2_03_rejects_unsafe_member_path, test_FR_0_2_03_rejects_unknown_field, test_FR_0_2_03_recipe_accepts_any_members, test_FR_0_2_03_invalid_fixture_names_expected_pointers]
+  CAP-CONTRACTS-005: schema_version is checked before anything else: a missing or malformed version, an unknown major version and a newer minor version are rejected at /schema_version with a clear message (UnsupportedSchemaVersionError for the last two); each schema $id carries <major>.<minor> [tests: test_FR_0_2_06_schema_ids_carry_version, test_FR_0_2_06_rejects_unknown_major_version, test_FR_0_2_06_rejects_newer_minor_version, test_FR_0_2_06_rejects_malformed_schema_version, test_FR_0_2_06_documents_describe_change_policy]
   CAP-CONTRACTS-007: the validator API: one ContractValidationError naming every failing field by RFC 6901 pointer (missing fields at their own pointer, 'Rule:' text for cross-field rules), strict JSON (UTF-8, no NaN or Infinity, no duplicate keys, integers without a fraction), per-run seq order in JSON Lines, and a worker-process pool for large event files giving the same reports as one process [tests: test_FR_0_2_04_error_names_every_failing_pointer, test_FR_0_2_04_pointer_escapes_tilde_and_slash, test_FR_0_2_04_missing_field_pointer_names_the_field, test_FR_0_2_04_rejects_nan_infinity_and_overflow, test_FR_0_2_04_rejects_duplicate_keys, test_FR_0_2_04_rejects_integer_written_as_float, test_FR_0_2_04_patterns_reject_trailing_newline_and_non_ascii_digits, test_FR_0_2_04_non_json_python_values_rejected, test_FR_0_2_04_non_object_record_rejected, test_FR_0_2_04_rule_errors_explain_the_rule, test_FR_0_2_04_dispatch_matches_full_schema_on_all_fixtures, test_FR_0_2_04_seq_counts_from_zero_per_run, test_FR_0_2_04_worker_pool_report_identical_to_single_process]
 INPUTS AND OUTPUTS: parsed JSON values (or raw JSON text for the parsers) in; None when valid, otherwise
   ContractValidationError listing (JSON Pointer, message) for every failing field.
@@ -23,6 +24,7 @@ CHANGE LOG:
   2026-09-27 WP-0.2 FR-0.2-02 run cards: validate_run_card and the run_card_id check.
   2026-09-27 WP-0.2 FR-0.2-03 pack manifests: validate_manifest and the checks across clips.
   2026-09-27 WP-0.2 FR-0.2-04 validate_document, the worker pool (question 2), 'Rule:' messages.
+  2026-09-27 WP-0.2 FR-0.2-06 schema_version check and UnsupportedSchemaVersionError.
 """
 import datetime
 import functools
@@ -49,6 +51,9 @@ ROOT_POINTER_LABEL = "(document)"
 # (NFR-0.2-01, plan question 2); each chunk is validated in one worker, and results keep the file order.
 POOL_MIN_RECORDS = 5000
 POOL_CHUNK_RECORDS = 2000
+# kind -> {known major version: newest known minor version}. The v1 schema files accept every v1 minor up to it.
+SUPPORTED_VERSIONS = {"event": {1: 0}, "run_card": {1: 0}, "manifest": {1: 0}}
+VERSION_RE = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 UTC_RE = re.compile(r"([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.[0-9]{1,9})?Z")
 
 
@@ -82,6 +87,10 @@ class ContractValidationError(ValueError):
     @property
     def pointers(self):
         return tuple(sorted({err.pointer for err in self.errors}))
+
+
+class UnsupportedSchemaVersionError(ContractValidationError):
+    """The record claims a schema version this validator does not know (unknown major or newer minor)."""
 
 
 @dataclass(frozen=True)
@@ -337,12 +346,37 @@ def _json_type_name(value):
     return "null" if value is None else names.get(type(value), type(value).__name__)
 
 
+def _check_version(kind, record):
+    """Raise unless schema_version names a version this validator knows; other fields are not judged before."""
+    label = KINDS[kind][0]
+    if "schema_version" not in record:
+        raise ContractValidationError(kind, [FieldError("/schema_version", "required field is missing; without it "
+                                                                           "the record's contract version is unknown")])
+    version = record["schema_version"]
+    match = VERSION_RE.fullmatch(version) if isinstance(version, str) else None
+    if match is None:
+        raise ContractValidationError(kind, [FieldError("/schema_version", f"must be a string '<major>.<minor>' such "
+                                                                           f"as '1.0', got {version!r}")])
+    major, minor = int(match.group(1)), int(match.group(2))
+    known = SUPPORTED_VERSIONS[kind]
+    known_text = ", ".join(f"major version {m} (up to {m}.{known[m]})" for m in sorted(known))
+    if major not in known:
+        raise UnsupportedSchemaVersionError(kind, [FieldError(
+            "/schema_version", f"{label} schema_version {version!r} has major version {major}, which this validator "
+                               f"does not know; it knows {known_text}")])
+    if minor > known[major]:
+        raise UnsupportedSchemaVersionError(kind, [FieldError(
+            "/schema_version", f"{label} schema_version {version!r} is newer than this validator "
+                               f"({major}.{known[major]}); update aqis_lab to validate it")])
+
+
 def _validate(kind, record, validator, rules):
     if not isinstance(record, dict):
         label = KINDS[kind][0]
         article = "an" if label[0] in "aeiou" else "a"
         raise ContractValidationError(kind, [FieldError("", f"{article} {label} record must be a JSON object, "
                                                             f"got {_json_type_name(record)}")])
+    _check_version(kind, record)
     errors = _schema_errors(validator, record)
     _json_value_errors(record, (), errors)
     errors.extend(rules(record))

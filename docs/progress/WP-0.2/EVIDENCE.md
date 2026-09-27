@@ -107,3 +107,20 @@ exit=1
 - Untested branch (stated here, not hidden): the `WorkerPoolError` path, taken when worker processes cannot start or die, which gives exit 2 with "rerun with --workers 1". Making process creation fail needs a resource limit that root ignores, or a test double for the OS, which the rules allow only for external services.
 - Fast suite: `887 passed, 8 deselected in 56.43s`. Gate (`--base origin/main`): `0 findings: OK (0.1 s)`.
 - Status: DONE
+
+### FR-0.2-06 — Versioning
+- Tests (`tests/aqis_lab/test_aqis_contracts_versioning.py`, 60 cases): `test_FR_0_2_06_schema_ids_carry_version`, `test_FR_0_2_06_rejects_unknown_major_version` (all three kinds; `2.0`, `0.1`, `10.0`, `2.5`), `test_FR_0_2_06_rejects_newer_minor_version` (`1.1`, `1.10`), `test_FR_0_2_06_rejects_malformed_schema_version` (12 malformed values, plus a missing version with another error present), `test_FR_0_2_06_documents_describe_change_policy`.
+- Tests first: `E   ImportError: cannot import name 'UnsupportedSchemaVersionError' from 'aqis_lab.contracts.validate'`. After the version check was in, only the 3 document tests failed (`3 failed, 57 passed`), because `docs/contracts/` did not exist yet. The three contract documents written at this step (`EVENT_LOG.md`, `RUN_CARD.md`, `PACK_MANIFEST.md`) are the FR-0.2-01 to 03 deliverables, and FR-0.2-07 checks them.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_contracts_versioning.py -q -p no:cacheprovider`, then `validate_run_card` on the valid card with `schema_version` set to `2.0`, `1.1` and `1`.
+- Output (real excerpt):
+```text
+60 passed in 0.21s
+UnsupportedSchemaVersionError | run card record is invalid (1 problem):
+  /schema_version: run card schema_version '2.0' has major version 2, which this validator does not know; it knows major version 1 (up to 1.0)
+UnsupportedSchemaVersionError | run card record is invalid (1 problem):
+  /schema_version: run card schema_version '1.1' is newer than this validator (1.0); update aqis_lab to validate it
+ContractValidationError | run card record is invalid (1 problem):
+  /schema_version: must be a string '<major>.<minor>' such as '1.0', got '1'
+```
+- Fast suite: `947 passed, 8 deselected in 57.02s`. Gate (`--base origin/main`): `0 findings: OK (0.2 s)`.
+- Status: DONE
