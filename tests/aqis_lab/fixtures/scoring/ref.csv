@@ -1,0 +1,14 @@
+clip_id,text
+c01-exact,The cat sat on the mat.
+c02-substitution,Please call me tomorrow.
+c03-deletions,I would like a large coffee.
+c04-insertion,Turn left here.
+c05-filler,"Um, I think so."
+c06-numbers,It costs twenty-five dollars.
+c07-empty-reference,
+c08-filler-only,Uh.
+c09-empty-hypothesis,See you soon.
+c10-apostrophe,I don’t know.
+c11-punctuation,"Yes, please."
+c12-multiline,"Line one
+line two"
