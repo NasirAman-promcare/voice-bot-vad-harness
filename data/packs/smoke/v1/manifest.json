@@ -1,0 +1,1603 @@
+{
+  "archives": [
+    {
+      "bytes": 3891200,
+      "n_members": 20,
+      "name": "smoke-1.0.0-test-clean-000.tar",
+      "sha256": "ecff33aa9b691796881b604bb10712ba5f210b1614f832c462deb0fd814acf42"
+    },
+    {
+      "bytes": 1832960,
+      "n_members": 10,
+      "name": "smoke-1.0.0-test-other-000.tar",
+      "sha256": "c593b255ce812fe4ec5f196dccb300872095a4ebc5103e3e36907f3e3bb93ab5"
+    },
+    {
+      "bytes": 2324480,
+      "n_members": 10,
+      "name": "smoke-1.0.0-noisy-000.tar",
+      "sha256": "1e463909133194e7fd6bc491fe24a375a78f1bc9ae4a0adc2614643bc7179db3"
+    },
+    {
+      "bytes": 3051520,
+      "n_members": 10,
+      "name": "smoke-1.0.0-non-speech-000.tar",
+      "sha256": "ff4cd9178a37ebf51f1c20e4df6be9ac4d7562c5b123ad60d2f47668576e5412"
+    },
+    {
+      "bytes": 1495040,
+      "n_members": 10,
+      "name": "smoke-1.0.0-tts-000.tar",
+      "sha256": "cc0ee350b5a32ea1a6cf7f32989478114dca11c2a30832a18837534b10afec99"
+    }
+  ],
+  "clips": [
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-1188-133604-0029",
+      "consent_ref": null,
+      "duration_s": 3.705,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-1188-133604-0029.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "7c26dd27425e63fbb7daab52f5ce26c57829930bae4defd28bcaa504210c5ebe",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/1188/133604/1188-133604-0029.flac",
+      "speaker_id": "1188",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "ONLY THERE ARE TWO SORTS OF CLOUD AND FIRE"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-121-127105-0012",
+      "consent_ref": null,
+      "duration_s": 4.83,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-121-127105-0012.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "f41465b0ff34124426e1f4442f093a429aaa4476c2c1c4654a31e0803d9a5c80",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/121/127105/121-127105-0012.flac",
+      "speaker_id": "121",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "IT WASN'T SIMPLY THAT SHE SAID SO BUT THAT I KNEW SHE HADN'T I WAS SURE I COULD SEE"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-1221-135767-0014",
+      "consent_ref": null,
+      "duration_s": 7.07,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-1221-135767-0014.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "7f6a89db5862cb1d68bc0defa6094894e6df943fb62473ca38c2be6940f054ca",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/1221/135767/1221-135767-0014.flac",
+      "speaker_id": "1221",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "YEA HIS HONOURABLE WORSHIP IS WITHIN BUT HE HATH A GODLY MINISTER OR TWO WITH HIM AND LIKEWISE A LEECH"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-1580-141083-0035",
+      "consent_ref": null,
+      "duration_s": 4.98,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-1580-141083-0035.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "80ef402b75c7f5a28a3007709465a5f43f622f17fcf3ff58e2c7697dd2a1c949",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/1580/141083/1580-141083-0035.flac",
+      "speaker_id": "1580",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "HOLMES TURNED AWAY AND STOOPED SUDDENLY TO THE FLOOR HALLOA WHAT'S THIS"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-237-134493-0011",
+      "consent_ref": null,
+      "duration_s": 5.035,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-237-134493-0011.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "83e7bb75de1320b5a2fdf1a247bf8cc9fde5d7057d94062d988ab76958db318e",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/237/134493/237-134493-0011.flac",
+      "speaker_id": "237",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "HOW BROWN YOU'VE GOT SINCE YOU CAME HOME I WISH I HAD AN ATHLETE TO MOW MY ORCHARD"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-2830-3980-0007",
+      "consent_ref": null,
+      "duration_s": 10.19,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-2830-3980-0007.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "97e4cfc6d5b65e9fa778780a19594ba47014686349b4dc98ec1253564b994fc0",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/2830/3980/2830-3980-0007.flac",
+      "speaker_id": "2830",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "AS THE AMBASSADOR OF A GOVERNMENT IS HONORED FOR HIS OFFICE AND NOT FOR HIS PRIVATE PERSON SO THE MINISTER OF CHRIST SHOULD EXALT HIS OFFICE IN ORDER TO GAIN AUTHORITY AMONG MEN"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-3570-5695-0009",
+      "consent_ref": null,
+      "duration_s": 5.025,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-3570-5695-0009.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "7d7d7ebe34456eae5a2ce4bf0982662c1aee5601247ba591e5e60761b8591146",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/3570/5695/3570-5695-0009.flac",
+      "speaker_id": "3570",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "EACH WILL THEREFORE SERVE ABOUT EQUALLY WELL DURING THE EARLIER STAGES OF SOCIAL GROWTH"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-4077-13751-0014",
+      "consent_ref": null,
+      "duration_s": 12.61,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-4077-13751-0014.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "a02273c1df47278411214e3e1cf5bdd191bf3a79d2d83019adcb767bf244c960",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/4077/13751/4077-13751-0014.flac",
+      "speaker_id": "4077",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "MAKING THEIR WAY ACROSS THE RIVER MOST OF THE REFUGEES FOUND SHELTER AMONG THE MORE HOSPITABLE PEOPLE OF CLAY COUNTY AND AFTERWARD ESTABLISHED THEMSELVES IN CALDWELL COUNTY THEREIN FOUNDING THE CITY OF FAR WEST"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-4446-2271-0024",
+      "consent_ref": null,
+      "duration_s": 3.16,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-4446-2271-0024.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "cedffbddfe811979ef486e5a510ffc831f29a7bc25e8a7fb90bec82f286c458f",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/4446/2271/4446-2271-0024.flac",
+      "speaker_id": "4446",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "I SHOULDN'T WONDER IF SHE COULD LAUGH ABOUT IT WITH ME NOW"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-4507-16021-0058",
+      "consent_ref": null,
+      "duration_s": 3.11,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-4507-16021-0058.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "ab27f3e157c7bd13ba50200c0ba0150b28146aca7028b1c46cf9fb4301e6d558",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/4507/16021/4507-16021-0058.flac",
+      "speaker_id": "4507",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "THE FLAME IS THE ENEMY OF THE WING"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-4970-29095-0002",
+      "consent_ref": null,
+      "duration_s": 5.48,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-4970-29095-0002.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "17c9101120d4f9bdbd6560cc8d10a2c9d8137263c89909719de0e97874660d9e",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/4970/29095/4970-29095-0002.flac",
+      "speaker_id": "4970",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "WELL MOTHER SAID THE YOUNG STUDENT LOOKING UP WITH A SHADE OF IMPATIENCE"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-4992-41797-0015",
+      "consent_ref": null,
+      "duration_s": 8.65,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-4992-41797-0015.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "ac958a9b272a122e31a2c1458863474a2cd94970034e9f448124236b7aa61636",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/4992/41797/4992-41797-0015.flac",
+      "speaker_id": "4992",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "CYRIL THERE MUST BE SOME BETTER WAY OF DOING I JUST DRAW THE OUTLINE OF AN ANIMAL AND THEN I PUT HAIRS OR FEATHERS ON IT THEY HAVE NO BODIES"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-61-70970-0011",
+      "consent_ref": null,
+      "duration_s": 6.075,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-61-70970-0011.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "4ce7e9dc53ed2476bf0f1b8f9a103b82fa4d8f3136e2d027426d90d1e6cb5fb4",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/61/70970/61-70970-0011.flac",
+      "speaker_id": "61",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "AS ANY IN ENGLAND I WOULD SAY SAID GAMEWELL PROUDLY THAT IS IN HIS DAY"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-6829-68771-0030",
+      "consent_ref": null,
+      "duration_s": 6.225,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-6829-68771-0030.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "b7c30cb32d53b33035804d73297929f937f37660cf07278dc884ec3ca318d80f",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/6829/68771/6829-68771-0030.flac",
+      "speaker_id": "6829",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "HER MANNER WAS NEITHER INDEPENDENT NOR ASSERTIVE BUT RATHER ONE OF WELL BRED COMPOSURE AND CALM RELIANCE"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-7127-75946-0009",
+      "consent_ref": null,
+      "duration_s": 4.72,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-7127-75946-0009.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "6cd991daff314d156975bdf059bdfde3e28008af6e011a5e9cd5d3cd13f30755",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/7127/75946/7127-75946-0009.flac",
+      "speaker_id": "7127",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "NOT AT ALL YOU ARE ON THE CONTRARY MOST AGREEABLE TO ME"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-7176-92135-0018",
+      "consent_ref": null,
+      "duration_s": 8.94,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-7176-92135-0018.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "8d6ddf736461abad6ee601d5f9ca4c755037423b7f682e39f9418486b6d6f376",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/7176/92135/7176-92135-0018.flac",
+      "speaker_id": "7176",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "IN THE MODERN WELL CONSTRUCTED PLAY HE SIMPLY RINGS UP AN IMAGINARY CONFEDERATE AND TELLS HIM WHAT HE IS GOING TO DO COULD ANYTHING BE MORE NATURAL"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-7729-102255-0023",
+      "consent_ref": null,
+      "duration_s": 5.5,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-7729-102255-0023.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "e1d2dce3267708f45c33f7b01e28fbdb4ccdeca233207016036427959cb7ca57",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/7729/102255/7729-102255-0023.flac",
+      "speaker_id": "7729",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "THEIR DISTINCTIVE CHARACTERS HOWEVER DISPLAY ONE BROAD AND UNFAILING DIFFERENCE"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-8230-279154-0011",
+      "consent_ref": null,
+      "duration_s": 6.25,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-8230-279154-0011.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "c720c423fb585a19301a2b8a6f4b2c9d857c91c31c939a479947c3098514acb2",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/8230/279154/8230-279154-0011.flac",
+      "speaker_id": "8230",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "SOME IMAGES LIKE SOME SENSATIONS FEEL VERY FAMILIAR WHILE OTHERS FEEL STRANGE"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-8455-210777-0037",
+      "consent_ref": null,
+      "duration_s": 4.735,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-8455-210777-0037.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "3d98c3bbd4c4e37ada0b9feeae0e4d20a9e581d884ef5dbe50d56d4354a421d9",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/8455/210777/8455-210777-0037.flac",
+      "speaker_id": "8455",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "YOU HAVE COME TO US THREATENING US WITH ABSOLUTE DESTRUCTION"
+    },
+    {
+      "archive": "smoke-1.0.0-test-clean-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-clean-908-157963-0014",
+      "consent_ref": null,
+      "duration_s": 4.52,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-clean/ls-test-clean-908-157963-0014.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "bf5cd3176f07c494e4f392d0663ee6da5d42154574519403b562aeb067c35d30",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-clean/908/157963/908-157963-0014.flac",
+      "speaker_id": "908",
+      "split": "test-clean",
+      "tags": [
+        "clean",
+        "speech"
+      ],
+      "transcript": "DESCEND O LITTLE CLOUD AND HOVER BEFORE THE EYES OF THEL"
+    },
+    {
+      "archive": "smoke-1.0.0-test-other-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-other-2609-156975-0000",
+      "consent_ref": null,
+      "duration_s": 4.49,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-other/ls-test-other-2609-156975-0000.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "93e66197161e8031fb6f65e02a47f9f0a25706f77d81493e4045b49f2c2e87f8",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-other/2609/156975/2609-156975-0000.flac",
+      "speaker_id": "2609",
+      "split": "test-other",
+      "tags": [
+        "other",
+        "speech"
+      ],
+      "transcript": "THEN MOSES WAS AFRAID AND SAID SURELY THE THING IS KNOWN"
+    },
+    {
+      "archive": "smoke-1.0.0-test-other-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-other-3080-5040-0016",
+      "consent_ref": null,
+      "duration_s": 5.75,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-other/ls-test-other-3080-5040-0016.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "3f410e259f4c631465edc8e92b6dab617932b2ed4e5a0d53fcbba4e0b833cce4",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-other/3080/5040/3080-5040-0016.flac",
+      "speaker_id": "3080",
+      "split": "test-other",
+      "tags": [
+        "other",
+        "speech"
+      ],
+      "transcript": "I DO NOT FIND IT THOUGH I AM TOLD I WAS SO EXTREMELY WHEN I BELIEVED YOU LOVED ME"
+    },
+    {
+      "archive": "smoke-1.0.0-test-other-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-other-3528-168669-0043",
+      "consent_ref": null,
+      "duration_s": 4.16,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-other/ls-test-other-3528-168669-0043.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "345da677dd01c1b4b497bc848a89acd08af1815a8179110fffe4d5f1621970a2",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-other/3528/168669/3528-168669-0043.flac",
+      "speaker_id": "3528",
+      "split": "test-other",
+      "tags": [
+        "other",
+        "speech"
+      ],
+      "transcript": "FATHER FAUVENT THE COMMUNITY HAS BEEN BLESSED IN MOTHER CRUCIFIXION"
+    },
+    {
+      "archive": "smoke-1.0.0-test-other-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-other-3538-142836-0006",
+      "consent_ref": null,
+      "duration_s": 5.27,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-other/ls-test-other-3538-142836-0006.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "9d6b82c5a015afd17cbcdae5a469b7d4b6c0690c50b48224beebf10499a488cf",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-other/3538/142836/3538-142836-0006.flac",
+      "speaker_id": "3538",
+      "split": "test-other",
+      "tags": [
+        "other",
+        "speech"
+      ],
+      "transcript": "IT IS CONSIDERED TO BE SUFFICIENTLY BOILED WHEN SOME TAKEN UP IN A SPOON POURS OUT LIKE OIL"
+    },
+    {
+      "archive": "smoke-1.0.0-test-other-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-other-4198-12259-0026",
+      "consent_ref": null,
+      "duration_s": 5.49,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-other/ls-test-other-4198-12259-0026.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "24346eec5b84cb48cac45ec90516f4626d3ac14da136cd153bf813fee176e65f",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-other/4198/12259/4198-12259-0026.flac",
+      "speaker_id": "4198",
+      "split": "test-other",
+      "tags": [
+        "other",
+        "speech"
+      ],
+      "transcript": "I WAS WONT HERETOFORE TO DRINK OUT ALL BUT NOW I LEAVE NOTHING"
+    },
+    {
+      "archive": "smoke-1.0.0-test-other-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-other-6128-63244-0013",
+      "consent_ref": null,
+      "duration_s": 4.145,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-other/ls-test-other-6128-63244-0013.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "ce2ae6cad3835fbe550cde383c1224d40f657e27c3d4afdb7aa74c59c308a4f0",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-other/6128/63244/6128-63244-0013.flac",
+      "speaker_id": "6128",
+      "split": "test-other",
+      "tags": [
+        "other",
+        "speech"
+      ],
+      "transcript": "RAISE THE STANDARD AMONG THEM AND BRING ME A THOUSAND NAMES"
+    },
+    {
+      "archive": "smoke-1.0.0-test-other-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-other-6432-63723-0046",
+      "consent_ref": null,
+      "duration_s": 6.52,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-other/ls-test-other-6432-63723-0046.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "cf1508d49eb7e16beece86bbd07940e1c686d9be9156e65b36e02f2935bd1222",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-other/6432/63723/6432-63723-0046.flac",
+      "speaker_id": "6432",
+      "split": "test-other",
+      "tags": [
+        "other",
+        "speech"
+      ],
+      "transcript": "THERE WERE THREE OF THEM THE CENTER FIGURE BEING THAT OF HARRY KING AND HE WAS VERY MUCH INTOXICATED"
+    },
+    {
+      "archive": "smoke-1.0.0-test-other-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-other-7105-2340-0033",
+      "consent_ref": null,
+      "duration_s": 10.615,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-other/ls-test-other-7105-2340-0033.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "ddc495f316b86820ef39ad8da3c22f2100aea30b3eb8ecaf97b76092a6aa2090",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-other/7105/2340/7105-2340-0033.flac",
+      "speaker_id": "7105",
+      "split": "test-other",
+      "tags": [
+        "other",
+        "speech"
+      ],
+      "transcript": "PETER DASHED OUT OF THE ROOM WITH GLAD RELIEF HE HAD LIVED SO LONG DURING THE LAST FEW MINUTES THAT A GOLDEN WEDDING SEEMED WITHIN MEASURABLE DISTANCE"
+    },
+    {
+      "archive": "smoke-1.0.0-test-other-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-other-8188-269288-0027",
+      "consent_ref": null,
+      "duration_s": 4.4,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-other/ls-test-other-8188-269288-0027.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "702be697e6fba16f05e338fa0148f58c4f4ef57bf1af7ac6ec56433372f69440",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-other/8188/269288/8188-269288-0027.flac",
+      "speaker_id": "8188",
+      "split": "test-other",
+      "tags": [
+        "other",
+        "speech"
+      ],
+      "transcript": "JUST AFTER MIDNIGHT SHE ROSE WITH A SIGH TO PREPARE FOR BED"
+    },
+    {
+      "archive": "smoke-1.0.0-test-other-000.tar",
+      "channels": 1,
+      "clip_id": "ls-test-other-8280-266249-0004",
+      "consent_ref": null,
+      "duration_s": 5.87,
+      "licence": "CC-BY-4.0",
+      "member_path": "test-other/ls-test-other-8280-266249-0004.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "d2935dc14ab2b3ad07671a80f49f1de086f6e59415f0fb55c76ffd1eae7240d6",
+      "source": "librispeech",
+      "source_ref": "LibriSpeech/test-other/8280/266249/8280-266249-0004.flac",
+      "speaker_id": "8280",
+      "split": "test-other",
+      "tags": [
+        "other",
+        "speech"
+      ],
+      "transcript": "THERE ARE SOME NICE LOOKING PEOPLE ON BOARD REMARKED MISTER TRAVILLA IN AN UNDERTONE TO HIS WIFE"
+    },
+    {
+      "archive": "smoke-1.0.0-noisy-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-mix-01",
+      "consent_ref": null,
+      "duration_s": 5.225,
+      "licence": "CC-BY-4.0 AND LicenseRef-public-domain",
+      "member_path": "noisy/smoke-mix-01.wav",
+      "recipe": {
+        "achieved_snr_db": 5.0,
+        "kind": "mix",
+        "length_samples": 83600,
+        "noise_clip_id": "musan-noise-free-sound-0031",
+        "noise_gain": 0.18292021751403809,
+        "noise_gain_q24": 3068892,
+        "noise_offset_samples": 194381,
+        "peak_limited": false,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "snr_db": 5,
+        "snr_definition": "SNR = 10*log10(Ps/Pn), where Ps and Pn are the mean squares of the 16-bit sample values of the whole speech clip and of the equally long noise segment, each multiplied by its gain",
+        "source_clip_ids": [
+          "ls-test-clean-260-123288-0017",
+          "musan-noise-free-sound-0031"
+        ],
+        "speech_clip_id": "ls-test-clean-260-123288-0017",
+        "speech_gain": 1.0,
+        "speech_gain_q24": 16777216
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "7a784512513276f1d118ea983f4097b1ca36e3bd875c13b9452dee3a90d5d6e3",
+      "source": "mix",
+      "source_ref": "aqis_lab pack builder: ls-test-clean-260-123288-0017 mixed with musan-noise-free-sound-0031 at 5 dB SNR",
+      "speaker_id": "260",
+      "split": "noisy",
+      "tags": [
+        "noisy",
+        "snr-5",
+        "speech"
+      ],
+      "transcript": "IS THE ATMOSPHERIC CONDITION HAVING ONCE REACHED THIS DENSITY TO BECOME FINAL"
+    },
+    {
+      "archive": "smoke-1.0.0-noisy-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-mix-02",
+      "consent_ref": null,
+      "duration_s": 9.5050625,
+      "licence": "CC-BY-4.0 AND LicenseRef-public-domain",
+      "member_path": "noisy/smoke-mix-02.wav",
+      "recipe": {
+        "achieved_snr_db": 5.0,
+        "kind": "mix",
+        "length_samples": 152081,
+        "noise_clip_id": "musan-noise-free-sound-0064",
+        "noise_gain": 0.4910045862197876,
+        "noise_gain_q24": 8237690,
+        "noise_offset_samples": 627130,
+        "peak_limited": false,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "snr_db": 5,
+        "snr_definition": "SNR = 10*log10(Ps/Pn), where Ps and Pn are the mean squares of the 16-bit sample values of the whole speech clip and of the equally long noise segment, each multiplied by its gain",
+        "source_clip_ids": [
+          "ls-test-clean-1995-1837-0025",
+          "musan-noise-free-sound-0064"
+        ],
+        "speech_clip_id": "ls-test-clean-1995-1837-0025",
+        "speech_gain": 1.0,
+        "speech_gain_q24": 16777216
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "7d1d89afaadec17f726fb357018dc21df5eae730f9317dc3071d0946dfd7464f",
+      "source": "mix",
+      "source_ref": "aqis_lab pack builder: ls-test-clean-1995-1837-0025 mixed with musan-noise-free-sound-0064 at 5 dB SNR",
+      "speaker_id": "1995",
+      "split": "noisy",
+      "tags": [
+        "noisy",
+        "snr-5",
+        "speech"
+      ],
+      "transcript": "SHE ROSE WITH A FLEETING GLANCE GATHERED THE SHAWL ROUND HER THEN GLIDING FORWARD WAVERING TREMULOUS SLIPPED ACROSS THE ROAD AND INTO THE SWAMP"
+    },
+    {
+      "archive": "smoke-1.0.0-noisy-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-mix-03",
+      "consent_ref": null,
+      "duration_s": 7.4,
+      "licence": "CC-BY-4.0 AND LicenseRef-public-domain",
+      "member_path": "noisy/smoke-mix-03.wav",
+      "recipe": {
+        "achieved_snr_db": 5.0,
+        "kind": "mix",
+        "length_samples": 118400,
+        "noise_clip_id": "musan-noise-free-sound-0840",
+        "noise_gain": 0.13640451431274414,
+        "noise_gain_q24": 2288488,
+        "noise_offset_samples": 796457,
+        "peak_limited": false,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "snr_db": 5,
+        "snr_definition": "SNR = 10*log10(Ps/Pn), where Ps and Pn are the mean squares of the 16-bit sample values of the whole speech clip and of the equally long noise segment, each multiplied by its gain",
+        "source_clip_ids": [
+          "ls-test-clean-6829-68769-0049",
+          "musan-noise-free-sound-0840"
+        ],
+        "speech_clip_id": "ls-test-clean-6829-68769-0049",
+        "speech_gain": 1.0,
+        "speech_gain_q24": 16777216
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "ec440a5f61971160b67ebf97e14198be206392bd56cd9addd7b2e197f62ebcb1",
+      "source": "mix",
+      "source_ref": "aqis_lab pack builder: ls-test-clean-6829-68769-0049 mixed with musan-noise-free-sound-0840 at 5 dB SNR",
+      "speaker_id": "6829",
+      "split": "noisy",
+      "tags": [
+        "noisy",
+        "snr-5",
+        "speech"
+      ],
+      "transcript": "HE DETESTED THE GRASPING DISPOSITION THAT WOULD ENDEAVOR TO TAKE ADVANTAGE OF HIS EVIDENT DESIRE TO HELP YOUNG GATES"
+    },
+    {
+      "archive": "smoke-1.0.0-noisy-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-mix-04",
+      "consent_ref": null,
+      "duration_s": 5.265,
+      "licence": "CC-BY-4.0 AND LicenseRef-public-domain",
+      "member_path": "noisy/smoke-mix-04.wav",
+      "recipe": {
+        "achieved_snr_db": 5.0,
+        "kind": "mix",
+        "length_samples": 84240,
+        "noise_clip_id": "musan-noise-free-sound-0489",
+        "noise_gain": 0.08975297212600708,
+        "noise_gain_q24": 1505805,
+        "noise_offset_samples": 698080,
+        "peak_limited": false,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "snr_db": 5,
+        "snr_definition": "SNR = 10*log10(Ps/Pn), where Ps and Pn are the mean squares of the 16-bit sample values of the whole speech clip and of the equally long noise segment, each multiplied by its gain",
+        "source_clip_ids": [
+          "ls-test-clean-3729-6852-0028",
+          "musan-noise-free-sound-0489"
+        ],
+        "speech_clip_id": "ls-test-clean-3729-6852-0028",
+        "speech_gain": 1.0,
+        "speech_gain_q24": 16777216
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "d37d378e4949949c4760e684a60abc600ed37faf6f75aca2ad9f9fe98c3d21e1",
+      "source": "mix",
+      "source_ref": "aqis_lab pack builder: ls-test-clean-3729-6852-0028 mixed with musan-noise-free-sound-0489 at 5 dB SNR",
+      "speaker_id": "3729",
+      "split": "noisy",
+      "tags": [
+        "noisy",
+        "snr-5",
+        "speech"
+      ],
+      "transcript": "ALL THESE HONEST PERSONS ARE WAITING THEIR TURN TO GET THEIR SNUFF BOXES FILLED"
+    },
+    {
+      "archive": "smoke-1.0.0-noisy-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-mix-05",
+      "consent_ref": null,
+      "duration_s": 7.97,
+      "licence": "CC-BY-4.0 AND LicenseRef-public-domain",
+      "member_path": "noisy/smoke-mix-05.wav",
+      "recipe": {
+        "achieved_snr_db": 10.0,
+        "kind": "mix",
+        "length_samples": 127520,
+        "noise_clip_id": "musan-noise-free-sound-0824",
+        "noise_gain": 0.11977314949035645,
+        "noise_gain_q24": 2009460,
+        "noise_offset_samples": 151466,
+        "peak_limited": false,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "snr_db": 10,
+        "snr_definition": "SNR = 10*log10(Ps/Pn), where Ps and Pn are the mean squares of the 16-bit sample values of the whole speech clip and of the equally long noise segment, each multiplied by its gain",
+        "source_clip_ids": [
+          "ls-test-clean-1188-133604-0036",
+          "musan-noise-free-sound-0824"
+        ],
+        "speech_clip_id": "ls-test-clean-1188-133604-0036",
+        "speech_gain": 1.0,
+        "speech_gain_q24": 16777216
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "a4bfedac4a9b60367af73609513bf6c2c4b75457c88f2bac6bca652fef98e37b",
+      "source": "mix",
+      "source_ref": "aqis_lab pack builder: ls-test-clean-1188-133604-0036 mixed with musan-noise-free-sound-0824 at 10 dB SNR",
+      "speaker_id": "1188",
+      "split": "noisy",
+      "tags": [
+        "noisy",
+        "snr-10",
+        "speech"
+      ],
+      "transcript": "IN BOTH THESE HIGH MYTHICAL SUBJECTS THE SURROUNDING NATURE THOUGH SUFFERING IS STILL DIGNIFIED AND BEAUTIFUL"
+    },
+    {
+      "archive": "smoke-1.0.0-noisy-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-mix-06",
+      "consent_ref": null,
+      "duration_s": 3.32,
+      "licence": "CC-BY-4.0 AND LicenseRef-public-domain",
+      "member_path": "noisy/smoke-mix-06.wav",
+      "recipe": {
+        "achieved_snr_db": 10.0,
+        "kind": "mix",
+        "length_samples": 53120,
+        "noise_clip_id": "musan-noise-free-sound-0494",
+        "noise_gain": 3.385816216468811,
+        "noise_gain_q24": 56804570,
+        "noise_offset_samples": 837356,
+        "peak_limited": true,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "snr_db": 10,
+        "snr_definition": "SNR = 10*log10(Ps/Pn), where Ps and Pn are the mean squares of the 16-bit sample values of the whole speech clip and of the equally long noise segment, each multiplied by its gain",
+        "source_clip_ids": [
+          "ls-test-clean-5142-33396-0025",
+          "musan-noise-free-sound-0494"
+        ],
+        "speech_clip_id": "ls-test-clean-5142-33396-0025",
+        "speech_gain": 0.9282681941986084,
+        "speech_gain_q24": 15573756
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "e61acf1c75f47dcc91025f74c0e558077b6194bb389489962d3e2ef7b0a6caac",
+      "source": "mix",
+      "source_ref": "aqis_lab pack builder: ls-test-clean-5142-33396-0025 mixed with musan-noise-free-sound-0494 at 10 dB SNR",
+      "speaker_id": "5142",
+      "split": "noisy",
+      "tags": [
+        "noisy",
+        "snr-10",
+        "speech"
+      ],
+      "transcript": "COME COME I CALLED WHEN NO ONE OBEYED A FIRE"
+    },
+    {
+      "archive": "smoke-1.0.0-noisy-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-mix-07",
+      "consent_ref": null,
+      "duration_s": 9.64,
+      "licence": "CC-BY-4.0 AND LicenseRef-public-domain",
+      "member_path": "noisy/smoke-mix-07.wav",
+      "recipe": {
+        "achieved_snr_db": 10.0,
+        "kind": "mix",
+        "length_samples": 154240,
+        "noise_clip_id": "musan-noise-free-sound-0184",
+        "noise_gain": 0.8108800053596497,
+        "noise_gain_q24": 13604309,
+        "noise_offset_samples": 172891,
+        "peak_limited": false,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "snr_db": 10,
+        "snr_definition": "SNR = 10*log10(Ps/Pn), where Ps and Pn are the mean squares of the 16-bit sample values of the whole speech clip and of the equally long noise segment, each multiplied by its gain",
+        "source_clip_ids": [
+          "ls-test-clean-7176-92135-0031",
+          "musan-noise-free-sound-0184"
+        ],
+        "speech_clip_id": "ls-test-clean-7176-92135-0031",
+        "speech_gain": 1.0,
+        "speech_gain_q24": 16777216
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "172eb5a04b171726a23fa8511ba50990703185fc24ef2b2c86ecf23afd148b29",
+      "source": "mix",
+      "source_ref": "aqis_lab pack builder: ls-test-clean-7176-92135-0031 mixed with musan-noise-free-sound-0184 at 10 dB SNR",
+      "speaker_id": "7176",
+      "split": "noisy",
+      "tags": [
+        "noisy",
+        "snr-10",
+        "speech"
+      ],
+      "transcript": "AND THERE YOU ARE YOU WILL OF COURSE APPRECIATE THAT THE UNFINISHED SENTENCES NOT ONLY SAVE TIME BUT ALSO MAKE THE MANOEUVRING VERY MUCH MORE NATURAL"
+    },
+    {
+      "archive": "smoke-1.0.0-noisy-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-mix-08",
+      "consent_ref": null,
+      "duration_s": 7.75,
+      "licence": "CC-BY-4.0 AND LicenseRef-public-domain",
+      "member_path": "noisy/smoke-mix-08.wav",
+      "recipe": {
+        "achieved_snr_db": 20.0,
+        "kind": "mix",
+        "length_samples": 124000,
+        "noise_clip_id": "musan-noise-free-sound-0234",
+        "noise_gain": 0.07021224498748779,
+        "noise_gain_q24": 1177966,
+        "noise_offset_samples": 427221,
+        "peak_limited": false,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "snr_db": 20,
+        "snr_definition": "SNR = 10*log10(Ps/Pn), where Ps and Pn are the mean squares of the 16-bit sample values of the whole speech clip and of the equally long noise segment, each multiplied by its gain",
+        "source_clip_ids": [
+          "ls-test-clean-1284-1181-0011",
+          "musan-noise-free-sound-0234"
+        ],
+        "speech_clip_id": "ls-test-clean-1284-1181-0011",
+        "speech_gain": 1.0,
+        "speech_gain_q24": 16777216
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "4c1c41fbfbf82e2db0051d8aed48b8ddf9294fc906fc9da1bfb1c9b752dcebc6",
+      "source": "mix",
+      "source_ref": "aqis_lab pack builder: ls-test-clean-1284-1181-0011 mixed with musan-noise-free-sound-0234 at 20 dB SNR",
+      "speaker_id": "1284",
+      "split": "noisy",
+      "tags": [
+        "noisy",
+        "snr-20",
+        "speech"
+      ],
+      "transcript": "VERY CAREFULLY THE MAGICIAN REMOVED THIS POWDER PLACING IT ALL TOGETHER IN A GOLDEN DISH WHERE HE MIXED IT WITH A GOLDEN SPOON"
+    },
+    {
+      "archive": "smoke-1.0.0-noisy-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-mix-09",
+      "consent_ref": null,
+      "duration_s": 8.68,
+      "licence": "CC-BY-4.0 AND LicenseRef-public-domain",
+      "member_path": "noisy/smoke-mix-09.wav",
+      "recipe": {
+        "achieved_snr_db": 20.0,
+        "kind": "mix",
+        "length_samples": 138880,
+        "noise_clip_id": "musan-noise-free-sound-0275",
+        "noise_gain": 0.07336509227752686,
+        "noise_gain_q24": 1230862,
+        "noise_offset_samples": 33515,
+        "peak_limited": false,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "snr_db": 20,
+        "snr_definition": "SNR = 10*log10(Ps/Pn), where Ps and Pn are the mean squares of the 16-bit sample values of the whole speech clip and of the equally long noise segment, each multiplied by its gain",
+        "source_clip_ids": [
+          "ls-test-clean-237-126133-0007",
+          "musan-noise-free-sound-0275"
+        ],
+        "speech_clip_id": "ls-test-clean-237-126133-0007",
+        "speech_gain": 1.0,
+        "speech_gain_q24": 16777216
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "3fef4f3645d11ed80ba1bc283a5fbee2be3272a33228d856e10b9af82b6d7607",
+      "source": "mix",
+      "source_ref": "aqis_lab pack builder: ls-test-clean-237-126133-0007 mixed with musan-noise-free-sound-0275 at 20 dB SNR",
+      "speaker_id": "237",
+      "split": "noisy",
+      "tags": [
+        "noisy",
+        "snr-20",
+        "speech"
+      ],
+      "transcript": "BUT POLLY COULDN'T SPEAK AND IF JASPER HADN'T CAUGHT HER JUST IN TIME SHE WOULD HAVE TUMBLED OVER BACKWARD FROM THE STOOL PHRONSIE AND ALL"
+    },
+    {
+      "archive": "smoke-1.0.0-noisy-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-mix-10",
+      "consent_ref": null,
+      "duration_s": 7.41,
+      "licence": "CC-BY-4.0 AND LicenseRef-public-domain",
+      "member_path": "noisy/smoke-mix-10.wav",
+      "recipe": {
+        "achieved_snr_db": 20.0,
+        "kind": "mix",
+        "length_samples": 118560,
+        "noise_clip_id": "musan-noise-free-sound-0248",
+        "noise_gain": 0.09177947044372559,
+        "noise_gain_q24": 1539804,
+        "noise_offset_samples": 757800,
+        "peak_limited": false,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "snr_db": 20,
+        "snr_definition": "SNR = 10*log10(Ps/Pn), where Ps and Pn are the mean squares of the 16-bit sample values of the whole speech clip and of the equally long noise segment, each multiplied by its gain",
+        "source_clip_ids": [
+          "ls-test-clean-6930-81414-0014",
+          "musan-noise-free-sound-0248"
+        ],
+        "speech_clip_id": "ls-test-clean-6930-81414-0014",
+        "speech_gain": 1.0,
+        "speech_gain_q24": 16777216
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "035dd4dfc8843c71c7200489e2afbfaf45ba1c8942b4fa8580caac947fb94d1d",
+      "source": "mix",
+      "source_ref": "aqis_lab pack builder: ls-test-clean-6930-81414-0014 mixed with musan-noise-free-sound-0248 at 20 dB SNR",
+      "speaker_id": "6930",
+      "split": "noisy",
+      "tags": [
+        "noisy",
+        "snr-20",
+        "speech"
+      ],
+      "transcript": "IN THE LIGHT OF THE MOON I SAW A KNIFE RED WITH BLOOD AND MY HAND TOO WAS ALSO DISCOLOURED"
+    },
+    {
+      "archive": "smoke-1.0.0-non-speech-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-music-01",
+      "consent_ref": null,
+      "duration_s": 10.0,
+      "licence": "CC-BY-3.0",
+      "member_path": "non-speech/smoke-music-01.wav",
+      "recipe": {
+        "kind": "excerpt",
+        "length_samples": 160000,
+        "offset_samples": 1215141,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "source_clip_ids": [
+          "musan-music-rfm-0069"
+        ]
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "4a33f5c0cf3fed12abaf6829c831db18407e7704ac0f841d101f6a78359155c4",
+      "source": "musan",
+      "source_ref": "musan/music/rfm/music-rfm-0069.wav",
+      "speaker_id": null,
+      "split": "non-speech",
+      "tags": [
+        "music",
+        "non-speech"
+      ],
+      "transcript": null
+    },
+    {
+      "archive": "smoke-1.0.0-non-speech-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-music-02",
+      "consent_ref": null,
+      "duration_s": 10.0,
+      "licence": "CC-BY-3.0",
+      "member_path": "non-speech/smoke-music-02.wav",
+      "recipe": {
+        "kind": "excerpt",
+        "length_samples": 160000,
+        "offset_samples": 1282259,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "source_clip_ids": [
+          "musan-music-rfm-0052"
+        ]
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "97a610c7f822d008fb2017537642b8cb86025e09a2179e7608a9c6506ae983f2",
+      "source": "musan",
+      "source_ref": "musan/music/rfm/music-rfm-0052.wav",
+      "speaker_id": null,
+      "split": "non-speech",
+      "tags": [
+        "music",
+        "non-speech"
+      ],
+      "transcript": null
+    },
+    {
+      "archive": "smoke-1.0.0-non-speech-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-music-03",
+      "consent_ref": null,
+      "duration_s": 10.0,
+      "licence": "CC-BY-3.0",
+      "member_path": "non-speech/smoke-music-03.wav",
+      "recipe": {
+        "kind": "excerpt",
+        "length_samples": 160000,
+        "offset_samples": 2762995,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "source_clip_ids": [
+          "musan-music-rfm-0018"
+        ]
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "ce408083e6f3e283c48b2014bad0226038ff5e98646cde6398fc0cca69c533fb",
+      "source": "musan",
+      "source_ref": "musan/music/rfm/music-rfm-0018.wav",
+      "speaker_id": null,
+      "split": "non-speech",
+      "tags": [
+        "music",
+        "non-speech"
+      ],
+      "transcript": null
+    },
+    {
+      "archive": "smoke-1.0.0-non-speech-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-music-04",
+      "consent_ref": null,
+      "duration_s": 10.0,
+      "licence": "CC-BY-3.0",
+      "member_path": "non-speech/smoke-music-04.wav",
+      "recipe": {
+        "kind": "excerpt",
+        "length_samples": 160000,
+        "offset_samples": 1375165,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "source_clip_ids": [
+          "musan-music-rfm-0091"
+        ]
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "696c20233a38f7bedfd276caed84467eaeb87795f862e299982c626f9caeb3f1",
+      "source": "musan",
+      "source_ref": "musan/music/rfm/music-rfm-0091.wav",
+      "speaker_id": null,
+      "split": "non-speech",
+      "tags": [
+        "music",
+        "non-speech"
+      ],
+      "transcript": null
+    },
+    {
+      "archive": "smoke-1.0.0-non-speech-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-noise-01",
+      "consent_ref": null,
+      "duration_s": 10.0,
+      "licence": "LicenseRef-public-domain",
+      "member_path": "non-speech/smoke-noise-01.wav",
+      "recipe": {
+        "kind": "excerpt",
+        "length_samples": 160000,
+        "offset_samples": 249108,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "source_clip_ids": [
+          "musan-noise-free-sound-0240"
+        ]
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "ff35ca693286d9921e61b2f5f8af5655344e19eab47fa07a693cac8412d9194c",
+      "source": "musan",
+      "source_ref": "musan/noise/free-sound/noise-free-sound-0240.wav",
+      "speaker_id": null,
+      "split": "non-speech",
+      "tags": [
+        "noise",
+        "non-speech"
+      ],
+      "transcript": null
+    },
+    {
+      "archive": "smoke-1.0.0-non-speech-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-noise-02",
+      "consent_ref": null,
+      "duration_s": 10.0,
+      "licence": "LicenseRef-public-domain",
+      "member_path": "non-speech/smoke-noise-02.wav",
+      "recipe": {
+        "kind": "excerpt",
+        "length_samples": 160000,
+        "offset_samples": 33373,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "source_clip_ids": [
+          "musan-noise-free-sound-0003"
+        ]
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "99e3c2a2bd2d0d7a521a1ec977fdf52a36e28554c46cb405335fdaae81518678",
+      "source": "musan",
+      "source_ref": "musan/noise/free-sound/noise-free-sound-0003.wav",
+      "speaker_id": null,
+      "split": "non-speech",
+      "tags": [
+        "noise",
+        "non-speech"
+      ],
+      "transcript": null
+    },
+    {
+      "archive": "smoke-1.0.0-non-speech-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-noise-03",
+      "consent_ref": null,
+      "duration_s": 10.0,
+      "licence": "LicenseRef-public-domain",
+      "member_path": "non-speech/smoke-noise-03.wav",
+      "recipe": {
+        "kind": "excerpt",
+        "length_samples": 160000,
+        "offset_samples": 96679,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "source_clip_ids": [
+          "musan-noise-free-sound-0556"
+        ]
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "fc68e904a9b73bf6a5749af07562a43eaf666942cb792962765932989f4c05bc",
+      "source": "musan",
+      "source_ref": "musan/noise/free-sound/noise-free-sound-0556.wav",
+      "speaker_id": null,
+      "split": "non-speech",
+      "tags": [
+        "noise",
+        "non-speech"
+      ],
+      "transcript": null
+    },
+    {
+      "archive": "smoke-1.0.0-non-speech-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-noise-04",
+      "consent_ref": null,
+      "duration_s": 10.0,
+      "licence": "LicenseRef-public-domain",
+      "member_path": "non-speech/smoke-noise-04.wav",
+      "recipe": {
+        "kind": "excerpt",
+        "length_samples": 160000,
+        "offset_samples": 55685,
+        "recipe_version": "1.0",
+        "seed": 20260927,
+        "source_clip_ids": [
+          "musan-noise-free-sound-0162"
+        ]
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "af33fdc25e0f139d9b954ae9a8e66ba6b932204570161e535ceb7b12d46c27a1",
+      "source": "musan",
+      "source_ref": "musan/noise/free-sound/noise-free-sound-0162.wav",
+      "speaker_id": null,
+      "split": "non-speech",
+      "tags": [
+        "noise",
+        "non-speech"
+      ],
+      "transcript": null
+    },
+    {
+      "archive": "smoke-1.0.0-non-speech-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-silence-01",
+      "consent_ref": null,
+      "duration_s": 5.0,
+      "licence": "CC0-1.0",
+      "member_path": "non-speech/smoke-silence-01.wav",
+      "recipe": {
+        "kind": "silence",
+        "length_samples": 80000,
+        "recipe_version": "1.0",
+        "source_clip_ids": []
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "262d1f34f300560a4c82ba8127ddea9e1d72946f187fdbd3e8f70ee096077aec",
+      "source": "generated",
+      "source_ref": "aqis_lab pack builder: digital silence",
+      "speaker_id": null,
+      "split": "non-speech",
+      "tags": [
+        "non-speech",
+        "silence"
+      ],
+      "transcript": null
+    },
+    {
+      "archive": "smoke-1.0.0-non-speech-000.tar",
+      "channels": 1,
+      "clip_id": "smoke-silence-02",
+      "consent_ref": null,
+      "duration_s": 10.0,
+      "licence": "CC0-1.0",
+      "member_path": "non-speech/smoke-silence-02.wav",
+      "recipe": {
+        "kind": "silence",
+        "length_samples": 160000,
+        "recipe_version": "1.0",
+        "source_clip_ids": []
+      },
+      "sample_rate_hz": 16000,
+      "sha256": "ee7bea4232762775f8fce9b3e27e4d3948c8ac6a45a87ca769f703d6eed0b448",
+      "source": "generated",
+      "source_ref": "aqis_lab pack builder: digital silence",
+      "speaker_id": null,
+      "split": "non-speech",
+      "tags": [
+        "non-speech",
+        "silence"
+      ],
+      "transcript": null
+    },
+    {
+      "archive": "smoke-1.0.0-tts-000.tar",
+      "channels": 1,
+      "clip_id": "tts-smoke-01",
+      "consent_ref": null,
+      "duration_s": 4.15,
+      "licence": "Apache-2.0",
+      "member_path": "tts/tts-smoke-01.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "64d3d3d01ef0d6d58b0a0dc90922901efbe9df2050cf8b1d8b46e5d036213d4a",
+      "source": "tts",
+      "source_ref": "data/tts_smoke/01.wav",
+      "speaker_id": "kokoro-af_heart",
+      "split": "tts",
+      "tags": [
+        "speech",
+        "synthetic",
+        "tts"
+      ],
+      "transcript": "zero one two three four five six seven eight nine"
+    },
+    {
+      "archive": "smoke-1.0.0-tts-000.tar",
+      "channels": 1,
+      "clip_id": "tts-smoke-02",
+      "consent_ref": null,
+      "duration_s": 5.0,
+      "licence": "Apache-2.0",
+      "member_path": "tts/tts-smoke-02.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "971b265d9788948d7a5fd081fe7bbaeace500a435e4ffe3922729200aa2a3348",
+      "source": "tts",
+      "source_ref": "data/tts_smoke/02.wav",
+      "speaker_id": "kokoro-am_michael",
+      "split": "tts",
+      "tags": [
+        "speech",
+        "synthetic",
+        "tts"
+      ],
+      "transcript": "what is the current temperature and weather outside right now"
+    },
+    {
+      "archive": "smoke-1.0.0-tts-000.tar",
+      "channels": 1,
+      "clip_id": "tts-smoke-03",
+      "consent_ref": null,
+      "duration_s": 4.425,
+      "licence": "Apache-2.0",
+      "member_path": "tts/tts-smoke-03.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "3696396e891628bc7aeb89492e19562df931b91783e66f795f816186a64869bc",
+      "source": "tts",
+      "source_ref": "data/tts_smoke/03.wav",
+      "speaker_id": "kokoro-bf_emma",
+      "split": "tts",
+      "tags": [
+        "speech",
+        "synthetic",
+        "tts"
+      ],
+      "transcript": "nine eight seven six five four three two one zero"
+    },
+    {
+      "archive": "smoke-1.0.0-tts-000.tar",
+      "channels": 1,
+      "clip_id": "tts-smoke-04",
+      "consent_ref": null,
+      "duration_s": 4.975,
+      "licence": "Apache-2.0",
+      "member_path": "tts/tts-smoke-04.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "e2406cd9df8eebbc0a254465fa7e9172144d235383e70d5c6e691ce3dbabc350",
+      "source": "tts",
+      "source_ref": "data/tts_smoke/04.wav",
+      "speaker_id": "kokoro-bm_george",
+      "split": "tts",
+      "tags": [
+        "speech",
+        "synthetic",
+        "tts"
+      ],
+      "transcript": "please set an alarm for seven o'clock tomorrow morning"
+    },
+    {
+      "archive": "smoke-1.0.0-tts-000.tar",
+      "channels": 1,
+      "clip_id": "tts-smoke-05",
+      "consent_ref": null,
+      "duration_s": 4.25,
+      "licence": "Apache-2.0",
+      "member_path": "tts/tts-smoke-05.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "1eb9fbe8940f8e609de8fba5bdad1fbc8dae5f276998050f857c63d0ec569dbb",
+      "source": "tts",
+      "source_ref": "data/tts_smoke/05.wav",
+      "speaker_id": "kokoro-af_heart",
+      "split": "tts",
+      "tags": [
+        "speech",
+        "synthetic",
+        "tts"
+      ],
+      "transcript": "five four three two one zero nine eight seven six"
+    },
+    {
+      "archive": "smoke-1.0.0-tts-000.tar",
+      "channels": 1,
+      "clip_id": "tts-smoke-06",
+      "consent_ref": null,
+      "duration_s": 4.725,
+      "licence": "Apache-2.0",
+      "member_path": "tts/tts-smoke-06.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "2ddfe7ad50fbe1e1aafeab44fafa56d9956dd2492af0fbf1f5f6753e73e36dbc",
+      "source": "tts",
+      "source_ref": "data/tts_smoke/06.wav",
+      "speaker_id": "kokoro-am_michael",
+      "split": "tts",
+      "tags": [
+        "speech",
+        "synthetic",
+        "tts"
+      ],
+      "transcript": "can you tell me how to get to the nearest train station from here"
+    },
+    {
+      "archive": "smoke-1.0.0-tts-000.tar",
+      "channels": 1,
+      "clip_id": "tts-smoke-07",
+      "consent_ref": null,
+      "duration_s": 4.55,
+      "licence": "Apache-2.0",
+      "member_path": "tts/tts-smoke-07.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "c83b07202fe1c8b3d2d86141c035be1b28b7eddf94891e479dcb6c489b5b8490",
+      "source": "tts",
+      "source_ref": "data/tts_smoke/07.wav",
+      "speaker_id": "kokoro-bf_emma",
+      "split": "tts",
+      "tags": [
+        "speech",
+        "synthetic",
+        "tts"
+      ],
+      "transcript": "two four six eight zero one three five seven nine"
+    },
+    {
+      "archive": "smoke-1.0.0-tts-000.tar",
+      "channels": 1,
+      "clip_id": "tts-smoke-08",
+      "consent_ref": null,
+      "duration_s": 5.4,
+      "licence": "Apache-2.0",
+      "member_path": "tts/tts-smoke-08.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "e7b16413683e0e522cca643677548fbdc76bc5ddca13642e3960d90b78850769",
+      "source": "tts",
+      "source_ref": "data/tts_smoke/08.wav",
+      "speaker_id": "kokoro-bm_george",
+      "split": "tts",
+      "tags": [
+        "speech",
+        "synthetic",
+        "tts"
+      ],
+      "transcript": "can you play the latest news and the market updates for today"
+    },
+    {
+      "archive": "smoke-1.0.0-tts-000.tar",
+      "channels": 1,
+      "clip_id": "tts-smoke-09",
+      "consent_ref": null,
+      "duration_s": 4.2,
+      "licence": "Apache-2.0",
+      "member_path": "tts/tts-smoke-09.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "346181921ce5f648a01bb7e4e08d3f83d64d8b32234f91139eb2b078574e1ac8",
+      "source": "tts",
+      "source_ref": "data/tts_smoke/09.wav",
+      "speaker_id": "kokoro-af_heart",
+      "split": "tts",
+      "tags": [
+        "speech",
+        "synthetic",
+        "tts"
+      ],
+      "transcript": "one three five seven nine zero two four six eight"
+    },
+    {
+      "archive": "smoke-1.0.0-tts-000.tar",
+      "channels": 1,
+      "clip_id": "tts-smoke-10",
+      "consent_ref": null,
+      "duration_s": 4.575,
+      "licence": "Apache-2.0",
+      "member_path": "tts/tts-smoke-10.wav",
+      "recipe": null,
+      "sample_rate_hz": 16000,
+      "sha256": "1303f070b1a62289dbbe0855998d9dc73e40e3dfdb2909f10da50f8f74472cf8",
+      "source": "tts",
+      "source_ref": "data/tts_smoke/10.wav",
+      "speaker_id": "kokoro-bf_emma",
+      "split": "tts",
+      "tags": [
+        "speech",
+        "synthetic",
+        "tts"
+      ],
+      "transcript": "thank you very much for your help today and have a good evening"
+    }
+  ],
+  "created_utc": "2026-09-27T00:00:00Z",
+  "manifest_id": "smoke",
+  "purpose": "Phase 0 smoke pack: plumbing, cross-machine parity and traceability checks. It is not a benchmark: its 10 tts clips are synthetic speech and must never be used to judge or compare models.",
+  "schema_version": "1.0",
+  "version": "1.0.0"
+}
