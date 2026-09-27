@@ -1,119 +1,136 @@
-# AUDIT — WP-0.2, round 1
+# AUDIT — WP-0.2, round 2
 
-Auditor: wp-auditor · Date: 2026-09-27 · Commit audited: 81b58f1c1637d760691f84c778727f0fd071f534 · Previous audited commit: first audit · Protocol: version 2
+Auditor: wp-auditor · Date: 2026-09-27 · Commit audited: 39f2d71cc596ef50c508921d0de0596c08a4add2 · Previous audited commit: 81b58f1c1637d760691f84c778727f0fd071f534 · Protocol: version 2
 
 ## Verdict: FAIL
-CRITICAL: 1 · MAJOR: 1 (fixed 0, accepted as debt 0, open 1) · MINOR: 4
+CRITICAL: 1 · MAJOR: 1 (fixed 0, accepted as debt 0, open 1) · MINOR: 4 (open 2, accepted as debt 2)
 
-The production code does what the spec and the approved plan say. I found no stubs, fake data, swallowed errors or scope drift. Every suite, the gate, CI on the audited commit and the three acceptance commands give the expected output.
+**No fixes were made after round 1.** The branch head `39f2d71` is the round-1 audit commit. Since `81b58f1`, only two files have changed: `docs/progress/WP-0.2/AUDIT.md` (the round-1 report) and `docs/progress/STATUS.md` (the WP-0.2 row). No code, test, schema, fixture or contract document changed.
 
-The audit fails because tests are missing, not because of a code defect:
-- **F01 (CRITICAL).** Four type rules in the schemas are not protected by any test. This is must-catch behaviour 2, "wrong types are rejected". If any one of the four is removed, the whole fast suite still passes and wrong-typed values are accepted. The code rejects all of them today.
-- **F02 (MAJOR).** No test uses a JSON Lines file without a final newline. If a later change drops the last line of such a file, `contracts validate` passes a file whose last record is invalid, with exit 0, and the tests stay green. The code is correct today.
+The owner's round-2 condition on `main` (`e3439be`) says: fix WP-0.2-F01, F02, F03 and F05; F04 and F06 are accepted as debt, target WP-0.9. None of the four fixes is on the branch, and `docs/progress/DEBT.md` has no rows yet for F04 or F06.
 
-Both fixes are tests only.
+I re-ran everything myself and got the same result as round 1:
+- **F01 (CRITICAL, must-catch 2)** is still open. Removing any one of four schema type rules leaves the whole fast suite green (`952 passed`). With those breaks in place, the validators accept 52 wrong-typed values that the unmodified code rejects.
+- **F02 (MAJOR, inside must-catch 6)** is still open. If `split_json_lines` drops the last line unconditionally, the whole fast suite stays green (`952 passed`). With that break, `contracts validate` reports `event: 22 records, 22 valid, 0 invalid` with exit 0 for a 23-record file with no final newline and an invalid last record. The unmodified code gives `23 records, 22 valid, 1 invalid`, exit 1.
+
+Everything else passes: the fast and slow suites, the gate, CI on `39f2d71`, the three acceptance commands, and the other 214 must-catch breaks (each caught or shown equivalent). Both blocking fixes need tests only.
 
 ## Scope of this audit
-First audit of WP-0.2: the whole diff `origin/main...81b58f1` (merge-base `6f89741`), which has 35 files. I checked:
-- items A1 to A15;
-- the fast and slow suites, the gate, CI and AT-0.2-01 to AT-0.2-03, all re-run or read myself;
-- the complete must-catch proof (A6), with my own breaks, not the builder's script;
-- 10 exploratory breaks (A15) in the WP's new code.
+Re-audit, round 2, as the protocol defines it:
+1. **The six round-1 findings.** Each was re-checked and has its status in the Findings table.
+2. **Items A1 to A15 on the diff `81b58f1..39f2d71`.** That diff has two files, both records in `docs/progress/`. Code that passed round 1 and has not changed was not searched again. A15 has no new or changed code to break.
+3. **Full suites, the gate, CI on `39f2d71`, AT-0.2-01 to AT-0.2-03, and the complete must-catch proof (A6).** I redid the proof with my own harness rather than round 1's.
 
-All breaks were made in a throwaway copy of the audited commit (`git archive 81b58f1` into `/tmp/aqis-audit-wp02/base`), run with the project `.venv` and bytecode writing switched off. Each file was restored after its run and checked byte-identical with `cmp` against `81b58f1`. The working tree was not changed (`git status --porcelain` is empty).
-
-The copy is not a git checkout, so 5 WP-0.0 tests fail there with no break at all: `test_FR_0_0_13_oc_steps_use_pull_request_branch`, `test_NFR_0_0_01_gate_runtime_under_60s`, `test_FR_0_0_08_repository_registry_is_consistent`, `test_FR_0_0_12_asset_pins_match_repository` and `test_FR_0_0_01_version_prints_package_commit_python`. The unmodified copy gives `5 failed, 947 passed`. Full-suite results under a break are judged against that baseline.
+**Method.** I made four throwaway git clones of `39f2d71` in `/tmp/aqis-audit-wp02-r2/c1` to `c4`, with `origin/main` set to `e3439be`. They share the project `.venv` through a symlink, and bytecode writing was switched off. I checked that `aqis_lab` imports from the clone, not from the working tree.
+- Unlike round 1's `git archive` copy, the clones give a clean baseline: `952 passed, 9 deselected`. Every break result below is therefore judged against zero failures.
+- Re-serialising the three schemas with no change of content gives `712 passed` for the contract tests and `952 passed` for the whole fast suite in each clone. The rewriting method alone breaks nothing.
+- Every changed file was restored and compared byte for byte (`cmp` or an assert against the saved bytes). At the end, all four clones and the working tree have an empty `git status --porcelain`.
 
 ## Checklist
 | Item | Result | Evidence |
 | --- | --- | --- |
-| A1 Scope and dependencies | PASS | WP-0.0 is `MERGED` in `docs/progress/STATUS.md` on `origin/main`. Branch `claude/beautiful-dijkstra-8pbq6l`, not `main`. `git show origin/main:docs/approvals/WP-0.2.md`: `STATUS: APPROVED`, `CONDITIONS: Questions 1-7: as recommended in PLAN.md.` |
-| A2 Requirement coverage | PASS | `pytest --collect-only` collects tests named after every ID: FR_0_2_01 258, FR_0_2_02 180, FR_0_2_03 165, FR_0_2_04 29, FR_0_2_05 15, FR_0_2_06 60, FR_0_2_07 4, NFR_0_2_01 1, NFR_0_2_02 1 (961 lab tests in total). Every FR, NFR and AT ID appears in both `EVIDENCE.md` and `PLAN.md`. Each FR has code in `aqis_lab/contracts/` or `aqis_lab/commands/contracts.py`. |
-| A3 Acceptance commands | PASS | AT-0.2-01: `952 passed, 9 deselected in 58.46s`, exit 0. AT-0.2-02, valid fixture: 23 `line n: OK` lines, `event: 23 records, 23 valid, 0 invalid`, exit 0. Invalid fixture: `event: 96 records, 2 valid, 94 invalid`, exit 1; every invalid line names its pointer, for example `line 4: INVALID /seq: required field is missing` and `line 57: INVALID /payload/words/0/end_s: required field is missing`. AT-0.2-03: `aqis-audit-gate: base origin/main (merge-base 6f897411d876), head 81b58f1c1637 ... 0 findings: OK (0.2 s)`, exit 0. The invalid fixture has invalid lines for all 10 event types and for every envelope and payload field. |
-| A4 Test suites and CI | PASS | Fast suite: `952 passed, 9 deselected`. Slow suite (`-m "slow and not gpu and not colab and not oracle"`): `9 passed, 952 deselected in 58.83s`. NFR-0.2-01 run alone three times: 5.20 s, 5.40 s and 5.13 s, each under the 10 s limit. CI on `81b58f1`: push run 36310374131 and pull_request run 36310376547, jobs `lab` and `harness-regression` both `success`, and every `lab` step (bootstrap, fast suite, WP ID, gate) `success`. I read these conclusions from the GitHub API. I could not read the log text: the log download host returns a proxy 403. |
-| A5 Test integrity | PASS | `git diff --name-status origin/main...HEAD`: every test file is new (`A`), and no test from `main` was changed or deleted. There is no `skip`, `xfail` or `audit-allow` in the new tests. The only marker is `@pytest.mark.slow` on the NFR-0.2-01 timing test, which the spec requires. The expected pointers in `invalid_events.expected.json` and `invalid_expected.json` are consistent with the fixture lines I checked. |
-| A6 Must-catch proof | FAIL | 203 breaks across all 6 behaviours (table below). Behaviours 1 and 3 to 6 are fully protected. Behaviour 2 has 4 real gaps, which are F01. |
-| A7 Compromise scan | PASS | The gate reports 0 findings, with 0 exempted lines and 0 exempted files. I read every new function. There are no stubs, TODOs or placeholders. The fixtures are labelled "illustrative", and no value was found to be hard-coded to satisfy a test. The only `except` that returns an empty result is `_run_card_rules` `except CanonicalJSONError: return []` (`validate.py:324-325`). It is justified: `_json_value_errors` reports the same values at their pointers, and A15-04 shows that a test protects this path. |
-| A8 Scope diff | PASS | The changed files match the plan's list. `aqis_lab/__main__.py` has +2 lines: the `COMMANDS` entry and one CHANGE LOG line. `REGISTRY.md` only has appended rows. `STATUS.md` has the WP-0.2 row only. No GUARDED or NEVER path was changed. `tests/aqis_lab/fixtures/contracts/.gitignore` is LAB-OWNED and was approved under question 6a. The extra row CAP-CONTRACTS-007 is disclosed in EVIDENCE and is inside the approved scope. |
-| A9 Capabilities | PASS | All four new modules have the standard header. Rows CAP-CONTRACTS-001 to 007 and CAP-DOC-002 were added and no row was removed. `test_FR_0_0_08_module_headers_match_registry` passes in the fast suite. All linked tests are collected. One registry cell is incomplete (F05, MINOR). |
-| A10 Contracts | PASS | All valid fixtures validate. The event fixtures' `run_card_id` equals the defined ID of `valid_run_card.json` (`92544853…`). In the run card fixture, `pack.sha256 == sha256_canonical(valid_manifest.json)`, and `manifest_id` and `version` match the manifest. |
-| A11 Environment parity | PASS | A grep of the new code, tests and documents finds no absolute paths. Schemas are found from `__file__`. Python 3.13 matches the Colab probe (`3.13.15`). `jsonschema==4.26.0` is pinned with hashes, and the lock is unchanged. The `spawn` context and `os.process_cpu_count()` are available on 3.13. The spec runs on the cloud VM only, so no owner-run checks are needed. |
-| A12 Reproducibility and traceability | PASS | Canonical JSON is deterministic, and a test checks it against an independent encoder. Errors are sorted by pointer. The worker-pool report is identical to the one-process report (tested). Every event carries `run_card_id` and `clip_id`. |
-| A13 Errors and logging | PASS | An invalid record raises `ContractValidationError` naming every pointer. An unreadable file gives exit 2 with `ERROR: cannot read`. A worker failure raises `WorkerPoolError` and gives exit 2 with `rerun with --workers 1`; there is no silent fallback. That path has no test (F04, MINOR; the builder disclosed it). |
-| A14 Documentation, licences, data | PASS | The three contract documents cover the fields, the rules across fields, validation usage and the change policy. `EVIDENCE.md` has an entry for every ID. One CI sentence in it is inaccurate (F03, MINOR). No third-party code or data was added, so licences are not affected. The fixtures hold no personal data: the LibriSpeech speaker `1089` is a public dataset ID. |
-| A15 Exploratory breaks | FAIL | 10 breaks, 9 caught, 1 survivor that can make the command report success wrongly (F02). |
+| A1 Scope and dependencies | PASS | `git show origin/main:docs/progress/STATUS.md`: WP-0.0 `MERGED`. Branch `claude/beautiful-dijkstra-8pbq6l`, not `main`. `git show origin/main:docs/approvals/WP-0.2.md` (`e3439be`): `STATUS: APPROVED`, `- Questions 1-7: as recommended in PLAN.md.` and `- Round 2: fix WP-0.2-F01, F02, F03 and F05. WP-0.2-F04 and WP-0.2-F06 are accepted as debt in docs/progress/DEBT.md (target WP-0.9).` |
+| A2 Requirement coverage | PASS | `pytest --collect-only`: 961 lab tests. Tests named after each ID: FR_0_2_01 258, FR_0_2_02 180, FR_0_2_03 165, FR_0_2_04 29, FR_0_2_05 15, FR_0_2_06 60, FR_0_2_07 4, NFR_0_2_01 1, NFR_0_2_02 1. Every FR, NFR and AT ID appears in both `EVIDENCE.md` and `PLAN.md`. The same as round 1; nothing changed. |
+| A3 Acceptance commands | PASS | AT-0.2-01: `952 passed, 9 deselected in 59.76s`, exit 0. AT-0.2-02: the valid fixture gives `event: 23 records, 23 valid, 0 invalid`, exit 0. The invalid fixture gives `event: 96 records, 2 valid, 94 invalid`, exit 1, and names each failing field, for example `line 4: INVALID /seq: required field is missing`. AT-0.2-03: `aqis-audit-gate: base origin/main (merge-base 6f897411d876), head 39f2d71cc596, approvals origin/main e3439be0c320, wp WP-0.2` … `0 findings: OK (0.2 s)`, exit 0. |
+| A4 Test suites and CI | PASS | Fast suite: `952 passed, 9 deselected in 59.76s`. Slow suite (`-m "slow and not gpu and not colab and not oracle"`): `9 passed, 952 deselected in 89.43s`. NFR-0.2-01 run alone three times: call times 5.96 s, 5.61 s and 5.49 s, all under 10 s. CI on `39f2d71`, read from the GitHub API: push run 36311975195 (#135) and pull_request run 36311977170 (#136), jobs `lab` and `harness-regression` both `success`. Every `lab` step succeeded; the WP ID step is skipped on push, by design. |
+| A5 Test integrity | PASS | No test or fixture changed since `81b58f1`. In `git diff --name-status origin/main...HEAD -- tests/` all 20 entries are `A`. There is no `skip`, `xfail`, `skipif`, `importorskip` or `audit-allow` in the WP diff. The only marker is `@pytest.mark.slow` on the NFR-0.2-01 timing test, which the spec requires. |
+| A6 Must-catch proof | FAIL | 216 breaks: 178 schema-keyword removals and 38 code and document breaks (tables below). Behaviours 1, 3, 4 and 5 are fully protected. **Behaviour 2 has 4 real gaps (F01)**, the same as round 1. **In behaviour 6, break CB6-2 survives (F02)**; it is round 1's A15-01, re-run to check that finding. |
+| A7 Compromise scan | PASS | Gate: `Exempted lines (# audit-allow): 0`, `Exempted files (ALLOW-PATTERNS-IN): 0`, `Findings: 0`. A grep of the WP diff for stub and compromise words finds nothing. No code changed since round 1, so round 1's reading of every new function stands. |
+| A8 Scope diff | PASS | The diff since `81b58f1` is `A docs/progress/WP-0.2/AUDIT.md` and `M docs/progress/STATUS.md`; in STATUS, only the WP-0.2 row changed (`READY-FOR-AUDIT` to `AUDIT-FAIL`). No protected path, spec, approval, `.claude/` file or lock changed in the WP diff. PR 2 is open, `mergeable_state: clean`. |
+| A9 Capabilities | PASS | No module or registry row changed since round 1. The registry cell for CAP-DOC-002 is still incomplete (F05, MINOR, open). |
+| A10 Contracts | PASS | Recomputed independently with the standard library: the `run_card_id` of `valid_run_card.json` equals its definition (`92544853e82e…`), and all 23 valid events carry it. `pack.sha256` equals the SHA-256 of the canonical `valid_manifest.json`, and `manifest_id` and `version` match. Every event `clip_id` is a manifest clip. All valid fixtures validate. |
+| A11 Environment parity | PASS | Nothing changed since round 1. `.venv` runs Python 3.13.12 and the Colab probe records 3.13.15; major.minor match. The bootstrap reports lock sha256 `5c9a64eb…`, and no lock changed. The spec runs this WP on the cloud VM only, so no owner-run checks are needed. |
+| A12 Reproducibility and traceability | PASS | Unchanged since round 1. Breaks CB4-3 to CB4-6 (below) confirm that the canonical-bytes tests protect determinism. |
+| A13 Errors and logging | PASS | Unchanged since round 1. The untested `WorkerPoolError` path (F04) has been accepted as debt by the owner. |
+| A14 Documentation, licences, data | PASS | Unchanged since round 1. The inaccurate CI sentence at `EVIDENCE.md:279` is still there (F03, MINOR, open). |
+| A15 Exploratory breaks | N/A | No code was added or changed since the last audited commit, so there is nothing to break. The round-1 survivor A15-01 was re-run as CB6-2 to check F02. |
 
 ## Must-catch proof (A6)
-The schema breaks remove each keyword separately, one at a time, across all three schemas. `if` selectors are skipped, because they choose rules rather than state them. Each break was first run against its kind's test file and then against all contract tests. Every break that still survived was run against the whole fast suite.
+**Schema breaks.** One keyword is removed per run across all three schemas: each entry of every `required` list, and every `type` and `enum` keyword. The walker treats the schemas as schema trees, so a property that happens to be called `type` is never mistaken for a keyword. `if` selectors are skipped, because they choose rules rather than state them. Each break was run first against the 712 contract tests; each survivor was then run against the whole fast suite. The script is `/tmp/aqis-audit-wp02-r2/schema_breaks.py`.
+
+**Code and document breaks.** These are exact text substitutions, each checked to match once. The script is `/tmp/aqis-audit-wp02-r2/code_breaks.py`.
 
 | Behaviour | Break made in /tmp copy | Test that failed | Result |
 | --- | --- | --- | --- |
-| 1 Omitting each required field is rejected, naming it by JSON Pointer | Every entry of every `required` list removed, one per run (88 breaks: event 23, run card 38, manifest 27) | For example `test_FR_0_2_01_rejects_missing_required_payload_field[error-run_continues]`, `test_FR_0_2_01_rejects_missing_required_word_field[start_s]`, `test_FR_0_2_02_rejects_missing_required_field[machine/python_version]`, `test_FR_0_2_03_rejects_missing_required_field[clips/0/consent_ref]`, `test_FR_0_2_03_rejects_missing_required_field[archives/1/n_members]` | 88/88 caught. The static `schema_is_valid` tests catch top-level removals first. With those tests deselected, `rejects_missing_required_field[...]` catches every top-level removal except `schema_version`. That one is equivalent: the version check rejects a missing `schema_version` before the schema runs, and `rejects_missing_required_field[schema_version-*]` covers it. |
-| 1 (pointer names the field) | Missing field reported at its parent's pointer | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
-| 1 (pointer names the field) | `/` no longer escaped as `~1` in pointers | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
-| 2 Wrong types and values outside enums are rejected | Every `type` and `enum` keyword removed, one per run (90 breaks) | For example `test_FR_0_2_01_rejects_wrong_type_or_enum[final-path12-1]` (seq), `test_FR_0_2_02_rejects_wrong_type_or_enum[('mode',)-'fast']`, `test_FR_0_2_02_rejects_wrong_type_or_enum[('machine', 'platform')-'aws']`, `test_FR_0_2_03_rejects_wrong_type_or_enum[('clips', 0, 'channels')-1.0]` | 74 caught. 12 are equivalent: a probe of 52 wrong-typed records shows the value is still rejected by another rule. **4 survive the whole fast suite and let wrong types through: F01** |
-| 2 | Strict `integer` type accepts `1.0` | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
-| 2 | Strict `integer` type accepts booleans | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
-| 2 | Calendar check of UTC timestamps removed | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
-| 3 An unknown major schema version is rejected | `SUPPORTED_VERSIONS` claims major 2 for events | `test_FR_0_2_06_rejects_unknown_major_version[2.0-2-event]` | Caught |
-| 3 | Major version always read as 1 | `test_FR_0_2_06_rejects_unknown_major_version[2.0-2-event]` | Caught |
-| 3 | Version check skipped for manifests | `test_FR_0_2_06_rejects_unknown_major_version[2.0-2-manifest]` | Caught |
-| 4 `run_card_id` is the SHA-256 of the canonical card as defined, computed independently | `machine` also excluded from the ID | `test_FR_0_2_05_run_card_id_computed_independently` | Caught |
-| 4 | `notes` no longer excluded | `test_FR_0_2_05_run_card_id_computed_independently` | Caught |
-| 4 | Keys not sorted | `test_FR_0_2_05_canonical_bytes_match_definition` | Caught |
-| 4 | SHA3-256 instead of SHA-256 | `test_FR_0_2_05_canonical_bytes_match_definition` | Caught |
-| 4 | `validate_run_card` never compares `run_card_id` | `test_FR_0_2_04_cli_run_card_and_manifest_kinds` | Caught |
-| 4 | Canonical JSON accepts NaN | `test_FR_0_2_05_canonical_rejects_nan_infinity_and_non_json[nan-]` | Caught |
-| 5 Documents and schemas list the same fields | `/machine/os` row removed from `RUN_CARD.md` | `test_FR_0_2_07_documents_and_schemas_list_same_fields[run_card]` | Caught |
-| 5 | Row `/clips/*/language` (not in the schema) added to `PACK_MANIFEST.md` | `test_FR_0_2_07_documents_and_schemas_list_same_fields[manifest]` | Caught |
-| 5 | `/archives/*/bytes` renamed in the document | `test_FR_0_2_07_documents_and_schemas_list_same_fields[manifest]` | Caught |
-| 5 | `timing_mark` payload heading renamed, so its row sits under the wrong type | `test_FR_0_2_07_documents_and_schemas_list_same_fields[event]` | Caught |
-| 5 | Undocumented `priority` added to the `error` payload schema | `test_FR_0_2_07_documents_and_schemas_list_same_fields[event]` | Caught |
-| 5 | Undocumented `machine.ram_gb` added to the run card schema | `test_FR_0_2_07_documents_and_schemas_list_same_fields[run_card]` | Caught |
-| 6 `contracts validate` exits non-zero on any invalid record in a JSON Lines file | Exit 0 when exactly one record is invalid | `test_FR_0_2_04_cli_one_invalid_line_anywhere_fails[first]` | Caught |
-| 6 | Last record not counted | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
-| 6 | Unparsable line treated as valid | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
-| 6 | Blank lines dropped before validation | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
-| 6 | Worker pool drops the last chunk | `test_FR_0_2_04_cli_uses_worker_pool_only_for_large_files` | Caught |
+| 1 Omitting each required field is rejected, naming it by JSON Pointer | Every entry of every `required` list removed, one per run (88: event 23, run card 38, manifest 27) | For example `test_FR_0_2_02_rejects_missing_required_field[model/version]`, `[machine/architecture]` and `[processing/vad/1/name]`; `test_FR_0_2_03_rejects_missing_required_field[clips/0/consent_ref]` and `[archives/1/sha256]`; `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` (event payload `text`, `code`); `test_FR_0_2_01_rejects_missing_required_word_field` | 88/88 caught. Top-level removals are caught first by the `schema_is_valid_draft_2020_12` tests, which compare the `required` list with the spec's field list |
+| 1 | CB1-1 missing field reported at its parent's pointer | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
+| 1 | CB1-2 only the first of several missing fields reported | `test_FR_0_2_01_error_payload_fields` | Caught |
+| 1 | CB1-3 pointer escapes applied in the wrong order (`/` becomes `~01`) | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
+| 2 Wrong types and values outside enums are rejected | Every `type` and `enum` keyword removed, one per run (90: event 34, run card 32, manifest 24) | For example `test_FR_0_2_01_rejects_wrong_type_or_enum[final-path0-5]` (run_id); `test_FR_0_2_02_rejects_wrong_type_or_enum[('model',)-None]`; `test_FR_0_2_03_rejects_wrong_type_or_enum[('manifest_id',)-1]`; `test_FR_0_2_03_version_must_be_semver[1_1]`; `test_FR_0_2_04_cli_run_card_and_manifest_kinds` (`mode` enum) | 74 caught. 16 survive the whole fast suite (`952 passed` each). The probe (below) shows 12 of them are equivalent. **4 are real gaps: F01** |
+| 2 | CB2-1 strict `integer` type accepts integral floats such as `1.0` | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
+| 2 | CB2-2 strict `integer` type accepts booleans | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
+| 2 | CB2-3 calendar check of UTC timestamps removed | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
+| 2 | CB2-4 validators built without the format checker | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
+| 3 An unknown major schema version is rejected | CB3-1 `SUPPORTED_VERSIONS` claims major 2 for events | `test_FR_0_2_06_rejects_unknown_major_version[2.0-2-event]` | Caught |
+| 3 | CB3-2 major version always read as 1 | `test_FR_0_2_06_rejects_unknown_major_version[2.0-2-event]` | Caught |
+| 3 | CB3-3 unknown-major check removed (minor check tolerates it) | `test_FR_0_2_06_rejects_unknown_major_version[2.0-2-event]` | Caught |
+| 3 | CB3-4, CB3-5, CB3-6 version check skipped for manifests, run cards, events (one per run) | `test_FR_0_2_06_rejects_unknown_major_version[2.0-2-manifest]`, `[2.0-2-run_card]`, `[2.0-2-event]` | Caught (3/3) |
+| 3 | CB3-7 version check removed and the event `schema_version` enum replaced by `type: string`, so an unknown major is accepted | `test_FR_0_2_06_schema_ids_carry_version[event]` | Caught |
+| 4 `run_card_id` is the SHA-256 of the canonical card as defined, computed independently | CB4-1 `machine` also excluded from the ID | `test_FR_0_2_05_run_card_id_computed_independently` | Caught |
+| 4 | CB4-2 `notes` no longer excluded | `test_FR_0_2_05_run_card_id_computed_independently` | Caught |
+| 4 | CB4-3 keys not sorted; CB4-4 spaces after separators; CB4-5 non-ASCII escaped; CB4-6 SHA3-256 instead of SHA-256 | `test_FR_0_2_05_canonical_bytes_match_definition` (each) | Caught (4/4) |
+| 4 | CB4-7 `validate_run_card` never compares `run_card_id` | `test_FR_0_2_04_cli_run_card_and_manifest_kinds` | Caught |
+| 4 | CB4-8 canonical JSON accepts NaN and Infinity | `test_FR_0_2_05_canonical_rejects_nan_infinity_and_non_json[nan-]` | Caught |
+| 5 Documents and schemas list the same fields | CB5-1 `/machine/gpu` row removed from `RUN_CARD.md` | `test_FR_0_2_07_documents_and_schemas_list_same_fields[run_card]` | Caught |
+| 5 | CB5-2 row `/clips/*/language` (not in the schema) added to `PACK_MANIFEST.md` | `test_FR_0_2_07_documents_and_schemas_list_same_fields[manifest]` | Caught |
+| 5 | CB5-3 `/archives/*/n_members` renamed `/archives/*/members` in the document | `test_FR_0_2_07_documents_and_schemas_list_same_fields[manifest]` | Caught |
+| 5 | CB5-4 undocumented `confidence` added to the event `word` schema | `test_FR_0_2_07_documents_and_schemas_list_same_fields[event]` | Caught |
+| 5 | CB5-5 undocumented `lock.url` added to the run card schema | `test_FR_0_2_07_documents_and_schemas_list_same_fields[run_card]` | Caught |
+| 5 | CB5-6 `error` payload heading renamed, so its rows sit under the wrong type | `test_FR_0_2_07_documents_and_schemas_list_same_fields[event]` | Caught |
+| 5 | CB5-7 `tags` removed from the clip schema but still documented | `test_FR_0_2_04_cli_run_card_and_manifest_kinds` first; run alone, `test_FR_0_2_07_documents_and_schemas_list_same_fields[manifest]` also fails | Caught |
+| 6 `contracts validate` exits non-zero on any invalid record in a JSON Lines file | CB6-1 exit 0 when exactly one record is invalid | `test_FR_0_2_04_cli_one_invalid_line_anywhere_fails[first]` | Caught |
+| 6 | CB6-3 blank lines dropped before validation | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
+| 6 | CB6-4 unparsable line treated as valid | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
+| 6 | CB6-5 worker pool drops the last chunk | `test_FR_0_2_04_cli_uses_worker_pool_only_for_large_files` | Caught |
+| 6 | CB6-6 last report not counted as invalid | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
+| 6 | CB6-7 per-run `seq` errors dropped from the report | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
+| 6 | CB6-8 schema errors of a parsed line discarded | `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | Caught |
+| 6 | CB6-9 exit code decided by the last record only | `test_FR_0_2_04_cli_one_invalid_line_anywhere_fails[first]` | Caught |
+| 6 | CB6-2 `split_json_lines` always drops the last line (round 1's A15-01) | None: `712 passed` for the contract tests, `952 passed, 9 deselected` for the whole fast suite | **Survives: F02** |
 
-The 12 equivalent survivors under behaviour 2 are:
-- the root `type: object` of all three schemas: the code rejects non-objects before the schema runs (`validate.py:404-408`);
-- the event `payload` type and the 6 `$defs/payload_*` types: the other of the two object checks still applies;
-- the run card's `not {type: null}` on `model.version` and `model.checksum`: it becomes `not {}`, which still fails when both are null.
+**How the 16 survivors of the `type` and `enum` removals were judged.** The probe script is `/tmp/aqis-audit-wp02-r2/probe.py`. For each survivor, it applied the break and put wrong values into the valid fixtures at the affected place: `7`, `1.5`, `true`, `false`, `null`, `"s"`, `""`, `[]`, `["x"]`, `[1]`, `[null]`, `{}` and `{"a": 1}`. Run cards were re-hashed after each change, so an ID mismatch could not hide a gap. The results were compared with the same probe on the unmodified code; that baseline accepts only values that are valid, such as `clip_id: null` on run-level events or `pack: null` with `human_session`.
 
-The 4 real gaps (F01) each leave `5 failed, 947 passed` in the whole fast suite. That is the copy's baseline, so no test catches them.
+- **12 equivalent: every wrong value is still rejected.**
+  - The root `type: object` of each schema (13 records each). The code rejects a non-object before the schema runs.
+  - The event `payload` type, and the types of `payload_empty`, `payload_run_finished`, `payload_partial`, `payload_final`, `payload_timing_mark` and `payload_error` (299 records each). The other of the two object checks still applies.
+  - The run card's `not {type: null}` on `model.version` and on `model.checksum` (27 records each). It becomes `not {}`, which still rejects both being null.
+- **4 real gaps: F01.**
+  - `properties/clip_id/type` in `event_log.v1.json`: 20 wrong values accepted, `7`, `1.5`, `true`, `false`, `[]`, `["x"]`, `[1]`, `[null]`, `{}` and `{"a": 1}`, on both `timing_mark` and `error`.
+  - `$defs/word/type`: 11 accepted as `payload.words[0]` of a `final` event, for example `"s"`, `7`, `null` and `["x"]`.
+  - `properties/pack/type` in `run_card.v1.json`: 10 accepted with `mode: human_session`, for example `"s"`, `7`, `true` and `[]`.
+  - `$defs/archive/type` in `pack_manifest.v1.json`: 11 accepted as `archives[0]`, for example `"s"`, `7`, `null` and `[]`.
+  - The unmodified code rejects all 52.
 
 ## Exploratory breaks (A15, at most 10)
-All 10 are in `aqis_lab/contracts/validate.py` or `canonical.py`, which are new in this WP. Each was run against all contract tests.
-
 | Break | Where | Survived? | Severity |
 | --- | --- | --- | --- |
-| A15-01 `split_json_lines` always drops the last line (the last record is lost when there is no final newline) | `validate.py:475-476` | **Yes.** 712 contract tests passed. With the break, a 23-line file with no final newline and an invalid last record gives `event: 22 records, 22 valid, 0 invalid`, exit 0. The unmodified code gives `23 records, 22 valid, 1 invalid`, exit 1 | MAJOR (F02) |
-| A15-02 `_json_value_errors` does not look inside arrays | `validate.py:288-290` | No: `test_FR_0_2_04_rejects_nan_infinity_and_overflow` | — |
-| A15-03 Unknown fields produce no error | `validate.py:236-239` | No: `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | — |
-| A15-04 Non-finite numbers not reported (the path that `_run_card_rules` relies on) | `validate.py:294-297` | No: `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | — |
-| A15-05 A run's first `seq` may be any number | `validate.py:504` | No: `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | — |
-| A15-06 Per-type event validators lose the common `if`/`then` blocks | `validate.py:223` | No: `test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields` | — |
-| A15-07 Duplicate `clip_id` and archive names never detected | `validate.py:342-343` | No: `test_FR_0_2_04_cli_run_card_and_manifest_kinds` | — |
-| A15-08 A newer minor version passes the version check | `validate.py:397` | No: `test_FR_0_2_06_rejects_newer_minor_version[1.1-event]` | — |
-| A15-09 Word order checked for the first word only | `validate.py:310` | No: `test_FR_0_2_01_final_word_timings` | — |
-| A15-10 Canonical JSON check does not look inside arrays | `canonical.py:39-41` | No: `test_FR_0_2_05_canonical_rejects_nan_infinity_and_non_json[bad2-/a/1]` | — |
+| None | No code added or changed since `81b58f1` | — | — |
 
 ## Findings
 | ID | Severity | Item | Finding | Evidence | Recommendation: fix now, or accept as debt (target WP) |
 | --- | --- | --- | --- | --- | --- |
-| WP-0.2-F01 | CRITICAL | A6 (must-catch 2) | Four schema type rules have no test. If any one is removed, wrong types are accepted and the whole fast suite still passes. (1) Event `clip_id` type for the two event types where it may be null or an ID, `timing_mark` and `error`: `clip_id` values `7`, `true`, `["c"]` and `{"a": 1}` are accepted. The existing wrong-type cases use only `final`. (2) Items of a `final` payload's `words` must be objects: `words: ["hello"]`, `[1]` and `[null]` are accepted. (3) `pack` when `mode` is `human_session`: `"smoke"`, `5`, `[]` and `true` are accepted. The existing cases use mode `batch`, where the `else` rule also checks the type. (4) Items of `archives` must be objects: `"x"`, `5`, `null` and `[]` are accepted, and the clip-to-archive reference check is then skipped, so the manifest is reported valid. The code rejects all 52 probe records today, so this is a test gap, not a defect. EVIDENCE says the wrong-type tests cover "every envelope and payload field" and "every field"; these four context-dependent rules are not covered | Breaks: remove `type` at `event_log.v1.json:20` (`clip_id`), `event_log.v1.json:68` (`$defs/word`), `run_card.v1.json:13` (`pack`) and `pack_manifest.v1.json:56` (`$defs/archive`). Each gives `712 passed` for the contract tests and `5 failed, 947 passed` for the whole fast suite (the copy's baseline) | **Fix now, tests only.** Add wrong-type cases for: `clip_id` on `timing_mark` and `error`; a non-object item in `payload.words`; a non-object, non-null `pack` with `mode: human_session`; a non-object item in `archives`. Add them as new cases or new test functions (tightening only); no production change is needed. The re-audit will re-run these four breaks, and each must fail a named test |
-| WP-0.2-F02 | MAJOR | A15 (inside must-catch 6) | No test gives the validator or the command a JSON Lines file without a final newline. If `split_json_lines` drops the last line unconditionally, `contracts validate` reports a file with an invalid last record as all valid, with exit 0, and every test passes. A file without a final newline is valid JSON Lines, so this is a case of must-catch behaviour 6. The protocol says an A15 survivor is never CRITICAL, so it is rated MAJOR | A15-01 above; `validate.py:472-477`. The unmodified code handles the case correctly (exit 1) | **Fix now, tests only.** Add a test that runs `contracts validate` (and `validate_event_lines`) on a file whose last record is invalid and has no final newline, and requires exit 1 and that line in the report |
-| WP-0.2-F03 | MINOR | A14 / A4 | `EVIDENCE.md:279` says "Every earlier WP-0.2 commit's push run was also green". Push run 123 (36308454812) on `4f752e0` failed at step "Fast lab test suite". The cause (the `validate.py` header listing 7 of 13 tests) is disclosed at `EVIDENCE.md:30`, but only as a local test failure, not as a CI failure. The audited commit is green | GitHub API: run 36308454812, job `lab` `failure`, step 6 "Fast lab test suite" `failure` | **Fix now** (one sentence) together with F01 and F02. MINOR never blocks |
-| WP-0.2-F04 | MINOR | A13 | The `WorkerPoolError` path has no test: worker processes that cannot start or that die should give exit 2 with "rerun with --workers 1". The builder disclosed this in EVIDENCE. The path fails loudly and cannot report success | `validate.py:538-539`, `commands/contracts.py:77-79` | **Accept as debt**, target WP-0.9 |
-| WP-0.2-F05 | MINOR | A9 | Registry row CAP-DOC-002 names only `docs/contracts/EVENT_LOG.md` in its module column, although the capability covers all three contract documents | `docs/capabilities/REGISTRY.md:38` | **Fix now** with F01 (one cell), or accept as debt, target WP-0.9 |
-| WP-0.2-F06 | MINOR | A14 | A wrong-typed `clip_id` on a clip-level event gets two report lines at the same pointer: the envelope type error and the per-type rule error. CAP-CONTRACTS-006 says "one per failing field". The pointer and the exit code are correct | `contracts validate` on `invalid_events.jsonl`, line 26: `/clip_id: 7 is not of type 'string', 'null'` and `/clip_id: 7 is not of type 'string'. Rule: ...` | **Accept as debt**, target WP-0.9 |
+| WP-0.2-F01 | CRITICAL | A6 (must-catch 2) | **Not fixed (round 1 finding).** Four schema type rules have no test. If any one is removed, wrong types are accepted and every test passes. (1) Event `clip_id` on `timing_mark` and `error`, the two types where it may be null or an ID. (2) Items of a `final` payload's `words` must be objects. (3) `pack` when `mode` is `human_session`. (4) Items of `archives` must be objects. The code is correct today; this is a test gap | Removing `type` at `event_log.v1.json` `properties/clip_id`, `$defs/word`, `run_card.v1.json` `properties/pack` or `pack_manifest.v1.json` `$defs/archive` gives `712 passed` for the contract tests and `952 passed, 9 deselected` for the whole fast suite, each against a clean baseline. The probe shows 20, 11, 10 and 11 wrong values accepted (52 in total); the unmodified code rejects all of them. No test file has changed since round 1 | **Fix now, tests only** (required by the owner's round-2 condition). Add wrong-type cases for: `clip_id` on `timing_mark` and `error`; a non-object item in `payload.words`; a non-object, non-null `pack` with `mode: human_session`; a non-object item in `archives`. Add them as new cases or new test functions; that tightens the tests and changes no production code. The next audit will re-run these four breaks, and each must fail a named test |
+| WP-0.2-F02 | MAJOR | A15 in round 1 (inside must-catch 6) | **Not fixed (round 1 finding).** No test gives the validator or the command a JSON Lines file without a final newline. If `split_json_lines` drops the last line unconditionally, `contracts validate` reports a file whose invalid last record has no final newline as all valid, with exit 0, and every test passes. The severity is kept at MAJOR: the finding and its evidence are unchanged, and the owner has already ordered the fix | CB6-2: `712 passed` and `952 passed, 9 deselected`. With the break, a 23-line file with no final newline and `component: "asr"` on the last line gives `event: 22 records, 22 valid, 0 invalid`, exit 0. The unmodified code gives `line 23: INVALID /component: …` and `event: 23 records, 22 valid, 1 invalid`, exit 1. Every non-empty JSON Lines input built in `tests/aqis_lab/test_aqis_contracts_*.py` (the slow NFR test too) and both `.jsonl` fixtures end in `\n` | **Fix now, tests only** (required by the owner's round-2 condition). Add a test that runs `contracts validate` and `validate_event_lines` on a file whose invalid last record has no final newline, and requires exit 1 and that line in the report |
+| WP-0.2-F03 | MINOR | A14 / A4 | **Not fixed.** `EVIDENCE.md:279` still says "Every earlier WP-0.2 commit's push run was also green (runs 126 to 130 …)". Push run #123 (36308454812) on `4f752e0` failed at step "Fast lab test suite", and runs #124 and #125 are not mentioned | GitHub API: run 36308454812, job `lab` `failure`, step "Fast lab test suite" `failure`; runs #124 (`b3e8a03`) and #125 (`5939fe7`) `success` | **Fix now** (one sentence; required by the owner's round-2 condition). MINOR never blocks |
+| WP-0.2-F04 | MINOR | A13 | The `WorkerPoolError` path (exit 2, "rerun with --workers 1") has no test. **The owner accepted it as debt** in the approval's round-2 condition, target WP-0.9. The row in `docs/progress/DEBT.md` has not been written yet | `validate.py:538-539`, `commands/contracts.py:77-79`; `grep WP-0.2 docs/progress/DEBT.md` finds nothing | **Accept as debt**, target WP-0.9. The builder adds the DEBT row with the round-2 fixes |
+| WP-0.2-F05 | MINOR | A9 | **Not fixed.** Registry row CAP-DOC-002 names only `docs/contracts/EVENT_LOG.md` in its module column, although the capability covers all three contract documents | `docs/capabilities/REGISTRY.md:38` | **Fix now** (one cell; required by the owner's round-2 condition). MINOR never blocks |
+| WP-0.2-F06 | MINOR | A14 | A wrong-typed `clip_id` on a clip-level event gets two report lines at the same pointer, but CAP-CONTRACTS-006 says "one per failing field". **The owner accepted it as debt** in the approval's round-2 condition, target WP-0.9. The DEBT row has not been written yet | AT-0.2-02 invalid fixture, line 26: `/clip_id: 7 is not of type 'string', 'null'` and `/clip_id: 7 is not of type 'string'. Rule: …` | **Accept as debt**, target WP-0.9. The builder adds the DEBT row with the round-2 fixes |
 
 ## Convergence (round 3 onwards)
-Not applicable: round 1.
+Not applicable: this is round 2. For the next round, the counts so far are:
+
+| Round | CRITICAL | MAJOR | MINOR | Open findings inside the must-catch list |
+| --- | --- | --- | --- | --- |
+| 1 | 1 | 1 | 4 | F01 (behaviour 2), F02 (behaviour 6) |
+| 2 | 1 | 1 | 4 | F01 (behaviour 2), F02 (behaviour 6); no fix attempted |
 
 ## For the owner
 - audit-allow lines: None (gate: `Exempted lines (# audit-allow): 0`, `Exempted files (ALLOW-PATTERNS-IN): 0`).
-- Approvals used: `docs/approvals/WP-0.2.md` on `main` (`6f89741`), "Questions 1-7: as recommended in PLAN.md". This covers deviation D1 (`schema_version` in run cards and manifests), the worker pool for NFR-0.2-01, the payload fields, nullable `pack`, `normaliser` and `speaker_id`, `consent_ref` for `owner` and `campaign`, the per-run `seq` check, the nested `.gitignore` and the pure-Python reading.
-- Debt accepted so far: None for WP-0.2.
-- Owner-run checks still pending: None. The spec runs this WP on the cloud VM only. NFR-0.2-01 was not measured on Colab: the builder's estimate is about 9 s on 2 vCPUs, and the spec does not require that measurement.
+- Approvals used: `docs/approvals/WP-0.2.md` on `main` at `e3439be`:
+  - "Questions 1-7: as recommended in PLAN.md", the same as round 1;
+  - the round-2 condition to fix F01, F02, F03 and F05 and to accept F04 and F06 as debt, target WP-0.9.
+- Debt accepted so far:
+  - WP-0.2-F04 and WP-0.2-F06, target WP-0.9, named in the approval. Their rows in `docs/progress/DEBT.md` have not been written yet.
+  - No MAJOR finding has been accepted as debt.
+- Owner-run checks still pending: None. The spec runs this WP on the cloud VM only.
+- Next step: the round-2 fixes have not been built. They are four test additions, one EVIDENCE sentence, one registry cell and two DEBT rows. After they are built, a round-3 audit re-runs the four F01 breaks and CB6-2.
