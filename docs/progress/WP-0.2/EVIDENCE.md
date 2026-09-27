@@ -276,4 +276,68 @@ Pull request: https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/2
 | 36310189503 | push | `lab` | success | (same commit) |
 | 36310189503 | push | `harness-regression` | success | (same commit) |
 
-Every earlier WP-0.2 commit's push run was also green (runs 126 to 130: `cb96d44`, `2527f84`, `616fddd`, `0a4e2ef`, `3459ffa`). The commit that adds this section and sets STATUS changes only `docs/progress/`.
+Earlier WP-0.2 push runs (corrected in round 2, finding WP-0.2-F03):
+- **Run #123** (36308454812) on `4f752e0` (FR-0.2-01) **failed** at step "Fast lab test suite". This was the header/registry mismatch recorded under FR-0.2-01 (`test_FR_0_0_08_module_headers_match_registry`), fixed in the next commit.
+- Runs #124 to #130 were green: `b3e8a03`, `5939fe7`, `cb96d44`, `2527f84`, `616fddd`, `0a4e2ef`, `3459ffa`.
+
+The commit that adds this section and sets STATUS changes only `docs/progress/`.
+
+## Round 2 fixes (WP-0.2-F01, F02, F03, F05; debt F04, F06)
+Authority: `docs/approvals/WP-0.2.md` on `main` (`e3439be`). Change budget, root causes and baseline: `docs/progress/WP-0.2/FIXES.md`. No production code or schema changed; the modules changed only in their header docstrings.
+
+### F01 and F02 — the new tests
+`tests/aqis_lab/test_aqis_contracts_gaps.py` (new, 46 cases):
+- `test_FR_0_2_01_rejects_wrong_clip_id_type_on_either_level_events`: `timing_mark` and `error` with `clip_id` set to 7, 1.5, `true`, `[]`, `{}` or `["clip-1"]` are rejected at `/clip_id`; null and an ID are still accepted.
+- `test_FR_0_2_01_rejects_non_object_word_items`: a non-object item (number, boolean, string, array or null) at index 0 or 1 of `payload.words` is rejected at `/payload/words/<i>`.
+- `test_FR_0_2_02_human_session_pack_must_be_object_or_null`: with `mode: human_session`, `pack` null or an object is accepted; a number, boolean, string or array is rejected at `/pack`.
+- `test_FR_0_2_03_rejects_non_object_archive_items`: a non-object `archives` item, replacing the first entry or appended at the end, is rejected at `/archives/<i>`.
+- `test_FR_0_2_04_last_record_without_final_newline_is_validated`: `validate_event_lines` keeps and checks the last record when the file has no final newline, also with a final `\r`; this is also tested on a single-record file.
+- `test_FR_0_2_04_cli_last_line_without_final_newline_fails`: the command reports `line 23: INVALID /component` and `event: 23 records, 22 valid, 1 invalid` with exit 1; the valid file without a final newline exits 0 with 23 records.
+- `test_FR_0_2_04_cli_documents_without_final_newline` (the sibling case for run cards and manifests): valid documents exit 0 and invalid documents exit 1 without a final newline.
+
+Against the unchanged code all 46 pass, because the code was already correct (a test gap, as the audit says).
+
+### Proof: each audited break now fails a named test
+The five breaks were made exactly as the audit describes, one at a time, in a scratch copy of the working tree (tracked files plus the new test file). Each break was restored before the next. For every break, the command runs the contract test files that existed in round 1, then the new file.
+
+| Break (audit reference) | Round-1 contract tests | New tests | Failing test |
+| --- | --- | --- | --- |
+| F01-1 `event_log.v1.json` `properties/clip_id`: `type` removed | `712 passed` (the gap) | `12 failed, 34 passed` | `test_FR_0_2_01_rejects_wrong_clip_id_type_on_either_level_events` |
+| F01-2 `event_log.v1.json` `$defs/word`: `type` removed | `712 passed` | `14 failed, 32 passed` | `test_FR_0_2_01_rejects_non_object_word_items` |
+| F01-3 `run_card.v1.json` `properties/pack`: `type` removed | `712 passed` | `7 failed, 39 passed` | `test_FR_0_2_02_human_session_pack_must_be_object_or_null` |
+| F01-4 `pack_manifest.v1.json` `$defs/archive`: `type` removed | `712 passed` | `7 failed, 39 passed` | `test_FR_0_2_03_rejects_non_object_archive_items` |
+| F02 (CB6-2) `split_json_lines` always drops the last line | `712 passed` | `2 failed, 44 passed` | `test_FR_0_2_04_cli_last_line_without_final_newline_fails`, `test_FR_0_2_04_last_record_without_final_newline_is_validated` |
+
+Command: `.venv/bin/python <scratchpad>/r2_breaks.py "$PWD" <scratchpad>/r2 "$PWD/.venv/bin/python"`, which runs `pytest -q -p no:cacheprovider -m "not slow"` in the copy. Output (real):
+```text
+F01-1 event_log properties/clip_id: type removed
+  round-1 contract tests: 712 passed, 1 deselected in 11.13s
+  new tests: 12 failed, 34 passed in 1.41s
+  failing: test_FR_0_2_01_rejects_wrong_clip_id_type_on_either_level_events
+F01-2 event_log $defs/word: type removed
+  round-1 contract tests: 712 passed, 1 deselected in 10.79s
+  new tests: 14 failed, 32 passed in 1.37s
+  failing: test_FR_0_2_01_rejects_non_object_word_items
+F01-3 run_card properties/pack: type removed
+  round-1 contract tests: 712 passed, 1 deselected in 10.25s
+  new tests: 7 failed, 39 passed in 1.25s
+  failing: test_FR_0_2_02_human_session_pack_must_be_object_or_null
+F01-4 pack_manifest $defs/archive: type removed
+  round-1 contract tests: 712 passed, 1 deselected in 10.41s
+  new tests: 7 failed, 39 passed in 1.33s
+  failing: test_FR_0_2_03_rejects_non_object_archive_items
+F02 CB6-2 split_json_lines always drops the last line
+  round-1 contract tests: 712 passed, 1 deselected in 10.26s
+  new tests: 2 failed, 44 passed in 1.11s
+  failing: test_FR_0_2_04_cli_last_line_without_final_newline_fails, test_FR_0_2_04_last_record_without_final_newline_is_validated
+```
+
+### F03, F05; debt F04, F06
+- F03: the CI paragraph under "## CI" now lists run #123 on `4f752e0` as failed and runs #124 to #130 as green; the run list was checked through the GitHub API.
+- F05: a registry Module cell must name one existing file (the gate's `module_exists`, rule G33), so CAP-DOC-002 cannot list three documents there. `RUN_CARD.md` and `PACK_MANIFEST.md` now each have a row, CAP-DOC-003 and CAP-DOC-004, with the same tests. CAP-DOC-002's Functions cell points to them, and its capability is unchanged.
+- F04 → DEBT-006, F06 → DEBT-007 in `docs/progress/DEBT.md` (target WP-0.9, accepted in the approval's round-2 condition).
+- Registry and headers: the new tests are added to the CAP-CONTRACTS-001, 002, 003, 006 and 007 rows and to the matching lines in the `validate.py` and `commands/contracts.py` headers (header only, with CHANGE LOG lines).
+
+### Checks after the fixes
+- Fast suite: `998 passed, 9 deselected in 57.68s` (baseline `952`, plus the 46 new cases).
+- Gate: `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.2` → `0 findings: OK (0.2 s)`.

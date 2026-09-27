@@ -1,7 +1,7 @@
 """The `contracts` command: validate event logs, run cards and pack manifests against the v1 contracts.
 
 CAPABILITIES:
-  CAP-CONTRACTS-006: `python -m aqis_lab contracts validate <file> --kind event|run_card|manifest [--workers N]` prints one report line per record (one per failing field, named by JSON Pointer) and a summary; exit 0 when every record is valid, 1 on any invalid record or no records, 2 on usage errors, an unreadable file or worker processes that cannot run [tests: test_FR_0_2_04_cli_valid_events_exit_0, test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields, test_FR_0_2_04_cli_one_invalid_line_anywhere_fails, test_FR_0_2_04_cli_unparsable_and_blank_lines_are_invalid_records, test_FR_0_2_04_cli_empty_file_fails, test_FR_0_2_04_cli_run_card_and_manifest_kinds, test_FR_0_2_04_cli_missing_file_exit_2, test_FR_0_2_04_cli_listed_by_dispatcher, test_FR_0_2_04_cli_uses_worker_pool_only_for_large_files]
+  CAP-CONTRACTS-006: `python -m aqis_lab contracts validate <file> --kind event|run_card|manifest [--workers N]` prints one report line per record (one per failing field, named by JSON Pointer) and a summary; exit 0 when every record is valid, 1 on any invalid record or no records, 2 on usage errors, an unreadable file or worker processes that cannot run [tests: test_FR_0_2_04_cli_valid_events_exit_0, test_FR_0_2_04_cli_invalid_events_exit_1_and_name_fields, test_FR_0_2_04_cli_one_invalid_line_anywhere_fails, test_FR_0_2_04_cli_unparsable_and_blank_lines_are_invalid_records, test_FR_0_2_04_cli_empty_file_fails, test_FR_0_2_04_cli_run_card_and_manifest_kinds, test_FR_0_2_04_cli_missing_file_exit_2, test_FR_0_2_04_cli_listed_by_dispatcher, test_FR_0_2_04_cli_uses_worker_pool_only_for_large_files, test_FR_0_2_04_cli_last_line_without_final_newline_fails, test_FR_0_2_04_cli_documents_without_final_newline]
 INPUTS AND OUTPUTS: a file path (events as JSON Lines; a run card or a manifest as one JSON document) in; the
   per-record report on stdout, errors on stderr, exit code 0, 1 or 2.
 CONTRACTS: event-log v1, run-card v1, pack-manifest v1.
@@ -12,6 +12,7 @@ NOT IN SCOPE:
   - The validation rules themselves (aqis_lab/contracts/validate.py).
 CHANGE LOG:
   2026-09-27 WP-0.2 FR-0.2-04 created.
+  2026-09-27 WP-0.2 round 2 F01, F02: header lists the new gap tests (header only).
 """
 import argparse
 import os
