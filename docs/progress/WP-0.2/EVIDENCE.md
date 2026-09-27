@@ -135,3 +135,31 @@ ContractValidationError | run card record is invalid (1 problem):
 ```
 - Fast suite: `951 passed, 8 deselected in 56.96s`.
 - Status: DONE
+
+### NFR-0.2-01 — 100,000 events in under 10 s on the cloud VM
+- Approach (approved question 2, option a): event files of at least 5,000 records are split over worker processes (`spawn`; default count `os.process_cpu_count()`, 4 here), and the reports are identical to one process (`test_FR_0_2_04_worker_pool_report_identical_to_single_process`, `test_FR_0_2_04_cli_uses_worker_pool_only_for_large_files`). The per-event-type validators also inline local `$ref`s whose siblings are annotations only, which does not change any result (`test_FR_0_2_04_dispatch_matches_full_schema_on_all_fixtures` still passes).
+- Test: `test_NFR_0_2_01_validates_100k_events_under_10s` (marked `slow`). It runs the command on a generated 100,000-event file covering every event type, and requires exit 0, 100,000 OK lines and a wall time under 10 s.
+- Measurements on this VM, for the same 100,000-event file:
+  - Before the worker pool and the inlining (one process): 23.0 s.
+  - With the worker pool: 6.52 s.
+  - After inlining: 17.3 s in one process (`--workers 1`), 5.12 s with `--workers 4`.
+
+  So the test would fail without the worker pool.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_contracts_nfr.py -q -s -p no:cacheprovider -k NFR_0_2_01`, five runs.
+- Output (real excerpt, five runs):
+```text
+validated 100000 events in 5.03 s (validating 100000 records with 4 worker processes)
+validated 100000 events in 4.87 s (validating 100000 records with 4 worker processes)
+validated 100000 events in 5.08 s (validating 100000 records with 4 worker processes)
+validated 100000 events in 5.26 s (validating 100000 records with 4 worker processes)
+validated 100000 events in 5.20 s (validating 100000 records with 4 worker processes)
+1 passed, 1 deselected in 5.67s
+```
+- Status: DONE. The margin is about 2×. On Colab's 2 vCPUs the same file would take about 9 s (estimated from the one-process time; not measured). The NFR applies to the cloud VM only.
+
+### NFR-0.2-02 — Pure Python with pinned jsonschema
+- Test: `test_NFR_0_2_02_contracts_code_is_pure_python_with_pinned_jsonschema`. It checks, by AST, that the only third-party import of `aqis_lab/contracts/*.py` and `aqis_lab/commands/contracts.py` is `jsonschema`, pinned `==4.26.0` with hashes in `phase0.txt` and installed at that version; and that `aqis_lab/contracts/` holds only `.py` modules and `schemas/*.json`. Approved question 7: jsonschema's own dependency `rpds-py` is a compiled wheel, already pinned with hashes.
+- The test passed on its first run, because the code was pure Python from the start.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_contracts_nfr.py -q -p no:cacheprovider -k NFR_0_2_02` (also part of the fast suite).
+- Fast suite: `952 passed, 9 deselected in 57.55s`.
+- Status: DONE
