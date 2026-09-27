@@ -87,7 +87,8 @@ FAILED tests/aqis_lab/test_aqis_scoring_examples.py::test_FR_0_3_02_documented_e
 ```text
 6 passed, 1149 deselected in 0.41s
 ```
-- Status: DONE (the printed-report test is recorded under FR-0.3-06)
+- Printed report: `test_FR_0_3_05_cli_prints_corpus_and_mean_labelled` (both variants; the expected numbers are the fixture's hand counts, written in the test's comments), `test_FR_0_3_05_cli_prints_undefined_rates`. With them: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k FR_0_3_05` → `9 passed, 1173 deselected in 1.01s`.
+- Status: DONE
 
 ### FR-0.3-07 — Cross-check against the pinned jiwer
 - Tests (`tests/aqis_lab/test_aqis_scoring_crosscheck.py`):
@@ -105,5 +106,46 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k FR_0_3_07
 6 passed, 1149 deselected in 13.08s
 $ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_scoring_crosscheck.py -q -p no:cacheprovider -m slow
 1 passed, 5 deselected in 1.36s
+```
+- Status: DONE
+
+### FR-0.3-03 — Fillers removed in the main score, kept in the disfluency-aware score; both reported and labelled
+- Code: `aqis_lab/scoring/normalise.py` (`MAIN`, `DISFLUENCY_AWARE`, `FILLERS`; approved question 3: Whisper's own list), `aqis_lab/scoring/wer.py` (`score_corpus` scores every clip under both), `aqis_lab/scoring/table.py` (`variant`, `normaliser_name` and `normaliser_version` on every row), and `aqis_lab/commands/score.py` (one labelled block per variant).
+- Tests:
+  - `test_FR_0_3_03_main_removes_each_listed_filler` and `test_FR_0_3_03_disfluency_aware_keeps_each_listed_filler` (all six fillers, in three casings);
+  - `test_FR_0_3_03_documented_filler_list_matches_normaliser` (the list in `NORMALISATION.md` = `FILLERS` = the pinned class's pattern);
+  - `test_FR_0_3_03_both_variants_scored_and_labelled`;
+  - `test_FR_0_3_03_cli_prints_both_labelled_variants`.
+- Tests first: `test_FR_0_3_03_documented_filler_list_matches_normaliser` failed with `FileNotFoundError: ... docs/contracts/NORMALISATION.md` until the document existed. The corpus and command tests failed at collection with `ImportError: cannot import name 'wer'` (then `'table'`) before those modules existed.
+- Command and output (real): `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k FR_0_3_03`
+```text
+15 passed, 1167 deselected in 0.65s
+```
+- Status: DONE
+
+### FR-0.3-06 — Traceable score rows in Parquet and CSV, schema in SCORE_TABLE.md
+- Code:
+  - `aqis_lab/scoring/table.py` (CAP-SCORE-004);
+  - `aqis_lab/commands/score.py` (CAP-SCORE-005);
+  - `aqis_lab/__main__.py`: one `COMMANDS` entry and one CHANGE LOG line, inside the change budget (`git diff -U0` shows only those two added lines).
+- Document: `docs/contracts/SCORE_TABLE.md` (CAP-DOC-006), covering:
+  - columns, the alignment tie-break rule, empty references and corpus numbers;
+  - `summary.json` (approved addition D4) and the `schema_version` column (approved addition D3);
+  - input files and the change policy.
+- Fixtures: `tests/aqis_lab/fixtures/scoring/ref.csv` and `hyp.csv`. They hold 12 clips: exact match, substitution, deletions, insertion, filler, numbers, an empty reference, a filler-only reference, an empty hypothesis, a typographic apostrophe, punctuation and a multi-line quoted text. The `run_card_id` is that of the WP-0.2 fixture `valid_run_card.json`.
+- Tests (`tests/aqis_lab/test_aqis_scoring_table.py`, `test_aqis_scoring_cli.py`):
+  - `test_FR_0_3_06_every_row_carries_trace_fields`;
+  - `test_FR_0_3_06_hashes_are_sha256_of_raw_text` (hashlib over the fixture texts read with the `csv` module);
+  - `test_FR_0_3_06_parquet_schema_matches_score_table_doc`, `test_FR_0_3_06_csv_header_matches_score_table_doc` and `test_FR_0_3_06_csv_and_parquet_hold_the_same_rows`;
+  - `test_FR_0_3_06_rows_sorted_by_clip_and_variant` and `test_FR_0_3_06_rejects_invalid_run_card_id_and_clip_id`;
+  - `test_FR_0_3_06_input_errors_exit_2` (10 cases: missing file, both wrong headers, wrong field count, blank line, duplicate clip in either file, clip sets differ, several run cards, no clips);
+  - `test_FR_0_3_06_non_utf8_input_exit_2` and `test_FR_0_3_06_accepts_bom_and_multiline_text`;
+  - `test_FR_0_3_06_refuses_to_overwrite_output` (outputs byte- and mtime-identical after a refused second run);
+  - `test_FR_0_3_06_summary_matches_rows`, `test_FR_0_3_06_score_listed_by_dispatcher` and `test_FR_0_3_06_cli_lists_written_files`.
+- Tests first: collection failed with `E   ImportError: cannot import name 'table' from 'aqis_lab.scoring'` before `table.py` existed.
+- Dispatcher capability (CAP-CLI-001) before and after the `COMMANDS` edit: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "FR_0_0_01 or FR_0_2_04_cli_listed_by_dispatcher"` → before `8 passed, 1147 deselected in 2.00s`, after `8 passed, 1174 deselected in 2.17s`.
+- Command and output (real): `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k FR_0_3_06`
+```text
+23 passed, 1159 deselected in 3.63s
 ```
 - Status: DONE
