@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "run_card_id": "92544853e82e677dba6ae51e8a53d57b2527d96f7d8b7e4158b0d28e2db7c243",
+  "pack": {
+    "manifest_id": "smoke",
+    "version": "1.0.0",
+    "sha256": "bff0bfc54c0e015c028c46b2933d88bcb759e9de34f0b41276bca58b888d8aec"
+  },
+  "model": {
+    "family": "vosk",
+    "name": "vosk-model-small-en-us-0.15",
+    "version": "0.15",
+    "checksum": null,
+    "settings": {
+      "sample_rate_hz": 16000,
+      "words": true
+    }
+  },
+  "processing": {
+    "vad": [
+      {
+        "name": "highpass",
+        "params": {
+          "cutoff_hz": 80
+        }
+      },
+      {
+        "name": "gain-normalise",
+        "params": {
+          "target_dbfs": -20.0
+        }
+      }
+    ],
+    "stt": [
+      {
+        "name": "resample",
+        "params": {
+          "to_hz": 16000
+        }
+      }
+    ],
+    "emotion": []
+  },
+  "mode": "batch",
+  "machine": {
+    "platform": "cloud-vm",
+    "gpu": null,
+    "cpu_model": "example x86_64 CPU model",
+    "architecture": "x86_64",
+    "os": "Ubuntu 24.04 LTS",
+    "python_version": "3.13.12"
+  },
+  "seed": 20260927,
+  "normaliser": {
+    "name": "whisper-english",
+    "version": "example-1"
+  },
+  "lock": {
+    "file": "requirements/aqis_lab/phase0.txt",
+    "sha256": "9a47565d903d1a4b3a49c769d815bacfe4b8d3ca56026b481e6df70c30bfb60c"
+  },
+  "git": {
+    "commit": "014b051aadd3418b4235d891d07f94b343da45fe",
+    "dirty": false
+  },
+  "created_utc": "2026-09-27T09:45:00Z",
+  "notes": "Example run card for the WP-0.2 contract tests; values are illustrative."
+}

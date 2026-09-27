@@ -1,0 +1,2 @@
+# The root .gitignore ignores *.jsonl; these JSON Lines fixtures must be committed (WP-0.2 question 6).
+!*.jsonl
