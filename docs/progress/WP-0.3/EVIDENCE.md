@@ -69,3 +69,41 @@ FAILED tests/aqis_lab/test_aqis_scoring_examples.py::test_FR_0_3_02_documented_e
 74 passed in 0.16s
 ```
 - Status: DONE
+
+### FR-0.3-04 — Per-utterance alignment, counts, CER and empty references
+- Module: `aqis_lab/scoring/wer.py` (CAP-SCORE-002): `align`, `words`, `characters`, `score_utterance`, `score_corpus`.
+- Tests (`tests/aqis_lab/test_aqis_scoring_align.py`, 23 cases): `test_FR_0_3_04_hand_counted_alignments` (9 pairs counted by hand), `test_FR_0_3_04_tie_break_follows_documented_rule` (two tie cases worked through by hand in the test's comments), `test_FR_0_3_04_errors_equal_edit_distance` (3,000 random pairs against a textbook distance in `aqis_scoring_testutil.py`), `test_FR_0_3_04_alignment_ops_rebuild_both_texts`, `test_FR_0_3_04_reference_length_is_hits_subs_dels`, `test_FR_0_3_04_cer_counts_characters_including_spaces`, `test_FR_0_3_04_empty_reference_counts_insertions_and_wer_undefined`, `test_FR_0_3_04_reference_empty_after_normalisation` (`Um.` is empty in the main variant, not in the disfluency-aware one), `test_FR_0_3_04_empty_reference_enters_corpus_totals`, `test_FR_0_3_04_both_texts_empty`, `test_FR_0_3_04_utterance_score_records_texts_and_normaliser`, `test_FR_0_3_04_words_rejects_text_that_is_not_normalised`.
+- Tests first: before `wer.py` existed, collection of the three new modules failed with `E   ImportError: cannot import name 'wer' from 'aqis_lab.scoring'`.
+- Command and output (real): `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k FR_0_3_04`
+```text
+23 passed, 1132 deselected in 0.63s
+```
+- Status: DONE
+
+### FR-0.3-05 — Corpus WER and CER as totals; the mean, labelled
+- Module: `aqis_lab/scoring/wer.py` (CAP-SCORE-003): `corpus_summary`, `CorpusSummary` (`corpus_wer`, `mean_utterance_wer`, `utterances_with_wer`, `empty_references`, `corpus_cer` and every total). Printed labels are in the `score` command (FR-0.3-06 section; `test_FR_0_3_05_cli_prints_corpus_and_mean_labelled`).
+- Tests (`tests/aqis_lab/test_aqis_scoring_corpus.py`): `test_FR_0_3_05_corpus_wer_is_total_errors_over_total_reference_words` (1 error over 1 + 9 words: corpus 0.1, mean 0.5), `test_FR_0_3_05_mean_utterance_wer_excludes_undefined_and_is_labelled`, `test_FR_0_3_05_corpus_wer_undefined_without_reference_words`, `test_FR_0_3_05_corpus_cer_is_total_errors_over_total_reference_characters`, `test_FR_0_3_05_summary_totals_are_sums_of_utterances`, `test_FR_0_3_05_score_corpus_rejects_duplicate_clip_and_non_text`.
+- Command and output (real): `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k FR_0_3_05` (before the command tests existed)
+```text
+6 passed, 1149 deselected in 0.41s
+```
+- Status: DONE (the printed-report test is recorded under FR-0.3-06)
+
+### FR-0.3-07 — Cross-check against the pinned jiwer
+- Tests (`tests/aqis_lab/test_aqis_scoring_crosscheck.py`):
+  - `test_FR_0_3_07_word_counts_match_jiwer_on_generated_pairs` (asserts at least 200 pairs);
+  - `test_FR_0_3_07_char_counts_match_jiwer_on_generated_pairs`;
+  - `test_FR_0_3_07_corpus_totals_and_wer_match_jiwer` (both variants: totals, `jiwer.wer` and `jiwer.cer` on the whole list, with the texts first normalised by the lab);
+  - `test_FR_0_3_07_generated_pairs_cover_edge_cases`, which also proves that the tie-heavy pairs exercise the tie-break: a traceback preferring insertion first disagrees with jiwer on at least 5 of them;
+  - `test_FR_0_3_07_jiwer_is_the_pinned_version`;
+  - `test_FR_0_3_07_tie_heavy_pairs_match_jiwer` (marked `slow`: 20,000 pairs over 2 to 4 word vocabularies).
+- Generated pairs (seed 30703): 212 pairs, with words taken from real normaliser output: `{'identical': 21, 'empty-reference': 11, 'empty-hypothesis': 11, 'both-empty': 1, 'repeated-words': 2, 'tie-heavy': 80, 'random-edits': 80, 'long': 6}` (the long pairs have 300-word references).
+- Correction to the plan: the plan's FR-0.3-07 row says the generated words "include digits, `%`, `£` and `'`". Normalised text never contains `'`: Whisper expands contractions and then removes apostrophes. The characters actually present are letters, digits, space, `$ % . ¢ £ €`. The coverage test asserts that set; the first version of it (asserting `'`) failed for this reason before it was committed.
+- Commands and output (real):
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k FR_0_3_07
+6 passed, 1149 deselected in 13.08s
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_scoring_crosscheck.py -q -p no:cacheprovider -m slow
+1 passed, 5 deselected in 1.36s
+```
+- Status: DONE
