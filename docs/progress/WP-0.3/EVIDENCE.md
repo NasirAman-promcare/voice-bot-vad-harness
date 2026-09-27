@@ -311,3 +311,19 @@ Every requirement (FR-0.3-01 to FR-0.3-07, NFR-0.3-01) is DONE, and AT-0.3-01 to
 ## Round 2 (audit findings; approval `20ba9ba`)
 - **WP-0.3-F01 (MAJOR), fixed with tests only.** Two new tests cover the ways a clip can be on one side only: `test_FR_0_3_06_one_sided_clip_is_an_input_error` (3 cases) and `test_FR_0_3_06_more_input_and_output_errors_exit_2` (5 cases, sibling checks in the same functions that had no test). The details, the reproduction and the mutation proof are in `docs/progress/WP-0.3/FIXES.md`, "Round 2". Summary: the auditor's breaks X2 and X2m each now fail a named new test, and so do 5 sibling breaks (S1 to S5). Fast suite `1182 passed, 11 deselected`; gate `0 findings: OK`.
 - **WP-0.3-F02 and WP-0.3-F03 (MINOR)** are accepted debt: `docs/progress/DEBT.md` rows DEBT-008 (target WP-0.6) and DEBT-009 (target WP-0.5).
+- **CI for round 2** (`aqis-lab-ci`, commits `c3464c2` and `52fab02`): every job succeeded:
+  - push runs [36329183764](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/36329183764) and [36329200040](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/36329200040);
+  - pull request runs [36329187110](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/36329187110) and [36329204032](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/36329204032).
+
+  Each run passed both `lab` and `harness-regression`. Excerpts from pull request run 36329204032 on `52fab02` (real):
+```text
+[lab] 1182 passed, 11 deselected in 89.24s (0:01:29)
+[lab] Work package from the pull request title: WP-0.3
+[lab] aqis-audit-gate: base origin/main (merge-base 20ba9bad5eff), head 421f9e696640, approvals origin/main 20ba9bad5eff, wp WP-0.3
+[lab] Findings: 0
+[lab] 0 findings: OK (0.2 s)
+[harness-regression] ========================= 1 failed, 21 passed in 4.22s =========================
+[harness-regression] baseline: 22 tests, 21 passed; this run: 22 tests, 21 passed
+[harness-regression] RESULT: PASS
+```
+  The one harness failure is the recorded baseline failure (`test_loss_category`), unchanged. Round 2 status: READY-FOR-AUDIT.

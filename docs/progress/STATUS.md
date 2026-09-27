@@ -8,7 +8,7 @@ Values: NOT-STARTED, PLANNED, APPROVED, IN-BUILD, READY-FOR-AUDIT, AUDIT-FAIL, M
 | WP-0.0 | Guardrails and audit tooling | MERGED | claude/hopeful-noether-yinc4e, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/1 | 2026-09-27 |
 | WP-0.1 | Tier 2 VAD transport baseline | NOT-STARTED | | |
 | WP-0.2 | Contracts | MERGED | claude/beautiful-dijkstra-8pbq6l, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/2 | 2026-09-27 |
-| WP-0.3 | Text normaliser and scorer | AUDIT-FAIL | claude/charming-knuth-atc1dq, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/3 | 2026-09-27 |
+| WP-0.3 | Text normaliser and scorer | READY-FOR-AUDIT | claude/charming-knuth-atc1dq, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/3 | 2026-09-27 |
 | WP-0.4 | Source registry, pack builder, smoke pack | NOT-STARTED | | |
 | WP-0.5 | Platform, doctor, runner, Colab launcher | NOT-STARTED | | |
 | WP-0.6 | Oracle worker, results store, traceability | NOT-STARTED | | |
