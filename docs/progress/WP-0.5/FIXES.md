@@ -15,8 +15,8 @@ Baseline before any change: the affected test files (`test_aqis_platform.py`, `t
 | F02 | `docs/capabilities/REGISTRY.md` | CAP-DRIVE-001 row, "What it does" cell only | Same overstatement | CAP-DRIVE-001 (wording only) |
 | F02 | `docs/colab/COLAB_RUNBOOK.md` | "Drive layout" bullet "Only under `AQIS_LAB`" | Same overstatement | CAP-DOC-011 (its test does not read this line) |
 | F02, F01, F09 | `docs/progress/DEBT.md` | new row DEBT-014; DEBT-009 Target WP cell → WP-0.9 | Owner decision | none |
-| F03 | `tests/aqis_lab/test_aqis_platform.py` (new in this WP) | `platform_detail_lines`, plus new AST resolution helpers; `test_FR_0_5_01_platform_details_only_from_platform_module` gains evasion cases | The scan matched text only, so `from platform import machine` and `__import__("os").uname()` passed | CAP-PLAT-003 (must-catch 5) |
-| F04 | `tests/aqis_lab/test_aqis_launcher.py` (new in this WP) | `logic_problems` (argument shapes of `subprocess.run`); new rejection cases in `test_FR_0_5_08_logic_checker_rejects_each_forbidden_form` | Any `subprocess.run([...], check=True)` was allowed, so `bash -c "if …"` passed | CAP-NB-001 (must-catch 4) |
+| F03 | `tests/aqis_lab/test_aqis_platform.py` (new in this WP) | `platform_detail_lines`, plus new AST resolution helpers; new test `test_FR_0_5_01_platform_scan_resolves_imports` (12 import forms) | The scan matched text only, so `from platform import machine` and `__import__("os").uname()` passed | CAP-PLAT-003 (must-catch 5) |
+| F04 | `tests/aqis_lab/test_aqis_launcher.py` (new in this WP) | `logic_problems` (argument shapes of `subprocess.run`); new test `test_FR_0_5_08_logic_checker_rejects_logic_inside_commands` (14 cases) | Any `subprocess.run([...], check=True)` was allowed, so `bash -c "if …"` passed | CAP-NB-001 (must-catch 4) |
 | F05 | `tests/aqis_lab/test_aqis_runner.py` (new in this WP) | new test `test_FR_0_5_05_resume_refused_when_card_differs` (parametrised) | Only `/seed`, the plan and `/machine/gpu` refusals were tested | CAP-RUN-007 |
 | F06, F07 | `tests/aqis_lab/test_aqis_stage.py` (new in this WP) | new tests `test_FR_0_5_04_changed_source_manifest_is_staged_again`, `test_FR_0_5_04_archive_hash_mismatch_with_intact_members_stages_nothing` | `_reuse`'s byte check and the `verify_pack` result had no test of their own | CAP-RUN-001 |
 | F08 | `aqis_lab/commands/run.py` | `main` only (+ header CHANGE LOG) | One `except` caught every `OSError`/`DriveError` of the whole run and called it a unit-log error | CAP-RUN-009 |
@@ -69,3 +69,6 @@ Harness: `mutate_r2.py` in the session scratchpad. It makes a fresh copy for eac
 - `DEBT.md`:
   - new row DEBT-014 (F01, target WP-0.7, the owner's condition text);
   - DEBT-009's Target WP is now WP-0.9 (F09).
+
+### CI (round 2)
+Workflow `aqis-lab-ci` on commit `d122fe8`: runs 36412859717 and 36412864571 (push and PR #5). Both `lab` jobs (fast suite and audit gate, the PR run with `--wp WP-0.5`) and both `harness-regression` jobs: success.
