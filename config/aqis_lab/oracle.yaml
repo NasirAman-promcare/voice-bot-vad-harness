@@ -1,0 +1,26 @@
+# Oracle worker settings (WP-0.6; owner-editable). Loaded and checked by aqis_lab/oracle_config.py.
+# Owner decisions: docs/approvals/WP-0.6.md (questions 1-16 as recommended; cores 2-3 reserved for timing runs).
+# Machine facts: docs/environment/oracle_probe.txt (VM.Standard.A1.Flex, Ubuntu 24.04.4 LTS on aarch64,
+# Ampere Altra, 4 CPUs online 0-3, one thread per core, glibc 2.39).
+schema_version: "1.0"
+setup:
+  # Read by aqis_lab/deploy/oracle_setup.sh before any Python exists. Keep each value quoted on one line.
+  # x86_64 and aarch64 are the spec's architectures (FR-0.6-01).
+  architectures: "x86_64 aarch64"
+  # ID:VERSION_ID from /etc/os-release: the Oracle VM and this cloud VM both run Ubuntu 24.04.
+  operating_systems: "ubuntu:24.04"
+  # Every package in requirements/aqis_lab/phase0.txt has wheels for manylinux_2_28 (glibc 2.28), not older.
+  min_glibc: "2.28"
+paths:
+  # Relative paths are resolved from the repository root; data/raw/ is git-ignored.
+  work_dir: data/raw/aqis_lab/work
+  doctor_reports: data/raw/aqis_lab/doctor
+  results_store: data/raw/aqis_lab/results
+  logs: data/raw/aqis_lab/logs
+cores:
+  # CPU numbers kept for timing runs; batch runs use every other online CPU (FR-0.6-04).
+  reserved_for_timing: [2, 3]
+rclone:
+  # rclone remote for Google Drive (docs/oracle/ORACLE_RUNBOOK.md, "Configure rclone for Google Drive").
+  # The destination is always <remote>:AQIS_LAB/results.
+  remote: aqis-drive

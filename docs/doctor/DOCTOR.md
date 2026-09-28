@@ -37,6 +37,7 @@ Every check runs, even after an earlier FAIL, in this order:
 | `gpu` | With `--expect-gpu`: a GPU type is detected (from `nvidia-smi`). Without it: SKIP |
 | `drive-mount` (colab only) | `--drive-mount` is a Google Drive (`fuse.drive`) mount |
 | `drive-folder` (colab only) | `<mount>/MyDrive/AQIS_LAB` is a folder, and `doctor_write_check.json` can be written in it atomically and read back. The same file is reused each time. The lab never creates `AQIS_LAB`; you create it in Google Drive |
+| `cores` (oracle only; WP-0.6 FR-0.6-04) | The core reservation in `config/aqis_lab/oracle.yaml` is possible on this machine: every CPU in `cores.reserved_for_timing` is online, the reservation holds whole physical cores (all hardware threads of each core; owner decision, WP-0.6 question 10), and at least one online CPU is left for batch runs. PASS shows `timing on <CPUs>, batch on <CPUs>`; FAIL names the reason. See `docs/oracle/ORACLE_RUNBOOK.md` |
 
 ## Minimums
 Values from `config/aqis_lab/doctor.yaml` (owner decision, WP-0.5 question 8). GB means 1,000,000,000 bytes. A test keeps this table, the config and `docs/colab/COLAB_RUNBOOK.md` identical.
