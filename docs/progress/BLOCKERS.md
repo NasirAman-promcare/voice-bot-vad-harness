@@ -217,7 +217,7 @@ WP: WP-0.5  ·  Raised: 2026-09-28  ·  Session: https://claude.ai/code/session_
 **Owner answer:** Option 1 (session chat and `docs/approvals/WP-0.5.md` on `main`, 2026-09-28): the NFR-0.5-01 percentage target is deferred to WP-0.7 (Vosk on the smoke pack) and recorded as DEBT-013 in `docs/progress/DEBT.md`; WP-0.5 records the measured fixed overhead (about 25 ms per run, about 6 ms per extra shard) in `EVIDENCE.md`. The owner also approved continuing NFR-0.5-02, the DEBT-009 and DEBT-011 tests, the must-catch proof, the acceptance runs and the pull request.
 
 ## BLK-009 — Oracle probe missing; reserved-core figure not in the repository
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.6  ·  Raised: 2026-09-28  ·  Session: https://claude.ai/code/session_01Q6kwg6fLchZiuf9e84Zn2g
 
 **What I need:**
@@ -242,4 +242,4 @@ WP: WP-0.6  ·  Raised: 2026-09-28  ·  Session: https://claude.ai/code/session_
 
 **Paused until answered:** the committed values in `config/aqis_lab/oracle.yaml` (supported operating systems, reserved cores), the Oracle-specific install steps in the runbook, and the owner-run checks. Planning is complete. No code has been written.
 
-**Owner answer:**
+**Owner answer:** Owner committed `docs/environment/oracle_probe.txt` and `docs/approvals/WP-0.6.md` to `main` (`6ad251b`). The probe shows VM.Standard.A1.Flex: Ubuntu 24.04.4 LTS on aarch64 (Ampere Altra, Neoverse-N1), 4 CPUs online `0-3`, glibc 2.39, chassis asset tag `OracleCloud.com`, 22 GB available RAM, 38 GB free disk, rclone 1.60.1. The approval sets the reservation: cores 2-3 for timing runs, batch runs on cores 0-1 (highest-numbered half of the physical cores), and questions 1-16 as recommended. Merged into this branch (`f57cfc2`).
