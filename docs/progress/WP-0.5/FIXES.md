@@ -118,3 +118,6 @@ Harness: `wp05_r3_breaks.py` in the session scratchpad.
 - Audit gate `--base origin/main --wp WP-0.5`: `0 findings: OK`.
 - `git diff -U0 -- aqis_lab`: only the `aqis_lab/drive.py` header (summary line, CAP-DRIVE-003 wording, one CHANGE LOG line). No production behaviour changed.
 - F12: `EVIDENCE.md` (FR-0.5-02 "New files") and the `drive.py` summary no longer say "every lab write". The same wording in CAP-DRIVE-003 (the `drive.py` header and the registry row) was fixed as a sibling. The one remaining mention, in the NFR-0.5-02 section, quotes the round-1 wording as wrong.
+
+### CI (round 3)
+Workflow `aqis-lab-ci` on commit `719de94`: run 36431204531 (push) and run 36431211029 (PR #5, with `--wp WP-0.5` from the title). Conclusion success for both.
