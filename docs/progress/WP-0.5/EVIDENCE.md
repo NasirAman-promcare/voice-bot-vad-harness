@@ -192,3 +192,22 @@ exit 0
 - Command: the fast command with `-k FR_0_5_07` → `16 passed, 1454 deselected in 2.32s`.
 - Fast suite after FR-0.5-07: `1453 passed, 17 deselected in 208.26s (0:03:28)`.
 - Status: DONE
+
+### FR-0.5-08 — Colab launcher notebook
+- Tests (`tests/aqis_lab/test_aqis_launcher.py`):
+  - `test_FR_0_5_08_launcher_has_at_most_6_cells` (1 markdown and 5 code cells, no committed outputs);
+  - `test_FR_0_5_08_tag_is_one_variable_in_first_cell` (`AQIS_TAG = "aqis-lab-wp-0.5-colab-1"`, assigned once, used as `--branch`);
+  - `test_FR_0_5_08_launcher_cells_contain_no_logic` (must-catch 4);
+  - `test_FR_0_5_08_logic_checker_rejects_each_forbidden_form` (19 forms, each rejected: `if`, `for`, `while`, `def`, `try`, `with`, a comprehension, a conditional expression, a comparison, `lambda`, `!` and `%` lines, an unlisted import, `os.system`, `subprocess.run` without `check=True` or with `check=False`, `open`, indexing, `os.chdir`);
+  - `test_FR_0_5_08_token_only_reaches_the_clone_command` (the token is read inside the clone's `env` and never held in a variable);
+  - `test_FR_0_5_08_clone_failure_never_shows_token` (stand-in `google.colab` module; a failing clone's output, traceback and every notebook variable are free of the token);
+  - `test_FR_0_5_08_launcher_commands_exist_and_parse` (3 cases: the notebook's `RUN_ARGS` and both runbook variants; every `python -m aqis_lab` call's arguments are parsed by that command's own parser);
+  - `test_FR_0_5_08_runbook_matches_launcher` (tag, `RUN_ARGS`, `RUN_OUT`, the pytest command, and the minimums and rate tables equal their config files).
+- Test-first: before the notebook existed, `9 failed, 19 passed`. The 9 failures were `FileNotFoundError` on the notebook and the runbook; the 19 passes were the checker's rejection cases, which need no notebook.
+- Catch while building: `test_FR_0_5_08_runbook_matches_launcher` found that the runbook named the run folder only by its Drive-relative path; `RUN_OUT` is now given in full.
+- Design points:
+  - Token: the clone gets its header through git's `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0` environment variables, built inline from `userdata.get("GITHUB_TOKEN")`. No variable holds the token, so a failed clone (stopped by `check=True`) leaves nothing behind and needs no `if` or `try`.
+  - Ordering: `drive layout` runs before `unitlog start`, because the unit log lives in `AQIS_LAB/logs`.
+- Command: the fast command with `-k FR_0_5_08` → `28 passed, 1470 deselected in 0.84s`.
+- Fast suite after FR-0.5-08: `1481 passed, 17 deselected in 201.70s (0:03:21)`.
+- Status: DONE (the Colab run itself is OC-0.5-01 and OC-0.5-02)
