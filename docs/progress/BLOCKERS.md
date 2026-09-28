@@ -215,3 +215,31 @@ WP: WP-0.5  ·  Raised: 2026-09-28  ·  Session: https://claude.ai/code/session_
 **Not dependent on the answer:** NFR-0.5-02 (Drive write guard tests), the DEBT-009 and DEBT-011 tests (question 13), the must-catch proof and the acceptance commands. I will continue them only if you say so.
 
 **Owner answer:** Option 1 (session chat and `docs/approvals/WP-0.5.md` on `main`, 2026-09-28): the NFR-0.5-01 percentage target is deferred to WP-0.7 (Vosk on the smoke pack) and recorded as DEBT-013 in `docs/progress/DEBT.md`; WP-0.5 records the measured fixed overhead (about 25 ms per run, about 6 ms per extra shard) in `EVIDENCE.md`. The owner also approved continuing NFR-0.5-02, the DEBT-009 and DEBT-011 tests, the must-catch proof, the acceptance runs and the pull request.
+
+## BLK-009 — Oracle probe missing; reserved-core figure not in the repository
+STATUS: OPEN
+WP: WP-0.6  ·  Raised: 2026-09-28  ·  Session: https://claude.ai/code/session_01Q6kwg6fLchZiuf9e84Zn2g
+
+**What I need:**
+1. `docs/environment/oracle_probe.txt` on `main`, made with the probe command in `docs/progress/WP-0.6/PLAN.md`, section "Oracle probe (owner need 1)".
+2. The number of cores to reserve for timing on the Oracle VM: the Build Plan's "Resource plan" figure, or your decision (PLAN.md, question 2).
+
+**Why:**
+- The WP-0.6 spec lists `oracle_probe.txt` under "Read first", and the file does not exist.
+- The probe decides the operating system that `oracle_setup.sh` accepts (FR-0.6-01) and whether glibc is new enough for the lock (2.28 or newer).
+- It gives the CPU layout, and the core figure then gives the reserved cores in `config/aqis_lab/oracle.yaml` (FR-0.6-04).
+- It confirms the `oracle` detection signal (`OracleCloud.com` asset tag), which has never been checked on a real Oracle VM.
+- The spec says to stop and ask if "core reservation is not possible on the shape"; only the probe and the core figure can show that.
+
+**What I tried:**
+- `ls docs/environment/`: no `oracle_probe.txt`. The session-start hook also reports it MISSING.
+- `grep -ri "resource plan"`: only the specs and the WP-0.5 plan mention it; the Build Plan is not in the repository.
+- Measured what I could without the VM (PLAN.md, "Measurements"): every lock package, and DuckDB, has CPython 3.13 wheels for x86_64 and aarch64 (manylinux_2_28), so the architecture itself does not block a pinned dependency.
+
+**Options:**
+1. **(Recommended)** Run the probe on the Oracle VM and commit its output. Put the core figure (or "as suggested in question 2 (b)") in the approval CONDITIONS for WP-0.6. About 5 minutes.
+2. Approve the plan first and send the probe later. I then build every part that does not depend on it (PLAN.md, "Parts that do not depend on owner inputs") and stop before the committed `oracle.yaml` values.
+
+**Paused until answered:** the committed values in `config/aqis_lab/oracle.yaml` (supported operating systems, reserved cores), the Oracle-specific install steps in the runbook, and the owner-run checks. Planning is complete. No code has been written.
+
+**Owner answer:**
