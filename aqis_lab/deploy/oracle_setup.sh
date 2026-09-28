@@ -3,7 +3,7 @@
 # .venv on the Colab Python from the hashed lock, and run the doctor for target oracle.
 #
 # CAPABILITIES:
-#   CAP-ENV-004: six steps (platform, tools, python, wheels, venv, doctor), each printed as "step N/6 <name>: ...";
+#   CAP-ENV-007: six steps (platform, tools, python, wheels, venv, doctor), each printed as "step N/6 <name>: ...";
 #                stops with "ERROR: unsupported architecture/operating system ..." before doing anything on a machine
 #                outside the setup pin of config/aqis_lab/oracle.yaml (x86_64 or aarch64, the listed ID:VERSION_ID,
 #                glibc at least setup.min_glibc); needs git and uv 0.8.17; stops naming every package of the lock
