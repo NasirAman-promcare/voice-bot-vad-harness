@@ -1,0 +1,22 @@
+=== ORACLE PLATFORM PROBE ===
+--- OS & Kernel ---
+Linux jitsi 6.17.0-1020-oracle aarch64
+PRETTY_NAME="Ubuntu 24.04.4 LTS"
+glibc: ldd (Ubuntu GLIBC 2.39-0ubuntu8.3) 2.39
+--- Chassis Asset Tag ---
+OracleCloud.com
+--- CPU Info ---
+Architecture:          aarch64
+CPU op-mode(s):        64-bit
+Byte Order:            Little Endian
+CPU(s):                4
+On-line CPU(s) list:   0-3
+Vendor ID:             ARM
+Model name:            Neoverse-N1 (Ampere Altra)
+--- Memory & Disk ---
+MemTotal:       24G
+MemAvailable:   22G
+DiskFree:       38G on /
+--- Core Isolation & Tools ---
+taskset: available
+rclone: rclone v1.60.1-ubuntu
