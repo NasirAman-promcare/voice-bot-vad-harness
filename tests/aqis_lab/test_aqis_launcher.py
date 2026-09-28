@@ -86,8 +86,16 @@ def command_shape_problems(call):
     return problems
 
 
-def logic_problems(source):
-    """Every construct in one code cell that is not one of the launcher's allowed steps."""
+SETTINGS = ("AQIS_TAG", "REPO", "WORKDIR", "DRIVE_MOUNT", "AQIS_DRIVE", "RUN_OUT", "RUN_ARGS")
+LATER_CELL_NAMES = ("PY",)       # the only name a later cell may assign (pinned in the no-logic test)
+
+
+def logic_problems(source, first_cell=False):
+    """Every construct in one code cell that is not one of the launcher's allowed steps.
+
+    WP-0.5-F10: the commands trust the cell-1 settings (`rm -rf WORKDIR`), so only cell 1 assigns them and a later
+    cell may assign only `PY`. A cell checked on its own counts as a later cell unless first_cell is True.
+    """
     problems = []
     for no, line in enumerate(source.splitlines(), start=1):
         if line.lstrip().startswith(("!", "%")):
@@ -109,6 +117,12 @@ def logic_problems(source):
         elif isinstance(node, ast.Assign):
             if len(node.targets) != 1 or not isinstance(node.targets[0], ast.Name):
                 problems.append(f"line {node.lineno}: assignment to something other than one name")
+            else:
+                target = node.targets[0].id
+                allowed = SETTINGS if first_cell else LATER_CELL_NAMES
+                if target not in allowed:
+                    problems.append(f"line {node.lineno}: {target} may not be assigned in this cell "
+                                    f"({'cell 1 assigns only the settings' if first_cell else 'the settings belong to cell 1'})")
         elif isinstance(node, ast.Call):
             name = dotted(node.func)
             method = node.func.attr if isinstance(node.func, ast.Attribute) else None
@@ -161,7 +175,12 @@ def test_FR_0_5_08_tag_is_one_variable_in_first_cell():
 
 def test_FR_0_5_08_launcher_cells_contain_no_logic():
     for i, cell in enumerate(code_cells(), start=1):
-        assert logic_problems(cell) == [], f"cell {i}: {logic_problems(cell)}"
+        assert logic_problems(cell, first_cell=i == 1) == [], f"cell {i}: {logic_problems(cell, first_cell=i == 1)}"
+    # WP-0.5-F10: every cell-1 setting is assigned exactly once in the whole notebook, and that is in cell 1
+    assigned = [(i, n.targets[0].id) for i, cell in enumerate(code_cells(), start=1) for n in ast.walk(ast.parse(cell))
+                if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name)]
+    for name in SETTINGS:
+        assert [i for i, target in assigned if target == name] == [1], f"{name} must be assigned once, in cell 1"
     text = "\n".join(code_cells())
     assert text.count("drive.mount(") == 1 and text.count("dev_bootstrap.sh") == 1
     # WP-0.5-F04: the commands trust PY, so PY is the lab environment's Python, defined once
@@ -172,24 +191,24 @@ def test_FR_0_5_08_launcher_cells_contain_no_logic():
 
 
 @pytest.mark.parametrize("source", [
-    "if AQIS_TAG:\n    x = 1\n",
+    "if AQIS_TAG:\n    PY = 1\n",
     "for a in [1]:\n    pass\n",
     "while False:\n    pass\n",
     "def f():\n    return 1\n",
-    "try:\n    x = 1\nexcept OSError:\n    x = 2\n",
-    "with open('x') as fh:\n    x = fh\n",
-    "x = [a for a in 'ab']\n",
-    "x = 1 if True else 2\n",
-    "x = AQIS_TAG == 'a'\n",
-    "x = lambda: 1\n",
+    "try:\n    PY = 1\nexcept OSError:\n    PY = 2\n",
+    "with open('x') as fh:\n    PY = fh\n",
+    "PY = [a for a in 'ab']\n",
+    "PY = 1 if True else 2\n",
+    "PY = AQIS_TAG == 'a'\n",
+    "PY = lambda: 1\n",
     "!pip install uv\n",
     "%cd /content\n",
     "import shutil\n",
     "import os\nos.system('ls')\n",
     "import subprocess\nsubprocess.run(['ls'])\n",
     "import subprocess\nsubprocess.run(['ls'], check=False)\n",
-    "x = open('/etc/passwd')\n",
-    "x = y[0]\n",
+    "PY = open('/etc/passwd')\n",
+    "PY = y[0]\n",
     "import os\nos.chdir('/content')\n",
 ])
 def test_FR_0_5_08_logic_checker_rejects_each_forbidden_form(source):
@@ -212,6 +231,8 @@ HIDDEN_LOGIC = {
     "other_script": 'subprocess.run(["bash", "other.sh"], cwd=WORKDIR, check=True)',
     "env_outside_clone": 'subprocess.run(["rm", "-rf", WORKDIR], env=dict(os.environ), check=True)',
     "command_in_variable": 'subprocess.run(RUN_ARGS, check=True)',
+    # WP-0.5-F10, break E4: a later cell re-points WORKDIR before `rm -rf WORKDIR`
+    "reassign_workdir": 'WORKDIR = "/content/drive/MyDrive"\nsubprocess.run(["rm", "-rf", WORKDIR], check=True)',
 }
 
 

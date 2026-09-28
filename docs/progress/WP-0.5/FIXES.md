@@ -72,3 +72,49 @@ Harness: `mutate_r2.py` in the session scratchpad. It makes a fresh copy for eac
 
 ### CI (round 2)
 Workflow `aqis-lab-ci` on commit `d122fe8`: runs 36412859717 and 36412864571 (push and PR #5). Both `lab` jobs (fast suite and audit gate, the PR run with `--wp WP-0.5`) and both `harness-regression` jobs: success.
+
+## Round 3 (audit round 2: `docs/progress/WP-0.5/AUDIT.md`)
+Owner decision (`docs/approvals/WP-0.5.md` on `main`, `59619d1`): fix WP-0.5-F10, F11 and F12. No new debt.
+
+Baseline before any change: `test_aqis_launcher.py`, `test_aqis_runner.py` and `test_aqis_gate_registry.py` → `80 passed in 7.27s`.
+
+### Change budget
+| Finding | File | Functions or parts changed | Root cause | Capabilities at risk |
+| --- | --- | --- | --- | --- |
+| F10 | `tests/aqis_lab/test_aqis_launcher.py` (new in this WP) | `logic_problems` (new `first_cell` argument: settings may be assigned only in cell 1, and later cells only `PY`); `test_FR_0_5_08_launcher_cells_contain_no_logic` (passes the cell position; every cell-1 setting assigned exactly once across all cells, in cell 1); new `HIDDEN_LOGIC` case `reassign_workdir` (break E4) | `rm -rf WORKDIR` was allowed whatever `WORKDIR` held, and only cell 1's first value was pinned | CAP-NB-001 (must-catch 4) |
+| F11 | `tests/aqis_lab/test_aqis_runner.py` (new in this WP) | `test_FR_0_5_05_run_io_error_is_not_reported_as_unit_log`: a third case where the unit log's session-file write fails with an `OSError` | Only the `UnitLogError` branch of the F08 wrapper was exercised | CAP-RUN-009 |
+| F12 | `docs/progress/WP-0.5/EVIDENCE.md` | FR-0.5-02 "New files" bullet for `aqis_lab/drive.py` | Round-1 "every lab write" wording left over | none (records) |
+| F12 | `aqis_lab/drive.py` | module summary line (header only) plus a CHANGE LOG line | Same leftover wording | none (header only) |
+| F12 (same category, step 6) | `aqis_lab/drive.py` header and `docs/capabilities/REGISTRY.md` | CAP-DRIVE-003 description: "every lab write" → writes through `write_bytes`, `append_bytes` or `make_dirs` (all WP-0.5 commands; DEBT-014 for the older writers) | The crowding warning has the same limit as the guard | CAP-DRIVE-003 (wording only) |
+
+No production behaviour changes in round 3.
+
+### Reproduction
+| Finding | Test | Before the fix |
+| --- | --- | --- |
+| F10 | `test_FR_0_5_08_logic_checker_rejects_logic_inside_commands[reassign_workdir]` (break E4 as a case) | `1 failed` (the checker accepted `WORKDIR = "/content/drive/MyDrive"` followed by `rm -rf WORKDIR`) |
+| F11 | third case of `test_FR_0_5_05_run_io_error_is_not_reported_as_unit_log` (the session file's atomic write fails: its `.partial` path is a folder, so an `OSError`) | Passes on the shipped code, which is correct. Proven by break E3 below |
+
+A consequence handled in the same change: the older forbidden-form cases of `test_FR_0_5_08_logic_checker_rejects_each_forbidden_form` assigned `x = …`, which the new rule rejects on its own. They now assign `PY`, the one name a later cell may assign. Each is therefore still rejected by its construct alone; checked one by one, none of their problems is the assignment rule.
+
+### Verification: breaks re-applied in a copy under `/tmp`
+Harness: `wp05_r3_breaks.py` in the session scratchpad.
+
+| Break | Result |
+| --- | --- |
+| E3: unit-log wrapper narrowed to `except (UnitLogError,)` | `1 failed`: `test_FR_0_5_05_run_io_error_is_not_reported_as_unit_log` |
+| E4: cell 2 gains `WORKDIR = "/content/drive/MyDrive"` before `rm -rf WORKDIR` | `1 failed, 44 passed`: `test_FR_0_5_08_launcher_cells_contain_no_logic` |
+| Cell 1 assigns `WORKDIR` a second time | `2 failed`: `test_FR_0_5_08_launcher_cells_contain_no_logic`, `test_FR_0_5_08_runbook_matches_launcher` |
+| Cell 4 re-points `RUN_OUT` | `4 failed`: `test_FR_0_5_08_launcher_cells_contain_no_logic` and the 3 cases of `test_FR_0_5_08_launcher_commands_exist_and_parse` |
+| Cell 5 re-points `DRIVE_MOUNT` | `1 failed`: `test_FR_0_5_08_launcher_cells_contain_no_logic` |
+
+**Limit stated plainly (F11).** The wrapper also catches `DriveError` from `touch`. That branch needs a Google Drive mount, which the `run` command reads from the real system, and there is none on the cloud VM, so no test reaches it through the command. The `OSError` case above fails break E3. The Drive refusal of the unit-log write itself is tested in-process by `test_NFR_0_5_02_each_command_refuses_drive_path_outside_aqis_lab`.
+
+### After the fix
+- `test_aqis_launcher.py`: `43 passed`. The runner, registry, platform and Drive tests pass.
+- Fast suite: `1524 passed, 18 deselected in 150.94s (0:02:30)`.
+- Slow CPU suite: `3 passed, 1539 deselected in 8.36s`.
+- `doctor --target cloud`: `result: PASS`.
+- Audit gate `--base origin/main --wp WP-0.5`: `0 findings: OK`.
+- `git diff -U0 -- aqis_lab`: only the `aqis_lab/drive.py` header (summary line, CAP-DRIVE-003 wording, one CHANGE LOG line). No production behaviour changed.
+- F12: `EVIDENCE.md` (FR-0.5-02 "New files") and the `drive.py` summary no longer say "every lab write". The same wording in CAP-DRIVE-003 (the `drive.py` header and the registry row) was fixed as a sibling. The one remaining mention, in the NFR-0.5-02 section, quotes the round-1 wording as wrong.

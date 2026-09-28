@@ -64,7 +64,7 @@ All test outputs below are real excerpts from this session. Fast command, per re
 - Test-first: before `aqis_lab/doctor.py` existed, collection of the test file failed (`1 error during collection`), and the whole fast suite stopped with `Interrupted: 1 error during collection`.
 - New files:
   - `aqis_lab/doctor.py`, `aqis_lab/commands/doctor.py`;
-  - `aqis_lab/drive.py`: the write guard and atomic writes that every lab write uses;
+  - `aqis_lab/drive.py`: the Drive write guard and atomic writes that every WP-0.5 command uses (the older `score`, `pack build` and `registry` writers do not yet: DEBT-014, target WP-0.7);
   - `config/aqis_lab/doctor.yaml`: minimums of 10 GB disk and 4 GB RAM on every target, owner decision, question 8 (a);
   - `docs/doctor/DOCTOR.md`.
 - Existing file changed: `aqis_lab/__main__.py`, one `COMMANDS` entry and one CHANGE LOG line (see "Changes to existing files" below).
@@ -406,5 +406,19 @@ Every re-applied auditor break (A15-1 to A15-5, A15-7, break 5a) now fails a nam
 Results:
 - Fast suite: `1523 passed, 18 deselected in 194.87s (0:03:14)`.
 - Slow CPU suite: `3 passed, 1538 deselected in 12.63s`.
+- AT-0.5-01: `result: PASS`.
+- AT-0.5-03 gate: `0 findings: OK`.
+
+## Round 3 (audit round 2 findings)
+Details in `docs/progress/WP-0.5/FIXES.md`, "Round 3".
+- **F10:** only cell 1 may assign the settings (`AQIS_TAG`, `REPO`, `WORKDIR`, `DRIVE_MOUNT`, `AQIS_DRIVE`, `RUN_OUT`, `RUN_ARGS`); each is assigned exactly once in the notebook, in cell 1; later cells may assign only `PY`. The E4 form is the new `HIDDEN_LOGIC` case `reassign_workdir`.
+- **F11:** `test_FR_0_5_05_run_io_error_is_not_reported_as_unit_log` has a third case: the session file's write fails with an `OSError` and is reported as a unit-log error.
+- **F12:** wording aligned with DEBT-014.
+
+Re-applied breaks E3, E4 and three related settings breaks each fail a named test.
+
+Results:
+- Fast suite: `1524 passed, 18 deselected in 150.94s (0:02:30)`.
+- Slow CPU suite: `3 passed, 1539 deselected in 8.36s`.
 - AT-0.5-01: `result: PASS`.
 - AT-0.5-03 gate: `0 findings: OK`.

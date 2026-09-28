@@ -381,3 +381,13 @@ def test_FR_0_5_05_run_io_error_is_not_reported_as_unit_log(tmp_path, work):
     proc = _cli(tmp_path / "run-2", work, "--drive-mount", str(mount))
     assert proc.returncode == 2 and proc.stderr.startswith("ERROR: unit log (last-seen time):")
     assert "units_open_session.json" in proc.stderr
+    # WP-0.5-F11: a failed write of the session file (an OSError, not a UnitLogError) is a unit-log error too
+    logs = mount / "MyDrive" / "AQIS_LAB" / "logs"
+    (logs / "units_open_session.json").write_text(json.dumps({
+        "state": "open", "session_id": "colab-2026-09-28-000000000000", "platform": "colab", "gpu_type": None,
+        "start_utc": "2026-09-28T10:00:00.000000Z", "last_seen_utc": "2026-09-28T10:00:00.000000Z"}),
+        encoding="utf-8")
+    (logs / "units_open_session.json.partial").mkdir()        # the atomic write's temporary file cannot be opened
+    proc = _cli(tmp_path / "run-3", work, "--drive-mount", str(mount))
+    assert proc.returncode == 2 and proc.stderr.startswith("ERROR: unit log (last-seen time):"), proc.stderr
+    assert "units_open_session.json.partial" in proc.stderr and "cannot write the run folder" not in proc.stderr
