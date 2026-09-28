@@ -14,6 +14,8 @@ NOT IN SCOPE:
   - Checking a pack in place (aqis_lab/packs/verify.py, reused here).
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-04 created.
+  2026-09-28 WP-0.5 NFR-0.5-01: a staged pack whose marker names exactly the source's manifest bytes is reused
+             without validating those bytes again (they were validated and verified when staged).
 """
 import hashlib
 import json
@@ -66,30 +68,66 @@ class StagedPack:
         return data
 
 
-def read_manifest(source):
+def read_manifest_bytes(source):
     path = Path(source) / MANIFEST
     try:
-        manifest = parse_json(path.read_bytes(), "manifest")
-        validate_manifest(manifest)
+        return path.read_bytes()
     except OSError as exc:
         raise StageError(f"cannot read {path}: {exc.strerror or exc}") from exc
+
+
+def read_manifest(source, data=None):
+    """The pack manifest at `source`, parsed strictly and validated against pack-manifest v1."""
+    path = Path(source) / MANIFEST
+    data = read_manifest_bytes(source) if data is None else data
+    try:
+        manifest = parse_json(data, "manifest")
+        validate_manifest(manifest)
     except ContractValidationError as exc:
         raise StageError(f"{path} is not a valid pack manifest: " + "; ".join(
             f"{display_pointer(e.pointer)}: {e.message}" for e in exc.errors)) from exc
     return manifest
 
 
-def _marker_for(manifest):
+def _marker_for(manifest, data):
     return {"stage_version": STAGE_VERSION, "manifest_id": manifest["manifest_id"], "version": manifest["version"],
-            "manifest_sha256": sha256_canonical(manifest),
+            "manifest_sha256": sha256_canonical(manifest), "manifest_file_sha256": hashlib.sha256(data).hexdigest(),
             "archives": {a["name"]: a["sha256"] for a in manifest["archives"]}, "clips": len(manifest["clips"])}
 
 
-def _valid_marker(root, manifest):
+def _read_marker(root):
     try:
-        return json.loads((root / STAGED_MARKER).read_text(encoding="utf-8")) == _marker_for(manifest)
+        marker = json.loads((root / STAGED_MARKER).read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return False
+        return None
+    return marker if isinstance(marker, dict) else None
+
+
+def _reuse(source, work_dir, data):
+    """The already staged pack when its marker names exactly these manifest bytes, else None.
+
+    Identical bytes were parsed, validated and verified when the pack was staged, so they are not validated again;
+    the staged copy of the manifest is checked against the marker's hashes before it is used.
+    """
+    try:
+        head = json.loads(data)
+        dest = Path(work_dir) / "packs" / head["manifest_id"] / head["version"]
+    except (ValueError, TypeError, KeyError):
+        return None
+    marker = _read_marker(dest) if dest.is_dir() else None
+    if not marker or marker.get("stage_version") != STAGE_VERSION or \
+            marker.get("manifest_file_sha256") != hashlib.sha256(data).hexdigest():
+        return None
+    try:
+        staged_bytes = (dest / PACK_DIR / MANIFEST).read_bytes()
+    except OSError:
+        return None
+    if staged_bytes != data:
+        return None
+    manifest = json.loads(staged_bytes)
+    if _marker_for(manifest, staged_bytes) != marker:
+        return None
+    return StagedPack(dest, manifest, marker["manifest_sha256"], fresh=False)
 
 
 def _remove_local(path):
@@ -123,11 +161,13 @@ def stage_pack(source, work_dir, system=None):
     if drive.drive_mount_of(work_dir, system) is not None:
         raise StageError(f"work folder {work_dir} is on Google Drive; packs are copied to and processed on local disk "
                          f"(choose a --work-dir outside the Drive mount)")
-    manifest = read_manifest(source)
-    marker = _marker_for(manifest)
+    data = read_manifest_bytes(source)
+    reused = _reuse(source, work_dir, data)
+    if reused is not None:
+        return reused
+    manifest = read_manifest(source, data)
+    marker = _marker_for(manifest, data)
     dest = work_dir / "packs" / manifest["manifest_id"] / manifest["version"]
-    if dest.is_dir() and _valid_marker(dest, manifest):
-        return StagedPack(dest, manifest, marker["manifest_sha256"], fresh=False)
     parent = drive.make_dirs(dest.parent, system)
     staging = parent / f".staging-{manifest['version']}"
     _remove_local(staging)                       # an interrupted staging of this version (local disk only)
@@ -143,7 +183,7 @@ def stage_pack(source, work_dir, system=None):
         if not report.ok:
             raise StageError(f"the pack copied from {source} failed verification ({len(report.problems)} problem(s)): "
                              + "; ".join(report.problems))
-        if read_manifest(staging / PACK_DIR) != manifest:
+        if read_manifest_bytes(staging / PACK_DIR) != data:
             raise StageError(f"{source / MANIFEST} changed while it was being copied")
         by_member = {c["member_path"]: c for c in manifest["clips"]}
         for archive in manifest["archives"]:

@@ -11,12 +11,13 @@ NOT IN SCOPE:
   - Deciding whether a stored card may be resumed (aqis_lab/runner/run.py).
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-05 created.
+  2026-09-28 WP-0.5 NFR-0.5-01: git_state asks git twice instead of four times (same rules).
 """
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 
-from aqis_lab.commands.version import _git, git_commit
+from aqis_lab.commands.version import VersionInfoError, _git
 from aqis_lab.contracts.canonical import compute_run_card_id
 from aqis_lab.contracts.validate import validate_run_card
 
@@ -29,9 +30,12 @@ def utc_now():
 
 
 def git_state(root=REPO_ROOT):
-    """{"commit": full hash, "dirty": bool} of the checkout holding this package."""
-    _, dirty = git_commit(root)
-    return {"commit": _git(root, "rev-parse", "HEAD"), "dirty": dirty}
+    """{"commit": full hash, "dirty": bool} of the checkout holding this package (the version command's rules)."""
+    toplevel, commit = _git(root, "rev-parse", "--show-toplevel", "HEAD").splitlines()
+    if Path(toplevel).resolve() != Path(root).resolve():
+        raise VersionInfoError(f"{root} is inside the git checkout {toplevel} but is not its top level")
+    dirty = bool(_git(root, "status", "--porcelain", "--untracked-files=normal"))
+    return {"commit": commit, "dirty": dirty}
 
 
 def build_run_card(task, staged, seed, notes, machine, root=REPO_ROOT):

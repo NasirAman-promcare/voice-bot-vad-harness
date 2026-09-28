@@ -211,3 +211,24 @@ exit 0
 - Command: the fast command with `-k FR_0_5_08` → `28 passed, 1470 deselected in 0.84s`.
 - Fast suite after FR-0.5-08: `1481 passed, 17 deselected in 201.70s (0:03:21)`.
 - Status: DONE (the Colab run itself is OC-0.5-01 and OC-0.5-02)
+
+### NFR-0.5-01 — Runner overhead under 5 % (BLOCKED, see BLK-008)
+- Measured with the scripts under "Measurements" (same process, same staged smoke pack, same `clip-stats` task, fsync on in both; direct loop = read and check every clip, compute, write one results file atomically).
+- First build of the runner: `direct median 72.9 ms; runner median 139.8 ms; overhead 91.8 %`.
+- A profile showed three genuine inefficiencies in my own new code, which I removed without dropping any check:
+  - `SystemView.real()` copied the whole environment on every call; it is now built once per process.
+  - A staged pack was re-validated with jsonschema on every run. It is now reused without validation only when its marker names exactly the source's manifest bytes (file SHA-256), and the staged copy's bytes equal them. Those bytes were validated and verified at staging.
+  - `git_state` made four git calls; it now makes two, with the same rules.
+- After: `direct median 68.1 ms; runner median 96.6 ms; overhead 41.9 %`. A second measurement (11 alternating repetitions):
+```text
+{'direct': 75.4, '1 shard': 100.8, '6 shards': 137.7, '60 shards': 466.8}
+overhead 1 shard 33.7 %; fixed per run ~25.4 ms; per extra shard ~6.20 ms
+```
+- What remains is fixed per-run work that the runner has to do:
+  - two git subprocesses for the run card's commit and dirty flag (8.4 ms);
+  - run-card validation, the canonical manifest hash and the shard plan;
+  - about ten atomic writes and fsyncs (card, plan, shard results, marker, `results.jsonl`, log lines).
+
+  5 % of a ~70 ms workload is 3.5 ms, less than the two git calls alone. The plan named this as risk 1 and committed to stop and ask rather than slow the task, drop fsyncs or change the comparison.
+- Status: **BLOCKED**: `BLK-008` in `docs/progress/BLOCKERS.md`. `test_NFR_0_5_01_runner_overhead_under_5_percent` is not committed: it would fail as the requirement stands.
+- Fast suite after the optimizations: `1481 passed, 17 deselected in 202.64s (0:03:22)`.

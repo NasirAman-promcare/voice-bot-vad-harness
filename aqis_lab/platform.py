@@ -15,6 +15,7 @@ NOT IN SCOPE:
   - Deciding whether a machine is good enough to run the lab (aqis_lab/doctor.py).
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-01 created.
+  2026-09-28 WP-0.5 NFR-0.5-01: SystemView.real() is built once per process.
 """
 import functools
 import os
@@ -50,7 +51,8 @@ class SystemView:
 
     @classmethod
     def real(cls):
-        return cls(root=Path(os.sep), environ=dict(os.environ), path=os.environ.get("PATH"))
+        """The real system, built once per process (like the platform detection itself)."""
+        return _real_view()
 
     def file(self, rel):
         return Path(self.root) / rel
@@ -81,6 +83,11 @@ class SystemView:
         except OSError as exc:
             raise PlatformError(f"cannot run {exe}: {exc.strerror or exc}") from exc
         return proc.returncode, proc.stdout, proc.stderr
+
+
+@functools.lru_cache(maxsize=1)
+def _real_view():
+    return SystemView(root=Path(os.sep), environ=dict(os.environ), path=os.environ.get("PATH"))
 
 
 @dataclass(frozen=True)

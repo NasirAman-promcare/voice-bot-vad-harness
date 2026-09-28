@@ -32,10 +32,10 @@ The runner runs a task over every clip of a pack in shards. It survives a discon
 1. Read the pack's `manifest.json` strictly and validate it (pack-manifest v1).
 2. Copy the manifest, `LICENCES.md`, `build_record.json` and every archive into `<work-dir>/packs/<manifest_id>/.staging-<version>/pack/` on local disk.
 3. Run `pack verify` (`verify_pack`) on the copy: every archive's size and SHA-256, and every member, rate, channel count and duration. Any problem stops here, and the staging folder is removed.
-4. Extract every archive into `clips/`, check each clip's SHA-256 against the manifest, and write the `.staged` marker. The marker records the manifest's canonical SHA-256 and every archive's SHA-256.
+4. Extract every archive into `clips/`, check each clip's SHA-256 against the manifest, and write the `.staged` marker. The marker records the manifest's canonical SHA-256, the SHA-256 of the manifest file's bytes and every archive's SHA-256.
 5. Rename the staging folder to `<work-dir>/packs/<manifest_id>/<version>/`.
 
-Only a folder with a valid `.staged` marker for the same manifest is used. An interrupted staging never counts and is redone. A pack already staged is not copied again. Clips are read only from the local copy, and each clip's SHA-256 is checked again every time it is read.
+Only a folder with a valid `.staged` marker for exactly the same manifest bytes is used; such a pack is not validated or copied again. An interrupted staging never counts and is redone. A pack already staged is not copied again. Clips are read only from the local copy, and each clip's SHA-256 is checked again every time it is read.
 
 ## Tasks
 `clip-stats` 1.0 reads each clip (16 kHz mono 16-bit PCM) and writes integers only, so its rows are byte-identical on every machine:
