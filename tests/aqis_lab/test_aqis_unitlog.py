@@ -59,6 +59,8 @@ def lab(tmp_path):
     (None, "2026-09-28T10:00:00.000000Z", "2026-09-28T10:45:00.000000Z"),
     ("NVIDIA A100-SXM4-40GB", "2026-09-28T23:10:00.250000Z", "2026-09-29T00:17:13.750000Z"),
     ("NVIDIA L4", "2026-09-28T08:00:00.000000Z", "2026-09-28T08:00:01.000000Z"),
+    # 1.00005 h: the exact estimate is 5.4003 units, one from hours rounded first would be 5.4000
+    ("NVIDIA A100-SXM4-40GB", "2026-09-28T10:00:00.000000Z", "2026-09-28T11:00:00.180000Z"),
 ])
 def test_FR_0_5_07_appends_row_with_estimate_from_rate_table(lab, gpu, start, end):
     rates = unitlog.load_rates(RATES_FILE)

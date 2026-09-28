@@ -212,7 +212,7 @@ exit 0
 - Fast suite after FR-0.5-08: `1481 passed, 17 deselected in 201.70s (0:03:21)`.
 - Status: DONE (the Colab run itself is OC-0.5-01 and OC-0.5-02)
 
-### NFR-0.5-01 — Runner overhead under 5 % (BLOCKED, see BLK-008)
+### NFR-0.5-01 — Runner overhead under 5 % (accepted debt DEBT-013, target WP-0.7)
 - Measured with the scripts under "Measurements" (same process, same staged smoke pack, same `clip-stats` task, fsync on in both; direct loop = read and check every clip, compute, write one results file atomically).
 - First build of the runner: `direct median 72.9 ms; runner median 139.8 ms; overhead 91.8 %`.
 - A profile showed three genuine inefficiencies in my own new code, which I removed without dropping any check:
@@ -230,5 +230,132 @@ overhead 1 shard 33.7 %; fixed per run ~25.4 ms; per extra shard ~6.20 ms
   - about ten atomic writes and fsyncs (card, plan, shard results, marker, `results.jsonl`, log lines).
 
   5 % of a ~70 ms workload is 3.5 ms, less than the two git calls alone. The plan named this as risk 1 and committed to stop and ask rather than slow the task, drop fsyncs or change the comparison.
-- Status: **BLOCKED**: `BLK-008` in `docs/progress/BLOCKERS.md`. `test_NFR_0_5_01_runner_overhead_under_5_percent` is not committed: it would fail as the requirement stands.
+- Owner decision (BLK-008 option 1, `docs/approvals/WP-0.5.md` on `main`): the 5 % limit is checked in WP-0.7 with Vosk on the smoke pack and is DEBT-013 until then. WP-0.5 records the measured fixed overhead.
+- **Recorded fixed overhead: about 25 to 30 ms per run, about 6 ms per extra shard.** On the ~70 ms `clip-stats` workload that is 34 to 42 %.
+- Test: `test_NFR_0_5_01_overhead_measured_against_direct_loop` (`tests/aqis_lab/test_aqis_runner_nfr.py`, marker `slow`). It runs the measurement above, asserts that both loops write byte-identical results (so the comparison is like for like), and prints the numbers. It does **not** assert the 5 % limit (DEBT-013).
+  - Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_runner_nfr.py -q -s -p no:cacheprovider`
+```text
+NFR-0.5-01 measurement: direct median 71.5 ms; runner median 101.4 ms; fixed overhead 29.9 ms (41.8 %); 5 % limit deferred to WP-0.7 (DEBT-013)
+1 passed in 3.54s
+```
+  - An earlier run of the same test gave `direct median 76.3 ms; runner median 104.2 ms; fixed overhead 27.8 ms (36.4 %)`.
+- Status: PARTIAL by owner decision: measured and recorded; the 5 % check is accepted debt DEBT-013 (target WP-0.7).
 - Fast suite after the optimizations: `1481 passed, 17 deselected in 202.64s (0:03:22)`.
+
+### NFR-0.5-02 — Nothing writes to Drive except under AQIS_LAB
+- Tests (`tests/aqis_lab/test_aqis_drive_guard.py`; Drive test double: a folder plus a generated `fuse.drive` mountinfo line):
+  - `test_NFR_0_5_02_each_command_refuses_drive_path_outside_aqis_lab`. Each of these is refused before any byte is written, and the whole stand-in Drive is compared before and after:
+    - `doctor` report `--out`, `run --out` (in `MyDrive/Personal` and at the Drive root);
+    - `write_bytes`, `append_bytes`, `make_dirs` outside `AQIS_LAB`;
+    - `unitlog` and `doctor` writing through an `AQIS_LAB/logs` link that points elsewhere on Drive.
+  - `test_NFR_0_5_02_writes_under_aqis_lab_allowed`: doctor report, unit log and a full run under `AQIS_LAB` succeed, and nothing else on Drive changes.
+- Code: `check_write_path` in `aqis_lab/drive.py` (built with FR-0.5-02). Every lab write goes through `write_bytes`, `append_bytes` or `make_dirs`, which apply it.
+- Order of work: the guard was built with FR-0.5-02 and these tests were written afterwards. Break NFR2 below shows the main test fails when the guard is switched off.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_drive_guard.py -q -p no:cacheprovider` → `2 passed in 7.82s`.
+- Status: DONE
+
+## Accepted debt with target WP-0.5 (question 13 (a))
+- Tests (`tests/aqis_lab/test_aqis_debt_wp05.py`, test-only; no existing test or production file changed):
+  - DEBT-009:
+    - `test_FR_0_3_01_normaliser_checks_package_version_on_first_use`;
+    - `test_FR_0_3_06_score_turns_normaliser_version_error_into_exit_2`.
+
+    Both use a real installed-package record (`whisper_normalizer-0.1.2.dist-info`) placed first on `PYTHONPATH`.
+  - DEBT-011: `test_FR_0_4_03_one_clip_per_speaker_when_candidates_share_a_speaker`, a generated registry where all but 6 test-clean rows share one speaker.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_debt_wp05.py -q -p no:cacheprovider` → `3 passed in 7.23s`.
+- Breaks D9a, D9b and D11 below: each test fails when its behaviour is removed.
+- `docs/progress/DEBT.md` (Status column only):
+  - DEBT-011: CLOSED.
+  - DEBT-009: stays OPEN, partly done. The `NormalisationError` branch of `score` still has no test: reaching it needs a normaliser that never settles, which only a stand-in library could give, and the rules allow test doubles only for external services.
+
+## Must-catch proof
+- Script: `mutate.py` in the session scratchpad.
+- Method, for each break:
+  1. Copy every tracked and untracked (not ignored) file into `/tmp/aqis-wp05-mutations` as a fresh git repository.
+  2. Apply exactly one break.
+  3. Run the named tests with `-k`.
+
+| # | Break (in the copy only) | Result |
+| --- | --- | --- |
+| MC1a | `doctor` python check always PASS | `1 failed`: `test_FR_0_5_02_fails_on_python_version_other_than_probe` |
+| MC1b | `doctor` lock differences ignored | `3 failed`: `test_FR_0_5_02_fails_on_package_version_other_than_lock`, `test_FR_0_5_02_fails_on_package_missing_from_lock`, `test_FR_0_5_02_fails_on_lock_package_not_installed` |
+| MC1c | missing `AQIS_LAB` not checked | `1 failed`: `test_FR_0_5_02_colab_fails_when_aqis_lab_missing` |
+| MC1d | Drive write check not attempted (read-only folder passes) | `1 failed`: `test_FR_0_5_02_colab_fails_when_aqis_lab_read_only` |
+| MC2 | every shard treated as unfinished (recomputed on resume) | `2 failed`: `test_FR_0_5_05_restart_skips_finished_shards`, `test_FR_0_5_06_kill_and_resume_byte_identical_without_recomputing` |
+| MC3 | a results file without its marker counts as finished | `2 failed`: `test_FR_0_5_05_results_without_marker_not_finished`, `test_FR_0_5_06_kill_during_result_write_never_counts` |
+| MC4 | an `if` added to launcher cell 5 | `1 failed`: `test_FR_0_5_08_launcher_cells_contain_no_logic` |
+| MC5 | `platform.machine()` read in `aqis_lab/runner/card.py` | `1 failed`: `test_FR_0_5_01_platform_details_only_from_platform_module` |
+| MC6 | unit log uses the CPU rate for every runtime | `3 failed, 1 passed`: the T4, A100 and L4 cases of `test_FR_0_5_07_appends_row_with_estimate_from_rate_table` (the CPU case rightly passes) |
+| MC6b | unit log multiplies the *rounded* hours by the rate | first run: `4 passed` (survived). A case was added (1.00005 h × 5.40: exact 5.4003, from rounded hours 5.4000). Rerun: `1 failed, 4 passed`, the new A100 case |
+| NFR2 | Drive guard switched off | `1 failed`: `test_NFR_0_5_02_each_command_refuses_drive_path_outside_aqis_lab` |
+| D9a | normaliser version check not called | `1 failed`: `test_FR_0_3_01_normaliser_checks_package_version_on_first_use` |
+| D9b | `score` no longer catches `NormaliserVersionError` | `1 failed`: `test_FR_0_3_06_score_turns_normaliser_version_error_into_exit_2` |
+| D11 | one-clip-per-speaker rule removed from `choose` | `1 failed`: `test_FR_0_4_03_one_clip_per_speaker_when_candidates_share_a_speaker` |
+
+Every must-catch behaviour of the spec (1 to 6) has at least one named test that fails when it is broken.
+
+## Acceptance commands
+### AT-0.5-01
+`.venv/bin/python -m aqis_lab doctor --target cloud` (from the repository root):
+```text
+check         status expected               actual                         detail
+---------------------------------------------------------------------------------
+platform      PASS   cloud-vm               cloud-vm                       signal: environment variable CLAUDE_CODE_REMOTE=true
+python        PASS   3.13                   3.13.12                        major.minor 3.13 equals the Colab probe's 3.13 (docs/environment/colab_probe.txt; owner decision: major.minor)
+lock          PASS   24 packages            24 installed                   installed packages equal requirements/aqis_lab/phase0.txt
+disk          PASS   >= 10 GB               31,067,639,808 bytes (31.07 GB) free on the file system of /home/user/voice-bot-vad-harness/data/raw/aqis_lab/work; minimum 10 GB (config/aqis_lab/doctor.yaml)
+ram           PASS   >= 4 GB                16,292,495,360 bytes (16.29 GB) MemAvailable; minimum 4 GB (config/aqis_lab/doctor.yaml)
+gpu           SKIP   not requested          none                           --expect-gpu not given
+result: PASS
+report: /home/user/voice-bot-vad-harness/data/raw/aqis_lab/doctor/doctor_cloud-vm_20260928T100354Z.json
+exit 0
+```
+
+### AT-0.5-02
+- Fast suite: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"`
+```text
+1487 passed, 18 deselected in 205.80s (0:03:25)
+```
+- Slow CPU suite: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "slow and not gpu and not colab and not oracle and not network"`
+```text
+3 passed, 1502 deselected in 12.58s
+```
+  The three slow tests: `test_NFR_0_2_01_validates_100k_events_under_10s`, `test_NFR_0_5_01_overhead_measured_against_direct_loop`, `test_FR_0_3_07_tie_heavy_pairs_match_jiwer`.
+- The kill-and-resume tests (`test_FR_0_5_06_*`) are in the fast suite.
+
+### AT-0.5-03
+The audit gate with `--wp WP-0.5`: see "Audit gate" below.
+
+## Audit gate
+Recorded after the final commit (below).
+
+## Owner-run checks
+| Check | Where | Command | Expected output | Result report |
+| --- | --- | --- | --- | --- |
+| OC-0.5-01 | Colab, CPU runtime | Launcher `notebooks/aqis_lab/phase0_launcher.ipynb` with `AQIS_TAG = "aqis-lab-wp-0.5-colab-1"`, cells 1 to 4 with `RUN_ARGS = ["--shard-clips", "10"]`; then one extra cell: `!cd /content/aqis && .venv/bin/python -m pytest tests/aqis_lab -q -m colab`; then cell 5 (steps in `docs/colab/COLAB_RUNBOOK.md`) | Doctor table: `platform`, `python`, `lock`, `disk`, `ram`, `drive-mount`, `drive-folder` PASS, `gpu` SKIP, `result: PASS`; pytest: `3 passed` (`test_FR_0_5_01_colab_runtime_detected`, `test_FR_0_5_02_colab_doctor_passes_on_colab`, `test_FR_0_5_07_colab_session_recorded`) | `docs/environment/doctor_colab_<timestamp>.json` and `docs/progress/WP-0.5/OC-0.5-01_colab_tests.txt` (to be committed by the owner) |
+| OC-0.5-02 | Colab, same notebook | Pass 1: `RUN_ARGS = ["--shard-clips", "10", "--max-shards", "2"]`, all cells; **Runtime → Disconnect and delete runtime**; pass 2: `RUN_ARGS = ["--shard-clips", "10"]`, all cells | Pass 1 log ends `stopped after 2 computed shard(s) (--max-shards 2); 4 shard(s) remain`. Pass 2 log: `session 2 start`, `shard 00000 skipped`, `shard 00001 skipped`, shards 00002 to 00005 `started`/`finished`, `run complete: 6 shard(s), 2 skipped and 4 computed in this session`. `units.csv` has one row per session | `docs/progress/WP-0.5/OC-0.5-02_runner.log` and `docs/progress/WP-0.5/OC-0.5-02_units.csv` (to be committed by the owner) |
+
+The tag `aqis-lab-wp-0.5-colab-1` is created and pushed on the audited commit once the audit passes (question 12 (a)).
+
+## Changes to existing files (inside the change budget)
+- `aqis_lab/__main__.py`: four `COMMANDS` entries (`doctor`, `drive`, `run`, `unitlog`) and four CHANGE LOG lines. `build_parser` and `main` are unchanged. `git diff -U0 origin/main -- aqis_lab/__main__.py`:
+```text
++  2026-09-28 WP-0.5 FR-0.5-02: `doctor` command registered in COMMANDS.
++  2026-09-28 WP-0.5 FR-0.5-03: `drive` command registered in COMMANDS.
++  2026-09-28 WP-0.5 FR-0.5-05: `run` command registered in COMMANDS.
++  2026-09-28 WP-0.5 FR-0.5-07: `unitlog` command registered in COMMANDS.
++    "doctor": ("aqis_lab.commands.doctor", "check Python, lock, disk, RAM, GPU and Drive; PASS/FAIL report"),
++    "drive": ("aqis_lab.commands.drive", "create the Google Drive AQIS_LAB folder layout; report crowded folders"),
++    "run": ("aqis_lab.commands.run", "run a task over a pack in resumable shards (copy then compute)"),
++    "unitlog": ("aqis_lab.commands.unitlog", "Colab session compute-unit log (start, end)"),
+```
+- `docs/capabilities/REGISTRY.md`: rows appended only (CAP-PLAT-001 to 003, CAP-DOCTOR-001 to 004, CAP-DRIVE-001 to 004, CAP-RUN-001 to 009, CAP-UNIT-001 to 004, CAP-NB-001, CAP-DOC-009 to 011). Existing rows are unchanged.
+- `docs/progress/DEBT.md`:
+  - the Status cells of DEBT-009 and DEBT-011;
+  - the new row DEBT-013 (owner decision, BLK-008).
+- `docs/progress/BLOCKERS.md`: BLK-008 appended and resolved.
+- `docs/progress/STATUS.md`: the WP-0.5 row.
+- No GUARDED or NEVER path, no existing test file and no lock file changed.
+
+## audit-allow lines
+None.

@@ -169,7 +169,7 @@ Everything else in round 6 is green locally (fast `204 passed` with git-lfs 3.4.
 **Resolution:** the test now replaces `os.geteuid` with a function returning 0 through `monkeypatch`, inside the test only, and runs `Provisioner.step_system()` in-process with the stand-in commands on PATH. It passes here and fails under mutation P12 (`if os.geteuid() != 0:` changed to `if True:`). CI results are in EVIDENCE.md, "BLK-007 decision and minor fixes F45 and F46".
 
 ## BLK-008 — NFR-0.5-01 (runner overhead under 5 %) cannot be met on the sub-second WP-0.5 workload
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.5  ·  Raised: 2026-09-28  ·  Session: https://claude.ai/code/session_016NHQnTY3XyGxfsvGCp1n9y
 
 **What I need:** your decision on how NFR-0.5-01 is measured or when it applies.
@@ -214,4 +214,4 @@ WP: WP-0.5  ·  Raised: 2026-09-28  ·  Session: https://claude.ai/code/session_
 
 **Not dependent on the answer:** NFR-0.5-02 (Drive write guard tests), the DEBT-009 and DEBT-011 tests (question 13), the must-catch proof and the acceptance commands. I will continue them only if you say so.
 
-**Owner answer:** 
+**Owner answer:** Option 1 (session chat and `docs/approvals/WP-0.5.md` on `main`, 2026-09-28): the NFR-0.5-01 percentage target is deferred to WP-0.7 (Vosk on the smoke pack) and recorded as DEBT-013 in `docs/progress/DEBT.md`; WP-0.5 records the measured fixed overhead (about 25 ms per run, about 6 ms per extra shard) in `EVIDENCE.md`. The owner also approved continuing NFR-0.5-02, the DEBT-009 and DEBT-011 tests, the must-catch proof, the acceptance runs and the pull request.
