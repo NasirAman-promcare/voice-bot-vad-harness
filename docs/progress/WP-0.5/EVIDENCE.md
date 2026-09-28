@@ -169,3 +169,26 @@ exit 0
 ```
 - Fast suite after FR-0.5-04 to FR-0.5-06: `1437 passed, 16 deselected in 212.38s (0:03:32)`.
 - Status: DONE
+
+### FR-0.5-07 — Unit log
+- Tests (`tests/aqis_lab/test_aqis_unitlog.py`):
+  - `test_FR_0_5_07_appends_row_with_estimate_from_rate_table` (4 cases: T4, CPU, A100 across midnight, L4 for 1 s; must-catch 6. The expected hours and units are computed in the test with `fractions` from the two timestamps and the committed rate);
+  - `test_FR_0_5_07_append_never_rewrites_existing_rows`;
+  - `test_FR_0_5_07_unknown_runtime_type_is_an_error` (must-catch 6);
+  - `test_FR_0_5_07_every_rate_names_its_source` (5 malformed tables);
+  - `test_FR_0_5_07_committed_rates_equal_owner_figures`;
+  - `test_FR_0_5_07_unclosed_session_is_closed_at_next_start` (question 11 (a));
+  - `test_FR_0_5_07_run_and_doctor_keep_last_seen_current`;
+  - `test_FR_0_5_07_refuses_outside_colab`;
+  - `test_FR_0_5_07_writes_only_under_aqis_lab_logs`.
+- Colab-only test: `test_FR_0_5_07_colab_session_recorded` (marker `colab`). The plan named it `test_FR_0_5_07_colab_session_row_appended`. It was renamed because at OC-0.5-01 time the session is open (started by the launcher), so the check is the open-session record; the row itself is proved by OC-0.5-02's committed `units.csv`.
+- Test-first: before `aqis_lab/unitlog.py` existed: `ImportError: cannot import name 'unitlog' from 'aqis_lab'`.
+- Rates (`config/aqis_lab/colab_rates.yaml`): exactly the approval's figures, each with the approval's source text: cpu 0.08, Tesla T4 1.19, NVIDIA L4 1.71, NVIDIA A100-SXM4-40GB 5.40 units per hour; source "AQIS Test Lab Build Plan (Colab GPUs features and pricing, March 2026)".
+- **A real bug caught by the test:**
+  - The first implementation divided with `decimal` at its default 28 digits: 1 h 7 min 13.5 s = 1.12041666… h, stored as …667.
+  - × 5.40 gave 6.050250…002, which rounded to `6.0503`. The exact value is 6.05025, which rounds half-even to `6.0502`, as the test computed.
+  - `estimate` now uses exact fractions and integer half-even rounding (`round_half_even`).
+- Wiring (change budget inside this WP's own new files): `run` updates the unit log's last-seen time after each shard and at the end, and `doctor` after writing its report, when `--drive-mount` is given.
+- Command: the fast command with `-k FR_0_5_07` → `16 passed, 1454 deselected in 2.32s`.
+- Fast suite after FR-0.5-07: `1453 passed, 17 deselected in 208.26s (0:03:28)`.
+- Status: DONE

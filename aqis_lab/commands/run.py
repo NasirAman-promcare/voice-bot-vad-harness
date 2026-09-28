@@ -10,6 +10,7 @@ NOT IN SCOPE:
   - Running itself (aqis_lab/runner/run.py).
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-05 created.
+  2026-09-28 WP-0.5 FR-0.5-07: with --drive-mount, the unit log's last-seen time is updated after each shard.
 """
 import argparse
 import sys
@@ -44,20 +45,33 @@ def build_parser():
 
 def main(argv):
     ns = build_parser().parse_args(argv)
+    from aqis_lab.drive import DriveError
     from aqis_lab.runner.run import DEFAULT_WORK_DIR, RunFailure, RunInputError, RunOptions, run
+    from aqis_lab.unitlog import UnitLogError
     options = RunOptions(task=ns.task, pack=Path(ns.pack), out=Path(ns.out), seed=ns.seed,
                          work_dir=Path(ns.work_dir) if ns.work_dir else DEFAULT_WORK_DIR,
                          shard_minutes=ns.shard_minutes, shard_clips=ns.shard_clips, max_shards=ns.max_shards,
                          from_scratch=ns.from_scratch, drive_mount=Path(ns.drive_mount) if ns.drive_mount else None,
                          notes=ns.notes)
+    on_shard = None
+    if options.drive_mount is not None:
+        from aqis_lab.unitlog import touch
+
+        def on_shard(index):
+            touch(options.drive_mount)
     try:
-        outcome = run(options)
+        outcome = run(options, on_shard=on_shard)
+        if on_shard is not None:
+            on_shard(None)
     except RunInputError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     except RunFailure as exc:
         print(f"ERROR: the run stopped: {exc}", file=sys.stderr)
         return 1
+    except (UnitLogError, DriveError, OSError) as exc:
+        print(f"ERROR: unit log (last-seen time): {exc}", file=sys.stderr)
+        return 2
     print(f"{outcome.status}: {outcome.computed} shard(s) computed, {outcome.skipped} skipped, "
           f"{outcome.remaining} remaining")
     return 0

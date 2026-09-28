@@ -17,6 +17,7 @@ CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-02: `doctor` command registered in COMMANDS.
   2026-09-28 WP-0.5 FR-0.5-03: `drive` command registered in COMMANDS.
   2026-09-28 WP-0.5 FR-0.5-05: `run` command registered in COMMANDS.
+  2026-09-28 WP-0.5 FR-0.5-07: `unitlog` command registered in COMMANDS.
 """
 import argparse
 import importlib
@@ -32,6 +33,7 @@ COMMANDS = {
     "doctor": ("aqis_lab.commands.doctor", "check Python, lock, disk, RAM, GPU and Drive; PASS/FAIL report"),
     "drive": ("aqis_lab.commands.drive", "create the Google Drive AQIS_LAB folder layout; report crowded folders"),
     "run": ("aqis_lab.commands.run", "run a task over a pack in resumable shards (copy then compute)"),
+    "unitlog": ("aqis_lab.commands.unitlog", "Colab session compute-unit log (start, end)"),
 }
 
 

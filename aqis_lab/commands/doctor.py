@@ -11,6 +11,7 @@ NOT IN SCOPE:
   - The checks themselves (aqis_lab/doctor.py).
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-02 created.
+  2026-09-28 WP-0.5 FR-0.5-07: with --drive-mount, the unit log's last-seen time is updated.
 """
 import argparse
 import sys
@@ -46,12 +47,15 @@ def main(argv):
     from aqis_lab.doctor import DoctorInputError, run_doctor, write_report
     from aqis_lab.drive import DriveError
     from aqis_lab.platform import PlatformError
+    from aqis_lab.unitlog import UnitLogError, touch
     try:
         report = run_doctor(ns.target, expect_gpu=ns.expect_gpu, work_dir=ns.work_dir or DEFAULT_WORK,
                             drive_mount=ns.drive_mount)
         print(report.table())
         path = write_report(report, ns.out or DEFAULT_OUT)
-    except (DoctorInputError, DriveError, PlatformError, OSError) as exc:
+        if ns.drive_mount is not None:
+            touch(ns.drive_mount)
+    except (DoctorInputError, DriveError, PlatformError, UnitLogError, OSError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     print(f"report: {path}")

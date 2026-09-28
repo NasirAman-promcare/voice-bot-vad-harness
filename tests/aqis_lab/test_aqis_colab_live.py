@@ -37,3 +37,15 @@ def test_FR_0_5_02_colab_doctor_passes_on_colab(tmp_path):
     assert gpu == "SKIP"
     assert set(statuses.values()) == {"PASS"}, statuses
     assert report["machine"]["platform"] == "colab"
+
+
+def test_FR_0_5_07_colab_session_recorded():
+    """The launcher's `unitlog start` recorded this Colab session with a runtime the rate table knows."""
+    import json
+    from aqis_lab import unitlog
+    from aqis_testutil import ROOT
+    state = json.loads((unitlog.logs_dir(DRIVE_MOUNT) / unitlog.OPEN_SESSION).read_text(encoding="utf-8"))
+    info = lp.machine_info()
+    assert state["platform"] == "colab" and state["gpu_type"] == info.gpu
+    rates = unitlog.load_rates(ROOT / "config" / "aqis_lab" / "colab_rates.yaml")
+    assert unitlog.rate_for(rates, info.gpu).source
