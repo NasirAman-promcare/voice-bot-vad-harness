@@ -5,12 +5,16 @@ CPU topology files stands in for the Oracle VM's cores (the pinning itself is re
 CPUs), and an rclone `alias` remote on a local folder stands in for Google Drive (rclone itself is real). Expected
 values are computed here independently of the code under test.
 """
+import csv
+import hashlib
+import json
 import os
 import re
+import shutil
 from pathlib import Path
 
 from aqis_lab import platform as lp
-from aqis_runner_testutil import make_system_tree
+from aqis_runner_testutil import SMOKE_PACK, make_system_tree
 
 ORACLE_TAG = "OracleCloud.com"
 
@@ -98,3 +102,56 @@ def thread_masks(pid):
         assert m, f"no Cpus_allowed_list in {task}/status"
         masks[int(task.name)] = parse_cpu_list(m.group(1))
     return masks
+
+
+# --- results store inputs: real runner and scorer output ------------------------------------------------------------
+SMOKE_MANIFEST = json.loads((SMOKE_PACK / "manifest.json").read_text(encoding="utf-8"))
+
+
+def canonical(value):
+    """Canonical JSON bytes (sorted keys, no spaces, UTF-8), written independently of aqis_lab.contracts."""
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+
+
+def expected_row_id(identity):
+    """result_row_id as docs/results/RESULTS_STORE.md defines it: SHA-256 of the identity's canonical JSON."""
+    return hashlib.sha256(canonical(identity)).hexdigest()
+
+
+def smoke_run(out, work, seed=0, shard_clips=None):
+    """A real finished runner run of clip-stats over the smoke pack; returns the run folder."""
+    from aqis_lab.runner.run import RunOptions, run
+    run(RunOptions(task="clip-stats", pack=SMOKE_PACK, out=Path(out), seed=seed, work_dir=Path(work),
+                   shard_clips=shard_clips), echo=None)
+    return Path(out)
+
+
+def score_folder(out, run_card_id, clip_count=3, hyp=lambda text: text.lower()):
+    """A real `score` output folder: references are the smoke clips' transcripts, hypotheses `hyp(transcript)`."""
+    from aqis_lab.commands.score import main as score_main
+    out = Path(out)
+    inputs = out.parent / (out.name + "-inputs")
+    inputs.mkdir(parents=True)
+    clips = SMOKE_MANIFEST["clips"][:clip_count]
+    with open(inputs / "ref.csv", "w", encoding="utf-8", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["clip_id", "text"])
+        for c in clips:
+            w.writerow([c["clip_id"], c["transcript"]])
+    with open(inputs / "hyp.csv", "w", encoding="utf-8", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["run_card_id", "clip_id", "text"])
+        for c in clips:
+            w.writerow([run_card_id, c["clip_id"], hyp(c["transcript"])])
+    assert score_main(["--ref", str(inputs / "ref.csv"), "--hyp", str(inputs / "hyp.csv"), "--out", str(out)]) == 0
+    return out
+
+
+def copy_tree(src, dst):
+    shutil.copytree(src, dst)
+    return Path(dst)
+
+
+def run_rows(run_dir):
+    """The result rows of a run folder, parsed from its results.jsonl."""
+    return [json.loads(line) for line in (Path(run_dir) / "results.jsonl").read_text(encoding="utf-8").splitlines()]
