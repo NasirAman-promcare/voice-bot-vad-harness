@@ -25,3 +25,6 @@ jiwer==4.0.0
 # soundfile decodes LibriSpeech FLAC (checked against each file's STREAMINFO MD5); numpy holds the samples.
 soundfile
 numpy
+# Results store queries (WP-0.6 FR-0.6-02: "a DuckDB view"; owner approval docs/approvals/WP-0.6.md).
+# Its parquet and json extensions are statically linked, so no extension is downloaded at run time.
+duckdb
