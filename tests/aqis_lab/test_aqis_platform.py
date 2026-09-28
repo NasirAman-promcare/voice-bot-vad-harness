@@ -1,4 +1,5 @@
 """FR-0.5-01: aqis_lab.platform is the only place that detects the platform and reads machine facts."""
+import ast
 import copy
 import json
 import os
@@ -208,6 +209,61 @@ ALLOWED = {
 }
 
 
+# Machine facts by module (WP-0.5-F03): every name of the standard library's platform module, and these others.
+FACT_ATTRIBUTES = {"os": {"uname", "statvfs"}, "sys": {"version", "version_info", "platform"},
+                   "shutil": {"disk_usage"}}
+IMPORTERS = {"__import__", "importlib.import_module", "import_module"}
+
+
+def _is_fact(module, attr):
+    return module == "platform" or attr in FACT_ATTRIBUTES.get(module, set())
+
+
+def _ast_fact_lines(tree):
+    """Line numbers where a module reads a machine fact through any import form (import, alias, from-import,
+    __import__, importlib.import_module, getattr)."""
+    aliases, lines = {}, set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for a in node.names:
+                if a.name in FACT_ATTRIBUTES or a.name == "platform" or a.name == "importlib":
+                    aliases[a.asname or a.name] = a.name
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            for a in node.names:
+                if _is_fact(node.module, a.name):
+                    lines.add(node.lineno)
+                if node.module == "importlib" and a.name == "import_module":
+                    aliases[a.asname or a.name] = "importlib.import_module"
+
+    def module_of(expr):
+        if isinstance(expr, ast.Name):
+            return aliases.get(expr.id)
+        if isinstance(expr, ast.Call) and expr.args and isinstance(expr.args[0], ast.Constant) \
+                and isinstance(expr.args[0].value, str):
+            func = expr.func
+            name = func.id if isinstance(func, ast.Name) else (
+                f"{module_of(func.value)}.{func.attr}" if isinstance(func, ast.Attribute) else None)
+            if isinstance(func, ast.Name) and aliases.get(func.id) == "importlib.import_module":
+                name = "importlib.import_module"
+            if name in IMPORTERS:
+                return expr.args[0].value
+        return None
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute):
+            module = module_of(node.value)
+            if module and _is_fact(module, node.attr):
+                lines.add(node.lineno)
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "getattr" \
+                and len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
+            module = module_of(node.args[0])
+            if module and _is_fact(module, node.args[1].value):
+                lines.add(node.lineno)
+        elif isinstance(node, ast.Call) and module_of(node) == "platform":
+            lines.add(node.lineno)
+    return lines
+
+
 def platform_detail_lines(root):
     found = []
     for top in ("aqis_lab", "tools"):
@@ -215,9 +271,14 @@ def platform_detail_lines(root):
             rel = path.relative_to(root).as_posix()
             if rel == "aqis_lab/platform.py":
                 continue
-            for no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-                if any(rx.search(line) for rx in FORBIDDEN) and line.strip() not in ALLOWED.get(rel, set()):
-                    found.append(f"{rel}:{no}: {line.strip()}")
+            text = path.read_text(encoding="utf-8")
+            lines = text.splitlines()
+            flagged = {no for no, line in enumerate(lines, start=1) if any(rx.search(line) for rx in FORBIDDEN)}
+            flagged |= _ast_fact_lines(ast.parse(text, filename=rel))
+            for no in sorted(flagged):
+                line = lines[no - 1].strip()
+                if line not in ALLOWED.get(rel, set()):
+                    found.append(f"{rel}:{no}: {line}")
     return found
 
 
@@ -234,3 +295,35 @@ def test_FR_0_5_01_platform_details_only_from_platform_module(tmp_path):
     (other_root / "aqis_lab" / "runner.py").write_text("import platform\narch = platform.machine()\n")
     (other_root / "tools" / "x.py").write_text("import os\ncolab = 'COLAB_RELEASE_TAG' in os.environ\n")
     assert len(platform_detail_lines(other_root)) == 2
+
+
+# WP-0.5-F03: import forms that a text scan cannot see. Each module reads one machine fact; each must be found.
+EVASIONS = {
+    "from_import_alias": "from platform import machine as host_arch\narch = host_arch()\n",
+    "from_import": "from platform import python_version\n",
+    "module_alias": "import platform as p\nname = p.system()\n",
+    "dunder_import": "kernel = __import__('os').uname()\n",
+    "importlib": "import importlib\narch = importlib.import_module('platform').machine()\n",
+    "import_module_name": "from importlib import import_module\nx = import_module('platform').node()\n",
+    "os_from_import": "from os import uname\n",
+    "os_alias": "import os as o\nfree = o.statvfs('.')\n",
+    "sys_from_import": "from sys import version_info as v\n",
+    "sys_alias": "import sys as s\nwhere = s.platform\n",
+    "shutil_from_import": "from shutil import disk_usage\n",
+    "getattr": "import platform as q\nf = getattr(q, 'machine')\n",
+}
+
+
+@pytest.mark.parametrize("name", sorted(EVASIONS))
+def test_FR_0_5_01_platform_scan_resolves_imports(tmp_path, name):
+    root = tmp_path / "repo"
+    (root / "aqis_lab").mkdir(parents=True)
+    (root / "tools").mkdir()
+    (root / "aqis_lab" / "module.py").write_text(EVASIONS[name], encoding="utf-8")
+    assert platform_detail_lines(root), f"the scan missed: {EVASIONS[name]!r}"
+    # the lab's own module and ordinary standard-library use stay allowed
+    (root / "aqis_lab" / "module.py").write_text(
+        "from aqis_lab import platform as lp\nfrom aqis_lab import platform\nimport os\nimport sys\n"
+        "info = lp.machine_info()\nhome = os.environ.get('HOME')\nargs = sys.argv\npath = os.path.join('a', 'b')\n",
+        encoding="utf-8")
+    assert platform_detail_lines(root) == []

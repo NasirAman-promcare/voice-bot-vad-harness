@@ -1,7 +1,7 @@
 """Copy then compute: copy a pack to local disk, verify every hash, extract it there, and read clips back checked.
 
 CAPABILITIES:
-  CAP-RUN-001: stage_pack() copies a pack folder (from Drive or the repository) into <work>/packs/<id>/<version>/pack on local disk through a staging folder, runs verify_pack on the copy, extracts every archive into clips/ with each clip's SHA-256 checked, writes the .staged marker and renames the folder into place; a failed verification stages nothing; a valid marker for the same manifest means nothing is copied again; a work folder on a Drive mount is refused [tests: test_FR_0_5_04_stages_repository_pack_to_local_disk, test_FR_0_5_04_stages_pack_from_drive_folder, test_FR_0_5_04_rejects_changed_archive_and_stages_nothing, test_FR_0_5_04_interrupted_staging_is_redone, test_FR_0_5_04_restaging_a_staged_pack_copies_nothing, test_FR_0_5_04_work_dir_on_drive_is_refused]
+  CAP-RUN-001: stage_pack() copies a pack folder (from Drive or the repository) into <work>/packs/<id>/<version>/pack on local disk through a staging folder, runs verify_pack on the copy, extracts every archive into clips/ with each clip's SHA-256 checked, writes the .staged marker and renames the folder into place; a failed verification stages nothing; a valid marker for the same manifest means nothing is copied again; a work folder on a Drive mount is refused [tests: test_FR_0_5_04_stages_repository_pack_to_local_disk, test_FR_0_5_04_stages_pack_from_drive_folder, test_FR_0_5_04_rejects_changed_archive_and_stages_nothing, test_FR_0_5_04_interrupted_staging_is_redone, test_FR_0_5_04_restaging_a_staged_pack_copies_nothing, test_FR_0_5_04_work_dir_on_drive_is_refused, test_FR_0_5_04_changed_source_manifest_is_staged_again, test_FR_0_5_04_archive_hash_mismatch_with_intact_members_stages_nothing]
   CAP-RUN-002: StagedPack.read_clip() reads a clip only from the local extracted copy and raises ClipError when its SHA-256 differs from the manifest [tests: test_FR_0_5_04_run_reads_only_local_extracted_clips, test_FR_0_5_04_changed_extracted_clip_stops_the_run]
 INPUTS AND OUTPUTS: a pack folder (manifest.json, LICENCES.md, build_record.json, archives) and a local work folder
   in; a StagedPack out; StageError when the pack cannot be staged.
@@ -16,6 +16,7 @@ CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-04 created.
   2026-09-28 WP-0.5 NFR-0.5-01: a staged pack whose marker names exactly the source's manifest bytes is reused
              without validating those bytes again (they were validated and verified when staged).
+  2026-09-28 WP-0.5 round 2 F06, F07: header lists the reuse and archive-hash tests (header only).
 """
 import hashlib
 import json

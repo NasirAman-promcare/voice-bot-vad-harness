@@ -1,7 +1,7 @@
 """Google Drive rules for every lab write: only under MyDrive/AQIS_LAB, atomic files, the AQIS_LAB layout.
 
 CAPABILITIES:
-  CAP-DRIVE-001: check_write_path() refuses any path on a Google Drive mount (from aqis_lab.platform) that is not inside <mount>/MyDrive/AQIS_LAB, before anything is written; write_bytes(), append_bytes() and make_dirs() are the lab's write functions and always apply it [tests: test_NFR_0_5_02_each_command_refuses_drive_path_outside_aqis_lab, test_NFR_0_5_02_writes_under_aqis_lab_allowed]
+  CAP-DRIVE-001: check_write_path() refuses any path on a Google Drive mount (from aqis_lab.platform) that is not inside <mount>/MyDrive/AQIS_LAB, before anything is written; write_bytes(), append_bytes() and make_dirs() always apply it; the WP-0.5 commands (doctor, drive layout, run, unitlog) write only through them (the older score, pack build, registry build and fetch do not yet: DEBT-014, target WP-0.7) [tests: test_NFR_0_5_02_each_command_refuses_drive_path_outside_aqis_lab, test_NFR_0_5_02_writes_under_aqis_lab_allowed]
   CAP-DRIVE-003: ensure_layout() creates only the missing AQIS_LAB/{packs,models,results,logs} folders (never AQIS_LAB itself, never deleting or changing anything; a layout name that is not a folder stops it before anything is created) and reports every AQIS_LAB folder holding more than 1,000 entries; every lab write that adds an entry to a Drive folder warns first when the folder would pass 1,000 entries, then still writes [tests: test_FR_0_5_03_creates_missing_layout_folders, test_FR_0_5_03_never_deletes_or_changes_existing_content, test_FR_0_5_03_refuses_when_aqis_lab_missing, test_FR_0_5_03_layout_name_that_is_a_file_is_an_error, test_FR_0_5_03_warns_before_folder_exceeds_1000_items, test_FR_0_5_03_layout_reports_crowded_folders]
   CAP-DRIVE-002: write_bytes() writes a file atomically (write <name>.partial, fsync, rename, fsync the folder), so a reader sees the old file or the whole new one, never a torn file [tests: test_FR_0_5_02_colab_drive_checks_pass_when_writable, test_FR_0_5_05_shard_results_written_atomically_with_marker]
 INPUTS AND OUTPUTS: paths and bytes in; files and folders out; DriveError when a path is refused.
@@ -14,6 +14,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-02 created (write guard and atomic writes, also NFR-0.5-02).
   2026-09-28 WP-0.5 FR-0.5-03: ensure_layout, crowded_folders, warn_if_crowded (called by every write function).
+  2026-09-28 WP-0.5 round 2 F02: header states which commands use the guard (header only).
 """
 import os
 import sys

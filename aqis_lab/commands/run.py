@@ -1,7 +1,7 @@
 """The `run` command: run a task over a pack in resumable shards (copy then compute, completion markers).
 
 CAPABILITIES:
-  CAP-RUN-009: `python -m aqis_lab run --task clip-stats --pack DIR --out DIR --seed N [--work-dir DIR] [--shard-minutes M] [--shard-clips N] [--max-shards N] [--from-scratch] [--drive-mount DIR] [--notes TEXT]` prints the runner log; exit 0 complete or stopped by --max-shards, 1 a clip failed, 2 usage or input error [tests: test_FR_0_5_05_clip_failure_stops_run_without_marker, test_FR_0_5_05_max_shards_stops_cleanly, test_FR_0_5_04_changed_extracted_clip_stops_the_run, test_FR_0_5_06_kill_and_resume_byte_identical_without_recomputing]
+  CAP-RUN-009: `python -m aqis_lab run --task clip-stats --pack DIR --out DIR --seed N [--work-dir DIR] [--shard-minutes M] [--shard-clips N] [--max-shards N] [--from-scratch] [--drive-mount DIR] [--notes TEXT]` prints the runner log; exit 0 complete or stopped by --max-shards, 1 a clip failed, 2 usage or input error [tests: test_FR_0_5_05_clip_failure_stops_run_without_marker, test_FR_0_5_05_max_shards_stops_cleanly, test_FR_0_5_04_changed_extracted_clip_stops_the_run, test_FR_0_5_06_kill_and_resume_byte_identical_without_recomputing, test_FR_0_5_05_run_io_error_is_not_reported_as_unit_log]
 INPUTS AND OUTPUTS: command-line arguments in; the run folder, the log on stdout, errors on stderr, exit 0, 1 or 2.
 CONTRACTS: run folder layout in docs/runner/RUNNER.md.
 INVARIANTS:
@@ -11,12 +11,17 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-05 created.
   2026-09-28 WP-0.5 FR-0.5-07: with --drive-mount, the unit log's last-seen time is updated after each shard.
+  2026-09-28 WP-0.5 round 2 F08: a run-folder write error is reported as such, not as a unit-log error (main only).
 """
 import argparse
 import sys
 from pathlib import Path
 
 from aqis_lab.runner.plan import DEFAULT_SHARD_MINUTES
+
+
+class _UnitLogTouchError(RuntimeError):
+    """Updating the unit log's last-seen time failed (the cause is the original error)."""
 
 
 def build_parser():
@@ -58,7 +63,10 @@ def main(argv):
         from aqis_lab.unitlog import touch
 
         def on_shard(index):
-            touch(options.drive_mount)
+            try:
+                touch(options.drive_mount)
+            except (UnitLogError, DriveError, OSError) as exc:
+                raise _UnitLogTouchError(exc) from exc
     try:
         outcome = run(options, on_shard=on_shard)
         if on_shard is not None:
@@ -69,8 +77,11 @@ def main(argv):
     except RunFailure as exc:
         print(f"ERROR: the run stopped: {exc}", file=sys.stderr)
         return 1
-    except (UnitLogError, DriveError, OSError) as exc:
-        print(f"ERROR: unit log (last-seen time): {exc}", file=sys.stderr)
+    except _UnitLogTouchError as exc:
+        print(f"ERROR: unit log (last-seen time): {exc.__cause__}", file=sys.stderr)
+        return 2
+    except (DriveError, OSError) as exc:
+        print(f"ERROR: cannot write the run folder {options.out}: {exc}", file=sys.stderr)
         return 2
     print(f"{outcome.status}: {outcome.computed} shard(s) computed, {outcome.skipped} skipped, "
           f"{outcome.remaining} remaining")

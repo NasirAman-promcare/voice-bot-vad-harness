@@ -139,3 +139,52 @@ def test_FR_0_5_04_changed_extracted_clip_stops_the_run(tmp_path):
     assert not (out / "results.jsonl").exists()
     log = (out / "runner.log").read_text(encoding="utf-8")
     assert "ERROR" in log and clip["clip_id"] in log
+
+
+def _rewrite_manifest(source, change):
+    """Change the source manifest (keeping its ID and version) and keep build_record.json consistent with it."""
+    from aqis_lab.contracts.canonical import sha256_canonical
+    manifest = json.loads((source / "manifest.json").read_text(encoding="utf-8"))
+    change(manifest)
+    (source / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+                                          encoding="utf-8")
+    record = json.loads((source / "build_record.json").read_text(encoding="utf-8"))
+    record["manifest_sha256"] = sha256_canonical(manifest)
+    (source / "build_record.json").write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return manifest
+
+
+def test_FR_0_5_04_changed_source_manifest_is_staged_again(tmp_path):
+    # WP-0.5-F06: a staged pack is reused only for exactly the same manifest bytes
+    source = copy_pack(tmp_path / "source")
+    work = tmp_path / "work"
+    first = stage.stage_pack(source, work)
+    assert first.fresh is True and stage.stage_pack(source, work).fresh is False
+    changed = _rewrite_manifest(source, lambda m: m.update(purpose=m["purpose"] + " Rebuilt with the same version."))
+    again = stage.stage_pack(source, work)
+    assert again.fresh is True and again.root == first.root
+    assert again.manifest == changed and again.manifest["purpose"].endswith("Rebuilt with the same version.")
+    assert json.loads((again.root / "pack" / "manifest.json").read_text(encoding="utf-8")) == changed
+    # the same JSON written differently is other bytes: it is checked and staged again, never trusted unseen
+    text = (source / "manifest.json").read_text(encoding="utf-8")
+    (source / "manifest.json").write_text(json.dumps(json.loads(text), indent=4, sort_keys=True) + "\n",
+                                          encoding="utf-8")
+    assert stage.stage_pack(source, work).fresh is True
+
+
+def test_FR_0_5_04_archive_hash_mismatch_with_intact_members_stages_nothing(tmp_path):
+    # WP-0.5-F07: bytes after the tar end leave every member intact but change the archive's size and SHA-256
+    source = copy_pack(tmp_path / "source")
+    name = MANIFEST["archives"][1]["name"]
+    with open(source / name, "ab") as fh:
+        fh.write(b"\0" * 10240 + b"appended after the end of the archive")
+    import tarfile
+    with tarfile.open(source / name) as tar:
+        members = {m.name: tar.extractfile(m).read() for m in tar.getmembers()}
+    clips = {c["member_path"]: c["sha256"] for c in MANIFEST["clips"] if c["archive"] == name}
+    assert {k: hashlib.sha256(v).hexdigest() for k, v in members.items()} == clips, "members are intact"
+    work = tmp_path / "work"
+    with pytest.raises(stage.StageError) as err:
+        stage.stage_pack(source, work)
+    assert name in str(err.value) and "verification" in str(err.value)
+    assert not staged_dir(work).exists()

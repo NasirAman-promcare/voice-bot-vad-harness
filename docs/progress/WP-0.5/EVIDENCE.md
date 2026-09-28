@@ -249,10 +249,12 @@ NFR-0.5-01 measurement: direct median 71.5 ms; runner median 101.4 ms; fixed ove
     - `write_bytes`, `append_bytes`, `make_dirs` outside `AQIS_LAB`;
     - `unitlog` and `doctor` writing through an `AQIS_LAB/logs` link that points elsewhere on Drive.
   - `test_NFR_0_5_02_writes_under_aqis_lab_allowed`: doctor report, unit log and a full run under `AQIS_LAB` succeed, and nothing else on Drive changes.
-- Code: `check_write_path` in `aqis_lab/drive.py` (built with FR-0.5-02). Every lab write goes through `write_bytes`, `append_bytes` or `make_dirs`, which apply it.
+- Code: `check_write_path` in `aqis_lab/drive.py` (built with FR-0.5-02). `write_bytes`, `append_bytes` and `make_dirs` always apply it.
+- **Guarded commands:** `doctor`, `drive layout`, `run` and `unitlog`, which are all the commands WP-0.5 adds and all the commands the launcher runs; they write only through those functions.
+- **Not guarded yet (audit finding WP-0.5-F01):** `score --out`, `pack build --out`, `registry build --out` and `registry fetch`. They are merged WP-0.3 and WP-0.4 code that writes directly. The owner accepted this as DEBT-014, target WP-0.7: before running on Colab, WP-0.7 routes every remaining lab writer through `aqis_lab.drive`. (Round 1 of this record said "every lab write", which was wrong: finding WP-0.5-F02.)
 - Order of work: the guard was built with FR-0.5-02 and these tests were written afterwards. Break NFR2 below shows the main test fails when the guard is switched off.
 - Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_drive_guard.py -q -p no:cacheprovider` → `2 passed in 7.82s`.
-- Status: DONE
+- Status: PARTIAL: met for every WP-0.5 command and for the launcher; the older writers are DEBT-014 (target WP-0.7).
 
 ## Accepted debt with target WP-0.5 (question 13 (a))
 - Tests (`tests/aqis_lab/test_aqis_debt_wp05.py`, test-only; no existing test or production file changed):
@@ -379,3 +381,30 @@ Workflow `aqis-lab-ci` on commit `879bf4cc5f823785ea44443132a706d7166a882d` (rea
 
 Every earlier push of this WP was green as well (runs 198 to 201).
 Pull request: https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/5
+
+## Round 2 (audit round 1 findings)
+The details are in `docs/progress/WP-0.5/FIXES.md`.
+- F02 to F08 fixed.
+- F01 accepted as DEBT-014 (target WP-0.7).
+- F09: DEBT-009 re-targeted to WP-0.9.
+
+New tests:
+- `test_FR_0_5_01_platform_scan_resolves_imports` (12 cases, F03);
+- `test_FR_0_5_08_logic_checker_rejects_logic_inside_commands` (14 cases, F04);
+- `test_FR_0_5_05_resume_refused_when_card_differs` (7 cases, F05);
+- `test_FR_0_5_04_changed_source_manifest_is_staged_again` (F06);
+- `test_FR_0_5_04_archive_hash_mismatch_with_intact_members_stages_nothing` (F07);
+- `test_FR_0_5_05_run_io_error_is_not_reported_as_unit_log` (F08).
+
+Changed test functions (all in files new in WP-0.5):
+- `platform_detail_lines` now resolves imports with `ast` (F03);
+- `logic_problems` now allows only the launcher's command shapes (F04);
+- `test_FR_0_5_08_launcher_cells_contain_no_logic` now pins `PY`.
+
+Every re-applied auditor break (A15-1 to A15-5, A15-7, break 5a) now fails a named test.
+
+Results:
+- Fast suite: `1523 passed, 18 deselected in 194.87s (0:03:14)`.
+- Slow CPU suite: `3 passed, 1538 deselected in 12.63s`.
+- AT-0.5-01: `result: PASS`.
+- AT-0.5-03 gate: `0 findings: OK`.

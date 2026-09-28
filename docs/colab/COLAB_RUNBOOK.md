@@ -39,7 +39,7 @@ MyDrive/AQIS_LAB/
   doctor_write_check.json   the doctor's write test, overwritten each time
 ```
 
-- **Only under `AQIS_LAB`.** The lab refuses to write anywhere on Drive outside `MyDrive/AQIS_LAB` (NFR-0.5-02).
+- **Only under `AQIS_LAB`.** The commands the launcher runs (`doctor`, `drive layout`, `run`, `unitlog`) refuse to write anywhere on Drive outside `MyDrive/AQIS_LAB` (NFR-0.5-02). The older `score`, `pack build`, `registry build` and `registry fetch` commands do not check this yet (DEBT-014, fixed in WP-0.7): do not point their `--out` or cache at Drive.
 - **Crowded folders.** Google Drive gets slow with crowded folders. Before a lab write would make a Drive folder hold more than 1,000 entries, the lab prints a `WARNING:` line and then still writes (owner decision, question 10). `drive layout` also warns about every folder already over 1,000.
 - **Local disk for computing.** Packs are copied to local disk (`/content/aqis/data/raw/aqis_lab/work/`), checked by SHA-256, and extracted there before any processing. The run folder itself (`RUN_OUT`) is on Drive, so a run survives a disconnect.
 

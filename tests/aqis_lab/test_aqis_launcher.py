@@ -38,6 +38,54 @@ def dotted(node):
     return None
 
 
+def _const(node):
+    return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
+
+
+def _name(node):
+    return node.id if isinstance(node, ast.Name) else None
+
+
+def command_shape_problems(call):
+    """WP-0.5-F04: a launcher command must be one of the launcher's own steps, in its exact shape.
+
+    Allowed: `rm -rf WORKDIR`; the one `git clone --quiet --depth 1 --branch AQIS_TAG REPO WORKDIR` (the only call
+    with env=); `pip install [--quiet] uv==X.Y.Z`; `bash aqis_lab/deploy/dev_bootstrap.sh`; and
+    `PY -m aqis_lab <registered command> <options>` whose options are literals or settings, never `-c`.
+    Keywords other than check, cwd (a setting) and the clone's env are refused, so is a command that is not a list.
+    """
+    from aqis_lab.__main__ import COMMANDS
+    if len(call.args) != 1 or not isinstance(call.args[0], ast.List):
+        return ["the command must be a literal list (no string command, no command held in a variable)"]
+    items = call.args[0].elts
+    consts = [_const(e) for e in items]
+    names = [_name(e) for e in items]
+    words = [c if c is not None else (f"${n}" if n else None) for c, n in zip(consts, names)]
+    problems = []
+    is_clone = words == ["git", "clone", "--quiet", "--depth", "1", "--branch", "$AQIS_TAG", "$REPO", "$WORKDIR"]
+    shapes = (
+        words == ["rm", "-rf", "$WORKDIR"],
+        is_clone,
+        words[:2] == ["pip", "install"] and len(words) in (3, 4) and words[2:-1] in ([], ["--quiet"])
+        and bool(re.fullmatch(r"uv==\d+\.\d+\.\d+", words[-1] or "")),
+        words == ["bash", "aqis_lab/deploy/dev_bootstrap.sh"],
+        words[:3] == ["$PY", "-m", "aqis_lab"] and len(words) >= 4 and words[3] in COMMANDS
+        and "-c" not in words[4:]
+        and all(isinstance(e, (ast.Constant, ast.Name, ast.BinOp, ast.Starred)) for e in items[4:]),
+    )
+    if not any(shapes):
+        problems.append(f"command {ast.unparse(call.args[0])} is not one of the launcher's steps")
+    for keyword in call.keywords:
+        if keyword.arg == "check":
+            continue
+        if keyword.arg == "cwd" and _name(keyword.value):
+            continue
+        if keyword.arg == "env" and is_clone:
+            continue
+        problems.append(f"keyword {keyword.arg}= is not allowed for this command")
+    return problems
+
+
 def logic_problems(source):
     """Every construct in one code cell that is not one of the launcher's allowed steps."""
     problems = []
@@ -70,6 +118,7 @@ def logic_problems(source):
                 check = [k for k in node.keywords if k.arg == "check"]
                 if not (check and isinstance(check[0].value, ast.Constant) and check[0].value.value is True):
                     problems.append(f"line {node.lineno}: subprocess.run without check=True can hide a failure")
+                problems += [f"line {node.lineno}: {p}" for p in command_shape_problems(node)]
         elif isinstance(node, ast.Attribute):
             name = dotted(node)
             if not (name in ALLOWED_ATTRIBUTES or name in ALLOWED_CALLS or node.attr in ALLOWED_METHODS):
@@ -115,6 +164,10 @@ def test_FR_0_5_08_launcher_cells_contain_no_logic():
         assert logic_problems(cell) == [], f"cell {i}: {logic_problems(cell)}"
     text = "\n".join(code_cells())
     assert text.count("drive.mount(") == 1 and text.count("dev_bootstrap.sh") == 1
+    # WP-0.5-F04: the commands trust PY, so PY is the lab environment's Python, defined once
+    py = [n for cell in code_cells() for n in ast.walk(ast.parse(cell))
+          if isinstance(n, ast.Assign) and isinstance(n.targets[0], ast.Name) and n.targets[0].id == "PY"]
+    assert len(py) == 1 and ast.unparse(py[0].value) == "WORKDIR + '/.venv/bin/python'"
     assert re.search(r'"git", "clone"', text) and text.count('"clone"') == 1
 
 
@@ -141,6 +194,31 @@ def test_FR_0_5_08_launcher_cells_contain_no_logic():
 ])
 def test_FR_0_5_08_logic_checker_rejects_each_forbidden_form(source):
     assert logic_problems(source), f"the checker let this through: {source!r}"
+
+
+# WP-0.5-F04: logic hidden inside a command. Only the launcher's own command shapes may run.
+HIDDEN_LOGIC = {
+    "bash_c": 'subprocess.run(["bash", "-c", "if [ -d data/raw ]; then rm -rf data/raw; fi"], cwd=WORKDIR, check=True)',
+    "python_c": 'subprocess.run(["python", "-c", "print(1)"], check=True)',
+    "venv_python_c": 'subprocess.run([PY, "-c", "import os"], cwd=WORKDIR, check=True)',
+    "string_shell": 'subprocess.run("ls -la", shell=True, check=True)',
+    "shell_keyword": 'subprocess.run(["rm", "-rf", WORKDIR], shell=True, check=True)',
+    "other_program": 'subprocess.run(["ls", "/content"], check=True)',
+    "rm_elsewhere": 'subprocess.run(["rm", "-rf", "/content/drive"], check=True)',
+    "pip_other_package": 'subprocess.run(["pip", "install", "requests"], check=True)',
+    "venv_pip": 'subprocess.run([PY, "-m", "pip", "install", "x"], cwd=WORKDIR, check=True)',
+    "unknown_lab_command": 'subprocess.run([PY, "-m", "aqis_lab", "nosuch"], cwd=WORKDIR, check=True)',
+    "clone_other_branch": 'subprocess.run(["git", "clone", "--branch", "main", REPO, WORKDIR], check=True)',
+    "other_script": 'subprocess.run(["bash", "other.sh"], cwd=WORKDIR, check=True)',
+    "env_outside_clone": 'subprocess.run(["rm", "-rf", WORKDIR], env=dict(os.environ), check=True)',
+    "command_in_variable": 'subprocess.run(RUN_ARGS, check=True)',
+}
+
+
+@pytest.mark.parametrize("name", sorted(HIDDEN_LOGIC))
+def test_FR_0_5_08_logic_checker_rejects_logic_inside_commands(name):
+    source = "import os\nimport subprocess\n" + HIDDEN_LOGIC[name] + "\n"
+    assert logic_problems(source), f"the checker let this through: {HIDDEN_LOGIC[name]!r}"
 
 
 def test_FR_0_5_08_token_only_reaches_the_clone_command():

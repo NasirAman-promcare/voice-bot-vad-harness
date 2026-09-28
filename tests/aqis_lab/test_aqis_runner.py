@@ -332,3 +332,52 @@ def test_FR_0_5_05_runner_doc_matches_code(tmp_path, work):
     plan = json.loads((out / store.PLAN).read_text(encoding="utf-8"))
     plan_section = doc[doc.index("## Shard plan"):doc.index("## Run folder")]
     assert all(f"`{k}`" in plan_section for k in plan)
+
+
+# WP-0.5-F05: owner decision (question 4 (b)): only machine.cpu_model may differ on resume; every other difference
+# is refused, so shards from another Python, OS, architecture, commit, lock or pack never mix under one run card.
+REFUSED_CHANGES = {
+    "/machine/python_version": lambda c: c["machine"].update(python_version="3.12.9"),
+    "/machine/os": lambda c: c["machine"].update(os="Ubuntu 22.04.4 LTS"),
+    "/machine/architecture": lambda c: c["machine"].update(architecture="aarch64"),
+    "/git/commit": lambda c: c["git"].update(commit="0" * 40),
+    "/git/dirty": lambda c: c["git"].update(dirty=not c["git"]["dirty"]),
+    "/lock/sha256": lambda c: c["lock"].update(sha256="1" * 64),
+    "/pack/sha256": lambda c: c["pack"].update(sha256="2" * 64),
+}
+
+
+@pytest.mark.parametrize("pointer", sorted(REFUSED_CHANGES))
+def test_FR_0_5_05_resume_refused_when_card_differs(tmp_path, work, pointer):
+    out = tmp_path / "run"
+    run(opts(out, work, shard_clips=10, max_shards=2))
+    _edit_card(out, REFUSED_CHANGES[pointer])
+    before = {p.name: p.read_bytes() for p in (out / "shards").iterdir()}
+    with pytest.raises(RunInputError) as err:
+        run(opts(out, work, shard_clips=10))
+    assert pointer in str(err.value) and "--from-scratch" in str(err.value)
+    assert {p.name: p.read_bytes() for p in (out / "shards").iterdir()} == before, "nothing was computed"
+
+
+def _cli(out, work, *extra):
+    return subprocess.run([sys.executable, "-m", "aqis_lab", "run", "--task", "clip-stats", "--pack", str(SMOKE_PACK),
+                           "--out", str(out), "--seed", "0", "--work-dir", str(work), "--shard-clips", "10", *extra],
+                          cwd=ROOT, capture_output=True, text=True, timeout=600)
+
+
+def test_FR_0_5_05_run_io_error_is_not_reported_as_unit_log(tmp_path, work):
+    # WP-0.5-F08: a failed write in the run folder names the run folder; only unit-log failures name the unit log
+    out = tmp_path / "run"
+    assert _cli(out, work, "--max-shards", "2").returncode == 0
+    (out / "results.jsonl").mkdir()                           # the final results file cannot be written
+    proc = _cli(out, work)
+    assert proc.returncode == 2
+    assert proc.stderr.startswith("ERROR: cannot write the run folder") and "results.jsonl" in proc.stderr
+    assert "unit log" not in proc.stderr
+    from aqis_runner_testutil import stand_in_drive
+    mount = stand_in_drive(tmp_path / "drive")
+    (mount / "MyDrive" / "AQIS_LAB" / "logs").mkdir()
+    (mount / "MyDrive" / "AQIS_LAB" / "logs" / "units_open_session.json").write_text("{not json", encoding="utf-8")
+    proc = _cli(tmp_path / "run-2", work, "--drive-mount", str(mount))
+    assert proc.returncode == 2 and proc.stderr.startswith("ERROR: unit log (last-seen time):")
+    assert "units_open_session.json" in proc.stderr

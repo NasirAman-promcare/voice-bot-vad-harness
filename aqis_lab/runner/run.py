@@ -1,7 +1,7 @@
 """Run a task over a staged pack in resumable shards: skip finished shards, compute the rest, join the results.
 
 CAPABILITIES:
-  CAP-RUN-007: run() stages the pack (copy then compute), builds and validates the run card and the shard plan, and in a new run folder writes both; in an existing run folder it resumes only when the stored card equals the rebuilt one except created_utc, notes and machine.cpu_model (owner decision, question 4 (b)) and the stored plan equals the rebuilt plan, else it refuses and names --from-scratch; --from-scratch renames the old folder to <out>.superseded-<UTC> (never deletes) and starts again [tests: test_FR_0_5_05_restart_skips_finished_shards, test_FR_0_5_05_starting_over_requires_from_scratch, test_FR_0_5_05_from_scratch_keeps_old_run_folder, test_FR_0_5_05_changed_card_or_plan_refused, test_FR_0_5_05_resume_rule_for_other_cpu_model, test_FR_0_5_05_run_card_valid_and_traceable]
+  CAP-RUN-007: run() stages the pack (copy then compute), builds and validates the run card and the shard plan, and in a new run folder writes both; in an existing run folder it resumes only when the stored card equals the rebuilt one except created_utc, notes and machine.cpu_model (owner decision, question 4 (b)) and the stored plan equals the rebuilt plan, else it refuses and names --from-scratch; --from-scratch renames the old folder to <out>.superseded-<UTC> (never deletes) and starts again [tests: test_FR_0_5_05_restart_skips_finished_shards, test_FR_0_5_05_starting_over_requires_from_scratch, test_FR_0_5_05_from_scratch_keeps_old_run_folder, test_FR_0_5_05_changed_card_or_plan_refused, test_FR_0_5_05_resume_rule_for_other_cpu_model, test_FR_0_5_05_run_card_valid_and_traceable, test_FR_0_5_05_resume_refused_when_card_differs]
   CAP-RUN-008: each shard is skipped when shard_finished() proves it finished, else computed clip by clip into canonical JSON rows carrying run_card_id and clip_id and written with its marker; a clip that fails stops the run (RunFailure, no marker for that shard, an ERROR line in runner.log); --max-shards N stops cleanly after N computed shards; when every shard is finished, results.jsonl is the shards' results joined in order [tests: test_FR_0_5_05_shard_results_written_atomically_with_marker, test_FR_0_5_05_result_rows_carry_run_card_and_clip_ids, test_FR_0_5_05_clip_failure_stops_run_without_marker, test_FR_0_5_05_max_shards_stops_cleanly, test_FR_0_5_06_kill_and_resume_byte_identical_without_recomputing, test_FR_0_5_04_run_reads_only_local_extracted_clips]
 INPUTS AND OUTPUTS: RunOptions in; the run folder (docs/runner/RUNNER.md), log lines on stdout and a RunOutcome
   out; RunInputError (usage or input problem) or RunFailure (a clip failed).
@@ -15,6 +15,7 @@ NOT IN SCOPE:
   - The event log (WP-0.7 adapters; owner decision, question 14); the results store (WP-0.6).
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-05 created.
+  2026-09-28 WP-0.5 round 2 F05: header lists the resume-refusal test (header only).
 """
 import hashlib
 import json

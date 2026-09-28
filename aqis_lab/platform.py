@@ -3,7 +3,7 @@
 CAPABILITIES:
   CAP-PLAT-001: detect_platform() names the platform (cloud-vm, colab, kaggle, oracle) from exactly one kind of positive signal; no signal, or signals for two platforms, is a PlatformError listing what it looked for [tests: test_FR_0_5_01_detects_each_platform_from_its_signal, test_FR_0_5_01_unknown_platform_is_an_error, test_FR_0_5_01_conflicting_signals_are_an_error]
   CAP-PLAT-002: machine_info()/machine_block() give the run card machine block: platform, GPU type (from nvidia-smi when present, else null; a failing nvidia-smi is an error), CPU model (/proc/cpuinfo, else lscpu), architecture, OS (PRETTY_NAME) and Python version; detected once per process on the real system [tests: test_FR_0_5_01_gpu_type_from_nvidia_smi_else_null, test_FR_0_5_01_failing_nvidia_smi_is_an_error, test_FR_0_5_01_cpu_model_from_cpuinfo_or_lscpu, test_FR_0_5_01_os_from_os_release, test_FR_0_5_01_real_machine_facts, test_FR_0_5_01_machine_block_valid_in_run_card, test_FR_0_5_01_colab_runtime_detected]
-  CAP-PLAT-003: memory_available_bytes(), disk_free_bytes() and drive_mounts() give the RAM, disk and Google Drive mount facts the doctor and the Drive guard use [tests: test_FR_0_5_01_memory_disk_and_mount_facts, test_FR_0_5_01_platform_details_only_from_platform_module]
+  CAP-PLAT-003: memory_available_bytes(), disk_free_bytes() and drive_mounts() give the RAM, disk and Google Drive mount facts the doctor and the Drive guard use [tests: test_FR_0_5_01_memory_disk_and_mount_facts, test_FR_0_5_01_platform_details_only_from_platform_module, test_FR_0_5_01_platform_scan_resolves_imports]
 INPUTS AND OUTPUTS: a SystemView (environment variables, a root folder for the operating-system files, a PATH for
   commands; the real system by default) in; MachineInfo, dicts and numbers out; PlatformError on failure.
 CONTRACTS: run-card v1 `machine` block (docs/contracts/RUN_CARD.md).
@@ -16,6 +16,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-01 created.
   2026-09-28 WP-0.5 NFR-0.5-01: SystemView.real() is built once per process.
+  2026-09-28 WP-0.5 round 2 F03: header lists the import-resolving scan test (header only).
 """
 import functools
 import os
