@@ -100,3 +100,72 @@ FAILED tests/aqis_lab/test_aqis_drive.py::test_FR_0_5_03_layout_reports_crowded_
 - FR-0.5-02 and FR-0.5-03 are committed together: the FR-0.5-03 crowding warning sits inside the FR-0.5-02 write functions of `aqis_lab/drive.py`.
 - Fast suite after both: `1409 passed, 16 deselected in 206.81s (0:03:26)`.
 - Status: DONE
+
+### FR-0.5-04 — Copy then compute
+- Tests (`tests/aqis_lab/test_aqis_stage.py`):
+  - `test_FR_0_5_04_stages_repository_pack_to_local_disk`;
+  - `test_FR_0_5_04_stages_pack_from_drive_folder` (Drive test double);
+  - `test_FR_0_5_04_rejects_changed_archive_and_stages_nothing`;
+  - `test_FR_0_5_04_interrupted_staging_is_redone`;
+  - `test_FR_0_5_04_restaging_a_staged_pack_copies_nothing`;
+  - `test_FR_0_5_04_run_reads_only_local_extracted_clips` (the source archives are overwritten after staging; the run still gives the reference results);
+  - `test_FR_0_5_04_work_dir_on_drive_is_refused`;
+  - `test_FR_0_5_04_changed_extracted_clip_stops_the_run`.
+- Test-first: before `aqis_lab/runner/` existed, collection failed with `ModuleNotFoundError: No module named 'aqis_lab.runner'` (this file and the FR-0.5-05 and FR-0.5-06 files).
+- Code: `aqis_lab/runner/stage.py`, reusing `verify_pack` (WP-0.4, unchanged) on the local copy before anything is extracted.
+- Status: DONE (fast command output under FR-0.5-06)
+
+### FR-0.5-05 — Resumable runner
+- Tests (`tests/aqis_lab/test_aqis_runner.py`):
+  - `test_FR_0_5_05_default_shard_is_at_most_30_minutes_of_expected_work` (expected shards computed in the test by its own greedy rule);
+  - `test_FR_0_5_05_shard_size_is_configurable`;
+  - `test_FR_0_5_05_shard_results_written_atomically_with_marker`;
+  - `test_FR_0_5_05_results_without_marker_not_finished` (must-catch 3);
+  - `test_FR_0_5_05_marker_with_wrong_hash_or_plan_not_finished` (4 cases, must-catch 3);
+  - `test_FR_0_5_05_restart_skips_finished_shards`;
+  - `test_FR_0_5_05_starting_over_requires_from_scratch`, `test_FR_0_5_05_from_scratch_keeps_old_run_folder`;
+  - `test_FR_0_5_05_changed_card_or_plan_refused`;
+  - `test_FR_0_5_05_resume_rule_for_other_cpu_model` (question 4 (b));
+  - `test_FR_0_5_05_run_card_valid_and_traceable` (expected pack hash, lock hash and git commit computed in the test);
+  - `test_FR_0_5_05_result_rows_carry_run_card_and_clip_ids` (clip statistics recomputed in the test with `wave` and `array`);
+  - `test_FR_0_5_05_clip_failure_stops_run_without_marker`;
+  - `test_FR_0_5_05_max_shards_stops_cleanly` (question 5);
+  - `test_FR_0_5_05_runner_doc_matches_code`.
+- Code: `aqis_lab/runner/tasks.py`, `card.py`, `plan.py`, `store.py`, `run.py`, `aqis_lab/commands/run.py`, `docs/runner/RUNNER.md`. Existing file changed: `aqis_lab/__main__.py`, one `COMMANDS` entry and one CHANGE LOG line.
+- Expected-work ratio of `clip-stats`, measured with the script in `docs/runner/RUNNER.md` ("Expected work"):
+```text
+audio 390.935 s; passes [0.0638, 0.0697, 0.0652, 0.0637, 0.0661, 0.0709, 0.0735]; median 0.0661 s; ratio 0.000169
+```
+- Catches while building:
+  - `test_FR_0_5_05_runner_doc_matches_code` found that `RUNNER.md` did not name the plan fields `task` and `shards`; the doc was fixed.
+  - The test's own regular expression first left out digits (`results_sha256`) and was corrected.
+- Plan acceptance command, the same run twice (`--out` and `--work-dir` in the scratchpad; machine JSON shortened to `{...}`):
+```text
+2026-09-28T09:22:22.946805Z run complete: 6 shard(s), 0 skipped and 6 computed in this session; results.jsonl sha256 5ac0fa121384d459d6d3155b25302047c5f4f2e8d5583e6669ec5b0b78df21cc (60 rows)
+complete: 6 shard(s) computed, 0 skipped, 0 remaining
+exit 0
+2026-09-28T09:22:23.497769Z session 2 start: task clip-stats 1.0; pack smoke 1.0.0; run card d344a4efd7c34463a4b59bef8697f19c7f6b75fb866c1d3169f5c3dec6bde8aa; plan 2c89d1e222459c6250b4bb47ea038788e1a1510df1a4bec880f9865b2b4f86f2 with 6 shard(s); machine {...}
+2026-09-28T09:22:23.499822Z shard 00000 skipped: finished (marker verified, results sha256 e2a0a63fa39a09023a66612ca3c7a81bf2ec5d0043cc0c7a5919b344f50520c7, 10 rows)
+…
+2026-09-28T09:22:23.507217Z shard 00005 skipped: finished (marker verified, results sha256 ec9f595ecd755f2121666cfa9680249c82910dc1f8ee7502251cf0408c098fca, 10 rows)
+2026-09-28T09:22:23.511668Z run complete: 6 shard(s), 6 skipped and 0 computed in this session; results.jsonl sha256 5ac0fa121384d459d6d3155b25302047c5f4f2e8d5583e6669ec5b0b78df21cc (60 rows)
+complete: 0 shard(s) computed, 6 skipped, 0 remaining
+exit 0
+```
+- The plan's wording "`6 shard(s) skipped`" appears in the log as `6 skipped and 0 computed`, and as one `skipped` line per shard.
+- Status: DONE
+
+### FR-0.5-06 — Kill and resume
+- Tests (`tests/aqis_lab/test_aqis_runner_resume.py`):
+  - `test_FR_0_5_06_kill_and_resume_byte_identical_without_recomputing` (must-catch 2). The first clip of shard 3 becomes a named pipe, the real run is SIGKILLed once exactly 3 markers exist, then it is resumed.
+    - Asserted: `results.jsonl` is byte-identical to an uninterrupted run's.
+    - Asserted: the 6 files of shards 0 to 2 keep their bytes, inode and mtime.
+    - Asserted: the second session's log skips shards 0 to 2 and starts shards 3 to 5.
+  - `test_FR_0_5_06_kill_during_result_write_never_counts`: a half-written `.partial` file, a results file without a marker, and a deleted `results.jsonl`.
+- Repeated 5 times to check it is deterministic: `2 passed` each time (4.12 to 5.24 s).
+- Command: the fast command with `-k "FR_0_5_04 or FR_0_5_05 or FR_0_5_06"`:
+```text
+28 passed, 1425 deselected in 16.38s
+```
+- Fast suite after FR-0.5-04 to FR-0.5-06: `1437 passed, 16 deselected in 212.38s (0:03:32)`.
+- Status: DONE
