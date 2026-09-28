@@ -366,3 +366,16 @@ The tag `aqis-lab-wp-0.5-colab-1` is created and pushed on the audited commit on
 
 ## audit-allow lines
 None.
+
+## CI
+Workflow `aqis-lab-ci` on commit `879bf4cc5f823785ea44443132a706d7166a882d` (read with the GitHub Actions API):
+
+| Run | Event | Job | Conclusion | Steps |
+| --- | --- | --- | --- | --- |
+| 36407566033 | push | `lab` | success | fast lab test suite success; audit gate (`--base origin/main`) success |
+| 36407566033 | push | `harness-regression` | success | provisioning, harness tests and regression check against the baseline all success |
+| 36407605458 | pull_request (PR #5) | `lab` | success | fast lab test suite success; work package ID from the title (`WP-0.5`) success; audit gate (`--wp WP-0.5`) success |
+| 36407605458 | pull_request (PR #5) | `harness-regression` | success | provisioning, harness tests and regression check all success |
+
+Every earlier push of this WP was green as well (runs 198 to 201).
+Pull request: https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/5
