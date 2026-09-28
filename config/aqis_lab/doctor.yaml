@@ -1,0 +1,16 @@
+# Doctor minimums per target (owner-editable). GB means 1,000,000,000 bytes.
+# free_disk_gb: free space on the file system of the local work folder (doctor --work-dir).
+# available_ram_gb: MemAvailable from /proc/meminfo.
+# Owner decision: docs/approvals/WP-0.5.md, question 8 (a). Keep docs/doctor/DOCTOR.md and
+# docs/colab/COLAB_RUNBOOK.md in step (test_FR_0_5_02_minimums_documented_equal_config).
+schema_version: "1.0"
+minimums:
+  cloud:
+    free_disk_gb: 10
+    available_ram_gb: 4
+  colab:
+    free_disk_gb: 10
+    available_ram_gb: 4
+  oracle:
+    free_disk_gb: 10
+    available_ram_gb: 4

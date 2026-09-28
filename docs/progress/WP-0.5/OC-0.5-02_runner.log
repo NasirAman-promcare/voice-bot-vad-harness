@@ -1,0 +1,18 @@
+2026-09-28T14:38:49.143562Z session 1 start: task clip-stats 1.0; pack smoke 1.0.0; run card 60ed6f22f2956b16dea6171b27add252ffae8010832420e79fbabf887da980dc; plan 53ad14194a1914311593906bf1f5a19effdb803d67965c016ffc058ecd806f09 with 6 shard(s); machine {"architecture": "x86_64", "cpu_model": "Intel(R) Xeon(R) CPU @ 2.20GHz", "gpu": null, "os": "Ubuntu 24.04.5 LTS", "platform": "colab", "python_version": "3.13.15"}
+2026-09-28T14:38:49.170495Z shard 00000 started (10 clips)
+2026-09-28T14:38:49.250882Z shard 00000 finished (10 rows, results sha256 ba27592f319760788b8880f74deb790d2b9970ea78a30bab478cc0716c3cab21, 0.031 s)
+2026-09-28T14:38:49.259491Z shard 00001 started (10 clips)
+2026-09-28T14:38:49.318306Z shard 00001 finished (10 rows, results sha256 eb2872352a624d3f251910ccdc7ffba5829b8cc6732dd4ab9b09d1f6de80009d, 0.020 s)
+2026-09-28T14:38:49.326047Z stopped after 2 computed shard(s) (--max-shards 2); 4 shard(s) remain; run the same command again to continue
+2026-09-28T14:51:26.162391Z session 2 start: task clip-stats 1.0; pack smoke 1.0.0; run card 60ed6f22f2956b16dea6171b27add252ffae8010832420e79fbabf887da980dc; plan 53ad14194a1914311593906bf1f5a19effdb803d67965c016ffc058ecd806f09 with 6 shard(s); machine {"architecture": "x86_64", "cpu_model": "Intel(R) Xeon(R) CPU @ 2.20GHz", "gpu": null, "os": "Ubuntu 24.04.5 LTS", "platform": "colab", "python_version": "3.13.15"}
+2026-09-28T14:51:27.474558Z shard 00000 skipped: finished (marker verified, results sha256 ba27592f319760788b8880f74deb790d2b9970ea78a30bab478cc0716c3cab21, 10 rows)
+2026-09-28T14:51:28.515706Z shard 00001 skipped: finished (marker verified, results sha256 eb2872352a624d3f251910ccdc7ffba5829b8cc6732dd4ab9b09d1f6de80009d, 10 rows)
+2026-09-28T14:51:28.527676Z shard 00002 started (10 clips)
+2026-09-28T14:51:28.614815Z shard 00002 finished (10 rows, results sha256 7ad534dc9df79a61164dfb9688ab485fbcf55ca3321e3b04d719eb40a6e10392, 0.021 s)
+2026-09-28T14:51:29.166605Z shard 00003 started (10 clips)
+2026-09-28T14:51:29.256407Z shard 00003 finished (10 rows, results sha256 c52dc5a3968020b131c455e3c19bdaa422595ded37680fa1d74e51accccb1464, 0.031 s)
+2026-09-28T14:51:29.270480Z shard 00004 started (10 clips)
+2026-09-28T14:51:29.364338Z shard 00004 finished (10 rows, results sha256 d1377bcbcef1858e01b9887cfd4ed712c408144106331cfc6d1c24bcba5fb132, 0.041 s)
+2026-09-28T14:51:29.374245Z shard 00005 started (10 clips)
+2026-09-28T14:51:29.456523Z shard 00005 finished (10 rows, results sha256 327a75795aa26fcc7cbd073b62d6c0c3455c791ed1811d9b24c599b11f8c0d6c, 0.026 s)
+2026-09-28T14:51:29.547864Z run complete: 6 shard(s), 2 skipped and 4 computed in this session; results.jsonl sha256 41cb04459db05dccf8e3e68e70ba38aac8e27ecf76b91ebb5f026da94cc9c006 (60 rows)

@@ -167,3 +167,51 @@ Everything else in round 6 is green locally (fast `204 passed` with git-lfs 3.4.
 **Owner answer:** Option 1 (2026-09-26; `docs/approvals/WP-0.0.md` on `main`, `8f11ab0`): "In test_FR_0_0_12_root_installs_without_sudo, use pytest monkeypatch for os.geteuid to return 0. Include minor fixes F45 and F46."
 
 **Resolution:** the test now replaces `os.geteuid` with a function returning 0 through `monkeypatch`, inside the test only, and runs `Provisioner.step_system()` in-process with the stand-in commands on PATH. It passes here and fails under mutation P12 (`if os.geteuid() != 0:` changed to `if True:`). CI results are in EVIDENCE.md, "BLK-007 decision and minor fixes F45 and F46".
+
+## BLK-008 — NFR-0.5-01 (runner overhead under 5 %) cannot be met on the sub-second WP-0.5 workload
+STATUS: RESOLVED
+WP: WP-0.5  ·  Raised: 2026-09-28  ·  Session: https://claude.ai/code/session_016NHQnTY3XyGxfsvGCp1n9y
+
+**What I need:** your decision on how NFR-0.5-01 is measured or when it applies.
+
+**Why:**
+- NFR-0.5-01 asks for "runner overhead under 5 % against a direct loop on the smoke pack". Before any model exists (WP-0.7), the only real work on the smoke pack is the `clip-stats` task (question 2 (a)), which takes about 70 ms for all 60 clips.
+- The runner must do some fixed work per run, whatever the size of the run:
+  - build and validate the run card, including two `git` calls for the commit and dirty flag;
+  - check the staged pack and build the shard plan;
+  - write card, plan, shard results, marker, `results.jsonl` and log lines atomically, with fsync.
+
+  That costs about 25 ms, and each extra shard about 6 ms. 5 % of 70 ms is 3.5 ms, less than the two `git` calls alone.
+- The plan listed this as risk 1 and promised to stop and ask rather than slow the task, drop fsyncs or checks, or change the comparison.
+
+**What I tried:**
+- Measured on this VM: same process, same staged pack, fsync on in both loops, medians of alternating repetitions.
+  - First build: overhead **91.8 %** (72.9 ms direct, 139.8 ms runner).
+- A profile showed three real inefficiencies in my own new code. I removed them without dropping any check (commit `67f61cf`):
+  - the system view was rebuilt on every call;
+  - an identical staged manifest was re-validated on every run;
+  - `git_state` made four git calls instead of two.
+- Now:
+  - overhead **33.7 %** with the default single shard (75.4 ms direct, 100.8 ms runner);
+  - fixed about 25.4 ms per run, about 6.2 ms per extra shard (6 shards: 137.7 ms; 60 shards: 466.8 ms).
+- Full numbers and commands: `docs/progress/WP-0.5/EVIDENCE.md`, "NFR-0.5-01".
+
+**Options:**
+1. **(Recommended) Measure NFR-0.5-01 in WP-0.7 with Vosk batch on the smoke pack**, the workload the requirement is really about.
+   - That is tens of seconds of real work, so the runner's ~25 ms plus ~6 ms per shard is far below 5 %. The test `test_NFR_0_5_01_runner_overhead_under_5_percent` (marked `slow`) then lands in WP-0.7.
+   - Here, the measured numbers stay in `EVIDENCE.md`, and NFR-0.5-01 is recorded in `docs/progress/DEBT.md` with target WP-0.7.
+   - Trade-off: the WP-0.5 audit cannot check the 5 % figure; it checks the recorded measurements instead.
+2. **Change the requirement to an absolute overhead limit in WP-0.5**, for example "at most 50 ms fixed per run and 10 ms per shard on the cloud VM". The `slow` test measures against those limits on the smoke pack now.
+   - Trade-off: it is a different requirement, with figures you choose. 5 % of a 30-minute shard is 90 s, so any such limit is loose for real runs.
+3. **Leave NFR-0.5-01 as written for WP-0.5.** WP-0.5 then cannot pass: I found no honest way to reach 5 % on a 70 ms workload.
+   - Removing the run card's `git` provenance, the fsyncs or the validation would break other requirements (traceability E3, atomic markers).
+   - Making the task slower on purpose would be gaming the test.
+
+**Paused until answered:**
+- NFR-0.5-01's test and final evidence;
+- marking WP-0.5 `READY-FOR-AUDIT`;
+- opening the pull request.
+
+**Not dependent on the answer:** NFR-0.5-02 (Drive write guard tests), the DEBT-009 and DEBT-011 tests (question 13), the must-catch proof and the acceptance commands. I will continue them only if you say so.
+
+**Owner answer:** Option 1 (session chat and `docs/approvals/WP-0.5.md` on `main`, 2026-09-28): the NFR-0.5-01 percentage target is deferred to WP-0.7 (Vosk on the smoke pack) and recorded as DEBT-013 in `docs/progress/DEBT.md`; WP-0.5 records the measured fixed overhead (about 25 ms per run, about 6 ms per extra shard) in `EVIDENCE.md`. The owner also approved continuing NFR-0.5-02, the DEBT-009 and DEBT-011 tests, the must-catch proof, the acceptance runs and the pull request.

@@ -1,0 +1,19 @@
+# Colab compute-unit rates per runtime type (owner-editable). Used by `python -m aqis_lab unitlog` (FR-0.5-07).
+# runtime: "cpu" for a runtime without a GPU, else the GPU type exactly as aqis_lab.platform reports it
+#          (nvidia-smi's name, for example "Tesla T4").
+# units_per_hour: a positive decimal, written as a string so it is read exactly.
+# Initial rates: the Build Plan's figures, given in docs/approvals/WP-0.5.md (owner, 2026-09-28).
+schema_version: "1.0"
+rates:
+  - runtime: cpu
+    units_per_hour: "0.08"
+    source: "AQIS Test Lab Build Plan (Colab GPUs features and pricing, March 2026)"
+  - runtime: Tesla T4
+    units_per_hour: "1.19"
+    source: "AQIS Test Lab Build Plan (Colab GPUs features and pricing, March 2026)"
+  - runtime: NVIDIA L4
+    units_per_hour: "1.71"
+    source: "AQIS Test Lab Build Plan (Colab GPUs features and pricing, March 2026)"
+  - runtime: NVIDIA A100-SXM4-40GB
+    units_per_hour: "5.40"
+    source: "AQIS Test Lab Build Plan (Colab GPUs features and pricing, March 2026)"
