@@ -327,7 +327,14 @@ exit 0
 The audit gate with `--wp WP-0.5`: see "Audit gate" below.
 
 ## Audit gate
-Recorded after the final commit (below).
+`git fetch origin main && .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.5` (on commit `7fbb3bd`):
+```text
+aqis-audit-gate: base origin/main (merge-base 408d7ad91a57), head 7fbb3bd09338, approvals origin/main 408d7ad91a57, wp WP-0.5
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.6 s)
+```
 
 ## Owner-run checks
 | Check | Where | Command | Expected output | Result report |
