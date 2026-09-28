@@ -14,6 +14,8 @@ CHANGE LOG:
   2026-09-27 WP-0.3 FR-0.3-06: `score` command registered in COMMANDS.
   2026-09-27 WP-0.4 FR-0.4-01: `registry` command registered in COMMANDS.
   2026-09-27 WP-0.4 FR-0.4-05: `pack` command registered in COMMANDS.
+  2026-09-28 WP-0.5 FR-0.5-02: `doctor` command registered in COMMANDS.
+  2026-09-28 WP-0.5 FR-0.5-03: `drive` command registered in COMMANDS.
 """
 import argparse
 import importlib
@@ -26,6 +28,8 @@ COMMANDS = {
     "score": ("aqis_lab.commands.score", "score transcripts: corpus WER and CER, Parquet and CSV score table"),
     "registry": ("aqis_lab.commands.registry", "fetch source datasets, build and validate the source registry"),
     "pack": ("aqis_lab.commands.pack", "build a test pack from a pack spec, or verify a built pack"),
+    "doctor": ("aqis_lab.commands.doctor", "check Python, lock, disk, RAM, GPU and Drive; PASS/FAIL report"),
+    "drive": ("aqis_lab.commands.drive", "create the Google Drive AQIS_LAB folder layout; report crowded folders"),
 }
 
 

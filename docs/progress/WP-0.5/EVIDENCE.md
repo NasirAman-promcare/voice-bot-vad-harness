@@ -50,3 +50,53 @@ All test outputs below are real excerpts from this session. Fast command, per re
   - with the file set aside: `tests/aqis_lab/test_aqis_markers.py`, `5 passed in 4.63s`.
 - Registry: rows CAP-PLAT-001 to CAP-PLAT-003. The first run caught a header/registry mismatch (`test_FR_0_0_08_module_headers_match_registry`); the header now lists the Colab test too.
 - Status: DONE
+
+### FR-0.5-02 — Doctor
+- Tests (`tests/aqis_lab/test_aqis_doctor.py`):
+  - `test_FR_0_5_02_cloud_doctor_prints_table_and_writes_json`;
+  - `test_FR_0_5_02_fails_on_python_version_other_than_probe`, `test_FR_0_5_02_fails_on_package_version_other_than_lock`, `test_FR_0_5_02_fails_on_package_missing_from_lock`, `test_FR_0_5_02_fails_on_lock_package_not_installed` (must-catch 1);
+  - `test_FR_0_5_02_fails_below_disk_minimum`, `test_FR_0_5_02_fails_below_ram_minimum`;
+  - `test_FR_0_5_02_gpu_skipped_without_expect_gpu`, `test_FR_0_5_02_expect_gpu_fails_without_gpu`, `test_FR_0_5_02_expect_gpu_passes_with_gpu`;
+  - `test_FR_0_5_02_fails_when_target_is_not_this_platform`;
+  - `test_FR_0_5_02_colab_fails_when_drive_not_mounted`, `test_FR_0_5_02_colab_fails_when_aqis_lab_missing`, `test_FR_0_5_02_colab_fails_when_aqis_lab_read_only` (must-catch 1; run as root under `setpriv --bounding-set -dac_override,-dac_read_search`, so the folder's mode applies), `test_FR_0_5_02_colab_drive_checks_pass_when_writable`;
+  - `test_FR_0_5_02_any_fail_exits_non_zero`, `test_FR_0_5_02_minimums_documented_equal_config`.
+- Colab-only test: `test_FR_0_5_02_colab_doctor_passes_on_colab` (marker `colab`, OC-0.5-01).
+- Test-first: before `aqis_lab/doctor.py` existed, collection of the test file failed (`1 error during collection`), and the whole fast suite stopped with `Interrupted: 1 error during collection`.
+- New files:
+  - `aqis_lab/doctor.py`, `aqis_lab/commands/doctor.py`;
+  - `aqis_lab/drive.py`: the write guard and atomic writes that every lab write uses;
+  - `config/aqis_lab/doctor.yaml`: minimums of 10 GB disk and 4 GB RAM on every target, owner decision, question 8 (a);
+  - `docs/doctor/DOCTOR.md`.
+- Existing file changed: `aqis_lab/__main__.py`, one `COMMANDS` entry and one CHANGE LOG line (see "Changes to existing files" below).
+- Plan detail made concrete: the Drive write check file is `AQIS_LAB/doctor_write_check.json`, at the top of `AQIS_LAB` (the plan said `logs/`). The check then does not depend on `drive layout` having run first. It is still one reused file that is never deleted.
+- Command: the fast command with `-k FR_0_5_02` → `17 passed, 1408 deselected in 4.02s`.
+- AT-0.5-01 run (see "Acceptance commands"): exit 0; every row PASS, `gpu` SKIP.
+- Two real catches while building:
+  - The first registry row for the doctor command held `\|` inside a cell, which the gate reads as a cell border (E2, caught by `test_FR_0_0_08_repository_registry_is_consistent`).
+  - My must-catch 5 scan caught the words `nvidia-smi` and `COLAB_` (in a doc file name) in the new modules. The module text was reworded; the scan was not loosened.
+- Status: DONE
+
+### FR-0.5-03 — Drive layout
+- Tests (`tests/aqis_lab/test_aqis_drive.py`; Google Drive replaced by a folder and a generated `fuse.drive` mountinfo line):
+  - `test_FR_0_5_03_creates_missing_layout_folders`;
+  - `test_FR_0_5_03_never_deletes_or_changes_existing_content` (full snapshot of names, modes and bytes before and after);
+  - `test_FR_0_5_03_refuses_when_aqis_lab_missing`;
+  - `test_FR_0_5_03_layout_name_that_is_a_file_is_an_error`;
+  - `test_FR_0_5_03_warns_before_folder_exceeds_1000_items` (boundary: 999 → 1,000 entries, no warning; 1,000 → 1,001, one warning and the file is still written; replacing a file, a folder on local disk: no warning);
+  - `test_FR_0_5_03_layout_reports_crowded_folders`.
+- Code: `ensure_layout`, `crowded_folders` and `warn_if_crowded` in `aqis_lab/drive.py`. `warn_if_crowded` is called by `write_bytes`, `append_bytes` and `make_dirs` before they add an entry. `aqis_lab/commands/drive.py` provides `drive layout`.
+- **Order of work (stated plainly):** I wrote these tests before the code, but first ran them after implementing. To show they fail for the right reason, I ran them against a scratch copy of the tree with `ensure_layout`, `LayoutResult`, `crowded_folders` and the `warn_if_crowded` calls removed:
+```text
+E       AttributeError: module 'aqis_lab.drive' has no attribute 'ensure_layout'
+FAILED tests/aqis_lab/test_aqis_drive.py::test_FR_0_5_03_creates_missing_layout_folders
+FAILED tests/aqis_lab/test_aqis_drive.py::test_FR_0_5_03_never_deletes_or_changes_existing_content
+FAILED tests/aqis_lab/test_aqis_drive.py::test_FR_0_5_03_refuses_when_aqis_lab_missing
+FAILED tests/aqis_lab/test_aqis_drive.py::test_FR_0_5_03_layout_name_that_is_a_file_is_an_error
+FAILED tests/aqis_lab/test_aqis_drive.py::test_FR_0_5_03_warns_before_folder_exceeds_1000_items
+FAILED tests/aqis_lab/test_aqis_drive.py::test_FR_0_5_03_layout_reports_crowded_folders
+6 failed in 0.78s
+```
+- Command: the fast command with `-k "FR_0_5_02 or FR_0_5_03"` → `23 passed, 1402 deselected in 5.17s`.
+- FR-0.5-02 and FR-0.5-03 are committed together: the FR-0.5-03 crowding warning sits inside the FR-0.5-02 write functions of `aqis_lab/drive.py`.
+- Fast suite after both: `1409 passed, 16 deselected in 206.81s (0:03:26)`.
+- Status: DONE
