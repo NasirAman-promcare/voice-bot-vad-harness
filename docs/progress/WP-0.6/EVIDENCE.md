@@ -185,6 +185,7 @@ Findings: 0
 | 236 | `8421bd6` FR-0.6-01 | failure: `test_FR_0_0_08_repository_registry_is_consistent`, `malformed registry row: duplicate capability ID CAP-ENV-004` (`1 failed, 1629 passed`); fixed in the next commit |
 | 237 | `951d2e9` capability ID CAP-ENV-007 | success |
 | 238 | `6034fb0` FR-0.6-06 | success |
+| 239 | `920960c` evidence and second-run test | success: job `lab` (bootstrap, rclone step, fast suite, audit gate) and job `harness-regression` (provision, harness tests, regression check) |
 
 ## Findings and changes from the plan (for the auditor)
 1. **Runner log line.** The plan said `session N cores: …`; the line is `cores: …`. An existing test (`test_FR_0_5_05_restart_skips_finished_shards`) finds the last `" session "` in `runner.log`, and I must not change existing tests; the new text keeps it passing (106 runner, doctor, platform and core tests passed after the change).
