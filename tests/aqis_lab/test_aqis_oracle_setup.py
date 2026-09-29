@@ -12,6 +12,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -290,6 +291,10 @@ def test_FR_0_6_01_second_run_changes_nothing(tmp_path):
     state = lambda: ((python.resolve().stat().st_ino, python.stat().st_mtime_ns),
                      sorted((p.name, p.stat().st_mtime_ns) for p in site.iterdir()))
     before = state()
+    # Doctor report names have one-second resolution (FR-0.5-02) and a report is never replaced, so two doctor runs
+    # in the same second fail with exit 2. With a warm uv cache a setup run can finish in under a second here, so the
+    # second run starts in a later second; the property under test is that nothing is reinstalled.
+    time.sleep(1.1)
     second = run(tree)
     assert second.returncode == 1, second.stdout + second.stderr      # the doctor's platform row, as above
     assert "Reusing .venv" in second.stdout
