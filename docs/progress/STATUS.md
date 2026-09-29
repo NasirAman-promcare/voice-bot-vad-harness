@@ -11,7 +11,7 @@ Values: NOT-STARTED, PLANNED, APPROVED, IN-BUILD, READY-FOR-AUDIT, AUDIT-FAIL, M
 | WP-0.3 | Text normaliser and scorer | MERGED | claude/charming-knuth-atc1dq, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/3 | 2026-09-27 |
 | WP-0.4 | Source registry, pack builder, smoke pack | MERGED | claude/optimistic-ptolemy-tdbotx, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/4 | 2026-09-27 |
 | WP-0.5 | Platform, doctor, runner, Colab launcher | MERGED | claude/magical-goldberg-kjvw5r, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/5 | 2026-09-28 |
-| WP-0.6 | Oracle worker, results store, traceability | AUDIT-FAIL | claude/relaxed-davinci-iwk5gi, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/6 | 2026-09-29 |
+| WP-0.6 | Oracle worker, results store, traceability | READY-FOR-AUDIT | claude/relaxed-davinci-iwk5gi, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/6 | 2026-09-29 |
 | WP-0.7 | First adapters and smoke run | NOT-STARTED | | |
 | WP-0.8 | Consent, recording guide, fillers, targets | NOT-STARTED | | |
 | WP-0.9 | Phase 0 review | NOT-STARTED | | |

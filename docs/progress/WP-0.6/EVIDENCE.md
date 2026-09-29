@@ -204,3 +204,25 @@ Findings: 0
 
 ## audit-allow lines
 None.
+
+## Round 2 (audit round 1 findings)
+Approval: `docs/approvals/WP-0.6.md` on `main` (`73d1198`). Details, change budget and outputs: `docs/progress/WP-0.6/FIXES.md`.
+
+| Finding | Result | Tests |
+| --- | --- | --- |
+| F01 (CRITICAL) | Fixed with a test only. A stored run card names an earlier commit of this repository and that commit's lock hash (both unlike the checkout's); trace must print the card's values. Breaks MC2b and MC2c are now caught | `test_FR_0_6_03_trace_prints_the_rows_own_commit_and_lock_hash` |
+| F02 (MAJOR) | Fixed with tests. X1, X2 and X3 are now caught | `test_FR_0_6_02_add_rejects_tampered_stored_rows`, `test_FR_0_6_02_query_trace_and_add_reject_a_damaged_store` (row text changed, part file changed in place, truncated part file, card copy) |
+| F03 | Fixed. `views.connect` checks every stored card (valid, in its own folder) and every part file (the checks `add` uses) before making the views, so `query` and `trace` give `ERROR:` and exit 1 on a damaged store | the same test; breaks X11 and X12 are caught |
+| F04 | Accepted as DEBT-015 (target WP-0.7). Item (1), the truncated part file, is now an `ERROR:` with exit 1 (F03 fix) | the `truncated` case above |
+| F05 | Fixed: step 6 reads its settings in the repository root | `test_FR_0_6_01_runs_from_any_directory` (slow, network) |
+| F06 | Accepted as DEBT-016 (target WP-0.9) | — |
+| F07 | (1)-(3) accepted as recorded deviations; (4) fixed | `test_FR_0_6_02_default_store_equals_oracle_results_store` |
+| F08 | Accepted as DEBT-017 (target WP-0.7) | — |
+
+Suites at `719d7f4`:
+```text
+fast (not slow, gpu, colab, oracle, network): 1640 passed, 25 deselected in 209.04s (0:03:29)
+slow (not gpu, colab, oracle, network):       3 passed, 1662 deselected in 9.85s
+WP-0.6 network (-k FR_0_6 -m "network and not oracle"): 5 passed, 1660 deselected in 6.65s
+```
+Gate: `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.6` gives `0 findings: OK (0.5 s)`. CI on `719d7f4`: push run 246 and pull-request run 247 `success`.
