@@ -2,7 +2,7 @@
 
 CAPABILITIES:
   CAP-RESULTS-001: add_batch() appends a batch of result rows under <store>/run_card_id=<id>/: the run card is written once, new rows go into one new part-<SHA-256>.parquet file published by hard link (an existing file can never be replaced), rows already stored with identical content are reported and not stored again, and a row whose identity is stored with other content stops the whole add with nothing written; adds hold an exclusive lock on <store>/.lock; a store on a Google Drive mount is refused [tests: test_FR_0_6_02_add_run_folder_writes_partition_by_run_card, test_FR_0_6_02_add_score_folder_rows, test_FR_0_6_02_refuses_to_overwrite_existing_rows, test_FR_0_6_02_existing_files_never_replaced, test_FR_0_6_02_identical_rows_not_stored_twice, test_FR_0_6_02_score_rows_need_their_run_card, test_FR_0_6_02_interrupted_add_leaves_no_row, test_FR_0_6_02_concurrent_adds_are_serialised, test_FR_0_6_02_store_on_drive_refused]
-  CAP-RESULTS-002: result_row_id() is the SHA-256 of the canonical JSON of a row's identity fields; read_partition() and verify_record() check every stored file and row (schema version, columns, content-addressed name, row ID, row SHA-256, partition) and raise StoreIntegrityError on any difference [tests: test_FR_0_6_02_row_id_computed_from_identity, test_FR_0_6_02_schema_documented_equals_code, test_FR_0_6_03_row_not_matching_its_id_is_reported]
+  CAP-RESULTS-002: result_row_id() is the SHA-256 of the canonical JSON of a row's identity fields; check_part_file(), read_partition() and verify_record() check every stored file and row (schema version, columns, content-addressed name, row ID, row SHA-256, partition) and raise StoreIntegrityError on any difference [tests: test_FR_0_6_02_row_id_computed_from_identity, test_FR_0_6_02_schema_documented_equals_code, test_FR_0_6_03_row_not_matching_its_id_is_reported, test_FR_0_6_02_add_rejects_tampered_stored_rows, test_FR_0_6_02_query_trace_and_add_reject_a_damaged_store]
 INPUTS AND OUTPUTS: a store folder and a Batch (from aqis_lab/results/ingest.py) in; files in the store and an
   AddResult out; StoreInputError (usage or input, exit 2), StoreConflictError and StoreIntegrityError (exit 1).
 CONTRACTS: store layout and schema in docs/results/RESULTS_STORE.md; run-card v1.
@@ -17,6 +17,8 @@ NOT IN SCOPE:
   - Reading runner or scorer output (aqis_lab/results/ingest.py); queries (aqis_lab/results/views.py).
 CHANGE LOG:
   2026-09-28 WP-0.6 FR-0.6-02 created.
+  2026-09-29 WP-0.6 round 2 F03: the file checks of read_partition moved unchanged into check_part_file, which
+    aqis_lab/results/views.py also calls.
 """
 import fcntl
 import hashlib
@@ -268,22 +270,30 @@ def verify_record(rec, run_card_id=None):
     return identity, row
 
 
+def check_part_file(part):
+    """The table of a stored part file after its file checks: content equal to the SHA-256 in its name, readable
+    Parquet, schema version and columns; StoreIntegrityError otherwise. Rows are checked by verify_record."""
+    part = Path(part)
+    data = part.read_bytes()
+    if hashlib.sha256(data).hexdigest() != PART_RE.fullmatch(part.name).group(1):
+        raise StoreIntegrityError(f"{part}: its content no longer matches the SHA-256 in its name")
+    try:
+        table = pq.read_table(io.BytesIO(data), use_threads=False)
+    except (pa.ArrowException, OSError) as exc:
+        raise StoreIntegrityError(f"{part} is not a readable Parquet file: {exc}") from exc
+    metadata = table.schema.metadata or {}
+    if metadata.get(METADATA_KEY) != SCHEMA_VERSION.encode("ascii") or tuple(table.column_names) != COLUMN_NAMES:
+        raise StoreIntegrityError(f"{part} is not a results store {SCHEMA_VERSION} file (metadata or columns)")
+    return table
+
+
 def read_partition(partition):
     """Every stored row of a partition, each checked; StoreIntegrityError on any damaged file or row."""
     partition = Path(partition)
     run_card_id = partition.name[len(PARTITION_PREFIX):]
     records = []
     for part in part_files(partition):
-        data = part.read_bytes()
-        if hashlib.sha256(data).hexdigest() != PART_RE.fullmatch(part.name).group(1):
-            raise StoreIntegrityError(f"{part}: its content no longer matches the SHA-256 in its name")
-        try:
-            table = pq.read_table(io.BytesIO(data), use_threads=False)
-        except (pa.ArrowException, OSError) as exc:
-            raise StoreIntegrityError(f"{part} is not a readable Parquet file: {exc}") from exc
-        metadata = table.schema.metadata or {}
-        if metadata.get(METADATA_KEY) != SCHEMA_VERSION.encode("ascii") or tuple(table.column_names) != COLUMN_NAMES:
-            raise StoreIntegrityError(f"{part} is not a results store {SCHEMA_VERSION} file (metadata or columns)")
+        table = check_part_file(part)
         for rec in table.to_pylist():
             verify_record(rec, run_card_id)
             records.append(rec)

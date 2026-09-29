@@ -1,17 +1,19 @@
 """DuckDB views over the results store: result_rows, run_cards, and results (every row joined to its run card).
 
 CAPABILITIES:
-  CAP-RESULTS-005: connect() opens an in-memory DuckDB connection (extension installs and autoloading switched off; parquet and json are built in) with the views result_rows (every stored part file), run_cards (every stored run card, key fields extracted) and results (result_rows joined to run_cards: pack manifest ID, version and SHA-256, git commit and dirty flag, lock file and SHA-256, mode); query_run_card() returns a run card's rows through the view, each row checked [tests: test_FR_0_6_02_duckdb_view_equals_stored_files, test_FR_0_6_02_duckdb_needs_no_network, test_FR_0_6_02_query_returns_rows_for_run_card, test_FR_0_6_02_interrupted_add_leaves_no_row]
+  CAP-RESULTS-005: connect() opens an in-memory DuckDB connection (extension installs and autoloading switched off; parquet and json are built in) with the views result_rows (every stored part file), run_cards (every stored run card, key fields extracted) and results (result_rows joined to run_cards: pack manifest ID, version and SHA-256, git commit and dirty flag, lock file and SHA-256, mode); before the views are made every stored card is checked (valid, and in its own run card's folder) and every part file gets the file checks `results add` uses (content equal to the SHA-256 in its name, readable Parquet, schema), so a damaged store is a StoreIntegrityError for query and trace, never rows; query_run_card() returns a run card's rows through the view, each row checked [tests: test_FR_0_6_02_query_trace_and_add_reject_a_damaged_store,  test_FR_0_6_02_duckdb_view_equals_stored_files, test_FR_0_6_02_duckdb_needs_no_network, test_FR_0_6_02_query_returns_rows_for_run_card, test_FR_0_6_02_interrupted_add_leaves_no_row]
 INPUTS AND OUTPUTS: a store folder in; a DuckDB connection or a list of row dicts out; StoreInputError when there is
   no store, StoreIntegrityError when a stored row does not check.
 CONTRACTS: store layout and view definitions in docs/results/RESULTS_STORE.md.
 INVARIANTS:
   - Read-only: nothing in the store is written; `.partial` files are never read.
+  - A damaged store is an error for every reader: the views are made only after every stored file checks.
   - No network: DuckDB never installs or downloads an extension.
 NOT IN SCOPE:
   - Writing the store (aqis_lab/results/store.py).
 CHANGE LOG:
   2026-09-28 WP-0.6 FR-0.6-02 created.
+  2026-09-29 WP-0.6 round 2 F03: connect checks every stored card and part file before making the views.
 """
 from pathlib import Path
 
@@ -56,6 +58,11 @@ def connect(store_dir):
     """An in-memory DuckDB connection with the views result_rows, run_cards and results over the store."""
     root = store.check_store(store_dir)
     parts, cards = stored_files(root)
+    for card in cards:
+        store.load_stored_card(card.parent)         # valid, and its run_card_id is its folder's
+    for part in parts:
+        store.check_part_file(part)                 # content = SHA-256 in its name, Parquet, schema; rows are checked
+                                                    # by query_run_card and trace for the rows they return
     con = duckdb.connect(":memory:", config=DUCKDB_CONFIG)
     if parts:
         con.execute(f"CREATE VIEW result_rows AS SELECT {', '.join(store.COLUMN_NAMES)} "

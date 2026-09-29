@@ -1,7 +1,7 @@
 """The `results` command: add rows to the append-only results store and query them by run card.
 
 CAPABILITIES:
-  CAP-RESULTS-006: `python -m aqis_lab results add (--run DIR | --scores DIR [--run-card FILE]) [--store DIR]` stores a finished run's rows or a score folder's rows and reports how many were stored and how many were already stored; `results query --run-card ID [--store DIR]` prints the run card's rows as canonical JSON lines; exit 0 done, 1 conflict, integrity problem or no rows, 2 usage or input error [tests: test_FR_0_6_02_results_listed_by_dispatcher, test_FR_0_6_02_query_returns_rows_for_run_card, test_FR_0_6_02_query_unknown_run_card_exit_1, test_FR_0_6_02_query_rejects_malformed_id, test_FR_0_6_02_query_missing_store_exit_2, test_FR_0_6_02_add_exit_codes, test_FR_0_6_02_concurrent_adds_are_serialised]
+  CAP-RESULTS-006: `python -m aqis_lab results add (--run DIR | --scores DIR [--run-card FILE]) [--store DIR]` stores a finished run's rows or a score folder's rows and reports how many were stored and how many were already stored; `results query --run-card ID [--store DIR]` prints the run card's rows as canonical JSON lines; exit 0 done, 1 conflict, integrity problem or no rows, 2 usage or input error [tests: test_FR_0_6_02_results_listed_by_dispatcher, test_FR_0_6_02_query_returns_rows_for_run_card, test_FR_0_6_02_query_unknown_run_card_exit_1, test_FR_0_6_02_query_rejects_malformed_id, test_FR_0_6_02_query_missing_store_exit_2, test_FR_0_6_02_add_exit_codes, test_FR_0_6_02_concurrent_adds_are_serialised, test_FR_0_6_02_default_store_equals_oracle_results_store]
 INPUTS AND OUTPUTS: command-line arguments in; a report or JSON lines on stdout, `ERROR: ...` on stderr, exit 0, 1
   or 2.
 CONTRACTS: store layout and query output in docs/results/RESULTS_STORE.md.
@@ -11,6 +11,7 @@ NOT IN SCOPE:
   - The store itself (aqis_lab/results/).
 CHANGE LOG:
   2026-09-28 WP-0.6 FR-0.6-02 created.
+  2026-09-29 WP-0.6 round 2 F07: header lists the default-store test (header only).
 """
 import argparse
 import sys

@@ -14,6 +14,8 @@ import pyarrow.parquet as pq
 import pytest
 
 from aqis_lab.commands import trace as trace_cmd
+from aqis_lab.contracts.canonical import compute_run_card_id
+from aqis_lab.contracts.validate import validate_run_card
 from aqis_lab.results import ingest, store
 from aqis_results_testutil import canonical, expected_row_id, score_folder, smoke_run
 from aqis_testutil import ROOT
@@ -151,3 +153,50 @@ def test_FR_0_6_03_row_not_matching_its_id_is_reported(capsys, filled, tmp_path)
     write_part(partition, [dict(row, added_utc="2026-09-28T00:00:00.000000Z")])
     code, out, err = run_trace(capsys, row["result_row_id"], "--store", store_dir)
     assert code == 1 and out == "" and "2 rows" in err
+
+
+def git_out(*args):
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, check=True).stdout
+
+
+def historical_run(tmp_path, run_dir):
+    """A copy of a real run whose card records an earlier commit of this repository and the lock as it was at that
+    commit: the parent of the last commit that changed requirements/aqis_lab/phase0.txt (audit finding WP-0.6-F01)."""
+    changed = git_out("log", "-1", "--format=%H", "--", "requirements/aqis_lab/phase0.txt").decode().strip()
+    old = git_out("rev-parse", f"{changed}^").decode().strip()
+    old_lock_sha = hashlib.sha256(git_out("show", f"{old}:requirements/aqis_lab/phase0.txt")).hexdigest()
+    copy = tmp_path / "historical-run"
+    subprocess.run(["cp", "-a", str(run_dir), str(copy)], check=True)
+    card = json.loads((copy / "run_card.json").read_text(encoding="utf-8"))
+    card["git"] = {"commit": old, "dirty": False}
+    card["lock"]["sha256"] = old_lock_sha
+    card["run_card_id"] = compute_run_card_id(card)
+    validate_run_card(card)
+    (copy / "run_card.json").write_text(json.dumps(card, indent=2), encoding="utf-8")
+    plan = json.loads((copy / "shard_plan.json").read_text(encoding="utf-8"))
+    plan["run_card_id"] = card["run_card_id"]
+    (copy / "shard_plan.json").write_text(json.dumps(plan), encoding="utf-8")
+    rows = [dict(json.loads(line), run_card_id=card["run_card_id"])
+            for line in (copy / "results.jsonl").read_text(encoding="utf-8").splitlines()]
+    (copy / "results.jsonl").write_text("".join(canonical(r).decode() + "\n" for r in rows), encoding="utf-8")
+    return copy, card
+
+
+def test_FR_0_6_03_trace_prints_the_rows_own_commit_and_lock_hash(capsys, filled, tmp_path):
+    # Must-catch 2 (audit finding WP-0.6-F01): the commit and lock hash come from the row's run card, never from the
+    # checkout. The stored card names an earlier commit and that commit's lock, both unlike the checkout's.
+    run_dir, card = historical_run(tmp_path, filled["runs"][0])
+    head = git_out("rev-parse", "HEAD").decode().strip()
+    current_lock = hashlib.sha256((ROOT / card["lock"]["file"]).read_bytes()).hexdigest()
+    assert card["git"]["commit"] != head and card["lock"]["sha256"] != current_lock
+    store_dir = tmp_path / "store"
+    assert store.add_batch(store_dir, ingest.from_run_folder(run_dir)).stored == 60
+    rows = all_rows(store_dir)
+    assert len(rows) == 60
+    for row in rows:
+        code, out, err = run_trace(capsys, row["result_row_id"], "--store", store_dir)
+        assert code == 0, err
+        fields, printed = parse_trace(out)
+        assert fields["git_commit"] == f"{card['git']['commit']} (dirty: false)"
+        assert fields["lock_sha256"] == card["lock"]["sha256"]
+        assert fields == expected_fields(row, card) and printed == card

@@ -155,3 +155,29 @@ def copy_tree(src, dst):
 def run_rows(run_dir):
     """The result rows of a run folder, parsed from its results.jsonl."""
     return [json.loads(line) for line in (Path(run_dir) / "results.jsonl").read_text(encoding="utf-8").splitlines()]
+
+
+# --- tampering with a stored results store (audit findings WP-0.6-F02, F03) ------------------------------------------
+def part_file(store_dir):
+    parts = sorted(Path(store_dir).glob("run_card_id=*/part-*.parquet"))
+    assert len(parts) == 1, parts
+    return parts[0]
+
+
+def rewrite_part(part, change, keep_name):
+    """Rewrite a stored part file with `change(rows)` applied. keep_name=True keeps the old (now wrong) name;
+    otherwise the file is renamed after its new content, as a careful hand edit would do."""
+    import io
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    from aqis_lab.results import store
+    rows = pq.read_table(part, use_threads=False).to_pylist()
+    change(rows)
+    buffer = io.BytesIO()
+    pq.write_table(pa.Table.from_pylist(rows, schema=store.arrow_schema()), buffer)
+    data = buffer.getvalue()
+    part.chmod(0o644)
+    part.unlink()
+    target = part if keep_name else part.with_name(f"part-{hashlib.sha256(data).hexdigest()}.parquet")
+    target.write_bytes(data)
+    return target, rows

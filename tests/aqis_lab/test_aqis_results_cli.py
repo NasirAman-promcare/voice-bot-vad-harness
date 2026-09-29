@@ -1,5 +1,6 @@
 """FR-0.6-02: `python -m aqis_lab results add` and `results query --run-card <id>` on real runner and scorer output."""
 import json
+import shutil
 import subprocess
 import sys
 
@@ -110,3 +111,58 @@ def test_FR_0_6_02_add_and_query_exit_promptly(tmp_path, run_dir):
         proc = subprocess.run([sys.executable, "-m", "aqis_lab", "results", "query", "--run-card", card_id(run_dir),
                                "--store", str(store_dir)], cwd=ROOT, capture_output=True, text=True, timeout=60)
         assert proc.returncode == 0
+
+
+def tampered_store(tmp_path, run_dir, how):
+    """A store holding run_dir's rows, then damaged `how`; returns (store, the first stored row ID)."""
+    from aqis_results_testutil import part_file, rewrite_part
+    store_dir = tmp_path / "store"
+    assert cli("results", "add", "--run", run_dir, "--store", store_dir).returncode == 0
+    part = part_file(store_dir)
+
+    def bump(rows):
+        row = json.loads(rows[0]["row"])
+        row["peak_abs"] += 1
+        rows[0]["row"] = json.dumps(row, sort_keys=True, separators=(",", ":"))
+
+    if how == "row-text":
+        _, rows = rewrite_part(part, bump, keep_name=False)
+    elif how == "file-in-place":
+        _, rows = rewrite_part(part, lambda rows: rows[0].update(added_by="someone else"), keep_name=True)
+    elif how == "truncated":
+        import pyarrow.parquet as pq
+        rows = pq.read_table(part, use_threads=False).to_pylist()
+        data = part.read_bytes()
+        part.chmod(0o644)
+        part.write_bytes(data[: len(data) // 2])
+    else:                                            # a copy of the card in another run card's folder
+        import pyarrow.parquet as pq
+        rows = pq.read_table(part, use_threads=False).to_pylist()
+        other = store_dir / ("run_card_id=" + "f" * 64)
+        other.mkdir()
+        shutil.copy2(part.parent / "run_card.json", other / "run_card.json")
+    return store_dir, rows[0]["result_row_id"]
+
+
+@pytest.mark.parametrize("how, words", [
+    ("row-text", "row_sha256 does not match the row"),
+    ("file-in-place", "no longer matches the SHA-256 in its name"),
+    ("truncated", "no longer matches the SHA-256 in its name"),
+    ("card-copy", "not the folder's"),
+])
+def test_FR_0_6_02_query_trace_and_add_reject_a_damaged_store(tmp_path, run_dir, how, words):
+    # Audit findings WP-0.6-F02 and F03: every reader checks the stored files and rows; a damaged or hand-edited
+    # store gives `ERROR:` and exit 1 from `results query`, `trace` and `results add`, never rows with exit 0.
+    store_dir, row_id = tampered_store(tmp_path, run_dir, how)
+    readers = [("results", "query", "--run-card", card_id(run_dir)), ("trace", row_id)]
+    if how != "card-copy":
+        readers.append(("results", "add", "--run", run_dir))
+    for args in readers:
+        proc = cli(*args, "--store", store_dir)
+        assert proc.returncode == 1, (args, proc.stdout, proc.stderr)
+        assert proc.stdout == "" and proc.stderr.startswith("ERROR:") and words in proc.stderr, (args, proc.stderr)
+        assert "Traceback" not in proc.stderr
+    if how == "card-copy":
+        # `add` reads only the partition it writes to; the stray card elsewhere does not change what it stores
+        proc = cli("results", "add", "--run", run_dir, "--store", store_dir)
+        assert proc.returncode == 0 and "stored 0 row(s)" in proc.stdout and "nothing written" in proc.stdout

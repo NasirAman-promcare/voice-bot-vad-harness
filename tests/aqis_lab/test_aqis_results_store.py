@@ -323,3 +323,28 @@ def test_FR_0_6_02_store_on_drive_refused(tmp_path, runs):
         store.add_batch(target, ingest.from_run_folder(runs["seed0"]), system=view)
     assert "local disk" in str(info.value) and str(mount) in str(info.value)
     assert tree_snapshot(mount) == before
+
+
+def test_FR_0_6_02_add_rejects_tampered_stored_rows(tmp_path, runs):
+    # Audit finding WP-0.6-F02: a stored row whose content no longer matches its row_sha256, or a part file changed
+    # in place, is an integrity error for `add`, never counted as "already stored".
+    from aqis_results_testutil import part_file, rewrite_part
+
+    def bump(rows):
+        row = json.loads(rows[0]["row"])
+        row["peak_abs"] += 1
+        rows[0]["row"] = json.dumps(row, sort_keys=True, separators=(",", ":"))
+
+    store_dir = tmp_path / "a"
+    add_run(store_dir, runs["seed0"])
+    rewrite_part(part_file(store_dir), bump, keep_name=False)
+    with pytest.raises(store.StoreIntegrityError) as info:
+        add_run(store_dir, runs["seed0"])
+    assert "row_sha256 does not match the row" in str(info.value)
+
+    store_dir = tmp_path / "b"
+    add_run(store_dir, runs["seed0"])
+    rewrite_part(part_file(store_dir), lambda rows: rows[0].update(added_by="someone else"), keep_name=True)
+    with pytest.raises(store.StoreIntegrityError) as info:
+        add_run(store_dir, runs["seed0"])
+    assert "no longer matches the SHA-256 in its name" in str(info.value)

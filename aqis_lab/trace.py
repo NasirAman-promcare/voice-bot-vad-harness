@@ -1,7 +1,7 @@
 """Trace a stored result row back to what produced it: run card, pack manifest ID and version, clip, commit, lock.
 
 CAPABILITIES:
-  CAP-TRACE-001: trace_row() finds a result_row_id through the DuckDB `results` view and, only after checking that exactly one row has the ID, that the row checks (ID from identity, row SHA-256, IDs agree) and that the stored run card validates and belongs to the row's folder, returns the row with its run card; format_trace() prints result_row_id, kind, clip_id, run_card_id, pack_manifest_id, pack_version, pack_sha256, git_commit (dirty flag), lock_file, lock_sha256 and the full run card [tests: test_FR_0_6_03_trace_prints_run_card_manifest_clip_commit_lock, test_FR_0_6_03_rows_of_two_run_cards_trace_to_their_own_card, test_FR_0_6_03_unknown_row_id_exit_1, test_FR_0_6_03_changed_run_card_is_reported, test_FR_0_6_03_row_not_matching_its_id_is_reported]
+  CAP-TRACE-001: trace_row() finds a result_row_id through the DuckDB `results` view and, only after checking that exactly one row has the ID, that the row checks (ID from identity, row SHA-256, IDs agree) and that the stored run card validates and belongs to the row's folder, returns the row with its run card; format_trace() prints result_row_id, kind, clip_id, run_card_id, pack_manifest_id, pack_version, pack_sha256, git_commit (dirty flag), lock_file, lock_sha256 and the full run card [tests: test_FR_0_6_03_trace_prints_run_card_manifest_clip_commit_lock, test_FR_0_6_03_rows_of_two_run_cards_trace_to_their_own_card, test_FR_0_6_03_unknown_row_id_exit_1, test_FR_0_6_03_changed_run_card_is_reported, test_FR_0_6_03_row_not_matching_its_id_is_reported, test_FR_0_6_03_trace_prints_the_rows_own_commit_and_lock_hash, test_FR_0_6_02_query_trace_and_add_reject_a_damaged_store]
 INPUTS AND OUTPUTS: a store folder and a result_row_id in; a Trace and its text out; StoreInputError (malformed ID,
   no store), TraceError (not found) or StoreIntegrityError (a check failed).
 CONTRACTS: store layout in docs/results/RESULTS_STORE.md; run-card v1.
@@ -12,6 +12,7 @@ NOT IN SCOPE:
   - Resolving the pack manifest file itself (the run card names its manifest ID, version and SHA-256).
 CHANGE LOG:
   2026-09-28 WP-0.6 FR-0.6-03 created.
+  2026-09-29 WP-0.6 round 2 F01, F03: header lists the new commit/lock and damaged-store tests (header only).
 """
 import json
 import re

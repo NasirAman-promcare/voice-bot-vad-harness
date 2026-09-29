@@ -16,7 +16,7 @@
 #                 test_FR_0_6_01_refuses_glibc_below_minimum, test_FR_0_6_01_setup_pin_read_by_script_equals_yaml,
 #                 test_FR_0_6_01_missing_build_names_the_package, test_FR_0_6_01_fails_when_uv_missing,
 #                 test_FR_0_6_01_creates_venv_installs_lock_and_runs_oracle_doctor,
-#                 test_FR_0_6_01_second_run_changes_nothing]
+#                 test_FR_0_6_01_second_run_changes_nothing, test_FR_0_6_01_runs_from_any_directory]
 # INPUTS AND OUTPUTS: config/aqis_lab/oracle.yaml, docs/environment/colab_probe.txt and
 #   requirements/aqis_lab/phase0.txt in; <repo>/.venv and one doctor report out. Usage:
 #   bash aqis_lab/deploy/oracle_setup.sh [--dry-run]
@@ -29,6 +29,8 @@
 #   - Installing uv or rclone, configuring rclone, the nightly sync (docs/oracle/ORACLE_RUNBOOK.md).
 # CHANGE LOG:
 #   2026-09-28 WP-0.6 FR-0.6-01 created.
+#   2026-09-29 WP-0.6 round 2 F05: the step-6 settings reads run in the repository root, so the script works
+#     from any folder.
 set -euo pipefail
 
 UV_VERSION="0.8.17"
@@ -194,8 +196,8 @@ if [ "$DRY" -eq 1 ]; then
     echo "DRY RUN: nothing was changed"
     exit 0
 fi
-WORK_DIR="$("$VENV/bin/python" -m aqis_lab.oracle_config get paths.work_dir)" || fail "cannot read paths.work_dir from $CONFIG_REL."
-REPORTS="$("$VENV/bin/python" -m aqis_lab.oracle_config get paths.doctor_reports)" || fail "cannot read paths.doctor_reports from $CONFIG_REL."
+WORK_DIR="$(cd "$ROOT" && "$VENV/bin/python" -m aqis_lab.oracle_config get paths.work_dir)" || fail "cannot read paths.work_dir from $CONFIG_REL."
+REPORTS="$(cd "$ROOT" && "$VENV/bin/python" -m aqis_lab.oracle_config get paths.doctor_reports)" || fail "cannot read paths.doctor_reports from $CONFIG_REL."
 echo "step 6/6 doctor: .venv/bin/python -m aqis_lab doctor --target oracle --work-dir $WORK_DIR --out $REPORTS"
 status=0
 (cd "$ROOT" && "$VENV/bin/python" -m aqis_lab doctor --target oracle --work-dir "$WORK_DIR" --out "$REPORTS") || status=$?

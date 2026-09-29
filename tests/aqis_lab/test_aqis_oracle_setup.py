@@ -313,3 +313,20 @@ def test_FR_0_6_01_setup_passes_on_oracle():
     rows = {c["name"]: c["status"] for c in json.loads(report.read_text())["checks"]}
     assert rows == {"platform": "PASS", "python": "PASS", "lock": "PASS", "disk": "PASS", "ram": "PASS",
                     "gpu": "SKIP", "cores": "PASS"}
+
+
+@pytest.mark.slow
+@pytest.mark.network
+def test_FR_0_6_01_runs_from_any_directory(tmp_path):
+    # Audit finding WP-0.6-F05: started from another folder, the setup reaches the doctor exactly as from the root
+    # (on this VM the doctor then fails only its platform row).
+    tree = make_tree(tmp_path)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    proc = subprocess.run(["bash", str(tree / SCRIPT_REL)], cwd=elsewhere, capture_output=True, text=True, timeout=900)
+    assert "cannot read paths" not in proc.stderr, proc.stderr
+    assert proc.returncode == 1 and "the doctor reported a problem (exit 1)" in proc.stderr, proc.stdout + proc.stderr
+    assert f"--work-dir {tree}/data/raw/aqis_lab/work --out {tree}/data/raw/aqis_lab/doctor" in steps(proc.stdout)[5]
+    reports, rows = doctor_rows(tree)
+    assert len(reports) == 1 and rows["platform"]["status"] == "FAIL" and rows["cores"]["status"] == "PASS"
+    assert list(elsewhere.iterdir()) == []

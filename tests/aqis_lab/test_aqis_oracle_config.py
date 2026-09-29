@@ -117,3 +117,10 @@ def test_FR_0_6_01_config_get_prints_resolved_value(tmp_path):
 def test_FR_0_6_05_drive_destination_is_fixed_by_spec():
     assert oc.DRIVE_DESTINATION == "AQIS_LAB/results"
     assert not hasattr(oc.load(CONFIG), "destination")
+
+
+def test_FR_0_6_02_default_store_equals_oracle_results_store():
+    # Audit finding WP-0.6-F07 (4): `results add`, `query` and `trace` default to the folder `sync` copies.
+    from aqis_lab.results.store import DEFAULT_STORE
+    assert oc.load(CONFIG).results_store == DEFAULT_STORE
+    assert DEFAULT_STORE == ROOT / "data" / "raw" / "aqis_lab" / "results"
