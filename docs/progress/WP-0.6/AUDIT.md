@@ -1,115 +1,140 @@
-# AUDIT — WP-0.6, round 1
+# AUDIT — WP-0.6, round 2
 
-Auditor: wp-auditor · Date: 2026-09-29 · Commit audited: fbc6966c9fe78b185c0da240a0c9b52f61569f37 · Previous audited commit: first audit · Protocol: version 2
+Auditor: wp-auditor · Date: 2026-09-30 · Commit audited: 3501ca8396ca5e0e181bc6cb36c5bd3def97c170 · Previous audited commit: fbc6966c9fe78b185c0da240a0c9b52f61569f37 · Protocol: version 2
 
-## Verdict: FAIL
-CRITICAL: 1 · MAJOR: 1 (fixed 0, accepted as debt 0, open 1) · MINOR: 6 (open 6)
+## Verdict: PASS
+CRITICAL: 0 open (round-1 F01 fixed) · MAJOR: 0 open (round-1 F02 fixed; fixed 1, accepted as debt 0, open 0) · MINOR: 1 new and open (F09); of round 1's six, F03, F05 and F07 (4) are fixed, F04, F06 and F08 are accepted as debt (DEBT-015 to DEBT-017), and F07 (1) to (3) are recorded deviations
 
-Most of the work is sound:
-- The fast suite, the slow suite, the WP-0.6 network tests, the gate, the acceptance commands and CI on the audited commit all pass. I re-ran each of them myself.
-- Must-catch behaviours 1, 3, 4 and 5 are protected: every break I made there was caught.
-- I found no stubs, fake data or swallowed errors, and no existing test was changed.
+Both round-1 blockers are fixed, and I confirmed each fix by breaking the code:
+- **F01 (CRITICAL, must-catch 2) is fixed.** The new test stores a run card that names an earlier commit and that commit's lock hash. Round 1's surviving breaks MC2b (trace prints the checkout's commit) and MC2c (trace prints the lock file's current hash) now fail `test_FR_0_6_03_trace_prints_the_rows_own_commit_and_lock_hash`.
+- **F02 (MAJOR) is fixed.** Round 1's breaks X1, X2 and X3 each fail a named test when re-made on the new code.
+- **The complete must-catch proof passes:** all 16 breaks are caught.
+- **Suites, gate, acceptance and CI:** the fast, slow and WP-0.6 network suites, the gate and both acceptance commands pass on my own runs. CI is green on the audited commit.
 
-Two findings block a pass:
-- **F01 (CRITICAL, must-catch 2).** `trace` can print the checkout's *current* git commit or lock hash instead of the row's own, and every test still passes. Every test row comes from a run made at the current commit with the current lock, so the tests cannot tell the two apart. The shipped code reads the right values today. The gap is in the tests only, and the fix is test-only.
-- **F02 (MAJOR, A15).** Three read-side integrity checks of the results store can each be removed with every test still passing: the `row_sha256` check, the part-file content-against-name check, and the per-row check in `results query`.
+One new MINOR finding (F09). Two of my six exploratory breaks in the new reader code survive: `connect` checking only the first part file, and dropping the schema-version check. Under either break, every returned row is still checked. No result value, row identity, run card, commit or lock hash can come out wrong. It does not block the pass.
 
 ## Scope of this audit
-First audit of WP-0.6. It covers items A1 to A15 on the whole WP diff `6ad251b..fbc6966`: 42 files, +4466 −14. It also covers the full suites, the gate, CI, the complete must-catch proof and 10 exploratory breaks in the new code.
-- **Code breaks:** made only in a throwaway copy of the repository under `/tmp/claude-0/.../scratchpad/mc/repo`, with its own `.git`. Each file was restored with `git checkout` after its break, and `git status` was clean at the end.
-- **The real working tree:** never modified (`git status --short` empty before this report).
+This is a re-audit (round 2). It covers:
+- each round-1 finding;
+- items A1 to A15 on the diff `fbc6966..3501ca8`: 17 files, +414 −23;
+- production changes, which are limited to `aqis_lab/results/views.py` (`connect`), `aqis_lab/results/store.py` (new `check_part_file`, called by `read_partition`), two lines of `aqis_lab/deploy/oracle_setup.sh`, and header lines in `aqis_lab/trace.py` and `aqis_lab/commands/results.py`;
+- the full suites, the gate, CI and the complete must-catch proof.
+
+Code that passed round 1 and has not changed was not searched again.
+
+How I made the code breaks:
+- **Where:** only in a fresh throwaway copy under `/tmp/claude-0/.../scratchpad/a2/repo`, with its own `.git`, its remote removed and `.venv` linked. I did not reuse the builder's break script from the same scratchpad; `audit_r2_breaks.py` is my own.
+- **Validity:** each break is one exact text change that must match exactly once.
+- **Clean-up:** each file was restored with `git checkout` after its break, and the copy's `git status` was clean after every break and at the end.
+- **The real working tree:** never modified. `git status --short` was empty before I wrote this report.
+
+## Round-1 findings
+| ID | Round-1 severity | Status now | Evidence |
+| --- | --- | --- | --- |
+| WP-0.6-F01 | CRITICAL | **Fixed** | `historical_run` in `tests/aqis_lab/test_aqis_trace.py` copies a real run. The card names the parent of the last commit that changed `requirements/aqis_lab/phase0.txt` and that commit's lock SHA-256, with `run_card_id` recomputed by `compute_run_card_id` and checked by `validate_run_card`. The test asserts that both values differ from the checkout's, then traces all 60 rows and compares every field and the full card. MC2b and MC2c each give `1 failed, 9 passed`, and the failing test is the new one. In round 1 both survived |
+| WP-0.6-F02 | MAJOR | **Fixed** | Re-made on the new code: X1 (`row_sha256` check removed) fails `test_FR_0_6_02_add_rejects_tampered_stored_rows` and `…_query_trace_and_add_reject_a_damaged_store[row-text]`. X2 (content-against-name check removed, now in `check_part_file`, so add, query and trace are all affected) fails `…_add_rejects_tampered_stored_rows`, `[file-in-place]` and `[truncated]`. X3 (`query_run_card` row check removed) fails `[row-text]` |
+| WP-0.6-F03 | MINOR | **Fixed** | `connect` now checks every stored card with `load_stored_card` (valid, and in its own folder) and every part file with `check_part_file`. The test's four cases each give `ERROR:`, exit 1, empty stdout and no traceback from `results query`, `trace` and `results add` (`add` is excluded for the card copy, by design). My breaks X14 and X18 (weaker card checks) are caught. I also probed the sibling case with real inputs: a part file copied into another run card's folder. `query` of the folder that received it exits 1 ("run_card_id … differs from its identity's"), `trace` exits 1 ("stored 2 times"), and `add` of that run exits 1. See the DuckDB note under "For the owner" |
+| WP-0.6-F04 | MINOR | Accepted as debt: DEBT-015, target WP-0.7 | Approval round-2 condition on `main` (`73d1198`) and the row in `docs/progress/DEBT.md`. Item (1) is done: a truncated part file now gives `ERROR: … no longer matches the SHA-256 in its name`, exit 1 (`[truncated]` case) |
+| WP-0.6-F05 | MINOR | **Fixed** | Both step-6 reads run `cd "$ROOT" && …`. `test_FR_0_6_01_runs_from_any_directory` passes (slow, network). My break X16 (only the second read back in the caller's folder) fails it with `ERROR: cannot read paths.doctor_reports from config/aqis_lab/oracle.yaml.` `cd / && bash …/oracle_setup.sh --dry-run` exits 0 |
+| WP-0.6-F06 | MINOR | Accepted as debt: DEBT-016, target WP-0.9 | Approval round-2 condition and the DEBT row |
+| WP-0.6-F07 | MINOR | (4) **fixed**; (1) to (3) recorded deviations | `test_FR_0_6_02_default_store_equals_oracle_results_store` fails when `DEFAULT_STORE` moves (my break F07-4: `1 failed, 53 passed`). (1) to (3) are recorded as accepted deviations in `FIXES.md` and in the round-2 table in `EVIDENCE.md`. The approval text names only the (4) fix; being MINOR, (1) to (3) need no further approval |
+| WP-0.6-F08 | MINOR | Accepted as debt: DEBT-017, target WP-0.7 | Approval round-2 condition and the DEBT row, which says WP-0.7 must call `pin_for_mode(<timing mode>)` in the real-speed feeder, with an affinity test |
 
 ## Checklist
 | Item | Result | Evidence |
 | --- | --- | --- |
-| A1 Scope and dependencies | PASS | WP-0.5 is `MERGED` in `docs/progress/STATUS.md`. The branch is `claude/relaxed-davinci-iwk5gi`, not `main`. `git show origin/main:docs/approvals/WP-0.6.md` starts `STATUS: APPROVED`, with CONDITIONS: questions 1-16 as recommended, cores 2-3 reserved, DEBT-008 closed |
-| A2 Requirement coverage | PASS | Every FR has code, tests named after it that pytest collects, and an `EVIDENCE.md` entry. Collected counts: FR-0.6-01 20, -02 22, -03 7, -04 16, -05 13, -06 3. All 117 test names cited in the new registry rows and headers are collected (script over `pytest --collect-only`) |
-| A3 Acceptance commands | PASS | **AT-0.6-01:** `bash aqis_lab/deploy/oracle_setup.sh --dry-run` gives six `step N/6` lines, then `DRY RUN: nothing was changed`, exit 0, and the tree stays clean. The fast suite passes (A4). **AT-0.6-02:** `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.6` gives `Findings: 0`, `0 findings: OK (0.5 s)`, exit 0 |
-| A4 Test suites and CI | PASS | **Fast:** `1633 passed, 24 deselected in 192.39s`, exit 0. **Slow:** (`slow and not network …`) `3 passed`. **WP-0.6 network** (`-k FR_0_6 -m "network and not oracle"`): `4 passed`. **Lock, bootstrap and runner-overhead slow/network tests** (the lock and runner changed): `16 passed`. **CI on `fbc6966`:** push run 241 and PR run 242 `success`, both jobs `lab` and `harness-regression`. The rclone step, fast suite and gate step all `success` (GitHub API). The job log itself could not be read: its storage host `productionresultssa12.blob.core.windows.net` is blocked by the proxy |
-| A5 Test integrity | PASS | `git diff --name-status 6ad251b HEAD -- tests/` lists only added files (`A`). There are no `skip`, `xfail`, `skipif`, `importorskip` or `audit-allow` entries in the added tests. `test_FR_0_6_01_second_run_changes_nothing` (new in this WP) got a 1.1 s sleep in `920960c`. That is disclosed and justified in the test (see F06), and it is not a weakened pre-existing test |
-| A6 Must-catch proof | **FAIL** | 16 effective breaks: 14 caught, 2 survive, both in must-catch 2 (MC2b, MC2c). See the table below and F01 |
-| A7 Compromise scan | PASS | The gate reports 0 findings and 0 `audit-allow`. A grep of the added lines in `aqis_lab tools config` finds no TODO, FIXME, placeholder, bare `except`, `pass` or `NotImplementedError`. I read every new function: the only swallowed exception is `ProcessLookupError` for a thread that ended (`timing/cores.py`), which is justified. Nothing is hard-coded to satisfy a test. The test doubles are the Oracle CPU tree and an rclone `alias` for Drive, both allowed and both only in `tests/` |
-| A8 Scope diff | PASS (see F07) | Changed files match the plan's change budget. No GUARDED or NEVER path changed: `.github/workflows/aqis-lab-ci.yml`, `config/aqis_lab/`, `requirements/aqis_lab/` and `tests/aqis_lab/` are lab-owned. Existing functions in `platform.py`, `doctor.py`, `runner/run.py` and `score.py` are unchanged apart from the budgeted ones. Small deviations are listed in F07 |
-| A9 Capabilities | PASS | Every new module has the standard header. `oracle_setup.sh` omits CONTRACTS, as the accepted `dev_bootstrap.sh` does. The registry diff adds 18 rows. The 4 changed rows only append text (word diff): CAP-ENV-002, CAP-SCORE-005, CAP-DOCTOR-001, CAP-RUN-007. No row was removed. The linked tests exist and run (A2) |
-| A10 Contracts | PASS | Stored run cards are validated with `validate_run_card` on add and on trace. The stored `run_card.json` equals the source byte for byte (`test_FR_0_6_02_add_run_folder_writes_partition_by_run_card`). Score folders are checked against score table 1.0 metadata and columns. The store schema in `RESULTS_STORE.md` is kept equal to the code by a test. The `run_card.v1.json` mode enum is fully mapped to timing or batch |
-| A11 Environment parity | PASS | New code has no absolute paths (grep). The new CPU facts live in `aqis_lab/platform.py`. `duckdb==1.5.6` is pinned with hashes, and `test_FR_0_0_03_regeneration_is_reproducible` and `…_lock_installable_with_plain_pip` pass. `.venv` is Python 3.13.12, matching the Colab probe. duckdb's licence classifier is `MIT License`. I also checked that uv 0.8.17 accepts the exact step-4 target for the Oracle VM: `uv pip compile <26 pins> --only-binary :all: --python-platform aarch64-manylinux_2_39 --python-version 3.13` exits 0. Both owner-run checks are listed with commands and expected output. One robustness issue is in F05 |
-| A12 Reproducibility and traceability | FAIL (via F01) | Row IDs are SHA-256 over the canonical identity (recomputed in the tests). Rows carry `run_card_id` and `clip_id`, and part files are content-addressed. Trace's commit and lock-hash lines are not protected (F01) |
-| A13 Errors and logging | PASS with MINOR findings | Failures raise or print `ERROR:` with the documented exit codes, and I found nothing that fails silently. Some error paths end in a traceback or a misleading message (F04, F05). The read path accepts some damaged states (F02, F03) |
-| A14 Documentation, licences, data | PASS (see F03) | `RESULTS_STORE.md`, `ORACLE_RUNBOOK.md`, `DOCTOR.md` and `RUNNER.md` are updated. `EVIDENCE.md` covers every FR, AT, the must-catch list, CI and the owner-run checks. Its outputs match my re-runs: same counts, same dry-run text, same gate output. The duckdb licence is recorded in PLAN.md finding 4. The data is the committed smoke pack only; no personal data |
-| A15 Exploratory breaks | 10 made, 3 survive | See the table below. X1 to X3 survive (F02) |
+| A1 Scope and dependencies | PASS | WP-0.5 is `MERGED` in `docs/progress/STATUS.md`. The branch is `claude/relaxed-davinci-iwk5gi`, not `main`. `git show origin/main:docs/approvals/WP-0.6.md` starts `STATUS: APPROVED`, and its round-2 condition names F01, F02, F03, F05 and F07 to fix, and F04, F06 and F08 as debt |
+| A2 Requirement coverage | PASS | The new tests are collected: the trace commit/lock test (1 item), `…_add_rejects_tampered_stored_rows` (1), `…_query_trace_and_add_reject_a_damaged_store` (4), `…_runs_from_any_directory` (1) and `…_default_store_equals_oracle_results_store` (1). All 31 test names cited in the changed registry rows and headers are collected (`pytest --collect-only` compared with the names in the diff: none missing). `EVIDENCE.md` has a round-2 table for every finding |
+| A3 Acceptance commands | PASS | **AT-0.6-01:** `bash aqis_lab/deploy/oracle_setup.sh --dry-run` gives six `step N/6` lines and `DRY RUN: nothing was changed`, exit 0, with the tree still clean. It also works from `/`. The fast suite passes (A4). **AT-0.6-02:** `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.6` gives `Findings: 0`, `0 findings: OK (0.6 s)`, exit 0 |
+| A4 Test suites and CI | PASS | **Fast:** `1640 passed, 25 deselected in 326.57s`, exit 0. **Slow** (`slow and not gpu and not colab and not oracle and not network`): `3 passed, 1662 deselected`. **WP-0.6 network** (`-k FR_0_6 -m "network and not oracle"`): `5 passed, 1660 deselected`, including `test_FR_0_6_01_runs_from_any_directory`. **CI on `3501ca8`** (GitHub API): push run 248 and pull-request run 249 are `success`. Both jobs (`lab`, `harness-regression`) and every step are `success`, including rclone, the fast suite and the gate with `--wp` |
+| A5 Test integrity | PASS | `git diff fbc6966 HEAD -- tests/` has no removed lines. Every touched test file was created by this WP (`A` against `6ad251b`). No `skip`, `xfail`, `importorskip`, `audit-allow` or sleep was added. The new slow and network marks sit on a setup test that builds a real `.venv`, as its siblings do |
+| A6 Must-catch proof | PASS | 16 breaks, 16 caught (table below). MC2b and MC2c, which survived in round 1, are now caught |
+| A7 Compromise scan | PASS | The gate gives 0 findings and 0 `audit-allow`. A grep of the added lines in `aqis_lab tools config tests` finds no TODO, FIXME, placeholder, bare or broad `except`, `pass`, `NotImplementedError` or mocks. `check_part_file` is the old `read_partition` block moved without change (a `diff` of the de-indented blocks is identical). `connect` raises `StoreIntegrityError`, and nothing is swallowed. Nothing is hard-coded to satisfy a test |
+| A8 Scope diff | PASS | The changes match the `FIXES.md` change budget. The one budget change (`check_part_file` in `store.py`) is disclosed with its reason, which I checked: running all of `read_partition` in `connect` would have hidden the second case of the round-1 test `test_FR_0_6_03_row_not_matching_its_id_is_reported`. `trace.py` and `commands/results.py` changed only in header lines. The only other paths changed are `docs/progress/`, `docs/capabilities/REGISTRY.md` and `docs/approvals/WP-0.6.md`; the approval change is the owner's commit `73d1198` on `main`, merged in `9dfd730`. No guarded or NEVER path changed |
+| A9 Capabilities | PASS | The registry has 105 rows before and after. The five changed rows (CAP-RESULTS-002, -005, -006, CAP-TRACE-001, CAP-ENV-007) only gain text: the word diff removes nothing except final tokens that gained a comma or semicolon. The headers have change-log lines. `test_FR_0_0_08_module_headers_match_registry` passes in the fast suite |
+| A10 Contracts | PASS | No contract changed in round 2. `connect` validates each stored card through `load_stored_card`, which calls `validate_run_card` |
+| A11 Environment parity | PASS | No absolute paths in the added production lines (grep). No new dependency; the lock is unchanged (`5cb02130…`). `.venv` is Python 3.13.12 and the Colab probe gives 3.13. F05 is fixed. See the note on shallow clones below |
+| A12 Reproducibility and traceability | PASS | F01 is fixed. Trace's commit and lock-hash lines are now protected by a test whose stored card differs from the checkout in both |
+| A13 Errors and logging | PASS | A damaged store (row text changed, file changed in place, truncated file, card copy) gives `ERROR:` and exit 1 from `query`, `trace` and `add`, with no traceback (tested). DEBT-015 still records the open error-message items (2) to (4) |
+| A14 Documentation, licences, data | PASS | `FIXES.md` and the round-2 section of `EVIDENCE.md` match my re-runs: fast `1640 passed, 25 deselected`, slow `3 passed`, network `5 passed`, gate `0 findings`, CI runs 246 and 247 green on `719d7f4` (and 248 and 249 on `3501ca8`). DEBT-015 to DEBT-017 are written as the approval says. No new data |
+| A15 Exploratory breaks | 6 made, 2 survive | Table below. X13 and X15 survive (F09, MINOR). Counting the four round-1 re-checks as well, the total is 10 |
 
 ## Must-catch proof (A6)
-Every break was made in the throwaway copy. I then ran `pytest tests/aqis_lab -m "not slow and not gpu and not colab and not oracle and not network" -k "<named tests>"` there.
+Every break was made in the throwaway copy. I then ran `pytest tests/aqis_lab -m "not slow and not gpu and not colab and not oracle and not network" -k <FR group>`, where the FR group is `FR_0_6_02`, `FR_0_6_03`, `FR_0_6_04`, `FR_0_6_05` or `FR_0_6_01`. The set is round 1's, re-made on the current code.
 
 | Behaviour | Break made in /tmp copy | Test that failed | Result |
 | --- | --- | --- | --- |
-| 1 Store refuses to overwrite rows | MC1a: a conflicting row is appended to `new` instead of `conflicts` (`store.py`, `add_batch`) | `test_FR_0_6_02_refuses_to_overwrite_existing_rows` | Caught |
-| 1 | MC1b: `publish` uses `os.replace` instead of `os.link` | `test_FR_0_6_02_existing_files_never_replaced` | Caught |
-| 1 | MC1c: `existing = {}` (stored rows not read before writing) | `…_refuses_to_overwrite_existing_rows`, `…_existing_files_never_replaced` | Caught |
-| 2 Trace returns exact card, manifest version, clip, commit, lock hash | MC2a: trace loads the first stored partition's card, not the row's | `test_FR_0_6_03_trace_prints_run_card_manifest_clip_commit_lock`, `test_FR_0_6_03_rows_of_two_run_cards_trace_to_their_own_card` | Caught |
-| 2 | MC2b: the `git_commit:` line prints `git rev-parse HEAD` of the checkout instead of `card['git']['commit']` (`trace.py:70`) | none: `2 passed`. A wider run (`-k "FR_0_6 or FR_0_5 or trace or results"`) also gives `278 passed` | **SURVIVES** (F01) |
-| 2 | MC2c: the `lock_sha256:` line prints the SHA-256 of the lock file on disk instead of `card['lock']['sha256']` (`trace.py:72`) | none: `2 passed`, and `278 passed` on the wider run | **SURVIVES** (F01) |
+| 1 Store refuses to overwrite rows | MC1a: a conflicting row goes to `new` instead of `conflicts` (`add_batch`) | `test_FR_0_6_02_refuses_to_overwrite_existing_rows` (also `…_add_exit_codes`, `…_add_and_query_exit_promptly`) | Caught |
+| 1 | MC1b: `publish` unlinks an existing target, then links (so it replaces files) | `test_FR_0_6_02_existing_files_never_replaced` | Caught |
+| 1 | MC1c: `existing = {}` (stored rows not read before writing) | `…_refuses_to_overwrite_existing_rows`, `…_existing_files_never_replaced` (10 failed) | Caught |
+| 2 Trace returns exact card, manifest version, clip, commit, lock hash | MC2a: trace loads the first stored partition's card, with the card/row check off | `test_FR_0_6_03_trace_prints_run_card_manifest_clip_commit_lock`, `test_FR_0_6_03_rows_of_two_run_cards_trace_to_their_own_card` | Caught |
+| 2 | MC2b: the `git_commit:` line prints `git rev-parse HEAD` of the checkout | `test_FR_0_6_03_trace_prints_the_rows_own_commit_and_lock_hash` (`1 failed, 9 passed`) | **Caught** (survived in round 1) |
+| 2 | MC2c: the `lock_sha256:` line prints the SHA-256 of the lock file on disk | `test_FR_0_6_03_trace_prints_the_rows_own_commit_and_lock_hash` (`1 failed, 9 passed`) | **Caught** (survived in round 1) |
 | 3 Timing runs pinned to reserved cores | MC3a: timing mode pinned to the batch CPUs | `test_FR_0_6_04_timing_process_pinned_to_reserved_cores` | Caught |
-| 3 | MC3b2: only the first-listed (main) thread is ever pinned, and the read-back is disabled | `…_timing_process_pinned_to_reserved_cores`, `…_batch_run_kept_off_reserved_cores` | Caught |
-| 3 | MC3b3: only the main thread is pinned, read-back left in place | the same two tests | Caught |
-| 3 | MC3c: the runner checks the plan but does not pin | `…_batch_run_kept_off_reserved_cores` | Caught |
-| 3 | MC3d: batch CPUs = every online CPU (reserved not excluded) | `…_batch_run_kept_off_reserved_cores` | Caught |
-| 4 Sync never deletes remote files | MC4a: `"sy" + "nc"` instead of `"copy"` (built so the constant scan cannot see it) | `test_FR_0_6_05_never_deletes_remote_files`, `…_command_is_copy_only` | Caught (by the real rclone test, not only the scan) |
+| 3 | MC3b2: only the first-listed thread is pinned, and the read-back checks only that thread | `…_timing_process_pinned_to_reserved_cores`, `…_batch_run_kept_off_reserved_cores` | Caught |
+| 3 | MC3b3: only the first-listed thread is pinned, read-back left in place | the same two tests | Caught |
+| 3 | MC3c: the runner builds and logs the plan but does not pin (`runner/run.py`) | `…_batch_run_kept_off_reserved_cores` | Caught |
+| 3 | MC3d: batch CPUs = every online CPU (reserved not excluded) | `…_batch_run_kept_off_reserved_cores` (5 failed) | Caught |
+| 4 Sync never deletes remote files | MC4a: `"sy" + "nc"` instead of `"copy"` | `test_FR_0_6_05_never_deletes_remote_files` (real rclone), `…_command_is_copy_only` | Caught |
 | 4 | MC4b: `--immutable` removed | `…_never_replaces_a_remote_file`, `…_command_is_copy_only` | Caught |
 | 4 | MC4c: `"--delete-" + "excluded"` added to the argv | `…_command_is_copy_only` | Caught |
-| 5 Setup stops on unsupported architecture or OS | MC5a: the architecture check prints a warning instead of `fail` | `test_FR_0_6_01_refuses_unsupported_architecture` (both parameters) | Caught |
-| 5 | MC5b: the OS is compared by `ID` only (any Ubuntu version passes) | `test_FR_0_6_01_refuses_unsupported_operating_system` | Caught |
-
-- **MC3b was not a valid break.** My first variant pinned one thread per pass (`for tid in new[:1]`). `pin_process` repeats its listing until no thread is left, so it still pinned every thread and both tests correctly passed. I replaced it with MC3b2 and MC3b3, which really pin only one thread.
-- **MC2b and MC2c really produce a wrong trace.** I checked this in the copy after each ran clean:
-  - **MC2b:** after a later commit in the copy's own `.git`, `trace` printed `git_commit: a0362c81ab52…` for a row whose run card says `fbc6966c9fe7…`.
-  - **MC2c:** after the lock file changed on disk, `trace` printed `lock_sha256: d1700b78…` for a row whose card says `5cb02130…`.
+| 5 Setup stops on unsupported architecture or OS | MC5a: the architecture check prints a warning instead of `fail` | `test_FR_0_6_01_refuses_unsupported_architecture[False]` and `[True]` | Caught |
+| 5 | MC5b: the OS is compared by `ID` only (any version of a listed ID passes) | `test_FR_0_6_01_refuses_unsupported_operating_system` | Caught |
 
 ## Exploratory breaks (A15, at most 10)
-Each was run against all 108 fast WP-0.6 tests (`-k FR_0_6`).
+Only in code changed since `fbc6966`. Each was run against `-k "FR_0_6_02 or FR_0_6_03"` (fast markers, 47 tests), except X16 (`-m "slow and network" -k runs_from_any_directory`). The four round-1 re-checks (F02-X1, F02-X2, F02-X3, F07-4) are listed under "Round-1 findings".
 
 | Break | Where | Survived? | Severity |
 | --- | --- | --- | --- |
-| X1: `verify_record` no longer checks `row_sha256` | `aqis_lab/results/store.py:259` | **Yes**: `108 passed` | MAJOR (F02) |
-| X2: `read_partition` no longer checks a part file's content against its name | `aqis_lab/results/store.py:278` | **Yes**: `108 passed` | MAJOR (F02) |
-| X3: `query_run_card` no longer checks the rows it returns | `aqis_lab/results/views.py:93-94` | **Yes**: `108 passed` | MAJOR (F02) |
-| X4: `trace_row` no longer calls `verify_record` | `aqis_lab/trace.py:48` | No: `test_FR_0_6_03_row_not_matching_its_id_is_reported` | — |
-| X5: stale-partial cleanup also deletes `.parquet` files | `aqis_lab/results/store.py`, `_remove_stale_partials` | No: 9 tests fail | — |
-| X6: sync reports success when rclone refused to replace a differing remote file | `aqis_lab/sync.py`, `run_sync` | No: `test_FR_0_6_05_never_replaces_a_remote_file` | — |
-| X7: sync no longer requires `AQIS_LAB/results` to exist | `aqis_lab/sync.py`, `run_sync` | No: `test_FR_0_6_05_refuses_when_remote_results_folder_missing` | — |
-| X8: setup continues after naming packages without a build | `aqis_lab/deploy/oracle_setup.sh`, step 4 | No: `test_FR_0_6_01_missing_build_names_the_package` | — |
-| X9: a refused pin is ignored and the read-back disabled | `aqis_lab/timing/cores.py`, `pin_process` | No: `test_FR_0_6_04_pin_failure_is_an_error` | — |
-| X10: the doctor `cores` row passes an impossible reservation | `aqis_lab/doctor.py`, `_check_cores` | No: `test_FR_0_6_04_doctor_oracle_cores_row` | — |
+| X13: `connect` checks only the first part file (`parts[:1]`) | `aqis_lab/results/views.py`, `connect` | **Yes**: `47 passed` | MINOR (F09) |
+| X14: `connect` checks only the first stored card (`cards[:1]`) | `aqis_lab/results/views.py`, `connect` | No: `…_reject_a_damaged_store[card-copy]` | — |
+| X15: `check_part_file` drops the schema-version and columns check | `aqis_lab/results/store.py`, `check_part_file` | **Yes**: `47 passed` | MINOR (F09) |
+| X16: step 6 reads `paths.doctor_reports` in the caller's folder again | `aqis_lab/deploy/oracle_setup.sh` | No: `test_FR_0_6_01_runs_from_any_directory` (`ERROR: cannot read paths.doctor_reports …`); an unbroken control run passes | — |
+| X17: `read_partition` (the add path) reads part files without `check_part_file` | `aqis_lab/results/store.py`, `read_partition` | No: `…_add_rejects_tampered_stored_rows`, `[file-in-place]`, `[truncated]` | — |
+| X18: `connect` checks the card stored under the card's own ID, not the file in the folder | `aqis_lab/results/views.py`, `connect` | No: `[card-copy]` | — |
+
+**What the two survivors let through.** I tested this on a real two-run-card store in the scratchpad (`a2/demo_x13`, `a2/demo_x15`):
+- **X13:** I changed the later part file in place (`added_by`, `source_sha256`, name kept). The real code gives `ERROR:` and exit 1 from both `results query` and `trace`. With X13 applied, `query` exits 0 and prints 60 rows with `added_by 'someone else'` and `source_sha256 00000000…`, and `trace` exits 0.
+- **X15:** a part file marked schema `2.0`, renamed after its own content. The real code gives exit 1. With X15 applied, `query` exits 0 with 60 rows.
 
 ## Findings
 | ID | Severity | Item | Finding | Evidence | Recommendation: fix now, or accept as debt (target WP) |
 | --- | --- | --- | --- | --- | --- |
-| WP-0.6-F01 | CRITICAL | A6, A12; must-catch 2 | No test protects trace's **commit and lock hash** lines. Every stored row in `test_aqis_trace.py` comes from a `smoke_run` made in this checkout, so the run card's `git.commit` and `lock.sha256` always equal the checkout's current commit and lock hash. A trace that prints the current commit or the current lock hash instead of the row's own passes both must-catch tests. The full card printed below the fields is compared, but the named `git_commit:` and `lock_sha256:` lines are not independent of the checkout. The code at `trace.py:70,72` is correct today | Breaks MC2b and MC2c survive (`2 passed`, and `278 passed` on the wider run). The demonstration in the copy printed the wrong commit and the wrong lock hash (above) | **Fix now (tests only).** Add a stored row whose run card's `git.commit` and `lock.sha256` differ from the checkout's, then assert trace prints the card's values. Either run the runner in a throwaway git tree at another commit with a changed lock, or build a valid card with another commit and lock hash through the real card builder and `compute_run_card_id`. Then MC2b and MC2c must fail. Re-run the must-catch proof |
-| WP-0.6-F02 | MAJOR | A15, A13 | Three read-side integrity checks have no test, and each can be removed with every WP-0.6 test passing. They are the `row_sha256` check (all readers), the part-file content-against-name check (`add`), and the per-row check in `results query`. Without them, a damaged or hand-edited row or part file reads as valid: `query` and `trace` exit 0, and `add` counts the rows as "already stored". `RESULTS_STORE.md` promises these checks ("Any difference is an integrity error, never a silent skip") | X1, X2 and X3 survive, each `108 passed` | **Fix now.** Add tests that change a stored row's `row` text while keeping its ID, rewrite a part file in place, and then run `results query`, `trace` and `results add`. Each must give `ERROR:` and exit 1. X1 to X3 must then fail |
-| WP-0.6-F03 | MINOR | A13, A14 | `query` and `trace` do not do all the reader checks the document lists. (1) They never compare a part file's content with its name. After I rewrote a part file in place (`added_by`, `source_sha256` changed), `results query` printed the altered `added_by` with exit 0 (60 lines), and `trace` exited 0. Only `results add` refused it (exit 1). (2) The `results` view joins every `run_card.json` by its `run_card_id` without checking the folder. A copy of a card in another partition folder makes `results query` print every row twice with exit 0 (120 lines, 60 unique). The traced fields stay correct: they come from the validated card and the self-hashed identity | `RESULTS_STORE.md:65`; `views.py:75, 89`. Scratchpad stores `t1` and `t3` | **Fix now, together with F02** (small). Make `query` and `trace` use the same file check as `add` (`read_partition`), and read stored columns from `result_rows`, or check the card folder. Otherwise correct the document. Else accept as debt, target WP-0.7 |
-| WP-0.6-F04 | MINOR | A13 | Some error paths end in a traceback or hide the cause. (1) A truncated part file makes `results query` and `trace` end with `_duckdb.InvalidInputException` and a Python traceback (exit 1), not `ERROR:`. One damaged file anywhere breaks both commands for every run card. (2) If `rclone lsf <remote>:AQIS_LAB` fails for any reason, such as an expired Drive token, sync reports "`AQIS_LAB` not found … must already exist" and drops rclone's own error text. (3) `subprocess.run(..., timeout=TIMEOUT_S)` for the copy does not catch `TimeoutExpired`. (4) `STORE.json` is created before the store lock is taken, so two first adds at once can fail with a traceback or a misleading "refusing to replace STORE.json". All of these fail loudly. None writes anything wrong | Truncation test in scratchpad `t2`: `query exit 1`, `trace exit 1`, both `Traceback … InvalidInputException`. By reading: `sync.py:90-94`, `sync.py:114-115`, `store.py:211-223, 337-338` | Accept as debt, target WP-0.7, or fix now alongside F02 |
-| WP-0.6-F05 | MINOR | A11, A13 | `oracle_setup.sh` fails when started from outside the repository root. It derives `ROOT` from its own location, but the step-6 config reads `"$VENV/bin/python" -m aqis_lab.oracle_config get …` run in the caller's directory, where `aqis_lab` cannot be imported. Steps 1 to 5 pass and `.venv` is built, then it stops with the misleading `ERROR: cannot read paths.work_dir from config/aqis_lab/oracle.yaml.` The real cause is `No module named 'aqis_lab'`. From the root it works. The runbook says to run from `~/aqis`, so the owner should not hit this | `oracle_setup.sh:197-198`. A run from `/` in a throwaway tree exits 1 as described, and the same tree run from its root reaches the doctor | Fix now (run the two reads with `cd "$ROOT"`), or accept as debt, target WP-0.7 |
-| WP-0.6-F06 | MINOR | A2 (FR-0.6-01 idempotency) | Two setup runs that start less than a second apart fail on the second run: the doctor report name has one-second resolution (FR-0.5-02) and is never replaced, so the doctor exits 2. State is unchanged. The builder measured 3 of 8 back-to-back pairs colliding with a warm cache, and the test sleeps 1.1 s. This is disclosed in EVIDENCE finding 5 | `test_aqis_oracle_setup.py:294-297`, commit `920960c` | Accept as debt, target WP-0.9 (or whichever WP may change the FR-0.5-02 name format) |
-| WP-0.6-F07 | MINOR | A8 | Deviations from the approved plan. (1) `parse_cpu_list` and three constants were added to `aqis_lab/platform.py`. The change budget named only `online_cpus`, `core_siblings`, `thread_ids` and `thread_affinity`. It is in the header and the registry, but not in EVIDENCE's deviation list. (2) `oracle_setup.sh` has no `--config` option (disclosed). (3) The runner log line is `cores:`, not `session N cores:` (disclosed, to keep an existing test unchanged). (4) The plan promised "a test keeps `paths.results_store` equal to that default". No test references `store.DEFAULT_STORE`, so `results add` and `sync` could drift to different folders unnoticed | `platform.py:299`; `grep -rn DEFAULT_STORE tests/aqis_lab` finds nothing | Accept (1) to (3) as recorded deviations. Add the (4) test now or accept as debt, target WP-0.7 |
-| WP-0.6-F08 | MINOR | A2 (FR-0.6-04 handoff) | Only the pinning function exists for timing runs; no timing run exists yet, as the approved plan says. The WP-0.7 spec does not say its real-speed feeder must call `aqis_lab.timing.cores.pin_for_mode`. `ORACLE_RUNBOOK.md:95` describes timing runs as already pinned. If WP-0.7 forgets the call, timing runs on Oracle would run unpinned with no error | WP-0.7 spec (grep: no mention of pinning or reserved cores); `docs/runner/RUNNER.md` "they arrive with WP-0.7" | Accept as debt, **target WP-0.7**: a debt row saying the real-speed feeder calls `pin_for_mode(<timing mode>)`, with a test that reads each thread's affinity |
+| WP-0.6-F09 | MINOR | A15, A13 | Two file checks on the new read path have no test that fails without them. (1) `connect` checks every part file, but every damaged-store test uses a store with exactly one part file (`part_file` asserts it), so checking only the first file passes every test. (2) The schema-version and columns check in `check_part_file` has no test at all. Without either check, `results query` and `trace` exit 0 on a damaged store. **Why MINOR, not MAJOR:** under both breaks every returned row still passes `verify_record`, so no result value, identity, run card, commit or lock hash can be wrong. What gets through is only the add-provenance columns `source_file`, `source_sha256`, `added_utc` and `added_by` (X13), or a file of another schema version whose rows check (X15). Round 1 rated this same consequence MINOR (F03 (1)). A truncated later file still fails loudly (DuckDB error) | X13 and X15 survive (`47 passed` each); the demonstration above | Accept as debt, **target WP-0.7**, with DEBT-015, which already targets the store's error paths. The fix is test-only: in `test_FR_0_6_02_query_trace_and_add_reject_a_damaged_store`, damage the later of two part files, and add a case with a part file of another schema version renamed after its content. X13 and X15 must then fail. It may also be fixed now if the builder is back in this WP for another reason |
 
 ## Convergence (round 3 onwards)
-Not applicable: round 1.
+Not required at round 2. Shown for tracking.
 
 | Round | CRITICAL | MAJOR | MINOR | Open findings inside the must-catch list |
 | --- | --- | --- | --- | --- |
 | 1 | 1 | 1 | 6 | F01 (must-catch 2) |
+| 2 | 0 | 0 | 1 (F09, new) | none |
 
 ## For the owner
-- **What blocks a pass:** F01 (CRITICAL) and F02 (MAJOR). Both are fixed with tests. F01 needs no production change. F02 may need none either.
+- **Verdict:**
+  - PASS: no CRITICAL, and no open MAJOR finding.
+  - F09 is MINOR and does not block. The builder should record it in `docs/progress/DEBT.md` (recommended target WP-0.7).
 - **audit-allow lines:** none. The gate reports `Exempted lines (# audit-allow): 0`.
-- **Approvals used:** `docs/approvals/WP-0.6.md` on `main` (`6ad251b`): questions 1-16 as recommended, reserved cores 2-3, DEBT-008 closed.
-- **Debt accepted so far:** none for WP-0.6. DEBT-008 (from WP-0.3) is closed in this WP. I confirmed the fix: `test_FR_0_3_06_out_folder_that_cannot_be_created_exits_2` passes in the fast suite.
+- **Approvals used:** `docs/approvals/WP-0.6.md` on `main` (`73d1198`):
+  - questions 1-16 as recommended;
+  - reserved cores 2-3;
+  - DEBT-008 closed;
+  - the round-2 condition (fix F01, F02, F03, F05, F07; F04, F06, F08 as debt).
+- **Debt accepted so far for WP-0.6:**
+  - DEBT-015 (F04, WP-0.7; item 1 already done);
+  - DEBT-016 (F06, WP-0.9);
+  - DEBT-017 (F08, WP-0.7).
+  - DEBT-008 (from WP-0.3) was closed in this WP.
 - **Owner-run checks still pending:**
   - **OC-0.6-01:** on the Oracle VM, `oracle_setup.sh --dry-run`, then `oracle_setup.sh`, then `pytest -m oracle`. Commit the doctor JSON and `OC-0.6-01_oracle.txt`.
   - **OC-0.6-02:** configure the rclone remote, then `run`, `results add` and `sync --dry-run`. Commit `OC-0.6-02_sync_dry_run.txt`.
-  - Both are expected only after the audit passes, at the tag `aqis-lab-wp-0.6-oracle-1`.
-  - The aarch64 path has not run on real hardware. I confirmed only that every lock pin resolves to a binary for `aarch64-manylinux_2_39`, the exact target step 4 builds on the probe's glibc 2.39.
-- **A note on the probe:** `docs/environment/oracle_probe.txt` is shorter than the probe the plan asked for. It has no `ID`/`VERSION_ID` or threads-per-core lines, and no git, uv or GitHub reachability lines.
-  - The builder read `ubuntu:24.04` from `PRETTY_NAME` and one thread per core from the Neoverse-N1 model. Both are reasonable.
-  - OC-0.6-01 will confirm them: the doctor `cores` row reads the real `thread_siblings_list`, and step 3 needs GitHub for uv's Python download.
+  - Both are planned at tag `aqis-lab-wp-0.6-oracle-1` after this audit. The commands and expected output are in `EVIDENCE.md`, "Owner-run checks". The aarch64 path has still not run on real hardware.
+- **Note, not a finding (shallow clones):** the new F01 test reads git history (`git log` on the lock and `<commit>^`), so it errors in a depth-1 clone.
+  - I checked this in a `--depth 1` clone: `4 failed, 1636 passed`. The other three failures are WP-0.0 tests that already need a pinned historical corpus commit and `origin/main`, so the fast suite already needed full history before this WP.
+  - CI (`fetch-depth: 0`) and the Oracle runbook (`git clone` without `--depth`) use full clones.
+  - The Colab launcher's `--depth 1` clone runs only `-m colab` tests.
+- **Note, not a finding (DuckDB):** the `results` view takes `run_card_id` from the `run_card_id=<id>` folder name. DuckDB 1.5.6 auto-detects hive partitions.
+  - This is why `query` refuses rows that sit in another run card's folder, which is correct.
+  - It is not set explicitly in `views.py` and not documented in `RESULTS_STORE.md`.
+  - If a later DuckDB version stopped auto-detecting, a copied part file would print its rows twice under its own run card, with exit 0.
+  - Worth pinning `hive_partitioning` explicitly when the store is next touched (WP-0.7 with DEBT-015).
