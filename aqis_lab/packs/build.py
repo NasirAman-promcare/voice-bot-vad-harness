@@ -1,7 +1,7 @@
 """pack build: from a pack spec, the registry and the source files to a verified pack folder, byte-identical every time.
 
 CAPABILITIES:
-  CAP-PACK-005: build_pack() loads and checks the spec, datasets.yaml and the registry, plans the clips (aqis_lab/packs/select.py), reads every source file once and checks it against its registry SHA-256, sample count and the working format, renders each clip (taken as it is, mixed, cut or generated) as a canonical WAV, rebuilds every derived clip from its recipe to prove the recipe complete, lays the clips out per category in tar shards within the limits, writes manifest.json (validated with the WP-0.2 contract before it is written), LICENCES.md and build_record.json into a staging folder and renames it into place; an existing output or staging folder is never touched, and a failed build leaves nothing behind [tests: test_FR_0_4_05_manifest_valid_under_wp_0_2_schema, test_FR_0_4_05_archive_hashes_sizes_and_member_counts_recorded, test_FR_0_4_05_members_in_documented_order, test_FR_0_4_05_build_twice_byte_identical, test_FR_0_4_05_created_utc_comes_from_spec, test_FR_0_4_05_clips_hold_the_source_samples, test_FR_0_4_05_derived_clips_match_their_recipes, test_FR_0_4_05_build_refuses_existing_output, test_FR_0_4_05_build_rejects_source_with_wrong_hash, test_FR_0_4_05_failed_build_leaves_nothing, test_FR_0_4_05_build_record_traces_inputs, test_FR_0_4_06_splits_archives_at_size_limit, test_FR_0_4_06_splits_member_folders_at_1000_files, test_FR_0_4_06_rejects_clip_larger_than_archive_limit]
+  CAP-PACK-005: build_pack() loads and checks the spec, datasets.yaml and the registry, plans the clips (aqis_lab/packs/select.py), reads every source file once and checks it against its registry SHA-256, sample count and the working format, renders each clip (taken as it is, mixed, cut or generated) as a canonical WAV, rebuilds every derived clip from its recipe to prove the recipe complete, lays the clips out per category in tar shards within the limits, writes manifest.json (validated with the WP-0.2 contract before it is written), LICENCES.md and build_record.json into a staging folder and renames it into place; an existing output or staging folder is never touched, and a failed build leaves nothing behind; on Google Drive it writes only under MyDrive/AQIS_LAB (NFR-0.5-02): the pack folder and its staging folder are checked before anything is read or written, and another Drive path is a BuildError [tests: test_FR_0_4_05_manifest_valid_under_wp_0_2_schema, test_FR_0_4_05_archive_hashes_sizes_and_member_counts_recorded, test_FR_0_4_05_members_in_documented_order, test_FR_0_4_05_build_twice_byte_identical, test_FR_0_4_05_created_utc_comes_from_spec, test_FR_0_4_05_clips_hold_the_source_samples, test_FR_0_4_05_derived_clips_match_their_recipes, test_FR_0_4_05_build_refuses_existing_output, test_FR_0_4_05_build_rejects_source_with_wrong_hash, test_FR_0_4_05_failed_build_leaves_nothing, test_FR_0_4_05_build_record_traces_inputs, test_FR_0_4_06_splits_archives_at_size_limit, test_FR_0_4_06_splits_member_folders_at_1000_files, test_FR_0_4_06_rejects_clip_larger_than_archive_limit, test_NFR_0_5_02_pack_build_refuses_drive_path_outside_aqis_lab]
 INPUTS AND OUTPUTS: paths of the spec, output folder, registry, datasets file, cache and repository root in; the
   pack folder and a BuildResult out; BuildError naming the problem.
 CONTRACTS: pack-manifest v1 (docs/contracts/PACK_MANIFEST.md); pack spec v1, recipe v1 and the layout
@@ -14,6 +14,8 @@ NOT IN SCOPE:
   - Downloading sources (aqis_lab/registry/fetch.py); checking a built pack (aqis_lab/packs/verify.py).
 CHANGE LOG:
   2026-09-27 WP-0.4 FR-0.4-05 created.
+  2026-09-30 WP-0.7 DEBT-014: build_pack checks the pack folder and its staging folder with
+    aqis_lab.drive.check_write_path first (test_NFR_0_5_02_pack_build_refuses_drive_path_outside_aqis_lab).
 """
 import hashlib
 import json
@@ -196,8 +198,15 @@ def _assemble(spec, plan, load, datasets):
 
 def build_pack(spec_path, out_dir, registry_path, datasets_path, cache_dir, repo_root):
     """Build a pack folder at out_dir (see the module header); returns BuildResult or raises BuildError."""
+    from aqis_lab.drive import DriveError, check_write_path
+    from aqis_lab.platform import PlatformError
     out = Path(out_dir)
     staging = out.parent / f".{out.name}.partial"
+    try:
+        for path in (out, staging):          # NFR-0.5-02: on Google Drive, only under MyDrive/AQIS_LAB
+            check_write_path(path)
+    except (DriveError, PlatformError) as exc:
+        raise BuildError(str(exc)) from exc
     if out.exists():
         raise BuildError(f"{out} already exists; a built pack is never overwritten (choose a new folder or version)")
     if staging.exists():

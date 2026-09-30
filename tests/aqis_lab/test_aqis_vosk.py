@@ -70,6 +70,7 @@ def test_FR_0_7_02_model_block_records_checksum_and_settings():
     assert s["sample_rate_hz"] == 16000 and s["feed_samples"] == 320 and s["words"] is True
     assert s["openblas_coretype"] == "Prescott" and s["openblas_num_threads"] == 1   # owner decision, question 6
     assert s["library"] == "vosk 0.3.45" and adapter.component == "live_stt"
+    assert s["c_rand_seed_per_clip"] == 1        # the dither's generator, reseeded per clip (glibc's own start seed)
 
 
 @pytest.mark.network
@@ -118,6 +119,30 @@ def test_FR_0_7_02_same_input_gives_identical_transcript():
                   for l in s.data().splitlines()]
         runs.append((fields, events))
     assert runs[0] == runs[1]
+
+
+@pytest.mark.network
+def test_FR_0_7_02_clip_result_independent_of_earlier_clips(tmp_path):
+    # Kaldi dithers the features with noise from the C library's rand(), a process-wide generator: without a fixed
+    # seed per clip, a clip's result depends on everything the process computed before it. This clip showed it: 4
+    # different transcripts in 20 repeats in one process (docs/progress/WP-0.7/EVIDENCE.md).
+    clip, wav = smoke_clip("ls-test-other-3080-5040-0016")
+    other, other_wav = smoke_clip(CLIP)
+    samples, other_samples = samples_of(wav), samples_of(other_wav)
+    adapter = VoskAdapter(cache_dir=SESSION_MODEL_CACHE)
+    adapter.open()
+    results = []
+    for repeat in range(10):
+        for _ in range(repeat % 3):
+            adapter.process_clip(other["clip_id"], other_samples, sink())
+        s = sink()
+        fields = adapter.process_clip(clip["clip_id"], samples, s)
+        events = [{k: v for k, v in json.loads(l).items() if k not in ("wall_time_ns", "wall_clock_utc", "seq")}
+                  for l in s.data().splitlines()]
+        results.append((fields, events))
+    assert all(r == results[0] for r in results), [r[0]["partials"] for r in results]
+    # the same as the clip computed first in a fresh process by Vosk itself
+    assert results[0][0]["text"] == reference_text(tmp_path, wav)
 
 
 @pytest.mark.network

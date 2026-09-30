@@ -142,3 +142,73 @@ AssertionError: (3, ["line 4: command ['bash', 'aqis_lab/deploy/dev_bootstrap.sh
 ```text
 1734 passed, 51 deselected in 197.83s (0:03:17)
 ```
+
+### DEBT-014 — the four older writers refuse Drive outside `MyDrive/AQIS_LAB` (NFR-0.5-02)
+- Code, each change only in the planned function, plus its header text and CHANGE LOG:
+  - `aqis_lab/commands/score.py` `write_outputs` (CAP-SCORE-005);
+  - `aqis_lab/packs/build.py` `build_pack` (CAP-PACK-005; the pack folder and its staging folder);
+  - `aqis_lab/commands/registry.py` `main`, build branch (CAP-REG-005; `--out` and its staging file);
+  - `aqis_lab/registry/fetch.py` `fetch_dataset` (CAP-REG-003; the cache, archive, `.part`, extraction and staging paths).
+
+  Each calls `aqis_lab.drive.check_write_path` before it reads or writes anything, and turns a `DriveError` or `PlatformError` into the command's own input error (`ERROR:`, exit 2). The imports are inside the functions, so the rest of each file is byte-identical (`git diff -U0`: one CAPABILITIES line, two CHANGE LOG lines and one hunk inside the named function per file).
+- Tests: `tests/aqis_lab/test_aqis_debt_wp07.py`, `test_NFR_0_5_02_*`. The Drive test double is the WP-0.5 one: a local folder with a generated `fuse.drive` mountinfo line, installed as `SystemView.real`. Each command runs through its real `main`, with inputs it can really process: generated CSVs, and the WP-0.4 generated world with archives served over local HTTP. So without the guard it really writes to Drive. Three kinds of target are refused: a folder beside `AQIS_LAB`, `MyDrive` itself, and the Drive root. The same command with a folder inside `AQIS_LAB` succeeds.
+- Tests first (real tree, before the fix): `4 failed in 3.05s`, each `assert 0 == 2`, meaning the command wrote to Drive and exited 0. One test of mine then failed for my own reason: `capsys` also held the set-up's download log. I fixed the test (`capsys.readouterr()` after set-up), not the code.
+- The writers' existing tests, before and after: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_scoring_cli.py tests/aqis_lab/test_aqis_scoring_table.py tests/aqis_lab/test_aqis_packs_build.py tests/aqis_lab/test_aqis_packs_smoke.py tests/aqis_lab/test_aqis_registry_build.py tests/aqis_lab/test_aqis_registry_fetch.py tests/aqis_lab/test_aqis_drive_guard.py tests/aqis_lab/test_aqis_debt_wp05.py tests/aqis_lab/test_aqis_debt_wp06.py -q -p no:cacheprovider -m "not slow and not network"`
+```text
+before: 96 passed, 3 deselected in 30.46s
+after:  96 passed, 3 deselected in 25.11s
+```
+
+### DEBT-015 items 2 to 4 — sync and store error paths
+- Code, each change only in the planned function, plus header text and CHANGE LOG:
+  - `aqis_lab/sync.py` `_check_destination` (item 2): a failed `rclone lsf` shows rclone's own message. It is `SyncFailed` (exit 1) unless rclone's exit code is 3, its documented "directory not found", which keeps the "must already exist" guidance and now shows rclone's message too.
+  - `aqis_lab/sync.py` `run_sync` (item 3): `subprocess.TimeoutExpired` from `rclone copy` prints the copy's output so far, then raises `SyncFailed` (`ERROR:`, exit 1).
+  - `aqis_lab/results/store.py` `_ensure_store` (item 4): the folder is created race-safely. A folder holding anything other than the store's own `.lock`, `STORE.json` or `STORE.json.partial` is refused before any file is made in it. `STORE.json` is then re-checked and published only while holding the store lock. `add_batch` needed no change.
+- Real rclone behaviour, measured here (`rclone lsf aqisdrive:AQIS_LAB --dirs-only`):
+  - an alias remote to an unconfigured remote: `Failed to create file system for "aqisdrive:AQIS_LAB": didn't find section in config file`, exit 1;
+  - an alias remote to an empty folder: `error listing: directory not found`, exit 3.
+- Tests: `test_FR_0_6_05_failed_remote_listing_shows_rclone_message` (real rclone, the expected message taken from rclone itself in the test); `test_FR_0_6_05_rclone_timeout_is_an_error` (real rclone for every call except `copy`, which a wrapper on `PATH` replaces with a process that never finishes; the time limit is set to 2 s for the test); `test_FR_0_6_02_simultaneous_first_adds_are_safe` (12 rounds of 4 processes, started with `spawn` and held at a barrier, adding to the same new store).
+- Tests first (real tree, before the fix), 3 failed:
+```text
+AssertionError: ERROR: aqisdrive:AQIS_LAB not found: AQIS_LAB/results must already exist on Google Drive; … (assert 2 == 1)
+subprocess.TimeoutExpired: Command '[…/bin/rclone', 'copy', …]' timed out after 2 seconds
+AssertionError: (1, [('error', "FileExistsError: [Errno 17] File exists: '…/store-1'"), ('ok', 60), ('ok', 0), ('ok', 0)])
+```
+  In the pre-fix copy, with `spawn`, round 0 gave the misleading message the debt describes: `StoreInputError: …/store-0 is not a results store (no STORE.json) and is not empty`.
+- One regression found and fixed on the way: `test_FR_0_6_06_runbook_has_each_required_step` reads `section "<name>"` from source lines, and my first message split it across two lines. The message now keeps it on one line. The test is unchanged.
+- The files' existing tests, before and after: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_sync.py tests/aqis_lab/test_aqis_results_cli.py tests/aqis_lab/test_aqis_results_store.py tests/aqis_lab/test_aqis_trace.py tests/aqis_lab/test_aqis_debt_wp06.py -q -p no:cacheprovider -m "not slow and not network"`: before `63 passed in 31.96s`. After all debt fixes, together with the DEBT-014 files, `test_aqis_debt_wp07.py` and `test_aqis_oracle_runbook.py`: `1 failed, 167 passed` (the runbook regression above), then after the fix `26 passed in 13.24s` for `test_aqis_oracle_runbook.py`, `test_aqis_sync.py` and `test_aqis_debt_wp07.py`.
+- New debt tests (before the DEBT-013 test was added): `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_debt_wp07.py -q -p no:cacheprovider`: `7 passed in 8.20s`. In the pre-fix copy (`/tmp/wp07-mustcatch`, its own git repository at `8c1d2f6`): `7 failed in 6.87s`.
+
+### Defect found by the DEBT-013 measurement: Vosk results depended on earlier clips in the process (fixed; FR-0.7-02)
+- **What happened.** The first run of `test_NFR_0_5_01_runner_overhead_under_5_percent_on_vosk_batch` failed its like-for-like check. The runner and the direct loop, in the same process, gave different bytes for one clip:
+```text
+AssertionError: direct … At index 8648 diff: b'5' != b'6'
+ls-test-other-3080-5040-0016 {'events': (16, 15), 'partials': (15, 14)}
+```
+- **Cause.** Kaldi dithers the features (the model's `conf/mfcc.conf` sets no `--dither`, so the default 1.0 applies) with noise from the C library's `rand()`. `libvosk.so` imports `rand`, `rand_r` and `srand` from glibc (`nm -D`), and that generator is one for the whole process. Measured on that clip, 2 model loads × 10 repeats in one process, three separate processes (`partials`, text hash, partial-event hash):
+  - every process printed the same sequence of 20 results;
+  - within a process the 20 results were all different, with 4 different transcripts (`d95e96069738`, `81fd88a2fbac`, `5a47641ea9b3`, `6b5b3ce0a45d`).
+
+  With `srand(1)` before each repeat, all 20 were identical: `{(14, 'd95e96069738', '475944e22772'): 20}`. So the adapter's documented invariant ("the same samples, model, kernel and feed size give the same events and text") and the plan's "same bytes on a rerun" did not hold within a process. The consequences:
+  - a resumed run could differ from an uninterrupted one;
+  - `vosk-realspeed` depended on the batch run before it;
+  - cross-machine parity depended on the whole history of each process.
+
+  The existing `test_FR_0_7_02_same_input_gives_identical_transcript` repeats one clip twice, which happened not to show it.
+- **Fix** (`aqis_lab/adapters/vosk_stt.py`, my own WP-0.7 module):
+  - `start_clip` reseeds the C library's `rand()` with `C_RAND_SEED = 1` before each clip, and the run card records `c_rand_seed_per_clip: 1`.
+  - glibc's `rand()` starts from seed 1, so each clip is computed exactly as the first clip of a fresh process.
+  - The dither itself is unchanged: the pinned model files are never modified.
+  - CAP-VOSK-001 and -003, `docs/adapters/VOSK.md` ("Feature dither").
+  - **For the owner:** this is a new recorded setting in the Vosk run card, of the same kind as the OpenBLAS kernel pin (question 6).
+- **Test first:** `test_FR_0_7_02_clip_result_independent_of_earlier_clips` (`network`) processes that clip 10 times, with 0 to 2 other clips before each repeat, in one process. Every repeat's fields and events must be identical and equal to Vosk run directly on the clip in a fresh process. Before the fix: `AssertionError: [14, 14, 14, 14, 14, 14, ...]` (`assert False`), `1 failed`. After: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_vosk.py -q -p no:cacheprovider`: `9 passed in 31.32s`; with the model-block test also checking `c_rand_seed_per_clip`, `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_vosk.py tests/aqis_lab/test_aqis_debt_wp07.py -q -p no:cacheprovider -m "not slow"`: `16 passed, 1 deselected in 38.25s`.
+
+### DEBT-013 — NFR-0.5-01 (runner overhead under 5 %) on a real workload
+- Test: `tests/aqis_lab/test_aqis_debt_wp07.py::test_NFR_0_5_01_runner_overhead_under_5_percent_on_vosk_batch` (`slow`, `network`), measured the way WP-0.5 measured `clip-stats`. The runner and a direct loop (the same adapter, model load included, every clip of the same staged pack, one fsynced results file) run in the same process. Each timed run must give the reference run's `results.jsonl` byte for byte. The test takes medians of 3 alternating repetitions and asserts an overhead under 5 %.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_debt_wp07.py -q -p no:cacheprovider -k NFR_0_5_01 -s`
+```text
+NFR-0.5-01 on vosk-batch: direct median 69.03 s, runner median 69.15 s, overhead 0.18 % (limit 5 %); all times {'direct': [71683369841, 69028080052, 67309865828], 'runner': [69151041110, 70240005252, 66631015780]}
+1 passed, 7 deselected in 483.68s (0:08:03)
+```
+- The runner's fixed cost measured in WP-0.5 (about 25 ms per run, 6 ms per shard) is negligible against a real model's work, as the WP-0.5 approval expected. The first run of this test found the Vosk dither defect above; the numbers are from the run after its fix.
+- After DEBT-013, DEBT-014, DEBT-015 and the dither fix: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_smoke.py tests/aqis_lab/test_aqis_runner_events.py tests/aqis_lab/test_aqis_realspeed.py -q -p no:cacheprovider` (all markers, with the real cloud smoke): `35 passed in 151.45s (0:02:31)`. Fast suite: `1741 passed, 53 deselected in 200.34s (0:03:20)`.

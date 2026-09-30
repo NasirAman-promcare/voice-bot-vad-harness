@@ -1,7 +1,7 @@
 """The `registry` command: fetch source datasets, build data/registry/sources.csv, validate a registry file.
 
 CAPABILITIES:
-  CAP-REG-005: `python -m aqis_lab registry fetch <dataset>...|all`, `registry build [--out FILE]` and `registry validate [FILE]`, each with --datasets, --cache and --repo-root defaulting to the repository's data/registry/datasets.yaml, data/raw/aqis_lab and the repository root; validate prints OK with row counts per source or one line per problem; build writes the registry atomically and never writes an invalid one; exit 0 success, 1 invalid registry, 2 usage, input, download or I/O error [tests: test_FR_0_4_01_cli_validate_exit_codes, test_FR_0_4_01_build_is_deterministic, test_FR_0_4_05_pack_and_registry_listed_by_dispatcher]
+  CAP-REG-005: `python -m aqis_lab registry fetch <dataset>...|all`, `registry build [--out FILE]` and `registry validate [FILE]`, each with --datasets, --cache and --repo-root defaulting to the repository's data/registry/datasets.yaml, data/raw/aqis_lab and the repository root; validate prints OK with row counts per source or one line per problem; build writes the registry atomically and never writes an invalid one; exit 0 success, 1 invalid registry, 2 usage, input, download or I/O error; on Google Drive, build and fetch write only under MyDrive/AQIS_LAB (NFR-0.5-02): another Drive --out or --cache is `ERROR:` and exit 2 before anything is written [tests: test_FR_0_4_01_cli_validate_exit_codes, test_FR_0_4_01_build_is_deterministic, test_FR_0_4_05_pack_and_registry_listed_by_dispatcher, test_NFR_0_5_02_registry_build_refuses_drive_path_outside_aqis_lab, test_NFR_0_5_02_registry_fetch_refuses_drive_cache_outside_aqis_lab]
 INPUTS AND OUTPUTS: command-line arguments in; the registry file (build), the cache (fetch) and a report on
   stdout, errors on stderr, exit code 0, 1 or 2.
 CONTRACTS: registry format and datasets.yaml format 1 (docs/data/REGISTRY_FORMAT.md).
@@ -11,6 +11,8 @@ NOT IN SCOPE:
   - The rules themselves (aqis_lab/registry/).
 CHANGE LOG:
   2026-09-27 WP-0.4 FR-0.4-01, FR-0.4-02 created.
+  2026-09-30 WP-0.7 DEBT-014: main (build) checks --out and its staging file with aqis_lab.drive.check_write_path
+    before building (test_NFR_0_5_02_registry_build_refuses_drive_path_outside_aqis_lab).
 """
 import argparse
 import collections
@@ -92,6 +94,14 @@ def main(argv):
         from aqis_lab.registry.importers import SourceImportError, build_registry
         from aqis_lab.registry.registry import registry_bytes
         out = Path(ns.out) if ns.out else root / DEFAULT_REGISTRY
+        from aqis_lab.drive import DriveError, check_write_path
+        from aqis_lab.platform import PlatformError
+        try:
+            for path in (out, out.with_name(f".{out.name}.partial")):   # NFR-0.5-02: Drive only under AQIS_LAB
+                check_write_path(path)
+        except (DriveError, PlatformError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 2
         try:
             rows = build_registry(datasets, cache, root)
         except (SourceImportError, RegistryValidationError) as exc:

@@ -36,6 +36,11 @@ Every later load checks all 14 files again. Any mismatch raises an error with co
 - If `vosk` was already loaded in the process with another kernel or thread count, it raises `vosk-library-loaded`. The fix is to start a new process.
 - The aarch64 library (Oracle) has no kernel dispatch. The adapter records it as a fixed build. It needs `libatomic.so.1` from the Ubuntu package `libatomic1` (`docs/oracle/ORACLE_RUNBOOK.md`, OC-0.7-02).
 
+## Feature dither
+Kaldi adds a little random noise ("dither") to the audio before computing features. The model's `conf/mfcc.conf` does not set `--dither`, so Kaldi's default 1.0 applies. The noise comes from the C library's `rand()`, one generator for the whole process. So without care, a clip's result depends on everything the process computed before it. Measured on `ls-test-other-3080-5040-0016`: 20 repeats in one process gave 4 different transcripts. The sequence of results was the same in every new process.
+
+The adapter therefore reseeds `rand()` with 1 at the start of every clip (`C_RAND_SEED`, run-card setting `c_rand_seed_per_clip`). glibc's `rand()` starts from seed 1, so every clip is computed as the first clip of a fresh process would be. The dither itself stays as the model's configuration has it, because the pinned model files are never changed. With the reseed, the same 20 repeats were identical. `test_FR_0_7_02_clip_result_independent_of_earlier_clips` checks it against Vosk run directly in a fresh process.
+
 ## Feeding and events
 - Input is 16 kHz mono 16-bit audio. It is fed in 20 ms frames (320 samples) in both tasks; the last part-frame is fed as it is. The frame size matters: 20 ms and 500 ms feeds gave different transcripts on 6 of 60 clips (finding 5).
 - A `partial` event is written whenever the partial text changes.
@@ -68,9 +73,10 @@ The `model` block: family `vosk`, name `vosk-model-small-en-us-0.15`, version `0
 | `openblas_coretype` | `Prescott` |
 | `openblas_num_threads` | 1 |
 | `log_level` | -1 |
+| `c_rand_seed_per_clip` | 1 |
 
 ## Same result everywhere
-The same samples, model, kernel and frame size give byte-identical events and text, run after run (finding 5). The aarch64 build gave the same 60 transcripts in emulation (finding 6). The real Oracle and Colab runs are checked by `parity` (OC-0.7-03). Word confidences are not compared: they differ in the last digit between builds.
+The same samples, model, kernel and frame size give byte-identical events and text, run after run (finding 5), and, with the per-clip reseed, whatever the process computed before. The aarch64 build gave the same 60 transcripts in emulation (finding 6). The real Oracle and Colab runs are checked by `parity` (OC-0.7-03). Word confidences are not compared: they differ in the last digit between builds.
 
 ## Packages
 `vosk==0.3.45` is in `requirements/aqis_lab/phase0.txt`. Its dependency `srt` exists only as a source archive. It is the one approved source build (owner decision, question 2): it is built with the lock's own hash-checked setuptools (`--build-constraints`), on Oracle too (`SOURCE_BUILDS=(srt)` in `aqis_lab/deploy/oracle_setup.sh`).

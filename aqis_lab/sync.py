@@ -2,7 +2,7 @@
 
 CAPABILITIES:
   CAP-SYNC-001: run_sync() checks the store, rclone (at least 1.60.1), that the configured remote exists and that <remote>:AQIS_LAB/results already exists (the lab never creates AQIS_LAB), then runs only `rclone copy <store> <remote>:AQIS_LAB/results --immutable --checksum --no-update-modtime` excluding .partial and .lock files (plus --dry-run when asked): remote files are never deleted, and a remote file that differs is never replaced but reported [tests: test_FR_0_6_05_copies_store_to_aqis_lab_results, test_FR_0_6_05_never_deletes_remote_files, test_FR_0_6_05_never_replaces_a_remote_file, test_FR_0_6_05_dry_run_changes_nothing, test_FR_0_6_05_command_is_copy_only, test_FR_0_6_05_partial_files_not_copied, test_FR_0_6_05_rclone_version_minimum]
-  CAP-SYNC-002: a missing rclone, a remote that is not configured, a missing AQIS_LAB/results on the remote or a missing store is a SyncUsageError whose message points to the runbook section to follow [tests: test_FR_0_6_05_missing_remote_points_to_runbook, test_FR_0_6_05_missing_rclone_points_to_runbook, test_FR_0_6_05_refuses_when_remote_results_folder_missing, test_FR_0_6_05_missing_store_exit_2]
+  CAP-SYNC-002: a missing rclone, a remote that is not configured, a missing AQIS_LAB/results on the remote or a missing store is a SyncUsageError whose message points to the runbook section to follow; when listing <remote>:AQIS_LAB fails for another reason than a missing folder (rclone exit 3), sync shows rclone's own message and exits 1, and a missing folder's message includes rclone's message too; an rclone copy that runs past the time limit is stopped and is a SyncFailed (exit 1) (DEBT-015) [tests: test_FR_0_6_05_missing_remote_points_to_runbook, test_FR_0_6_05_missing_rclone_points_to_runbook, test_FR_0_6_05_refuses_when_remote_results_folder_missing, test_FR_0_6_05_missing_store_exit_2, test_FR_0_6_05_failed_remote_listing_shows_rclone_message, test_FR_0_6_05_rclone_timeout_is_an_error]
 INPUTS AND OUTPUTS: config/aqis_lab/oracle.yaml (remote name, store path) and --dry-run in; rclone's messages and a
   summary on stdout; SyncUsageError (exit 2) or SyncFailed (exit 1).
 CONTRACTS: Drive layout AQIS_LAB/{packs,models,results,logs} (WP-0.5); store layout in docs/results/RESULTS_STORE.md.
@@ -14,6 +14,9 @@ NOT IN SCOPE:
   - Configuring rclone or scheduling the nightly run (docs/oracle/ORACLE_RUNBOOK.md).
 CHANGE LOG:
   2026-09-28 WP-0.6 FR-0.6-05 created.
+  2026-09-30 WP-0.7 DEBT-015 (2, 3): _check_destination shows rclone's message when `rclone lsf` fails (exit 1
+    unless rclone says the folder is missing); run_sync turns an rclone copy timeout into SyncFailed
+    (test_FR_0_6_05_failed_remote_listing_shows_rclone_message, test_FR_0_6_05_rclone_timeout_is_an_error).
 """
 import os
 import re
@@ -87,8 +90,13 @@ def _check_remote(rclone, remote):
 def _check_destination(rclone, remote):
     where = f"{remote}:{AQIS_FOLDER}"
     proc = _run([rclone, "lsf", where, "--dirs-only"])
+    not_found = 3                              # rclone's documented exit code for "directory not found"
+    if proc.returncode not in (0, not_found):
+        raise SyncFailed(f"rclone lsf {where} failed (exit {proc.returncode}), rclone says: {proc.stderr.strip()}; "
+                         f"if the Google sign-in of the remote expired, connect it again as in {RUNBOOK}, "
+                         f"section \"Configure rclone for Google Drive\"")
     if proc.returncode != 0 or f"{RESULTS_FOLDER}/" not in proc.stdout.splitlines():
-        found = "not found" if proc.returncode != 0 else "has no results folder"
+        found = f"not found (rclone says: {proc.stderr.strip()})" if proc.returncode != 0 else "has no results folder"
         raise SyncUsageError(f"{where} {found}: {oracle_config.DRIVE_DESTINATION} must already exist on Google Drive; "
                              f"the lab never creates {AQIS_FOLDER} (create it and run `drive layout` on Colab, or see "
                              f"{RUNBOOK}, section \"Configure rclone for Google Drive\")")
@@ -111,8 +119,15 @@ def run_sync(config=None, dry_run=False, echo=print):
     echo(f"destination {cfg.rclone_remote}:{oracle_config.DRIVE_DESTINATION}")
     echo(f"rclone v{'.'.join(map(str, parsed))} at {rclone}")
     echo(f"mode {'DRY RUN' if dry_run else 'COPY'} (copy only: remote files are never deleted or replaced)")
-    proc = subprocess.run(copy_command(rclone, store_dir, cfg.rclone_remote, dry_run), stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT, text=True, timeout=TIMEOUT_S, env=dict(os.environ))
+    try:
+        proc = subprocess.run(copy_command(rclone, store_dir, cfg.rclone_remote, dry_run), stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT, text=True, timeout=TIMEOUT_S, env=dict(os.environ))
+    except subprocess.TimeoutExpired as exc:
+        output = exc.output.decode("utf-8", "replace") if isinstance(exc.output, bytes) else exc.output or ""
+        for line in output.splitlines():
+            echo(line)
+        raise SyncFailed(f"rclone copy did not finish within {TIMEOUT_S} s and was stopped; run the sync again (it "
+                         f"only copies: files already on Google Drive are kept, and what is missing is copied)") from exc
     for line in proc.stdout.splitlines():
         echo(line)
     if proc.returncode != 0:
