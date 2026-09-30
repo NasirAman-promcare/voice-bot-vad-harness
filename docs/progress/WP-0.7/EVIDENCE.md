@@ -37,3 +37,23 @@ step 4/6 wheels: would check that each of the 37 pins in requirements/aqis_lab/p
 ```
 - Fast suite after this step: `1644 passed, 26 deselected in 210.16s`.
 - Status: DONE for the CPU lock; the GPU lock is under FR-0.7-03.
+
+### FR-0.7-02 — Vosk adapter and model cache (in progress: runner and smoke parts follow)
+- Code: `aqis_lab/adapters/model_cache.py` (CAP-MODEL-001 to -003), `config/aqis_lab/models.yaml` (CAP-MODEL-004), `aqis_lab/adapters/vosk_stt.py` (CAP-VOSK-001 to -003).
+- Tests: `tests/aqis_lab/test_aqis_model_cache.py`, `tests/aqis_lab/test_aqis_vosk.py`, `tests/aqis_lab/test_aqis_locks_gpu.py` (all `test_FR_0_7_02_*`); network tests use the real model downloaded from alphacephei.com and checked against the pins.
+- Tests first: before `model_cache.py` and `vosk_stt.py` existed, both test files failed at collection (`ModuleNotFoundError: aqis_lab.adapters.model_cache` / `…vosk_stt`).
+- Command: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "FR_0_7_02"`
+```text
+28 passed, 1695 deselected in 23.19s
+```
+- OpenBLAS kernel on this session's VM: `OPENBLAS_CORETYPE` unset → `COOPERLAKE`; `Prescott` → `PRESCOTT`; `Haswell` → `HASWELL` (read from libvosk's `gotoblas` table with ctypes). The planning session's VM fell back to Prescott, so the default kernel really does change between machines; the adapter pins Prescott and 1 thread (owner decision, question 6) and `test_FR_0_7_02_openblas_kernel_pinned_and_verified` reads it back as `PRESCOTT`.
+
+### FR-0.7-04 — Harness VAD adapter (WebRTC VAD mode 2, 20 ms; owner decision, question 1)
+- Code: `aqis_lab/adapters/harness_vad.py` (CAP-HVAD-001 to -003). No file under `vad_adapters/` changed.
+- Tests: `tests/aqis_lab/test_aqis_harness_vad.py` (`test_FR_0_7_04_*`; expected segments computed with `webrtcvad` directly on six real smoke clips: clean speech, noisy mix, noise, music, TTS, digital silence).
+- Tests first: the file failed at collection before `harness_vad.py` existed (`ModuleNotFoundError`).
+- Command: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "FR_0_7_04"`
+```text
+13 passed, 1710 deselected in 0.95s
+```
+- Fast suite after both adapters: `1691 passed, 32 deselected in 202.21s`.
