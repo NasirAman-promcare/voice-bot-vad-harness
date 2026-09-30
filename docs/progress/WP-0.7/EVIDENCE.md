@@ -66,3 +66,36 @@ step 4/6 wheels: would check that each of the 37 pins in requirements/aqis_lab/p
 ```text
 7 passed, 1723 deselected in 23.51s
 ```
+
+### FR-0.7-03 and FR-0.7-06 — Parakeet Unified adapter, GPU extras lock, lock sets (GPU path: OC-0.7-01)
+- Code: `aqis_lab/adapters/parakeet_unified.py` (CAP-PARA-001 to -003), `aqis_lab/locks.py` (CAP-LOCKS-001, -002), `aqis_lab/doctor.py` (`_check_lock` only, CAP-DOCTOR-001), `requirements/aqis_lab/phase0-gpu.in` and `phase0-gpu.txt` (CAP-ENV-008), `aqis_lab/deploy/dev_bootstrap.sh --gpu` (CAP-ENV-001).
+- GPU lock: 158 pins, `nemo-toolkit==3.0.0`, `torch==2.14.0` (CUDA 13, from PyPI; owner decision question 5), every pin shared with `phase0.txt` at the same version; `antlr4-python3-runtime` 4.9.3 is its only source-only package.
+- Real install of both locks on this VM, with hash checking and the lock as build constraint (scratch venv; this is the `--gpu` sync command):
+```text
+$ uv pip sync -q --python <scratch>/bin/python --require-hashes --strict --build-constraints requirements/aqis_lab/phase0.txt requirements/aqis_lab/phase0.txt requirements/aqis_lab/phase0-gpu.txt
+real	7m55.405s
+exit 0
+$ <scratch>/bin/python -c "import torch, nemo, nemo.collections.asr, importlib.metadata as m; print(...)"
+torch 2.14.0+cu130 cuda 13.0 nemo 3.0.0 antlr4 4.9.3
+```
+- Tests: `tests/aqis_lab/test_aqis_parakeet.py` (refusals without GPU and without NeMo on this VM, model block, the GPU test double for the timing code, warm-up), `tests/aqis_lab/test_aqis_locks_gpu.py` (GPU lock, lock sets, doctor row), `tests/aqis_lab/test_aqis_runner_events.py::test_FR_0_7_03_runner_refuses_parakeet_without_gpu_before_writing`; GPU: `test_aqis_smoke_live.py` (`colab`, `gpu`: OC-0.7-01).
+- Tests first: both files failed at collection before the modules existed (`ModuleNotFoundError: aqis_lab.locks` / `…parakeet_unified`).
+- Command: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "FR_0_7_03 or FR_0_7_06" -m "not colab and not gpu and not oracle"`
+```text
+16 passed, 1738 deselected in 9.70s
+```
+- Status: DONE on this VM; the GPU path (`test_FR_0_7_03_parakeet_transcribes_on_gpu`, `test_FR_0_7_06_gpu_compute_delay_on_colab_t4`) is owner-run (OC-0.7-01).
+
+### Runner with adapter tasks and event logs (FR-0.7-01, FR-0.7-07)
+- Code: `aqis_lab/runner/tasks.py` (CAP-RUN-003, new CAP-RUN-010), `card.py` (`build_run_card`), `plan.py` (`build_plan`), `store.py` (`write_shard`, `shard_finished`, `events_path`; CAP-RUN-011), `run.py` (`RunOptions`, `run`, `_open_run_folder`, `_compute_shard`, new helpers; CAP-RUN-012); `docs/runner/RUNNER.md`.
+- Tests: `tests/aqis_lab/test_aqis_runner_events.py` (harness VAD task over the real smoke pack; Vosk runs are `network`). Tests first: collection failed before the tasks existed (`KeyError`/import errors); then all passed.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_runner_events.py -q -p no:cacheprovider`
+```text
+9 passed in 13.63s
+```
+- Existing runner tests unchanged and passing (`clip-stats` run folders, markers and cards are as before): `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_runner.py tests/aqis_lab/test_aqis_runner_resume.py tests/aqis_lab/test_aqis_runner_nfr.py tests/aqis_lab/test_aqis_stage.py -q -p no:cacheprovider`
+```text
+39 passed in 12.20s
+```
+- Defect found and fixed during this step: the Vosk adapter first set `OPENBLAS_*` in the process environment, which leaked into later child processes (numpy then started one thread, and `test_FR_0_6_04_timing_process_pinned_to_reserved_cores` saw 2 threads instead of 3 when run after the Vosk tests). The adapter now sets the variables only while libvosk loads, restores the environment, and reads the kernel and the thread count back from the library; `test_FR_0_7_02_openblas_kernel_pinned_and_verified` checks that the environment is unchanged. The WP-0.6 test passes again in the combined run.
+- Fast suite after this step: `1715 passed, 39 deselected in 200.44s`.

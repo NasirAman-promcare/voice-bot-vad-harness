@@ -127,15 +127,19 @@ def test_FR_0_7_02_openblas_kernel_pinned_and_verified():
     vosk_model()
     code = ("from aqis_lab.adapters.vosk_stt import VoskAdapter\n"
             f"a = VoskAdapter(cache_dir={str(SESSION_MODEL_CACHE)!r}); a.open()\n"
-            "import os; print(a.kernel, os.environ['OPENBLAS_CORETYPE'], os.environ['OPENBLAS_NUM_THREADS'])\n")
+            "from aqis_lab.adapters.vosk_stt import active_threads\n"
+            "import os; print(a.kernel, active_threads(), os.environ['OPENBLAS_CORETYPE'], "
+            "os.environ['OPENBLAS_NUM_THREADS'])\n")
     proc = in_subprocess(code, {"OPENBLAS_CORETYPE": "Haswell", "OPENBLAS_NUM_THREADS": "4"})
     assert proc.returncode == 0, proc.stderr
-    kernel, coretype, threads = proc.stdout.split()
+    kernel, threads, coretype, env_threads = proc.stdout.split()
     if os.uname().machine == "x86_64":
         assert kernel == "PRESCOTT"
     else:
         assert kernel == "fixed-build"
-    assert (coretype, threads) == ("Prescott", "1")
+    assert threads == "1"
+    # the settings apply to libvosk only: the process environment (and so its child processes) is unchanged
+    assert (coretype, env_threads) == ("Haswell", "4")
 
 
 def test_FR_0_7_02_refuses_when_vosk_already_loaded_with_other_kernel():
@@ -151,7 +155,7 @@ def test_FR_0_7_02_refuses_when_vosk_already_loaded_with_other_kernel():
     proc = in_subprocess(code)
     assert proc.returncode == 0, proc.stderr
     code_line, message = proc.stdout.splitlines()[:2]
-    assert code_line == "vosk-library-loaded" and "Haswell" in message and "Prescott" in message
+    assert code_line == "vosk-library-loaded" and "haswell" in message.lower() and "Prescott" in message
 
 
 def test_FR_0_7_01_vosk_unusable_model_emits_error_event_and_raises(tmp_path):

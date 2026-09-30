@@ -2,7 +2,7 @@
 
 CAPABILITIES:
   CAP-VOSK-001: VoskAdapter.model_block() gives family vosk, the pinned model name, its version, the model archive's SHA-256 as checksum and the settings the run uses (16 kHz, 20 ms feed, word times, library version, OpenBLAS kernel Prescott and 1 thread, owner decision question 6) [tests: test_FR_0_7_02_model_block_records_checksum_and_settings]
-  CAP-VOSK-002: open() loads libvosk with OPENBLAS_CORETYPE and OPENBLAS_NUM_THREADS set first, reads the library's active kernel back (x86_64: it must equal the pin; aarch64: a fixed build without dispatch), refuses a Vosk library already loaded with another kernel, then fetches and verifies the model (config/aqis_lab/models.yaml) and loads it; a library or model failure raises [tests: test_FR_0_7_02_openblas_kernel_pinned_and_verified, test_FR_0_7_02_refuses_when_vosk_already_loaded_with_other_kernel, test_FR_0_7_01_vosk_unusable_model_emits_error_event_and_raises, test_FR_0_7_02_changed_model_file_stops_vosk_open, test_FR_0_7_02_process_before_open_is_an_error]
+  CAP-VOSK-002: open() loads libvosk with OPENBLAS_CORETYPE and OPENBLAS_NUM_THREADS set only for the load (the process environment is restored), reads the library's active kernel and thread count back (x86_64: it must equal the pin; aarch64: a fixed build without dispatch), refuses a Vosk library already loaded with another kernel, then fetches and verifies the model (config/aqis_lab/models.yaml) and loads it; a library or model failure raises [tests: test_FR_0_7_02_openblas_kernel_pinned_and_verified, test_FR_0_7_02_refuses_when_vosk_already_loaded_with_other_kernel, test_FR_0_7_01_vosk_unusable_model_emits_error_event_and_raises, test_FR_0_7_02_changed_model_file_stops_vosk_open, test_FR_0_7_02_process_before_open_is_an_error]
   CAP-VOSK-003: process_clip() and the streaming steps (start_clip, feed, finish_clip) feed 20 ms frames (the last part-frame as it is), emit a `partial` event whenever the partial text changes and a `final` event (with word times) for every Vosk result and for the closing result, and return text, text_sha256, finals, partials, words, events and audio_s; the clip text is the final texts joined by single spaces, empty ones left out [tests: test_FR_0_7_02_emits_partial_and_final_events_with_word_times, test_FR_0_7_02_same_input_gives_identical_transcript]
 INPUTS AND OUTPUTS: 16 kHz mono int16 samples in; event-log v1 events (component live_stt) and result fields out;
   AdapterError (vosk-library-loaded, vosk-not-open, model-checksum, model-download) on failure.
@@ -17,6 +17,7 @@ CHANGE LOG:
 """
 import ctypes
 import hashlib
+import importlib
 import importlib.metadata as md
 import json
 import os
@@ -58,18 +59,41 @@ def active_kernel():
     raise AdapterError("vosk-kernel-unknown", "libvosk's active OpenBLAS kernel is none of its known tables")
 
 
+def active_threads():
+    """The number of threads libvosk's OpenBLAS uses."""
+    import vosk
+    lib = ctypes.CDLL(os.path.join(os.path.dirname(vosk.__file__), "libvosk.so"))
+    return int(lib.openblas_get_num_threads())
+
+
 def _load_library():
-    """Import vosk with the pinned OpenBLAS settings and return (module, active kernel)."""
+    """Import vosk with the pinned OpenBLAS settings and return (module, active kernel).
+
+    libvosk reads OPENBLAS_CORETYPE and OPENBLAS_NUM_THREADS once, when it loads; they are set only around the import
+    and the previous values are restored, so child processes of this process are not affected."""
     if "vosk" not in sys.modules:
+        saved = {k: os.environ.get(k) for k in ("OPENBLAS_CORETYPE", "OPENBLAS_NUM_THREADS")}
         os.environ["OPENBLAS_CORETYPE"] = OPENBLAS_CORETYPE
         os.environ["OPENBLAS_NUM_THREADS"] = str(OPENBLAS_NUM_THREADS)
-    import vosk
+        try:
+            importlib.import_module("vosk")
+        finally:
+            for key, value in saved.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+    vosk = importlib.import_module("vosk")
     kernel = active_kernel()
     if kernel != FIXED_BUILD and kernel != OPENBLAS_CORETYPE.upper():
         raise AdapterError("vosk-library-loaded",
-                           f"the Vosk library in this process runs OpenBLAS kernel {kernel} "
-                           f"(OPENBLAS_CORETYPE={os.environ.get('OPENBLAS_CORETYPE', '')!r} when it was loaded), not "
-                           f"the pinned {OPENBLAS_CORETYPE}; start a new process")
+                           f"the Vosk library in this process runs OpenBLAS kernel {kernel}, not the pinned "
+                           f"{OPENBLAS_CORETYPE} (it was loaded before the adapter set OPENBLAS_CORETYPE); start a new "
+                           f"process")
+    threads = active_threads()
+    if threads != OPENBLAS_NUM_THREADS:
+        raise AdapterError("vosk-library-loaded", f"the Vosk library in this process uses {threads} OpenBLAS threads, "
+                                                  f"not the pinned {OPENBLAS_NUM_THREADS}; start a new process")
     vosk.SetLogLevel(LOG_LEVEL)
     return vosk, kernel
 
@@ -77,6 +101,7 @@ def _load_library():
 class VoskAdapter(StreamingAdapter):
     name = "vosk"
     component = "live_stt"
+    uses_model_cache = True
 
     def __init__(self, pin=None, cache_dir=model_cache.DEFAULT_CACHE, system=None):
         self.pin = pin if pin is not None else model_cache.load_pins()[MODEL_NAME]

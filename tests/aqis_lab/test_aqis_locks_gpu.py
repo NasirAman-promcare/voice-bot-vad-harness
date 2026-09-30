@@ -7,6 +7,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import urllib.request
@@ -15,7 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from aqis_testutil import BOOTSTRAP, LOCK, PROBE, normalise, parse_lock
+from aqis_lab import doctor, locks
+from aqis_testutil import BOOTSTRAP, LOCK, PROBE, ROOT, normalise, parse_lock
 
 PROBE_REL = "docs/environment/colab_probe.txt"
 
@@ -133,3 +135,103 @@ def test_FR_0_7_03_bootstrap_gpu_needs_the_gpu_lock(tmp_path):
     proc = bootstrap(tree, "--gpu")
     assert proc.returncode == 1 and "requirements/aqis_lab/phase0-gpu.txt is missing (needed by --gpu)" in proc.stderr
     assert not (tree / ".venv").exists()
+
+
+# --- The GPU extras lock (FR-0.7-03) and which lock set is installed (aqis_lab/locks.py) ---
+
+GPU_LOCK = LOCK.parent / "phase0-gpu.txt"
+GPU_IN = LOCK.parent / "phase0-gpu.in"
+
+
+def gpu_entries():
+    return parse_lock(GPU_LOCK.read_text(encoding="utf-8"))
+
+
+def test_FR_0_7_03_gpu_lock_is_hashed_and_layers_on_cpu_lock():
+    gpu, cpu = gpu_entries(), parse_lock()
+    assert gpu["nemo-toolkit"]["version"] == "3.0.0" and "torch" in gpu            # owner decision, questions 4, 5
+    for name, entry in gpu.items():
+        assert entry["hashes"] and all(a == "sha256" and len(d) == 64 for a, d in entry["hashes"]), name
+    shared = sorted(set(gpu) & set(cpu))
+    assert shared, "NeMo shares packages with the CPU lock (numpy, packaging, setuptools, ...)"
+    assert [n for n in shared if gpu[n]["version"] != cpu[n]["version"]] == []
+    command = GPU_LOCK.read_text(encoding="utf-8").splitlines()[1].lstrip("# ").strip()
+    assert command == ("uv pip compile requirements/aqis_lab/phase0-gpu.in -c requirements/aqis_lab/phase0.txt "
+                       "--python-version 3.13 --python-platform x86_64-manylinux_2_28 --generate-hashes "
+                       "--output-file requirements/aqis_lab/phase0-gpu.txt")
+    assert command in GPU_IN.read_text(encoding="utf-8")
+
+
+def test_FR_0_7_03_gpu_lock_header_binds_cpu_lock_sha256():
+    lines = [l for l in GPU_IN.read_text(encoding="utf-8").splitlines() if l.startswith("# compiled-against:")]
+    assert lines == [f"# compiled-against: requirements/aqis_lab/phase0.txt sha256 "
+                     f"{hashlib.sha256(LOCK.read_bytes()).hexdigest()}"]
+
+
+@pytest.mark.network
+def test_FR_0_7_03_gpu_lock_has_x86_64_wheels_except_antlr4(tmp_path):
+    for name, entry in gpu_entries().items():
+        (tmp_path / "one.txt").write_text(f"{name}=={entry['version']}\n", encoding="utf-8")
+        proc = subprocess.run(["uv", "pip", "compile", str(tmp_path / "one.txt"), "--no-deps", "--only-binary", ":all:",
+                               "--python-platform", "x86_64-manylinux_2_28", "--python-version", "3.13",
+                               "--no-header", "--quiet", "-o", str(tmp_path / "o.txt")],
+                              capture_output=True, text=True, timeout=300)
+        assert (proc.returncode == 0) == (name != "antlr4-python3-runtime"), (name, proc.stderr)
+
+
+@pytest.mark.slow
+@pytest.mark.network
+def test_FR_0_7_03_gpu_lock_installs_with_cpu_lock(tmp_path):
+    venv = tmp_path / "venv"
+    subprocess.run(["uv", "venv", "--quiet", "--python", "3.13", str(venv)], check=True, capture_output=True,
+                   timeout=300)
+    proc = subprocess.run(["uv", "pip", "sync", "--dry-run", "--python", str(venv / "bin" / "python"),
+                           "--require-hashes", "--strict", "--build-constraints", str(LOCK), str(LOCK),
+                           str(GPU_LOCK)], capture_output=True, text=True, timeout=900)
+    assert proc.returncode == 0, proc.stderr[-3000:]
+    assert "nemo-toolkit==3.0.0" in proc.stdout + proc.stderr
+
+
+def lock_tree(tmp_path, cpu_text, gpu_text=None):
+    tree = tmp_path / "locks-tree"
+    for rel in ("docs/environment/colab_probe.txt", "config/aqis_lab/doctor.yaml"):
+        (tree / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / rel, tree / rel)
+    (tree / "requirements" / "aqis_lab").mkdir(parents=True)
+    (tree / "requirements" / "aqis_lab" / "phase0.txt").write_text(cpu_text, encoding="utf-8")
+    if gpu_text is not None:
+        (tree / "requirements" / "aqis_lab" / "phase0-gpu.txt").write_text(gpu_text, encoding="utf-8")
+    return tree
+
+
+def split_lock(name):
+    """(the real CPU lock without `name`, the block of `name` alone)."""
+    text = LOCK.read_text(encoding="utf-8")
+    blocks = re.split(r"\n(?=[A-Za-z0-9])", text)
+    rest = [b for b in blocks if b.split("==", 1)[0].strip() != name]
+    one = [b for b in blocks if b.split("==", 1)[0].strip() == name]
+    assert len(one) == 1
+    return "\n".join(rest) + "\n", one[0] + "\n"
+
+
+def test_FR_0_7_03_installed_lock_is_the_cpu_lock_here():
+    assert locks.installed_lock() == "requirements/aqis_lab/phase0.txt"
+
+
+def test_FR_0_7_03_installed_lock_names_the_gpu_lock_when_extras_are_installed(tmp_path):
+    # This environment equals CPU lock + GPU lock when "srt" is moved from one file to the other.
+    cpu, extra = split_lock("srt")
+    tree = lock_tree(tmp_path, cpu, extra)
+    assert locks.installed_lock(tree) == "requirements/aqis_lab/phase0-gpu.txt"
+    with pytest.raises(locks.LockError, match="srt"):
+        locks.installed_lock(lock_tree(tmp_path / "no-gpu", cpu))
+
+
+def test_FR_0_7_03_doctor_lock_row_names_the_lock_set(tmp_path):
+    cpu, extra = split_lock("srt")
+    row = {c.name: c for c in doctor.run_doctor("cloud", repo_root=lock_tree(tmp_path, cpu, extra)).checks}["lock"]
+    assert row.status == "PASS" and "phase0.txt + requirements/aqis_lab/phase0-gpu.txt" in row.detail
+    row = {c.name: c for c in doctor.run_doctor("cloud", repo_root=lock_tree(tmp_path / "cpu", cpu)).checks}["lock"]
+    assert row.status == "FAIL" and "srt" in row.detail and "not in the lock" in row.detail
+    real = {c.name: c for c in doctor.run_doctor("cloud", repo_root=ROOT).checks}["lock"]
+    assert real.status == "PASS" and real.detail == "installed packages equal requirements/aqis_lab/phase0.txt"
