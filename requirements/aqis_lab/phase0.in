@@ -28,3 +28,15 @@ numpy
 # Results store queries (WP-0.6 FR-0.6-02: "a DuckDB view"; owner approval docs/approvals/WP-0.6.md).
 # Its parquet and json extensions are statically linked, so no extension is downloaded at run time.
 duckdb
+# First adapters (WP-0.7, owner approval docs/approvals/WP-0.7.md).
+# Vosk speech recogniser: exact pin, its libvosk.so and Python API decide the transcripts (FR-0.7-02).
+vosk==0.3.45
+# The harness VAD the owner named (WebRTC VAD, question 1) needs the webrtcvad-wheels package (FR-0.7-04).
+webrtcvad-wheels
+# Vosk imports srt, which PyPI ships only as a source archive (owner decision, question 2 (a)). setuptools is
+# its build tool; it is pinned here with hashes and dev_bootstrap.sh passes this lock as --build-constraints,
+# so the source build uses only this hash-checked setuptools.
+setuptools
+# NeMo's lightning needs packaging<25, so the GPU extras (phase0-gpu.txt) can sit on top of these pins
+# unchanged (owner decision, question 3 (a)). packaging does not affect any result.
+packaging<25

@@ -234,17 +234,56 @@ def test_FR_0_6_01_refuses_other_uv_version(tmp_path):
     assert not (tree / ".venv").exists()
 
 
+def script_source_builds():
+    """The owner-approved source-only packages named in oracle_setup.sh (SOURCE_BUILDS=(...))."""
+    text = (ROOT / SCRIPT_REL).read_text(encoding="utf-8")
+    found = re.findall(r"^SOURCE_BUILDS=\(([^)]*)\)$", text, flags=re.M)
+    assert len(found) == 1, "oracle_setup.sh must define SOURCE_BUILDS exactly once"
+    return found[0].split()
+
+
 @pytest.mark.network
 def test_FR_0_6_01_every_lock_package_has_x86_64_and_aarch64_builds(tmp_path):
     # The Oracle A1 VM is aarch64 (docs/environment/oracle_probe.txt, glibc 2.39); this VM and Colab are x86_64.
-    pins = [f"{n}=={e['version']}" + (f" ; {e['marker']}" if e["marker"] else "") for n, e in parse_lock().items()]
+    # Only the owner-approved source-only packages in oracle_setup.sh's SOURCE_BUILDS may lack a wheel
+    # (docs/approvals/WP-0.7.md, question 2 (a)); each of them must truly have none and be pure Python.
+    entries = parse_lock()
+    allowed = script_source_builds()
+    assert allowed and set(allowed) <= set(entries), (allowed, "every approved source build must be a lock pin")
+    no_binary = [arg for name in allowed for arg in ("--no-binary", name)]
+    pins = [f"{n}=={e['version']}" + (f" ; {e['marker']}" if e["marker"] else "") for n, e in entries.items()]
     (tmp_path / "pins.txt").write_text("\n".join(pins) + "\n", encoding="utf-8")
     for platform in ("aarch64-manylinux_2_28", "x86_64-manylinux_2_28"):
         proc = subprocess.run(["uv", "pip", "compile", str(tmp_path / "pins.txt"), "--no-deps", "--only-binary",
-                               ":all:", "--python-platform", platform, "--python-version", probe_python_major_minor(),
-                               "--no-header", "--quiet", "-o", str(tmp_path / f"{platform}.txt")],
+                               ":all:", *no_binary, "--python-platform", platform, "--python-version",
+                               probe_python_major_minor(), "--no-header", "--quiet", "-o",
+                               str(tmp_path / f"{platform}.txt")],
                               capture_output=True, text=True, timeout=600)
         assert proc.returncode == 0, (platform, proc.stderr)
+        for name in allowed:
+            (tmp_path / "one.txt").write_text(f"{name}=={entries[name]['version']}\n", encoding="utf-8")
+            alone = subprocess.run(["uv", "pip", "compile", str(tmp_path / "one.txt"), "--no-deps", "--only-binary",
+                                    ":all:", "--python-platform", platform, "--python-version",
+                                    probe_python_major_minor(), "--no-header", "--quiet", "-o",
+                                    str(tmp_path / "one.out")], capture_output=True, text=True, timeout=600)
+            assert alone.returncode != 0 and "no usable wheels" in alone.stderr, (name, platform, alone.stderr)
+    for name in allowed:
+        # The source archive is the one the lock hashes, and it builds a pure-Python (py3-none-any) wheel.
+        info = json.load(urllib.request.urlopen(f"https://pypi.org/pypi/{name}/{entries[name]['version']}/json",
+                                                timeout=60))
+        sdists = [f for f in info["urls"] if f["packagetype"] == "sdist"]
+        assert len(sdists) == 1, (name, [f["filename"] for f in info["urls"]])
+        data = urllib.request.urlopen(sdists[0]["url"], timeout=300).read()
+        assert ("sha256", hashlib.sha256(data).hexdigest()) in entries[name]["hashes"], name
+        archive = tmp_path / sdists[0]["filename"]
+        archive.write_bytes(data)
+        out = tmp_path / f"{name}-wheel"
+        built = subprocess.run(["uv", "build", "--wheel", "--out-dir", str(out), str(archive)],
+                               capture_output=True, text=True, timeout=600,
+                               env=dict(os.environ, UV_CACHE_DIR=str(tmp_path / "uv-cache")))
+        assert built.returncode == 0, built.stderr
+        wheels = [w.name for w in out.glob("*.whl")]
+        assert len(wheels) == 1 and wheels[0].endswith("-none-any.whl") and "-py3" in wheels[0], wheels
 
 
 def doctor_rows(tree):
