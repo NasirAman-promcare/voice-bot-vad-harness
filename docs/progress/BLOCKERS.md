@@ -243,3 +243,37 @@ WP: WP-0.6  ·  Raised: 2026-09-28  ·  Session: https://claude.ai/code/session_
 **Paused until answered:** the committed values in `config/aqis_lab/oracle.yaml` (supported operating systems, reserved cores), the Oracle-specific install steps in the runbook, and the owner-run checks. Planning is complete. No code has been written.
 
 **Owner answer:** Owner committed `docs/environment/oracle_probe.txt` and `docs/approvals/WP-0.6.md` to `main` (`6ad251b`). The probe shows VM.Standard.A1.Flex: Ubuntu 24.04.4 LTS on aarch64 (Ampere Altra, Neoverse-N1), 4 CPUs online `0-3`, glibc 2.39, chassis asset tag `OracleCloud.com`, 22 GB available RAM, 38 GB free disk, rclone 1.60.1. The approval sets the reservation: cores 2-3 for timing runs, batch runs on cores 0-1 (highest-numbered half of the physical cores), and questions 1-16 as recommended. Merged into this branch (`f57cfc2`).
+
+## BLK-010 — The committed smoke bundle breaks WP-0.4's "no raw corpus committed" test
+STATUS: OPEN
+WP: WP-0.7  ·  Raised: 2026-09-30  ·  Session: https://claude.ai/code/session_01DHNEPSgrExgeGVsAYja18g
+
+**What I need:** your decision on how smoke bundles may be committed, because an existing guarded test forbids the approved place.
+
+**Why:**
+- You approved question 11: smoke bundles are committed as `data/runs/phase0-smoke/<bundle name>.tar`. I committed the cloud bundle there in `175a361` (`phase0-smoke-cloud-20260930T170440Z.tar`, 808,960 bytes).
+- The WP-0.4 test `tests/aqis_lab/test_aqis_registry_fetch.py::test_FR_0_4_02_no_raw_corpus_committed` allows no `.tar`, `.gz`, `.zip` or audio file under `data/` except `data/tts_smoke/NN.wav` and pack archives `data/packs/<id>/v<n>/*.tar`. It now fails: `AssertionError: assert ['data/runs/p...T170440Z.tar'] == []`.
+- The test is an existing, guarded file, and the WP-0.7 approval allows editing only `tests/aqis_lab/test_aqis_oracle_setup.py`. I will not change it, and I will not rename the archive to slip past it.
+- Until this is settled, the fast suite on the branch has this one failure (`1 failed, 1743 passed, 53 deselected` on `28cce63`), so CI is red and the WP cannot be READY FOR AUDIT. The Colab and Oracle bundles (OC-0.7-01, OC-0.7-02) would hit the same rule.
+
+**What I tried:**
+- I checked what the bundle holds: only results, never audio (9 `.json`, 6 `.jsonl`, 3 `.log`, 2 `.csv`, 2 `.parquet`, 1 `.md`). `test_FR_0_7_07_committed_bundles_and_their_reports_in_docs` now checks this for every committed bundle, besides the hashes against `BUNDLE.json`.
+- Everything else is done and pushed:
+  - the audit gate: `0 findings: OK`;
+  - the must-catch proofs 1 to 11;
+  - AT-0.7-01 (CLI smoke, contracts, trace of four rows);
+  - DEBT-013/014/015/017 closed;
+  - EVIDENCE.md up to date.
+
+**Options:**
+1. **(Recommended)** Add `ALLOW-EDIT: tests/aqis_lab/test_aqis_registry_fetch.py` to `docs/approvals/WP-0.7.md`, for the function `test_FR_0_4_02_no_raw_corpus_committed` only. I change one line: the allowed pattern also accepts `data/runs/phase0-smoke/phase0-smoke-(cloud|colab|oracle)-<YYYYMMDDTHHMMSSZ>.tar`, and nothing else. The test's rule against raw corpora stays as strict, and the WP-0.7 test proves those archives hold no audio. The approved location (question 11) and the runbooks stay as they are.
+2. Commit bundles outside `data/`, for example `docs/runs/bundles/<name>.tar`. No protected file changes. But this departs from question 11, so I would move the committed file and change both runbooks, `docs/runs/PHASE0_SMOKE.md`, EVIDENCE.md and the test's path, and bundles would sit among documents.
+
+**Paused until answered:**
+- the final CI run and the pull request;
+- STATUS READY-FOR-AUDIT;
+- the second full slow-suite run on the final commit (the two WP-0.0 provisioning tests need a clean tree and are rerun then).
+
+The code, tests and evidence of every requirement are done and pushed.
+
+**Owner answer:**
