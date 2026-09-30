@@ -167,6 +167,23 @@ Upload the doctor JSON to `docs/environment/`, and the output of all three comma
 
 Upload the output of all three as `docs/progress/WP-0.6/OC-0.6-02_sync_dry_run.txt`.
 
+**OC-0.7-02** (the phase 0 smoke on Oracle; after the WP-0.7 audit passes, in the clone at the tag `aqis-lab-wp-0.7-oracle-1`, see "Update to a new tag"):
+1. `dpkg -s libatomic1 | grep Status`
+   - **Expected:** `Status: install ok installed`. Vosk's aarch64 library needs `libatomic.so.1`. If the line is missing, run `sudo apt-get install -y libatomic1` and repeat this step.
+2. `bash aqis_lab/deploy/oracle_setup.sh`
+   - **Expected:** six steps PASS. Step 4 names `srt` as the one approved source build.
+3. `.venv/bin/python -m aqis_lab phase0 smoke --target oracle`
+   - **Expected:** the runner logs of `vosk-batch`, `harness-vad` and `vosk-realspeed`. The batch runs log `cores: batch on 0-1`; the real-speed run logs `cores: timing on 2-3`. The last line starts with `smoke complete:` and names the archive `data/raw/aqis_lab/smoke/oracle/phase0-smoke-oracle-<stamp>.tar`.
+   - The real-speed run plays its 5 clips (25.6 s of audio) at real time, never faster.
+4. `.venv/bin/python -m pytest tests/aqis_lab -q -m oracle`
+   - **Expected:** a last line ending in `passed`, with nothing failed.
+
+Copy the archive to your computer:
+```bash
+scp oracle:~/aqis/data/raw/aqis_lab/smoke/oracle/phase0-smoke-oracle-*.tar .
+```
+Upload it to `data/runs/phase0-smoke/`, and the output of all four steps as `docs/progress/WP-0.7/OC-0.7-02_oracle.txt`, on the WP-0.7 branch.
+
 ## When something fails
 Do not change code on the VM. Copy the full output into a `.txt` file, upload it next to the check's other files, and run `/surgical-fix` in a Claude session with its name. Common messages:
 
@@ -175,6 +192,7 @@ Do not change code on the VM. Copy the full output into a `.txt` file, upload it
 | `ERROR: unsupported architecture …` or `unsupported operating system …` | The VM is not what `oracle.yaml` expects; send the message to Claude (the setup changed nothing) |
 | `ERROR: uv not found on PATH` or `needs uv 0.8.17` | Follow "Install uv and rclone" |
 | `ERROR: no build of <package> …` | A locked package has no aarch64 build; send the message to Claude |
+| `… libatomic.so.1: cannot open shared object file …` | Vosk's library needs `libatomic1`: run `sudo apt-get install -y libatomic1` (OC-0.7-02 step 1), then the smoke again |
 | Doctor row `cores` FAIL | The reservation does not fit this VM; send the row's detail to Claude |
 | `ERROR: rclone remote "aqis-drive" is not configured` | Follow "Configure rclone for Google Drive" |
 | `ERROR: … AQIS_LAB/results must already exist` | Create the folder in Google Drive (or run the Colab launcher's `drive layout`) |

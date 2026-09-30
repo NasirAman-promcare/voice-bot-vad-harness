@@ -21,6 +21,8 @@ CHANGE LOG:
   2026-09-28 WP-0.6 FR-0.6-02: `results` command registered in COMMANDS.
   2026-09-28 WP-0.6 FR-0.6-03: `trace` command registered in COMMANDS.
   2026-09-28 WP-0.6 FR-0.6-05: `sync` command registered in COMMANDS.
+  2026-09-30 WP-0.7 FR-0.7-07: `phase0` command registered in COMMANDS.
+  2026-09-30 WP-0.7 FR-0.7-08: `parity` command registered in COMMANDS.
 """
 import argparse
 import importlib
@@ -40,6 +42,8 @@ COMMANDS = {
     "results": ("aqis_lab.commands.results", "add rows to and query the append-only results store (DuckDB view)"),
     "trace": ("aqis_lab.commands.trace", "print the run card, manifest, clip, commit and lock hash of a result row"),
     "sync": ("aqis_lab.commands.sync", "copy the results store one way to Google Drive AQIS_LAB/results (rclone)"),
+    "phase0": ("aqis_lab.commands.phase0", "phase 0 smoke run of the first adapters; writes a result bundle"),
+    "parity": ("aqis_lab.commands.parity", "compare two smoke bundles: transcript hashes and WER per clip and total"),
 }
 
 

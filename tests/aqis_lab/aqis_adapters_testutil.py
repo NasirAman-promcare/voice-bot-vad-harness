@@ -71,3 +71,61 @@ def samples_of(data):
     with wave.open(io.BytesIO(data)) as w:
         assert (w.getframerate(), w.getnchannels(), w.getsampwidth()) == (16000, 1, 2)
         return np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").copy()
+
+
+def make_bundle(root, name, texts, refs, target="cloud", platform="cloud-vm", card_char="a", extra_tasks=None):
+    """A result bundle in the documented format (docs/runs/PHASE0_SMOKE.md), built here without aqis_lab.smoke:
+    runs/vosk-batch/results.jsonl from `texts` ({clip_id: text}), and scores/vosk-batch-natural/ from the real WP-0.3
+    `score` command against `refs`; BUNDLE.json lists every file with its SHA-256 and size."""
+    import csv
+    import hashlib
+    import json
+    import subprocess
+    import sys
+    bundle = Path(root) / name
+    runs = bundle / "runs" / "vosk-batch"
+    runs.mkdir(parents=True)
+    card_id = card_char * 64
+    rows = [{"clip_id": c, "run_card_id": card_id, "task": "vosk-batch", "task_version": "1.0", "text": t,
+             "text_sha256": hashlib.sha256(t.encode("utf-8")).hexdigest()} for c, t in texts.items()]
+    (runs / "results.jsonl").write_text("".join(json.dumps(r, sort_keys=True, separators=(",", ":")) + "\n"
+                                                for r in rows), encoding="utf-8")
+    for task, task_rows in (extra_tasks or {}).items():
+        (bundle / "runs" / task).mkdir(parents=True)
+        (bundle / "runs" / task / "results.jsonl").write_text(
+            "".join(json.dumps(r, sort_keys=True) + "\n" for r in task_rows), encoding="utf-8")
+    inputs = Path(root) / f"{name}.inputs"
+    inputs.mkdir()
+    with open(inputs / "ref.csv", "w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh, lineterminator="\n")
+        w.writerow(["clip_id", "text"])
+        w.writerows([[c, refs[c]] for c in texts if c in refs])
+    with open(inputs / "hyp.csv", "w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh, lineterminator="\n")
+        w.writerow(["run_card_id", "clip_id", "text"])
+        w.writerows([[card_id, c, texts[c]] for c in texts if c in refs])
+    proc = subprocess.run([sys.executable, "-m", "aqis_lab", "score", "--ref", str(inputs / "ref.csv"), "--hyp",
+                           str(inputs / "hyp.csv"), "--out", str(bundle / "scores" / "vosk-batch-natural")],
+                          cwd=ROOT, capture_output=True, text=True, timeout=300)
+    assert proc.returncode == 0, proc.stderr
+    (bundle / "PHASE0_SMOKE.md").write_text(f"# test bundle {name}\n", encoding="utf-8")
+    files = {p.relative_to(bundle).as_posix(): p.read_bytes() for p in bundle.rglob("*") if p.is_file()}
+    meta = {"bundle_version": "1.0", "name": name, "target": target, "platform": platform,
+            "machine": {"platform": platform, "cpu_model": "test CPU", "architecture": "x86_64", "os": "test OS",
+                        "python_version": "3.13.0", "gpu": None},
+            "git": {"commit": "c" * 40, "dirty": False},
+            "locks": [{"file": "requirements/aqis_lab/phase0.txt", "sha256": "d" * 64}],
+            "runs": {"vosk-batch": {"run_card_id": card_id}},
+            "files": {rel: {"sha256": hashlib.sha256(d).hexdigest(), "bytes": len(d)} for rel, d in sorted(files.items())}}
+    (bundle / "BUNDLE.json").write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return bundle
+
+
+def tar_bundle(bundle):
+    import tarfile
+    tar_path = bundle.parent / f"{bundle.name}.tar"
+    with tarfile.open(tar_path, "w") as tar:
+        for p in sorted(bundle.rglob("*")):
+            if p.is_file():
+                tar.add(p, arcname=f"{bundle.name}/{p.relative_to(bundle).as_posix()}")
+    return tar_path

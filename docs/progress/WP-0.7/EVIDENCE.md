@@ -99,3 +99,46 @@ torch 2.14.0+cu130 cuda 13.0 nemo 3.0.0 antlr4 4.9.3
 ```
 - Defect found and fixed during this step: the Vosk adapter first set `OPENBLAS_*` in the process environment, which leaked into later child processes (numpy then started one thread, and `test_FR_0_6_04_timing_process_pinned_to_reserved_cores` saw 2 threads instead of 3 when run after the Vosk tests). The adapter now sets the variables only while libvosk loads, restores the environment, and reads the kernel and the thread count back from the library; `test_FR_0_7_02_openblas_kernel_pinned_and_verified` checks that the environment is unchanged. The WP-0.6 test passes again in the combined run.
 - Fast suite after this step: `1715 passed, 39 deselected in 200.44s`.
+
+### FR-0.7-07 — `phase0 smoke`, the result bundle and its report (and the Colab launcher for OC-0.7-01)
+- Code: `aqis_lab/smoke.py` (CAP-SMOKE-001 to -004), `aqis_lab/commands/phase0.py` (CAP-SMOKE-005), `config/aqis_lab/phase0_smoke.yaml` (CAP-SMOKE-006), `aqis_lab/__main__.py` (`COMMANDS` entry `phase0`), `notebooks/aqis_lab/phase0_smoke_launcher.ipynb`; documents `docs/runs/PHASE0_SMOKE.md`, `docs/adapters/VOSK.md`, `docs/adapters/PARAKEET_UNIFIED.md`, `docs/adapters/HARNESS_VAD.md`, and the new OC-0.7-01 section of `docs/colab/COLAB_RUNBOOK.md` and OC-0.7-02 steps (inside "Report results back", plus one "When something fails" row) of `docs/oracle/ORACLE_RUNBOOK.md`. Existing runbook text is unchanged.
+- Tests: `tests/aqis_lab/test_aqis_smoke.py` (4 fast tests; 11 `slow`+`network` tests share one real cloud smoke run with the real Vosk model, plus a second, resumed run), `tests/aqis_lab/test_aqis_smoke_launcher.py` (the WP-0.5 launcher rules, imported unchanged from `test_aqis_launcher.py`, applied to the new notebook), `tests/aqis_lab/test_aqis_smoke_live.py` (`colab`/`gpu`/`oracle`: owner-run).
+- Tests first: the record of the first failing run of `test_aqis_smoke.py` was not kept. As a check made afterwards, in a copy of the tree (`/tmp/wp07-mustcatch`) without `aqis_lab/smoke.py` and `aqis_lab/parity.py`:
+```text
+E   ImportError: cannot import name 'smoke' from 'aqis_lab' (/tmp/wp07-mustcatch/aqis_lab/__init__.py)
+E   ImportError: cannot import name 'parity' from 'aqis_lab' (/tmp/wp07-mustcatch/aqis_lab/__init__.py)
+ERROR tests/aqis_lab/test_aqis_smoke.py
+ERROR tests/aqis_lab/test_aqis_parity.py
+```
+  `test_aqis_smoke_launcher.py` against the runbook as committed before this step (same copy): `E       ValueError: substring not found` (the `## OC-0.7-01` section), `1 failed, 3 passed in 0.11s`. Its no-logic test also failed on the first run against the real notebook (below).
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_smoke.py -q -p no:cacheprovider` (all markers, including the real cloud smoke)
+```text
+...................                                                      [100%]
+19 passed in 131.28s (0:02:11)
+```
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_smoke_launcher.py tests/aqis_lab/test_aqis_launcher.py tests/aqis_lab/test_aqis_oracle_runbook.py -q -p no:cacheprovider`: the launcher tests `4 passed`, the WP-0.5 launcher tests unchanged and passing (`46 passed` together with the first run), the Oracle runbook tests `3 passed`.
+- **Launcher and the WP-0.5 rule checker.** The WP-0.5 checker (`test_aqis_launcher.command_shape_problems`) allows the bootstrap step only without options, and the approved plan (OC-0.7-01, question 13) has cell 3 run `dev_bootstrap.sh --gpu`. The first run reported exactly that:
+```text
+AssertionError: (3, ["line 4: command ['bash', 'aqis_lab/deploy/dev_bootstrap.sh', '--gpu'] is not one of the launcher's steps"])
+```
+  The WP-0.5 test file is unchanged. My new test expects exactly that one report on the line that holds `"aqis_lab/deploy/dev_bootstrap.sh", "--gpu"`, and nothing else in any cell. Every other rule (keywords, settings, token handling, no logic) applies to all cells unchanged.
+- **Results store: now the plan's default.** The first version wrote to a new store beside each bundle. The plan says `--store` defaults to `data/raw/aqis_lab/results`, so `run_smoke` now uses `aqis_lab.results.store.DEFAULT_STORE`. The tests pass their own store. `test_FR_0_7_07_second_run_resumes_and_stores_nothing_new` now also checks that the second smoke run leaves every file of that store byte-identical.
+- **Differences from the plan, for the owner.** One option is not in the plan's command line: `--bundle-dir` (default `data/raw/aqis_lab/smoke-bundles`). It is the local folder where the bundle is assembled and scored before the archive is written to `--out`. The plan puts the score folders on local disk and the bundle in `--out`; on Colab `--out` is on Drive. The option lets the tests keep the bundle in a temporary folder.
+
+### FR-0.7-08 — `parity <A> <B>`
+- Code: `aqis_lab/parity.py` (CAP-PARITY-001 to -003), `aqis_lab/commands/parity.py` (CAP-PARITY-004), `aqis_lab/__main__.py` (`COMMANDS` entry `parity`); bundle format and output in `docs/runs/PHASE0_SMOKE.md`.
+- Tests: `tests/aqis_lab/test_aqis_parity.py`. The bundles are built by the test in the documented format, with real score tables from the WP-0.3 `score` command (`aqis_adapters_testutil.make_bundle`). The expected differences follow from how each test builds its bundles: 3 changed transcripts, 1 missing clip and 1 extra clip; a punctuation-only change that alters the hash but not the normalised WER; a total WER change; a damaged file, an extra file and a missing path; a task in one bundle only; folder and `.tar` giving the same lines. `test_FR_0_7_08_cloud_colab_oracle_bundles_identical` is added for OC-0.7-03 once the Colab and Oracle bundles are committed.
+- Tests first: see the collection errors under FR-0.7-07 (copy without `aqis_lab/parity.py`).
+- **Defect found and fixed: the parity process sometimes never exited.** In the full fast suite, one `parity` CLI call hung until the test's 300 s timeout (`subprocess.TimeoutExpired … timed out after 300 seconds`, `1 failed, 1733 passed, 50 deselected in 503.26s`). `gdb` on a hung process showed the main thread in `arrow::internal::ThreadPool::Shutdown` from `exit()`, and a pool thread in `arrow::py::PyBuffer::~PyBuffer` → `PyGILState_Ensure`, reached from a `ParquetFileFragment` destructor. `pq.read_table(pa.BufferReader(bytes))` goes through Arrow's dataset layer, and a fragment holding the Python buffer was released only at interpreter exit. `_scores` now reads the table with `pq.ParquetFile(...)` in a `with` block, closed in the calling thread.
+  - Reproduction (the CLI on two test bundles, each run with a 20 s limit), before: `runs 40: exit0 34, hangs 6`; after: `runs 100: exit0 100, hangs 0`.
+  - The same check for the read patterns in WP-0.6's `results/ingest.py` (`pq.read_table(pa.BufferReader(…), use_threads=False)`) and `results/store.py` (`pq.read_table(io.BytesIO(…), use_threads=False)`), 60 runs each: `hangs 0` for both; the old parity pattern: `hangs 3`. So only the new parity code was affected, and nothing outside the change budget is touched.
+  - New test `test_FR_0_7_08_parity_process_always_exits` (`slow`): 40 CLI runs, each must exit with its result within 60 s. With the old line put back in the copy: `subprocess.TimeoutExpired: … timed out after 60 seconds`, `1 failed, 7 deselected in 63.44s`. With the fix it passes.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_parity.py -q -p no:cacheprovider`
+```text
+........                                                                 [100%]
+8 passed in 11.47s
+```
+- Fast suite after FR-0.7-07 and FR-0.7-08: `.venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider`
+```text
+1734 passed, 51 deselected in 197.83s (0:03:17)
+```
