@@ -318,6 +318,26 @@ def test_FR_0_7_07_second_run_resumes_and_stores_nothing_new(cloud, tmp_path):
         assert result.stored == 0 and result.already > 0
 
 
+def test_FR_0_7_07_committed_bundles_and_their_reports_in_docs():
+    # Each committed bundle (question 11) is intact, made from a clean tree of this branch's history, and its report
+    # is byte-copied into docs/runs/PHASE0_SMOKE.md.
+    from aqis_lab import parity
+    tars = sorted((ROOT / "data" / "runs" / "phase0-smoke").glob("phase0-smoke-*.tar"))
+    assert [t for t in tars if t.name.startswith("phase0-smoke-cloud-")], "the cloud bundle is committed"
+    doc = (ROOT / "docs" / "runs" / "PHASE0_SMOKE.md").read_text(encoding="utf-8")
+    for tar in tars:
+        bundle = parity.load_bundle(tar)             # every file against BUNDLE.json (SHA-256 and size)
+        name = tar.name[:-len(".tar")]
+        assert bundle.name == bundle.meta["name"] == name
+        assert bundle.meta["target"] in name and bundle.meta["git"]["dirty"] is False
+        ancestor = subprocess.run(["git", "merge-base", "--is-ancestor", bundle.meta["git"]["commit"], "HEAD"],
+                                  cwd=ROOT, capture_output=True, text=True)
+        assert ancestor.returncode == 0, (name, ancestor.stderr)
+        m = re.search(rf"<!-- report {re.escape(name)} begin -->\n(.*?)<!-- report {re.escape(name)} end -->\n", doc,
+                      re.S)
+        assert m and m.group(1).encode("utf-8") == bundle.files["PHASE0_SMOKE.md"], name
+
+
 def test_FR_0_7_07_cli_parses_every_option():
     from aqis_lab.commands.phase0 import build_parser
     ns = build_parser().parse_args(["smoke", "--target", "oracle", "--out", "o", "--store", "s", "--model-cache", "m",

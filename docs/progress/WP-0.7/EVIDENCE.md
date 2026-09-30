@@ -212,3 +212,72 @@ NFR-0.5-01 on vosk-batch: direct median 69.03 s, runner median 69.15 s, overhead
 ```
 - The runner's fixed cost measured in WP-0.5 (about 25 ms per run, 6 ms per shard) is negligible against a real model's work, as the WP-0.5 approval expected. The first run of this test found the Vosk dither defect above; the numbers are from the run after its fix.
 - After DEBT-013, DEBT-014, DEBT-015 and the dither fix: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_smoke.py tests/aqis_lab/test_aqis_runner_events.py tests/aqis_lab/test_aqis_realspeed.py -q -p no:cacheprovider` (all markers, with the real cloud smoke): `35 passed in 151.45s (0:02:31)`. Fast suite: `1741 passed, 53 deselected in 200.34s (0:03:20)`.
+
+## Acceptance commands
+
+### AT-0.7-01 and NFR-0.7-01 — `phase0 smoke --target cloud` on a clean tree, contracts, trace
+- Tree clean at `0a534ce` (`git status --short` printed nothing). Command: `time .venv/bin/python -m aqis_lab phase0 smoke --target cloud` (default folders: run folders and archive in `data/raw/aqis_lab/smoke/cloud`, store `data/raw/aqis_lab/results`, bundle `data/raw/aqis_lab/smoke-bundles`). Excerpt:
+```text
+2026-09-30T17:04:40.551480Z cores: no reservation (platform cloud-vm)
+2026-09-30T17:05:51.662705Z run complete: 1 shard(s), 0 skipped and 1 computed in this session; results.jsonl sha256 2f42f17998622d836338e5fb8ea80af3e9df5846cb842f730e1bb46f1bce7da0 (60 rows)
+2026-09-30T17:05:51.697661Z cores: no reservation (platform cloud-vm)
+2026-09-30T17:05:52.037619Z run complete: 1 shard(s), 0 skipped and 1 computed in this session; results.jsonl sha256 70615de08363a75f1531f110aa8bba3d4527b333832ab4aeeb3aacc937f3ad34 (60 rows)
+2026-09-30T17:05:52.088935Z cores: no reservation (platform cloud-vm)
+2026-09-30T17:06:18.721877Z run complete: 1 shard(s), 0 skipped and 1 computed in this session; results.jsonl sha256 5fc67ae2ad3098abd175de42c5f8ac57b725cb61ceaa612e8f8772f7241a5888 (5 rows)
+scored vosk-batch natural: utterances 40, empty references 0
+scored vosk-batch synthetic-tts: utterances 10, empty references 0
+smoke complete: bundle /home/user/voice-bot-vad-harness/data/raw/aqis_lab/smoke-bundles/phase0-smoke-cloud-20260930T170440Z (23 files, 225 rows traced), archive /home/user/voice-bot-vad-harness/data/raw/aqis_lab/smoke/cloud/phase0-smoke-cloud-20260930T170440Z.tar, 105.7 s
+real	1m46.181s
+exit=0
+```
+- NFR-0.7-01: 105.7 s on this VM (limit 900 s); `BUNDLE.json` `elapsed_s` records it, and `test_NFR_0_7_01_cloud_smoke_within_15_minutes` asserts it.
+- Contracts: every run card and every event log of the bundle.
+```text
+$ .venv/bin/python -m aqis_lab contracts validate --kind run_card data/raw/aqis_lab/smoke-bundles/phase0-smoke-cloud-20260930T170440Z/runs/vosk-batch/run_card.json
+run_card: 1 record, 1 valid, 0 invalid
+exit 0
+$ .venv/bin/python -m aqis_lab contracts validate --kind run_card data/raw/aqis_lab/smoke-bundles/phase0-smoke-cloud-20260930T170440Z/runs/harness-vad/run_card.json
+run_card: 1 record, 1 valid, 0 invalid
+exit 0
+$ .venv/bin/python -m aqis_lab contracts validate --kind run_card data/raw/aqis_lab/smoke-bundles/phase0-smoke-cloud-20260930T170440Z/runs/vosk-realspeed/run_card.json
+run_card: 1 record, 1 valid, 0 invalid
+exit 0
+$ .venv/bin/python -m aqis_lab contracts validate --kind event data/raw/aqis_lab/smoke-bundles/phase0-smoke-cloud-20260930T170440Z/runs/vosk-batch/events.jsonl
+event: 894 records, 894 valid, 0 invalid
+exit 0
+$ .venv/bin/python -m aqis_lab contracts validate --kind event data/raw/aqis_lab/smoke-bundles/phase0-smoke-cloud-20260930T170440Z/runs/harness-vad/events.jsonl
+event: 462 records, 462 valid, 0 invalid
+exit 0
+$ .venv/bin/python -m aqis_lab contracts validate --kind event data/raw/aqis_lab/smoke-bundles/phase0-smoke-cloud-20260930T170440Z/runs/vosk-realspeed/events.jsonl
+event: 81 records, 81 valid, 0 invalid
+exit 0
+```
+- `trace` on one row of each kind, with row IDs taken from the bundle's report. Excerpt; every call exited 0, and the full output shows each row's run card:
+```text
+$ .venv/bin/python -m aqis_lab trace fa8f7d0a7dafdde0e282855c88ca7ecb029181b5938c0270e7ba623a05150d39   # score
+kind: score
+clip_id: ls-test-clean-1188-133604-0029
+run_card_id: 5eb8cb06f90d81fd2eb8290d3bdc09e4e799c57e2eb835e0f011b49673b70350
+git_commit: 0a534ce22bf7d1d0b5d266920d2302bced0ef865 (dirty: false)
+exit 0
+$ .venv/bin/python -m aqis_lab trace 994765df172b2bae9503c7136c8bde30ec91eeab06d563e9dc87c1c4d0b0d57a   # vosk-batch
+kind: run-result
+clip_id: ls-test-clean-1188-133604-0029
+run_card_id: 5eb8cb06f90d81fd2eb8290d3bdc09e4e799c57e2eb835e0f011b49673b70350
+git_commit: 0a534ce22bf7d1d0b5d266920d2302bced0ef865 (dirty: false)
+exit 0
+$ .venv/bin/python -m aqis_lab trace fd80b149df8e3bc822c3a474660175743dde9510d2aadc653742fa5f61bec643   # vosk-realspeed
+kind: run-result
+clip_id: ls-test-clean-3570-5695-0009
+run_card_id: 7a61ecfefa4b184d488bd377edf9e3858ee2e945b945bf6e464ef2b3b15d3bee
+git_commit: 0a534ce22bf7d1d0b5d266920d2302bced0ef865 (dirty: false)
+exit 0
+$ .venv/bin/python -m aqis_lab trace 1881693905111f2044839f86c6b8ee97f0216a4e304dda41772d1d944dca21d0   # harness-vad
+kind: run-result
+clip_id: ls-test-clean-1188-133604-0029
+run_card_id: 14db429d748b304b375a9a21bd00846001180575f86156a4f87c76bbc11ff3be
+git_commit: 0a534ce22bf7d1d0b5d266920d2302bced0ef865 (dirty: false)
+exit 0
+```
+  My first pick of the score row took the summary table's `summary.json` SHA-256 instead of a row ID. `trace` refused it correctly (`ERROR: result row cc9156be… is not in the results store …`, exit 1), and the row above comes from the "WER per clip" table.
+- The bundle is committed as `data/runs/phase0-smoke/phase0-smoke-cloud-20260930T170440Z.tar` (808,960 bytes). Its report is byte-copied into `docs/runs/PHASE0_SMOKE.md` ("Reports"). `test_FR_0_7_07_committed_bundles_and_their_reports_in_docs` checks every committed bundle against its `BUNDLE.json`, a clean tree whose commit is an ancestor of `HEAD`, and the report copy: `1 passed, 19 deselected in 0.41s`. Parity of the committed archive against the bundle folder: `parity: identical (vosk-batch: 60 clips; vosk-realspeed: 5 clips; vosk-batch-natural: 80 rows; vosk-batch-synthetic-tts: 20 rows)`.
