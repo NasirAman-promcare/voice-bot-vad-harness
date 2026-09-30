@@ -57,3 +57,12 @@ step 4/6 wheels: would check that each of the 37 pins in requirements/aqis_lab/p
 13 passed, 1710 deselected in 0.95s
 ```
 - Fast suite after both adapters: `1691 passed, 32 deselected in 202.21s`.
+
+### FR-0.7-05 — Real-speed feeder (and DEBT-017)
+- Code: `aqis_lab/realspeed.py` (CAP-RSPEED-001 to -003).
+- Tests: `tests/aqis_lab/test_aqis_realspeed.py` (`test_FR_0_7_05_*`): the harness VAD as a fast real adapter, a 30 ms-per-frame test adapter for lateness, the real Vosk model for latencies (`network`), and the WP-0.6 Oracle cores test double for pinning (the test reads every thread's `Cpus_allowed_list` of the running feeder process; the child runs a second Python thread so more than the main thread is checked).
+- Tests first: the file failed at collection before `realspeed.py` existed (`ModuleNotFoundError`). The first run of the pinning test showed one thread only (`{19471: {3}}`); the test now starts a second thread in the child so "every thread" is really exercised.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k FR_0_7_05`
+```text
+7 passed, 1723 deselected in 23.51s
+```
