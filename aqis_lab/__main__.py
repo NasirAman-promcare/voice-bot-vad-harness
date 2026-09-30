@@ -18,6 +18,9 @@ CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-03: `drive` command registered in COMMANDS.
   2026-09-28 WP-0.5 FR-0.5-05: `run` command registered in COMMANDS.
   2026-09-28 WP-0.5 FR-0.5-07: `unitlog` command registered in COMMANDS.
+  2026-09-28 WP-0.6 FR-0.6-02: `results` command registered in COMMANDS.
+  2026-09-28 WP-0.6 FR-0.6-03: `trace` command registered in COMMANDS.
+  2026-09-28 WP-0.6 FR-0.6-05: `sync` command registered in COMMANDS.
 """
 import argparse
 import importlib
@@ -34,6 +37,9 @@ COMMANDS = {
     "drive": ("aqis_lab.commands.drive", "create the Google Drive AQIS_LAB folder layout; report crowded folders"),
     "run": ("aqis_lab.commands.run", "run a task over a pack in resumable shards (copy then compute)"),
     "unitlog": ("aqis_lab.commands.unitlog", "Colab session compute-unit log (start, end)"),
+    "results": ("aqis_lab.commands.results", "add rows to and query the append-only results store (DuckDB view)"),
+    "trace": ("aqis_lab.commands.trace", "print the run card, manifest, clip, commit and lock hash of a result row"),
+    "sync": ("aqis_lab.commands.sync", "copy the results store one way to Google Drive AQIS_LAB/results (rclone)"),
 }
 
 

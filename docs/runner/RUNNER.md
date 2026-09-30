@@ -98,7 +98,7 @@ Clips are taken in manifest order. A shard closes before adding a clip would pas
 | `shards/shard-NNNNN.jsonl` | One row per clip, in manifest order (below) |
 | `shards/shard-NNNNN.done.json` | Completion marker: `marker_version`, `plan_id`, `shard`, `results_file`, `results_sha256`, `results_bytes`, `rows`, `finished_utc`, `duration_ns` (monotonic clock), `session`, `machine` (the machine that computed the shard) |
 | `results.jsonl` | Every shard's results joined in order, written once all are finished |
-| `runner.log` | One UTC-stamped line per event: `session N start` (task, pack, run card, plan, machine), `shard NNNNN skipped` (and why it counts as finished), `not finished` (and why), `started`, `finished`, `ERROR`, `stopped after`, `run complete` |
+| `runner.log` | One UTC-stamped line per event: `session N start` (task, pack, run card, plan, machine), `cores:` (the core pinning, below), `shard NNNNN skipped` (and why it counts as finished), `not finished` (and why), `started`, `finished`, `ERROR`, `stopped after`, `run complete` |
 
 **Result rows.** One canonical JSON object per line (sorted keys, no spaces). Fields: `clip_id`, `run_card_id`, `task`, `task_version`, then the task's fields.
 
@@ -111,6 +111,14 @@ Clips are taken in manifest order. A shard closes before adding a clip would pas
   - its `shard_plan.json` equals the plan for the options given.
 - **Otherwise the run stops with exit 2** and names the differing fields; use another `--out`, or `--from-scratch`.
 - **Session numbers** come from `runner.log`.
+
+## Core reservation on Oracle (WP-0.6 FR-0.6-04)
+Before it stages the pack, the runner pins itself for its run mode (`batch`) with `aqis_lab.timing.cores`:
+- **On the `oracle` platform** every thread of the process is pinned to the batch CPUs: every online CPU except `cores.reserved_for_timing` in `config/aqis_lab/oracle.yaml` (cores 2-3 on the A1 VM, owner decision in `docs/approvals/WP-0.6.md`). Each thread is read back; child processes inherit the pin. The log line reads `cores: batch on 0-1 (timing reserved 2-3; config <path>)`.
+- **On every other platform** nothing is pinned, and the log line reads `cores: no reservation (platform cloud-vm)`.
+- **A reservation that is not possible** (a reserved CPU not online, no CPU left for batch runs, a reservation that splits a physical core) or a pin that does not take stops the run with exit 2 before anything is staged or written.
+
+Timing runs (every mode other than `batch`: `realspeed_cpu`, `gpu_compute_delay`, `tier2_live`, `nearlive_replay`, `human_session`) are pinned to the reserved CPUs by the same function; they arrive with WP-0.7.
 
 ## Not in WP-0.5
 - The runner writes no event log yet: WP-0.7's adapters are the first components that emit events (owner decision, WP-0.5 question 14).

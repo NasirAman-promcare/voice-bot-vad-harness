@@ -1,7 +1,7 @@
 """Run a task over a staged pack in resumable shards: skip finished shards, compute the rest, join the results.
 
 CAPABILITIES:
-  CAP-RUN-007: run() stages the pack (copy then compute), builds and validates the run card and the shard plan, and in a new run folder writes both; in an existing run folder it resumes only when the stored card equals the rebuilt one except created_utc, notes and machine.cpu_model (owner decision, question 4 (b)) and the stored plan equals the rebuilt plan, else it refuses and names --from-scratch; --from-scratch renames the old folder to <out>.superseded-<UTC> (never deletes) and starts again [tests: test_FR_0_5_05_restart_skips_finished_shards, test_FR_0_5_05_starting_over_requires_from_scratch, test_FR_0_5_05_from_scratch_keeps_old_run_folder, test_FR_0_5_05_changed_card_or_plan_refused, test_FR_0_5_05_resume_rule_for_other_cpu_model, test_FR_0_5_05_run_card_valid_and_traceable, test_FR_0_5_05_resume_refused_when_card_differs]
+  CAP-RUN-007: run() stages the pack (copy then compute), builds and validates the run card and the shard plan, and in a new run folder writes both; in an existing run folder it resumes only when the stored card equals the rebuilt one except created_utc, notes and machine.cpu_model (owner decision, question 4 (b)) and the stored plan equals the rebuilt plan, else it refuses and names --from-scratch; --from-scratch renames the old folder to <out>.superseded-<UTC> (never deletes) and starts again; before staging, on the oracle platform it pins every thread to the batch cores of config/aqis_lab/oracle.yaml (WP-0.6 FR-0.6-04; a core error is exit 2 before anything is written) and logs `cores: ...` [tests: test_FR_0_6_04_batch_run_kept_off_reserved_cores, test_FR_0_6_04_real_runner_logs_no_reservation_on_this_vm, test_FR_0_6_04_run_stops_with_exit_2_on_core_error, test_FR_0_5_05_restart_skips_finished_shards, test_FR_0_5_05_starting_over_requires_from_scratch, test_FR_0_5_05_from_scratch_keeps_old_run_folder, test_FR_0_5_05_changed_card_or_plan_refused, test_FR_0_5_05_resume_rule_for_other_cpu_model, test_FR_0_5_05_run_card_valid_and_traceable, test_FR_0_5_05_resume_refused_when_card_differs]
   CAP-RUN-008: each shard is skipped when shard_finished() proves it finished, else computed clip by clip into canonical JSON rows carrying run_card_id and clip_id and written with its marker; a clip that fails stops the run (RunFailure, no marker for that shard, an ERROR line in runner.log); --max-shards N stops cleanly after N computed shards; when every shard is finished, results.jsonl is the shards' results joined in order [tests: test_FR_0_5_05_shard_results_written_atomically_with_marker, test_FR_0_5_05_result_rows_carry_run_card_and_clip_ids, test_FR_0_5_05_clip_failure_stops_run_without_marker, test_FR_0_5_05_max_shards_stops_cleanly, test_FR_0_5_06_kill_and_resume_byte_identical_without_recomputing, test_FR_0_5_04_run_reads_only_local_extracted_clips]
 INPUTS AND OUTPUTS: RunOptions in; the run folder (docs/runner/RUNNER.md), log lines on stdout and a RunOutcome
   out; RunInputError (usage or input problem) or RunFailure (a clip failed).
@@ -16,6 +16,8 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-05 created.
   2026-09-28 WP-0.5 round 2 F05: header lists the resume-refusal test (header only).
+  2026-09-28 WP-0.6 FR-0.6-04: RunOptions.cores_config; run() pins to the batch cores before staging and logs
+    the core line.
 """
 import hashlib
 import json
@@ -27,6 +29,7 @@ from pathlib import Path
 
 from aqis_lab import drive
 from aqis_lab import platform as lp
+from aqis_lab.oracle_config import OracleConfigError
 from aqis_lab.contracts.canonical import canonical_json
 from aqis_lab.contracts.validate import ContractValidationError
 from aqis_lab.packs.audio import AudioFormatError
@@ -35,12 +38,14 @@ from aqis_lab.runner.card import build_run_card, card_differences
 from aqis_lab.runner.plan import DEFAULT_SHARD_MINUTES, PlanError, build_plan, oversize_shards
 from aqis_lab.runner.stage import ClipError, StageError, stage_pack
 from aqis_lab.runner.tasks import TASKS
+from aqis_lab.timing import cores
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_WORK_DIR = REPO_ROOT / "data" / "raw" / "aqis_lab" / "work"
 IGNORED_ON_RESUME = ("/created_utc", "/notes", "/run_card_id")
 RESUMABLE_MACHINE_CHANGES = ("/machine/cpu_model",)      # owner decision, WP-0.5 question 4 (b)
 SESSION_RE = re.compile(r" session (\d+) start")
+RUN_MODE = "batch"                # the run card mode build_run_card writes; batch cores on Oracle
 
 
 class RunInputError(RuntimeError):
@@ -64,6 +69,7 @@ class RunOptions:
     from_scratch: bool = False
     drive_mount: Path | None = None
     notes: str = ""
+    cores_config: Path | None = None        # oracle.yaml; None: config/aqis_lab/oracle.yaml
 
 
 @dataclass
@@ -177,19 +183,25 @@ def run(options, system=None, echo=print, on_shard=None):
         raise RunInputError(f"--max-shards must be 0 or more, got {options.max_shards}")
     out = Path(options.out)
     try:
+        pinning = cores.pin_for_mode(RUN_MODE, system, options.cores_config)
         drive.check_write_path(out, system)
         staged = stage_pack(options.pack, options.work_dir, system)
         machine = lp.machine_info(system).block()
         card = build_run_card(task, staged, options.seed, options.notes, machine)
+        if card["mode"] != RUN_MODE:
+            raise RunInputError(f"the run card mode is {card['mode']!r}, but the runner pinned itself for "
+                                f"{RUN_MODE!r}")
         superseded = _supersede(out, system) if options.from_scratch and out.exists() else None
         card, plan, notes = _open_run_folder(out, card, task, staged.manifest, options, system)
-    except (drive.DriveError, StageError, lp.PlatformError, PlanError, ContractValidationError) as exc:
+    except (drive.DriveError, StageError, lp.PlatformError, PlanError, ContractValidationError, cores.CoreError,
+            OracleConfigError) as exc:
         raise RunInputError(str(exc)) from exc
     log = _Log(out, system, echo)
     session = _next_session(out)
     log(f"session {session} start: task {task.name} {task.version}; pack {staged.manifest['manifest_id']} "
         f"{staged.manifest['version']}; run card {card['run_card_id']}; plan {plan['plan_id']} with "
         f"{len(plan['shards'])} shard(s); machine {json.dumps(machine, sort_keys=True)}")
+    log(f"cores: {pinning.describe()}")
     if superseded is not None:
         log(f"previous run folder moved to {superseded} (--from-scratch)")
     for note in notes:

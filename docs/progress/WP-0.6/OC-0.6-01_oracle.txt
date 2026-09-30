@@ -1,0 +1,1 @@
+OC-0.6-01: oracle_setup.sh and pytest -m oracle completed with 2 passed on Ampere A1 (aarch64).

@@ -1,7 +1,7 @@
 """Environment health check: Python, lock, disk, RAM, GPU and (on Colab) Google Drive, as a PASS/FAIL report.
 
 CAPABILITIES:
-  CAP-DOCTOR-001: run_doctor() checks, in order: platform equals the target; Python major.minor equals the Colab probe's; installed distributions equal the lock (none missing, none extra, versions equal); free disk and available RAM against the target's minimums in config/aqis_lab/doctor.yaml; a GPU when expect_gpu (else SKIP); on colab, the Drive mount and a writable MyDrive/AQIS_LAB; every check runs even after a FAIL [tests: test_FR_0_5_02_fails_on_python_version_other_than_probe, test_FR_0_5_02_fails_on_package_version_other_than_lock, test_FR_0_5_02_fails_on_package_missing_from_lock, test_FR_0_5_02_fails_on_lock_package_not_installed, test_FR_0_5_02_fails_below_disk_minimum, test_FR_0_5_02_fails_below_ram_minimum, test_FR_0_5_02_gpu_skipped_without_expect_gpu, test_FR_0_5_02_expect_gpu_fails_without_gpu, test_FR_0_5_02_expect_gpu_passes_with_gpu, test_FR_0_5_02_fails_when_target_is_not_this_platform, test_FR_0_5_02_colab_fails_when_drive_not_mounted, test_FR_0_5_02_colab_fails_when_aqis_lab_missing, test_FR_0_5_02_colab_fails_when_aqis_lab_read_only, test_FR_0_5_02_colab_drive_checks_pass_when_writable]
+  CAP-DOCTOR-001: run_doctor() checks, in order: platform equals the target; Python major.minor equals the Colab probe's; installed distributions equal the lock (none missing, none extra, versions equal); free disk and available RAM against the target's minimums in config/aqis_lab/doctor.yaml; a GPU when expect_gpu (else SKIP); on colab, the Drive mount and a writable MyDrive/AQIS_LAB; on oracle, the core reservation of config/aqis_lab/oracle.yaml against this machine (WP-0.6 FR-0.6-04); every check runs even after a FAIL [tests: test_FR_0_6_04_doctor_oracle_cores_row, test_FR_0_5_02_fails_on_python_version_other_than_probe, test_FR_0_5_02_fails_on_package_version_other_than_lock, test_FR_0_5_02_fails_on_package_missing_from_lock, test_FR_0_5_02_fails_on_lock_package_not_installed, test_FR_0_5_02_fails_below_disk_minimum, test_FR_0_5_02_fails_below_ram_minimum, test_FR_0_5_02_gpu_skipped_without_expect_gpu, test_FR_0_5_02_expect_gpu_fails_without_gpu, test_FR_0_5_02_expect_gpu_passes_with_gpu, test_FR_0_5_02_fails_when_target_is_not_this_platform, test_FR_0_5_02_colab_fails_when_drive_not_mounted, test_FR_0_5_02_colab_fails_when_aqis_lab_missing, test_FR_0_5_02_colab_fails_when_aqis_lab_read_only, test_FR_0_5_02_colab_drive_checks_pass_when_writable]
   CAP-DOCTOR-002: DoctorReport renders a fixed-width PASS/FAIL table and writes doctor_<platform>_<YYYYMMDDTHHMMSSZ>.json (never replacing a report) [tests: test_FR_0_5_02_cloud_doctor_prints_table_and_writes_json, test_FR_0_5_02_minimums_documented_equal_config]
 INPUTS AND OUTPUTS: target, --expect-gpu, the Drive mount and the inputs below the repository root
   (docs/environment/colab_probe.txt, requirements/aqis_lab/phase0.txt, config/aqis_lab/doctor.yaml) in; a
@@ -15,6 +15,7 @@ NOT IN SCOPE:
   - The GPU lock (WP-0.7).
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-02 created.
+  2026-09-28 WP-0.6 FR-0.6-04: `cores` check for target oracle (run_doctor, _check_cores).
 """
 import hashlib
 import importlib.metadata as md
@@ -28,6 +29,7 @@ import yaml
 from packaging.markers import InvalidMarker, Marker
 
 from aqis_lab import drive
+from aqis_lab import oracle_config
 from aqis_lab import platform as lp
 from aqis_lab.commands.version import VersionInfoError, version_line
 
@@ -36,6 +38,7 @@ TARGETS = {"cloud": "cloud-vm", "colab": "colab", "oracle": "oracle"}
 PROBE_REL = "docs/environment/colab_probe.txt"
 LOCK_REL = "requirements/aqis_lab/phase0.txt"
 MINIMUMS_REL = "config/aqis_lab/doctor.yaml"
+ORACLE_CONFIG_REL = "config/aqis_lab/oracle.yaml"
 WRITE_CHECK = "doctor_write_check.json"
 GB = 1_000_000_000
 PROBE_RE = re.compile(r"\s*(?:Python Version:\s*|Python\s+)(\d+)\.(\d+)")
@@ -286,7 +289,20 @@ def _check_drive_folder(drive_mount, created_utc, system):
     return Check("drive-folder", "PASS", str(folder), "writable", f"wrote and read back {target.name}")
 
 
-def run_doctor(target, expect_gpu=False, repo_root=None, work_dir=None, drive_mount=None, system=None):
+def _check_cores(system, config):
+    from aqis_lab.timing import cores
+    try:
+        plan = cores.build_plan(system, config)
+    except (cores.CoreError, oracle_config.OracleConfigError, lp.PlatformError) as exc:
+        return Check("cores", "FAIL", "a possible reservation", "not possible", str(exc))
+    return Check("cores", "PASS", "a possible reservation",
+                 f"timing on {cores.format_cpus(plan.reserved)}, batch on {cores.format_cpus(plan.batch)}",
+                 f"cores.reserved_for_timing in {plan.config}; every reserved CPU online, whole physical cores, "
+                 f"at least one CPU left for batch runs")
+
+
+def run_doctor(target, expect_gpu=False, repo_root=None, work_dir=None, drive_mount=None, system=None,
+               oracle_config_path=None):
     """Run every check for `target` ('cloud', 'colab' or 'oracle'); returns a DoctorReport."""
     if target not in TARGETS:
         raise DoctorInputError(f"unknown target {target!r}; use one of {sorted(TARGETS)}")
@@ -327,6 +343,8 @@ def run_doctor(target, expect_gpu=False, repo_root=None, work_dir=None, drive_mo
     if target == "colab":
         report.checks.append(_check_drive_mount(drive_mount, system))
         report.checks.append(_check_drive_folder(drive_mount, created, system))
+    if target == "oracle":
+        report.checks.append(_check_cores(system, oracle_config_path or repo_root / ORACLE_CONFIG_REL))
     return report
 
 
