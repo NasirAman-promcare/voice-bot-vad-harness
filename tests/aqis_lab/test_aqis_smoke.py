@@ -327,6 +327,9 @@ def test_FR_0_7_07_committed_bundles_and_their_reports_in_docs():
     doc = (ROOT / "docs" / "runs" / "PHASE0_SMOKE.md").read_text(encoding="utf-8")
     for tar in tars:
         bundle = parity.load_bundle(tar)             # every file against BUNDLE.json (SHA-256 and size)
+        # results only, never audio or other archives (WP-0.4's rule against committing corpora)
+        kinds = {Path(rel).suffix for rel in bundle.files} | {Path(rel).name for rel in bundle.files if "." not in rel}
+        assert kinds <= {".json", ".jsonl", ".md", ".csv", ".parquet", ".log"}, (tar.name, kinds)
         name = tar.name[:-len(".tar")]
         assert bundle.name == bundle.meta["name"] == name
         assert bundle.meta["target"] in name and bundle.meta["git"]["dirty"] is False

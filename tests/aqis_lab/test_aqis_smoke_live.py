@@ -1,6 +1,7 @@
-"""Owner-run checks of WP-0.7 on the real machines: Parakeet on the Colab T4 (OC-0.7-01) and the smoke run on Colab
-and Oracle (OC-0.7-01, OC-0.7-02). Every test here carries the `colab`, `gpu` or `oracle` marker, so none runs in the
-fast suite; each asserts the real result, never a stand-in.
+"""Owner-run checks of WP-0.7 on the real machine: Parakeet Unified on the Colab T4 (OC-0.7-01). Both tests carry the
+`colab` and `gpu` markers, so neither runs in the fast suite; each asserts the real result, never a stand-in. The smoke
+runs on Colab and Oracle are the runbook commands (OC-0.7-01, OC-0.7-02), and parity compares their bundles
+(OC-0.7-03).
 """
 import json
 

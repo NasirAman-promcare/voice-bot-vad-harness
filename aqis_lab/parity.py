@@ -2,7 +2,7 @@
 
 CAPABILITIES:
   CAP-PARITY-001: load_bundle() reads a bundle folder or its .tar and checks it against BUNDLE.json: bundle version 1.0, exactly the listed files (no file missing or extra) and every file's SHA-256 and size; any problem is a ParityInputError naming the file [tests: test_FR_0_7_08_damaged_bundle_is_input_error, test_FR_0_7_08_reads_folder_and_tar_alike]
-  CAP-PARITY-002: compare() compares every transcript task present in both bundles (vosk-batch must be in both): the clip sets and each clip's text_sha256; and every score table present in both: each clip's and variant's WER (a row missing on one side is a difference) and each variant's corpus WER, errors, reference words and corpus CER; a task or table in one bundle only is named, never hidden; score tables are read through a ParquetFile closed at once, so no Arrow work is left for interpreter exit (where it can deadlock) [tests: test_FR_0_7_08_identical_bundles_report_no_difference, test_FR_0_7_08_reports_every_per_clip_difference, test_FR_0_7_08_total_wer_difference_reported, test_FR_0_7_08_bundle_without_vosk_batch_is_input_error, test_FR_0_7_08_task_in_one_bundle_only_is_named_not_hidden, test_FR_0_7_08_parity_process_always_exits]
+  CAP-PARITY-002: compare() compares every transcript task present in both bundles (vosk-batch must be in both): the clip sets and each clip's text_sha256; and every score table present in both: each clip's and variant's WER (a row missing on one side is a difference) and each variant's corpus WER, errors, reference words and corpus CER; a task or table in one bundle only is named, never hidden; score tables are read from a copy in Arrow-owned memory, so nothing Arrow releases at interpreter exit needs the Python interpreter (a Python-owned buffer there deadlocked the exit) [tests: test_FR_0_7_08_identical_bundles_report_no_difference, test_FR_0_7_08_reports_every_per_clip_difference, test_FR_0_7_08_total_wer_difference_reported, test_FR_0_7_08_bundle_without_vosk_batch_is_input_error, test_FR_0_7_08_task_in_one_bundle_only_is_named_not_hidden, test_FR_0_7_08_parity_process_always_exits]
   CAP-PARITY-003: report_lines() prints both bundles' facts (target, platform, machine, commit, locks), one DIFFERENT line per difference (item, clip or total, field, A value, B value) and a summary line [tests: test_FR_0_7_08_reports_every_per_clip_difference, test_FR_0_7_08_identical_bundles_report_no_difference]
 INPUTS AND OUTPUTS: two bundle paths in; a Report and printable lines out; ParityInputError on an unusable bundle.
 CONTRACTS: bundle format in docs/runs/PHASE0_SMOKE.md; score table 1.0.
@@ -130,9 +130,12 @@ def _tables(bundle):
 
 
 def _scores(bundle, table):
-    # ParquetFile, closed here in the calling thread: pq.read_table on an in-memory buffer leaves a dataset fragment
-    # holding the Python buffer in Arrow's thread pool, and releasing it at interpreter exit can deadlock on the GIL.
-    with pq.ParquetFile(pa.BufferReader(bundle.files[f"scores/{table}/scores.parquet"])) as scores:
+    # The bytes are copied into memory Arrow owns first. Arrow's pool threads can hold the last reference to a buffer
+    # until interpreter exit; releasing a Python-owned buffer there needs the GIL and deadlocks the exit, releasing
+    # Arrow-owned memory does not.
+    owned = pa.BufferOutputStream()
+    owned.write(bundle.files[f"scores/{table}/scores.parquet"])
+    with pq.ParquetFile(pa.BufferReader(owned.getvalue())) as scores:
         rows = scores.read().to_pylist()
     summary = json.loads(bundle.files[f"scores/{table}/summary.json"].decode("utf-8"))
     return {(r["clip_id"], r["variant"]): r["wer"] for r in rows}, summary["variants"]

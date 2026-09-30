@@ -127,11 +127,12 @@ def test_FR_0_7_08_task_in_one_bundle_only_is_named_not_hidden(tmp_path):
 
 @pytest.mark.slow
 def test_FR_0_7_08_parity_process_always_exits(tmp_path):
-    # Reading a score table from memory through pq.read_table left Arrow a buffer to release at interpreter exit, and
-    # the process hung there in about 1 run in 7 (measured: 6 of 40). Each run must finish, with its result.
+    # A score table read from Python-owned bytes left Arrow's pool threads a buffer to release at interpreter exit,
+    # which needs the GIL: the process hung there, in 6 of 40 runs with pq.read_table and in 1 of 190 with a closed
+    # ParquetFile (docs/progress/WP-0.7/EVIDENCE.md). Each run must finish, with its result.
     a = bundle(tmp_path, "a", texts())
     b = bundle(tmp_path, "b", texts({"clip-04": "the quick brown fox"}))
-    for _ in range(40):
+    for _ in range(120):
         proc = subprocess.run([sys.executable, "-m", "aqis_lab", "parity", str(a), str(b)], cwd=ROOT,
                               capture_output=True, text=True, timeout=60)
         assert proc.returncode == 1 and "DIFFERENT vosk-batch-natural clip-04 main wer" in proc.stdout

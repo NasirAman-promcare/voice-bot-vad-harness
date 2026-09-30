@@ -144,6 +144,53 @@ def test_FR_0_7_01_guarded_success_writes_no_error():
     assert out == {"text": "ok"} and [json.loads(l)["event_type"] for l in sink.data().splitlines()] == ["final"]
 
 
+def test_FR_0_7_01_every_adapter_declares_component_model_and_settings(tmp_path):
+    # Every adapter the runner can use declares its event-log component and a run-card model block with settings;
+    # the run-card mode is declared by the runner task, because one adapter (Vosk) serves two modes.
+    import importlib
+    from aqis_lab.runner.tasks import TASKS, AdapterTask
+    card_modes = set(load_schema("run_card")["properties"]["mode"]["enum"])
+    tasks = {name: task for name, task in TASKS.items() if isinstance(task, AdapterTask)}
+    assert set(tasks) == {"vosk-batch", "vosk-realspeed", "harness-vad", "parakeet-offline", "parakeet-compute-delay"}
+    components = {}
+    for name, task in tasks.items():
+        module_name, class_name = task.adapter_ref.split(":")
+        cls = getattr(importlib.import_module(module_name), class_name)
+        assert issubclass(cls, base.Adapter) and isinstance(cls.name, str) and cls.name, name
+        assert cls.component in base.COMPONENTS and task.mode in card_modes, name
+        task.configure(tmp_path / "models")                  # builds the adapter; nothing is loaded
+        block = base.check_model_block(task.model_block())
+        assert set(block) == {"family", "name", "version", "checksum", "settings"}, name
+        assert isinstance(block["settings"], dict) and block["settings"], name
+        components[class_name] = cls.component
+    assert components == {"VoskAdapter": "live_stt", "HarnessVADAdapter": "vad", "ParakeetUnifiedAdapter": "heavy_stt"}
+    assert {name: task.mode for name, task in tasks.items()} == {
+        "vosk-batch": "batch", "vosk-realspeed": "realspeed_cpu", "harness-vad": "batch",
+        "parakeet-offline": "batch", "parakeet-compute-delay": "gpu_compute_delay"}
+
+
+def test_FR_0_7_01_clip_in_wrong_format_emits_error_event_and_raises(tmp_path):
+    # Must-catch 2 with a real failure through the runner's task: an 8 kHz clip given to the harness VAD task.
+    from aqis_lab.runner.tasks import TASKS
+    from aqis_adapters_testutil import tone, wav_bytes
+    task = TASKS["harness-vad"]
+    task.configure(tmp_path / "models")
+    sink = new_sink()
+    task.open(sink)
+    try:
+        with pytest.raises(base.AdapterError) as info:
+            task.run_clip({"clip_id": "clip-8k"}, wav_bytes(tone(1.0, rate=8000), rate=8000), sink)
+    finally:
+        task.close()
+    assert info.value.code == "harness-vad-clip-failed" and "8000 Hz" in info.value.message
+    records = [json.loads(line) for line in sink.data().splitlines()]
+    assert [r["event_type"] for r in records] == ["clip_started", "error"]
+    error = records[1]
+    assert error["component"] == "vad" and error["clip_id"] == "clip-8k"
+    assert error["payload"]["code"] == "harness-vad-clip-failed" and error["payload"]["run_continues"] is False
+    assert "8000 Hz" in error["payload"]["message"] and all(r.valid for r in validate_event_lines(sink.data()))
+
+
 def test_FR_0_7_01_components_are_event_log_components():
     assert set(base.COMPONENTS) == set(load_schema("event")["properties"]["component"]["enum"])
 

@@ -138,6 +138,10 @@ AssertionError: (3, ["line 4: command ['bash', 'aqis_lab/deploy/dev_bootstrap.sh
 ........                                                                 [100%]
 8 passed in 11.47s
 ```
+- **The first fix was not enough.** In the slow suite, `test_FR_0_7_08_parity_process_always_exits` failed once (`TimeoutExpired … timed out after 60 seconds`). Six more runs of the test: 5 passed, 1 failed. A probe test in the `/tmp` clone ran the CLI inside pytest with `gdb` attached on a timeout: `runs 190 hangs 1`. It showed the same deadlock: a pool thread in `arrow::py::PyBuffer::~PyBuffer` → `PyGILState_Ensure`, reached from `arrow::io::BufferReader::~BufferReader` in `libparquet`, while the main thread waits in `arrow::internal::ThreadPool::Shutdown` from `exit()`. So closing the `ParquetFile` does not stop a pool thread from holding the last reference. Outside pytest the hang did not show in 760 runs; this is timing, not a different cause.
+  - Root-cause fix: `_scores` copies the bytes into memory Arrow owns (`pa.BufferOutputStream`), so nothing Arrow releases at exit is a Python object. Probe after the fix, inside pytest: `runs 1000 hangs 0`.
+  - WP-0.6's read patterns, in the same pytest probe, 600 runs each: `ingest runs 600 hangs 0`, `store runs 600 hangs 0`. Both pass `use_threads=False`, so no pool thread takes the buffer. Nothing outside WP-0.7 changes.
+  - The test now runs the CLI 120 times (40 before).
 - Fast suite after FR-0.7-07 and FR-0.7-08: `.venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider`
 ```text
 1734 passed, 51 deselected in 197.83s (0:03:17)
@@ -281,3 +285,123 @@ exit 0
 ```
   My first pick of the score row took the summary table's `summary.json` SHA-256 instead of a row ID. `trace` refused it correctly (`ERROR: result row cc9156be… is not in the results store …`, exit 1), and the row above comes from the "WER per clip" table.
 - The bundle is committed as `data/runs/phase0-smoke/phase0-smoke-cloud-20260930T170440Z.tar` (808,960 bytes). Its report is byte-copied into `docs/runs/PHASE0_SMOKE.md` ("Reports"). `test_FR_0_7_07_committed_bundles_and_their_reports_in_docs` checks every committed bundle against its `BUNDLE.json`, a clean tree whose commit is an ancestor of `HEAD`, and the report copy: `1 passed, 19 deselected in 0.41s`. Parity of the committed archive against the bundle folder: `parity: identical (vosk-batch: 60 clips; vosk-realspeed: 5 clips; vosk-batch-natural: 80 rows; vosk-batch-synthetic-tts: 20 rows)`.
+
+## Must-catch proof
+Every break was made in a fresh clone of this branch at `175a361` (`/tmp/wp07-mc`; `.venv` and the test model cache are symlinks to the real ones). The script applied one exact text replacement per break, ran the named tests with `.venv/bin/python -m pytest -q -p no:cacheprovider <tests>`, printed pytest's summary and every `FAILED` line, and restored the file with `git checkout -- .`; `git status` then showed only the untracked `.venv` link. Breaks 1 to 6 are the plan's must-catch list. 7 to 9 add DEBT-017, the dither reseed and the committed report copy.
+```text
+### 1a: sink no longer validates events
+broken: aqis_lab/adapters/base.py (1 file changed, 1 deletion(-))
+summary: 5 failed in 0.24s
+FAILED tests/aqis_lab/test_aqis_adapters_base.py::test_FR_0_7_01_sink_refuses_invalid_event[bad0]
+FAILED tests/aqis_lab/test_aqis_adapters_base.py::test_FR_0_7_01_sink_refuses_invalid_event[bad1]
+FAILED tests/aqis_lab/test_aqis_adapters_base.py::test_FR_0_7_01_sink_refuses_invalid_event[bad2]
+FAILED tests/aqis_lab/test_aqis_adapters_base.py::test_FR_0_7_01_sink_refuses_invalid_event[bad3]
+FAILED tests/aqis_lab/test_aqis_adapters_base.py::test_FR_0_7_01_sink_refuses_invalid_event[bad4]
+### 1b: sink no longer validates and the VAD emits an event type outside event log v1
+broken: aqis_lab/adapters/base.py, aqis_lab/adapters/harness_vad.py (2 files changed, 1 insertion(+), 2 deletions(-))
+summary: 1 failed in 0.79s
+FAILED tests/aqis_lab/test_aqis_runner_events.py::test_FR_0_7_01_events_validate_against_event_log_v1
+restored: ?? .venv
+
+### 2: guarded() no longer emits the error event
+broken: aqis_lab/adapters/base.py (1 file changed, 3 deletions(-))
+summary: 2 failed in 0.84s
+FAILED tests/aqis_lab/test_aqis_adapters_base.py::test_FR_0_7_01_adapter_failure_emits_error_event_and_raises
+FAILED tests/aqis_lab/test_aqis_runner_events.py::test_FR_0_7_01_runner_stops_on_adapter_error_with_error_event
+restored: ?? .venv
+
+### 3: Parakeet preflight no longer refuses a machine without a GPU
+broken: aqis_lab/adapters/parakeet_unified.py (1 file changed, 1 insertion(+), 1 deletion(-))
+summary: 2 failed in 6.75s
+FAILED tests/aqis_lab/test_aqis_parakeet.py::test_FR_0_7_03_refuses_without_gpu
+FAILED tests/aqis_lab/test_aqis_smoke.py::test_FR_0_7_03_colab_smoke_without_gpu_fails_never_skips
+restored: ?? .venv
+
+### 4a: the download's SHA-256 is no longer checked
+broken: aqis_lab/adapters/model_cache.py (1 file changed, 1 insertion(+), 1 deletion(-))
+summary: 1 failed in 0.44s
+FAILED tests/aqis_lab/test_aqis_model_cache.py::test_FR_0_7_02_model_rejected_when_checksum_differs
+restored: ?? .venv
+
+### 4b: a fetched model's files are no longer checked at load
+broken: aqis_lab/adapters/model_cache.py (1 file changed, 1 insertion(+), 1 deletion(-))
+summary: 1 failed in 0.25s
+FAILED tests/aqis_lab/test_aqis_model_cache.py::test_FR_0_7_02_changed_model_file_rejected_at_load
+restored: ?? .venv
+
+### 5: the feeder no longer waits for each frame's real-time deadline
+broken: aqis_lab/realspeed.py (1 file changed, 1 insertion(+), 1 deletion(-))
+summary: 1 failed in 0.25s
+FAILED tests/aqis_lab/test_aqis_realspeed.py::test_FR_0_7_05_feeder_never_faster_than_real_time
+restored: ?? .venv
+
+### 6: parity no longer reports a changed transcript hash
+broken: aqis_lab/parity.py (1 file changed, 1 insertion(+), 1 deletion(-))
+summary: 1 failed in 0.82s
+FAILED tests/aqis_lab/test_aqis_parity.py::test_FR_0_7_08_reports_every_per_clip_difference
+restored: ?? .venv
+
+### 7: the real-speed feeder no longer pins itself (DEBT-017)
+broken: aqis_lab/realspeed.py (1 file changed, 1 deletion(-))
+summary: 1 failed in 3.47s
+FAILED tests/aqis_lab/test_aqis_realspeed.py::test_FR_0_7_05_feeder_pins_every_thread_to_timing_cores
+restored: ?? .venv
+
+### 8: the Vosk adapter no longer reseeds the dither generator per clip
+broken: aqis_lab/adapters/vosk_stt.py (1 file changed, 1 deletion(-))
+summary: 1 failed in 21.98s
+FAILED tests/aqis_lab/test_aqis_vosk.py::test_FR_0_7_02_clip_result_independent_of_earlier_clips
+restored: ?? .venv
+
+### 9: the report copied into docs/runs/PHASE0_SMOKE.md differs from the committed bundle
+broken: docs/runs/PHASE0_SMOKE.md (1 file changed, 1 insertion(+), 1 deletion(-))
+summary: 1 failed in 0.39s
+FAILED tests/aqis_lab/test_aqis_smoke.py::test_FR_0_7_07_committed_bundles_and_their_reports_in_docs
+restored: ?? .venv
+
+```
+Two more, for the FR-0.7-01 tests added last (below), in the same clone after committing those tests there:
+```text
+### 10: the harness VAD adapter declares a component outside event log v1
+broken: aqis_lab/adapters/harness_vad.py (1 file changed, 1 insertion(+), 1 deletion(-))
+summary: 1 failed in 0.27s
+FAILED tests/aqis_lab/test_aqis_adapters_base.py::test_FR_0_7_01_every_adapter_declares_component_model_and_settings
+restored: ?? .venv
+
+### 11: a runner task reads and processes a clip outside the failure guard
+broken: aqis_lab/runner/tasks.py (1 file changed, 1 insertion(+), 1 deletion(-))
+summary: 1 failed in 0.25s
+FAILED tests/aqis_lab/test_aqis_adapters_base.py::test_FR_0_7_01_clip_in_wrong_format_emits_error_event_and_raises
+restored: ?? .venv
+```
+Also proved in the sections above:
+- the parity exit hang (`test_FR_0_7_08_parity_process_always_exits`, old line restored: `TimeoutExpired`);
+- the seven debt tests against the pre-fix code (`7 failed in 6.87s`).
+
+### FR-0.7-01 — two planned tests added at the end
+Comparing the plan's test names with the test files showed two planned tests missing. One was `test_FR_0_7_01_every_adapter_declares_component_model_and_settings`. The other was `test_FR_0_7_08_cloud_colab_oracle_bundles_identical`, which the plan adds for OC-0.7-03 once the Colab and Oracle bundles are committed. The plan also named "an 8 kHz clip for the VAD" as a real failure for must-catch 2, and no test had it. I wrote these after the code they test, so no failing first run exists. Breaks 10 and 11 above show that each fails when its behaviour is broken.
+- `test_FR_0_7_01_every_adapter_declares_component_model_and_settings` (`tests/aqis_lab/test_aqis_adapters_base.py`, CAP-ADAPT-001). Every adapter task of the runner names an `Adapter` subclass with a name and an event-log component (Vosk `live_stt`, harness VAD `vad`, Parakeet `heavy_stt`). Its task's run-card mode is in the run-card enum. Its model block has exactly family, name, version, checksum and non-empty settings.
+  - **Difference from the plan's wording:** the plan lists `mode` among the `Adapter` attributes. The build declares the mode on the runner task (`AdapterTask.mode`), because the one Vosk adapter serves two modes (`vosk-batch` `batch`, `vosk-realspeed` `realspeed_cpu`). The run card records the mode as the plan says.
+- `test_FR_0_7_01_clip_in_wrong_format_emits_error_event_and_raises` (CAP-RUN-010). The real `harness-vad` task gets an 8 kHz WAV clip. It writes `clip_started`, then one `error` event (`harness-vad-clip-failed`, the message naming 8000 Hz, `run_continues: false`), then raises `AdapterError`.
+- The base-class tests in that file use `ListeningAdapter`, a small concrete subclass of the abstract `Adapter` defined in the test, to reach `guarded()` and the sink directly. It replaces no production component. Real adapter failures are tested with the real adapters: a damaged Vosk model (`test_FR_0_7_01_vosk_unusable_model_emits_error_event_and_raises`), a Vosk model cache without its marker through the runner (`test_FR_0_7_01_runner_stops_on_adapter_error_with_error_event`), and the 8 kHz VAD clip above.
+- Command: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_adapters_base.py -q -p no:cacheprovider`: `16 passed in 0.39s`.
+
+## Owner-run checks
+The WP-0.7 tests that cannot run on this VM are the two `colab`+`gpu` tests in `tests/aqis_lab/test_aqis_smoke_live.py`. `pytest -m "colab or gpu" --collect-only` collects 5 tests: those two, plus WP-0.5's three Colab tests. The Oracle check runs WP-0.6's 2 `oracle` tests (`pytest -m oracle --collect-only`: `test_FR_0_6_01_setup_passes_on_oracle`, `test_FR_0_6_04_real_oracle_pinning`). The tags are pushed only after the audit passes.
+
+| Check | Where | Command | Expected output | Result report |
+| --- | --- | --- | --- | --- |
+| OC-0.7-01 | Colab, **T4 GPU** runtime; launcher `notebooks/aqis_lab/phase0_smoke_launcher.ipynb` at tag `aqis-lab-wp-0.7-colab-1` | Cells 1 to 4 (`docs/colab/COLAB_RUNBOOK.md`, "OC-0.7-01"). Cell 3: `dev_bootstrap.sh --gpu`. Cell 4: `drive layout`, `unitlog start`, `doctor --target colab --expect-gpu`, then `phase0 smoke --target colab --out /content/drive/MyDrive/AQIS_LAB/results/phase0-smoke-colab --drive-mount /content/drive`. Then one extra cell: `!cd /content/aqis && .venv/bin/python -m pytest tests/aqis_lab -q -m "colab or gpu"`. Then cell 5 | Cell 3: `OK: .venv ready: Python 3.13.x, lock sha256 87a1cc34…` and `OK: GPU extras installed: requirements/aqis_lab/phase0-gpu.txt sha256 …`. Doctor: `gpu` PASS `Tesla T4`, `lock` PASS naming `requirements/aqis_lab/phase0.txt + requirements/aqis_lab/phase0-gpu.txt`, `result: PASS`. Smoke: logs of the five tasks, then `smoke complete: bundle … archive /content/drive/MyDrive/AQIS_LAB/results/phase0-smoke-colab/phase0-smoke-colab-<stamp>.tar`. pytest: `5 passed` | the `.tar` into `data/runs/phase0-smoke/`; `docs/environment/doctor_colab_<timestamp>.json`; the output of cells 3 and 4 and of pytest in `docs/progress/WP-0.7/OC-0.7-01_colab.txt` |
+| OC-0.7-02 | Oracle VM, clone at tag `aqis-lab-wp-0.7-oracle-1` | 1. `dpkg -s libatomic1 \| grep Status` 2. `bash aqis_lab/deploy/oracle_setup.sh` 3. `.venv/bin/python -m aqis_lab phase0 smoke --target oracle` 4. `.venv/bin/python -m pytest tests/aqis_lab -q -m oracle` (`docs/oracle/ORACLE_RUNBOOK.md`, "OC-0.7-02") | 1: `Status: install ok installed`. 2: six steps PASS; step 4 names `srt` as the approved source build. 3: the batch runs log `cores: batch on 0-1 …`, the real-speed run logs `cores: timing on 2-3 …`, and the last line is `smoke complete: … archive data/raw/aqis_lab/smoke/oracle/phase0-smoke-oracle-<stamp>.tar …`. 4: `2 passed` | the `.tar` into `data/runs/phase0-smoke/`; the output of all four in `docs/progress/WP-0.7/OC-0.7-02_oracle.txt` |
+| OC-0.7-03 | This cloud VM, by Claude, after both bundles are committed | `.venv/bin/python -m aqis_lab parity data/runs/phase0-smoke/<A>.tar data/runs/phase0-smoke/<B>.tar` for cloud↔colab, cloud↔oracle and colab↔oracle; then add `test_FR_0_7_08_cloud_colab_oracle_bundles_identical` and copy the two reports into `docs/runs/PHASE0_SMOKE.md` | Exit 0, `parity: identical (…)` for each pair. Any `DIFFERENT` line goes to the owner as a blocker with every line, never hidden | parity outputs in `docs/runs/PHASE0_SMOKE.md` |
+
+## Audit-allow lines
+None: `grep -rn "audit-allow" aqis_lab tools` finds no WP-0.7 line (checked with the audit gate below).
+
+### Slow suite, first full run (AT-0.7-02), and what it found
+- Command: `time .venv/bin/python -m pytest tests/aqis_lab -q -m "slow and not gpu and not colab and not oracle" -p no:cacheprovider`: `3 failed, 31 passed, 1761 deselected in 1339.65s (0:22:19)`.
+  - `test_FR_0_0_12_provisions_harness_end_to_end` and `test_FR_0_0_12_second_run_downloads_nothing_within_60s`: `[FAIL] git-status: git status --porcelain is not empty`. I had edited files while the suite ran, and these tests need a clean tree. They are rerun on a clean tree.
+  - `test_FR_0_7_08_parity_process_always_exits`: the remaining parity exit hang, fixed above.
+- The next fast-suite run failed 6 tests: `6 failed, 1738 passed, 53 deselected`.
+  - Five were WP-0.5 doctor tests, with the doctor's `disk` row FAIL: 5.66 GB free against the 10 GB minimum. The disk was full of my own leftovers: the scratch GPU environment (6.4 GB) and its packages in the uv cache (`uv cache clean` of the GPU-only packages: `Removed 18295 files (5.3GiB)`), and old pytest folders (2.3 GB). After cleaning, the doctor gives `disk PASS … 14,007,123,968 bytes (14.01 GB)` and `result: PASS`, and the doctor tests pass. Nothing in the code changed for this.
+  - The sixth was `tests/aqis_lab/test_aqis_registry_fetch.py::test_FR_0_4_02_no_raw_corpus_committed`: `AssertionError: assert ['data/runs/p...T170440Z.tar'] == []`. This WP-0.4 test allows no `.tar` under `data/` except pack archives, and the approved plan (question 11) commits the smoke bundles as `data/runs/phase0-smoke/<name>.tar`. The test is an existing, guarded file, so this is BLK-010 (`docs/progress/BLOCKERS.md`), for the owner. `test_FR_0_7_07_committed_bundles_and_their_reports_in_docs` now also checks that a committed bundle holds only result files (`.json`, `.jsonl`, `.md`, `.csv`, `.parquet`, `.log`), never audio; the cloud bundle holds 9, 6, 1, 2, 2 and 3 of those.
