@@ -1,0 +1,36 @@
+$ nvidia-smi
+Wed Sep 30 12:51:15 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.82.07              Driver Version: 580.82.07      CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla T4                       Off |   00000000:00:04.0 Off |                    0 |
+| N/A   64C    P8             11W /   70W |       0MiB /  15360MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+
+$ nvidia-smi --query-gpu=name,driver_version,memory.total,compute_cap --format=csv
+name, driver_version, memory.total [MiB], compute_cap
+Tesla T4, 580.82.07, 15360 MiB, 7.5
+
+$ python3 -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+2.11.0+cu128 12.8 True Tesla T4
+
+$ python3 --version; nproc; free -g | head -2; df -h /content | tail -1
+Python 3.13.15
+2
+               total        used        free      shared  buff/cache   available
+Mem:              12           1           5           0           5          11
+overlay         236G   48G  188G  21% /
+
