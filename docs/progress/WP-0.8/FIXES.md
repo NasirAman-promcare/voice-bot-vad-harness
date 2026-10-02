@@ -93,3 +93,20 @@ Findings: 0
 
 ### Debt recorded
 F04 to F07 are DEBT-022 to DEBT-025 in `docs/progress/DEBT.md`, all with target WP-0.9, under the approval's round 2 condition. F08 is closed by the F02 fix.
+
+### CI on the round 2 head
+Commit `fa2c949`, PR #8. Every job is green:
+
+| Run | Job | Conclusion |
+| --- | --- | --- |
+| 37048381022 | lab | success |
+| 37048381022 | harness-regression | success |
+| 37048388420 | lab | success |
+| 37048388420 | harness-regression | success |
+
+The pull-request `lab` job (110975378867) runs the gate with `--wp WP-0.8`:
+```text
+aqis-audit-gate: base origin/main (merge-base f97f4929b4d5), head 0c1459161e65, approvals origin/main f97f4929b4d5, wp WP-0.8
+Findings: 0
+0 findings: OK (0.4 s)
+```
