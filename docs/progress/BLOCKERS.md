@@ -279,7 +279,7 @@ The code, tests and evidence of every requirement are done and pushed.
 **Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `6ed6229`, 2026-10-02): `ALLOW-EDIT: tests/aqis_lab/test_aqis_registry_fetch.py`, changing only `test_FR_0_4_02_no_raw_corpus_committed` so it also accepts `data/runs/phase0-smoke/phase0-smoke-(cloud|colab|oracle)-<YYYYMMDDTHHMMSSZ>.tar` and nothing else; the WP-0.7 test proving committed bundles hold no audio stays. Done after merging `main`: the one-line change, with every other rule of the test unchanged; the test passes (`docs/progress/WP-0.7/EVIDENCE.md`).
 
 ## BLK-011 — CI runners' newer git races the fixture repositories (intermittent red CI)
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.7  ·  Raised: 2026-10-02  ·  Session: https://claude.ai/code/session_01DHNEPSgrExgeGVsAYja18g
 
 **What I need:** your decision on a one-function change to the shared test helper `hermetic_git_env` in `tests/aqis_lab/aqis_testutil.py`, a guarded file that no approval lets me edit.
@@ -311,4 +311,4 @@ E       FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-
 
 **Paused until answered:** nothing in WP-0.7 round 2 depends on this. F01 to F04 are fixed and pushed, the debts are recorded, and CI on `0b12344` is green. Only the helper change waits.
 
-**Owner answer:**
+**Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `28ab7f4`, 2026-10-02): `ALLOW-EDIT: tests/aqis_lab/aqis_testutil.py`, `hermetic_git_env` only, with `maintenance.auto=0` and `gc.auto=0`. Done after merging `main`: the environment it returns now sets `GIT_CONFIG_COUNT=2`, `maintenance.auto` 0 and `gc.auto` 0 (`git config --show-origin --get maintenance.auto` in a fixture repository: `command line:	0`); the tests that use it pass before and after (`docs/progress/WP-0.7/FIXES.md`, round 2, BLK-011).
