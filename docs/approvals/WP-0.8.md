@@ -21,4 +21,14 @@ CONDITIONS:
   * (I) DECISION: timing-budget = TB-B
   * (I) DECISION: gate-escalation = GE-B
   * (I) DECISION: retention = 3 years from the date of recording, after which all voice recordings are permanently deleted.
+- Question 5 (Consent scheme): Speaker ID is ca-sNNN (pseudonymous) and consent reference is ca-cNNN. Signed consent forms kept offline by owner.
+- Question 6 (Consent facts):
+  * (a) Access: Only the AQIS test lab owner (@Nasir) and authorized project raters/evaluators.
+  * (b) Services: Google Drive (AQIS_LAB), Google Colab, and Oracle Cloud VM. Audio is never stored on GitHub.
+  * (c) Purpose: testing, benchmark measurement, and error diagnosis for voice bot pipelines.
+  * (d) Minimum age: 18 years or older.
+  * (e) Withdrawal: within 30 days of recording; deleted from active dataset pools.
+  * (f) Contact: Owner blank [OWNER DECIDES: contact email/phone] filled in per printed copy.
 - Questions 2 to 8: as recommended in PLAN.md.
+- Round 2 Fixes: fix WP-0.8-F01, WP-0.8-F02, WP-0.8-F03.
+- Debt accepted: WP-0.8-F04 (target WP-0.9), WP-0.8-F05 (target WP-0.9), WP-0.8-F06 (target WP-0.9), and WP-0.8-F07 (target WP-0.9) accepted in docs/progress/DEBT.md.
