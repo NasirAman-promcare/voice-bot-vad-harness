@@ -173,3 +173,29 @@ def test_FR_0_7_08_parity_process_always_exits(tmp_path):
         proc = subprocess.run([sys.executable, "-m", "aqis_lab", "parity", str(a), str(b)], cwd=ROOT,
                               capture_output=True, text=True, timeout=60)
         assert proc.returncode == 1 and "DIFFERENT vosk-batch-natural clip-04 main wer" in proc.stdout
+
+
+def test_FR_0_7_08_cloud_colab_oracle_bundles_identical():
+    # OC-0.7-03: the committed smoke bundles of the three machines (cloud VM x86_64, Colab T4 x86_64, Oracle Neoverse-N1
+    # aarch64) give the same transcript hashes and the same WER, per clip and in total, for every task and score
+    # table they share. Parakeet runs only on the GPU target, so its tasks and tables are named as not compared.
+    folder = ROOT / "data" / "runs" / "phase0-smoke"
+    found = {}
+    for target in ("cloud", "colab", "oracle"):
+        tars = sorted(folder.glob(f"phase0-smoke-{target}-*.tar"))
+        assert len(tars) == 1, (target, tars)
+        found[target] = tars[0]
+        meta = parity.load_bundle(tars[0]).meta
+        assert meta["target"] == target and meta["git"]["dirty"] is False
+    assert {parity.load_bundle(t).meta["machine"]["architecture"] for t in found.values()} == {"x86_64", "aarch64"}
+    parakeet_only = {"parakeet-offline", "parakeet-compute-delay", "score table parakeet-offline-natural",
+                     "score table parakeet-offline-synthetic-tts"}
+    for a, b in (("cloud", "colab"), ("cloud", "oracle"), ("colab", "oracle")):
+        proc = run_parity(found[a], found[b])
+        assert proc.returncode == 0, (a, b, proc.stdout + proc.stderr)
+        lines = proc.stdout.splitlines()
+        assert not [l for l in lines if l.startswith("DIFFERENT")], (a, b)
+        assert lines[-1] == ("parity: identical (vosk-batch: 60 clips; vosk-realspeed: 5 clips; vosk-batch-natural: "
+                             "80 rows; vosk-batch-synthetic-tts: 20 rows)"), (a, b, lines[-1])
+        not_compared = {l.split(": ", 1)[1].rsplit(" is only in ", 1)[0] for l in lines if l.startswith("not compared:")}
+        assert not_compared == (parakeet_only if "colab" in (a, b) else set()), (a, b, not_compared)

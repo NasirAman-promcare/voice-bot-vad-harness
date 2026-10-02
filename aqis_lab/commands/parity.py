@@ -1,7 +1,7 @@
 """The `parity` command: compare two smoke bundles (FR-0.7-08).
 
 CAPABILITIES:
-  CAP-PARITY-004: `python -m aqis_lab parity <results-A> <results-B>` (bundle folders or .tar archives) prints both bundles' facts, every difference (one DIFFERENT line each) and a summary; exit 0 identical, 1 differences, 2 an unusable bundle or a usage error (ERROR: on stderr) [tests: test_FR_0_7_08_identical_bundles_report_no_difference, test_FR_0_7_08_reports_every_per_clip_difference, test_FR_0_7_08_damaged_bundle_is_input_error]
+  CAP-PARITY-004: `python -m aqis_lab parity <results-A> <results-B>` (bundle folders or .tar archives) prints both bundles' facts, every difference (one DIFFERENT line each) and a summary; exit 0 identical, 1 differences, 2 an unusable bundle or a usage error (ERROR: on stderr) [tests: test_FR_0_7_08_identical_bundles_report_no_difference, test_FR_0_7_08_reports_every_per_clip_difference, test_FR_0_7_08_damaged_bundle_is_input_error, test_FR_0_7_08_cloud_colab_oracle_bundles_identical]
 INPUTS AND OUTPUTS: two paths in; the report on stdout, errors on stderr and an exit code out.
 CONTRACTS: bundle format in docs/runs/PHASE0_SMOKE.md.
 INVARIANTS:
@@ -10,6 +10,7 @@ NOT IN SCOPE:
   - The comparison rules (aqis_lab/parity.py).
 CHANGE LOG:
   2026-09-30 WP-0.7 FR-0.7-08 created.
+  2026-10-02 WP-0.7 OC-0.7-03: header lists test_FR_0_7_08_cloud_colab_oracle_bundles_identical (header only).
 """
 import argparse
 import sys

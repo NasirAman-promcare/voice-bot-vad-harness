@@ -452,3 +452,49 @@ Findings: 0
 F01 to F04 are fixed and recorded in `docs/progress/WP-0.7/FIXES.md`: change budget, baseline, the tests, the auditor's breaks MC6d, X1 and X10 plus an F04 break now caught, and the verify runs. F05 to F08 are accepted debt DEBT-018 to DEBT-021 (`docs/progress/DEBT.md`, approval `a592af0`).
 - `phase0 smoke` has `--from-scratch` (`docs/runs/PHASE0_SMOKE.md`). The Colab and Oracle runbooks say how to run the smoke again at a new tag.
 - Network-only tests at `0615214` (F06): `12 passed, 1789 deselected in 83.28s`.
+
+## Owner-run checks: results
+
+### OC-0.7-01 (Colab T4) and OC-0.7-02 (Oracle), run by the owner at `7c27dd5`
+- Committed by the owner: `data/runs/phase0-smoke/phase0-smoke-colab-20261002T140101Z.tar` (`d2d79e5`) and `data/runs/phase0-smoke/phase0-smoke-oracle-20261002T141937Z.tar` (`bbff98d`). The owner's notes are `docs/progress/WP-0.7/OC-0.7-01_colab.txt` and `OC-0.7-02_oracle.txt`. They are one-line summaries (Colab: doctor PASS with Tesla T4, smoke with 5 tasks, 390 rows traced, `pytest -m 'colab or gpu'` 5 passed; Oracle: doctor PASS, cores 0-1 batch and 2-3 timing, `pytest -m oracle` 2 passed), not the full command output the plan asked for.
+- Checked from the bundles themselves (`parity.load_bundle`, which verifies every file against `BUNDLE.json`):
+  - Colab: target `colab`, platform `colab`, `Intel(R) Xeon(R) CPU @ 2.00GHz` x86_64, GPU `Tesla T4`; locks `phase0.txt` and `phase0-gpu.txt`; tasks `harness-vad`, `parakeet-compute-delay`, `parakeet-offline`, `vosk-batch`, `vosk-realspeed`; `elapsed_s` 374.45; `traced_rows` 390.
+    - Parakeet run card: `nvidia/parakeet-unified-en-0.6b` at `fe53cd885760…`, NeMo 3.0.0, torch 2.14.0, lock `requirements/aqis_lab/phase0-gpu.txt`.
+    - Compute delay per subset clip on the T4: 129.6, 162.4, 117.7, 128.9 and 106.1 ms (RTF 0.021 to 0.028).
+    - Natural-speech corpus WER (variant `main`): Parakeet 0.0058 (4 errors / 689 words), Vosk 0.1074 (74 / 689).
+  - Oracle: target `oracle`, platform `oracle`, `Neoverse-N1` aarch64; lock `phase0.txt`; `elapsed_s` 116.16; `traced_rows` 225. The runner logs show `cores: batch on 0-1 (timing reserved 2-3 …)` for `vosk-batch` and `harness-vad`, and `cores: timing on 2-3 (batch on 0-1 …)` for `vosk-realspeed`.
+  - Both: `git` `7c27dd53e670…` with `dirty: false`, an ancestor of this branch's `HEAD`.
+
+### OC-0.7-03 — parity across the three machines (Claude, this VM)
+```text
+$ .venv/bin/python -m aqis_lab parity data/runs/phase0-smoke/phase0-smoke-cloud-20260930T170440Z.tar data/runs/phase0-smoke/phase0-smoke-colab-20261002T140101Z.tar
+A: phase0-smoke-cloud-20260930T170440Z: target cloud, platform cloud-vm, Intel(R) Xeon(R) Processor @ 2.10GHz x86_64, commit 0a534ce22bf7d1d0b5d266920d2302bced0ef865, locks requirements/aqis_lab/phase0.txt 87a1cc34c6d4
+B: phase0-smoke-colab-20261002T140101Z: target colab, platform colab, Intel(R) Xeon(R) CPU @ 2.00GHz x86_64, commit 7c27dd53e670d1a207be8738873eeb22bc1ce968, locks requirements/aqis_lab/phase0.txt 87a1cc34c6d4, requirements/aqis_lab/phase0-gpu.txt 837342085aed
+not compared: parakeet-compute-delay is only in B (phase0-smoke-colab-20261002T140101Z)
+not compared: parakeet-offline is only in B (phase0-smoke-colab-20261002T140101Z)
+not compared: score table parakeet-offline-natural is only in B (phase0-smoke-colab-20261002T140101Z)
+not compared: score table parakeet-offline-synthetic-tts is only in B (phase0-smoke-colab-20261002T140101Z)
+parity: identical (vosk-batch: 60 clips; vosk-realspeed: 5 clips; vosk-batch-natural: 80 rows; vosk-batch-synthetic-tts: 20 rows)
+exit 0
+
+$ .venv/bin/python -m aqis_lab parity data/runs/phase0-smoke/phase0-smoke-cloud-20260930T170440Z.tar data/runs/phase0-smoke/phase0-smoke-oracle-20261002T141937Z.tar
+A: phase0-smoke-cloud-20260930T170440Z: target cloud, platform cloud-vm, Intel(R) Xeon(R) Processor @ 2.10GHz x86_64, commit 0a534ce22bf7d1d0b5d266920d2302bced0ef865, locks requirements/aqis_lab/phase0.txt 87a1cc34c6d4
+B: phase0-smoke-oracle-20261002T141937Z: target oracle, platform oracle, Neoverse-N1 aarch64, commit 7c27dd53e670d1a207be8738873eeb22bc1ce968, locks requirements/aqis_lab/phase0.txt 87a1cc34c6d4
+parity: identical (vosk-batch: 60 clips; vosk-realspeed: 5 clips; vosk-batch-natural: 80 rows; vosk-batch-synthetic-tts: 20 rows)
+exit 0
+
+$ .venv/bin/python -m aqis_lab parity data/runs/phase0-smoke/phase0-smoke-colab-20261002T140101Z.tar data/runs/phase0-smoke/phase0-smoke-oracle-20261002T141937Z.tar
+A: phase0-smoke-colab-20261002T140101Z: target colab, platform colab, Intel(R) Xeon(R) CPU @ 2.00GHz x86_64, commit 7c27dd53e670d1a207be8738873eeb22bc1ce968, locks requirements/aqis_lab/phase0.txt 87a1cc34c6d4, requirements/aqis_lab/phase0-gpu.txt 837342085aed
+B: phase0-smoke-oracle-20261002T141937Z: target oracle, platform oracle, Neoverse-N1 aarch64, commit 7c27dd53e670d1a207be8738873eeb22bc1ce968, locks requirements/aqis_lab/phase0.txt 87a1cc34c6d4
+not compared: parakeet-compute-delay is only in A (phase0-smoke-colab-20261002T140101Z)
+not compared: parakeet-offline is only in A (phase0-smoke-colab-20261002T140101Z)
+not compared: score table parakeet-offline-natural is only in A (phase0-smoke-colab-20261002T140101Z)
+not compared: score table parakeet-offline-synthetic-tts is only in A (phase0-smoke-colab-20261002T140101Z)
+parity: identical (vosk-batch: 60 clips; vosk-realspeed: 5 clips; vosk-batch-natural: 80 rows; vosk-batch-synthetic-tts: 20 rows)
+exit 0
+
+```
+- All three pairs are identical: the same 60 Vosk transcript hashes, the same 5 real-speed transcript hashes, and the same WER per clip and in total for both score tables and both normaliser variants. Parakeet's tasks and tables are only in the Colab bundle, so parity names them and compares nothing for them.
+- The reports of both bundles are byte-copied into `docs/runs/PHASE0_SMOKE.md` ("Reports"), with the three parity outputs ("OC-0.7-03: the three machines compared"). `test_FR_0_7_07_committed_bundles_and_their_reports_in_docs` checks all three copies.
+- New test `test_FR_0_7_08_cloud_colab_oracle_bundles_identical` (fast, `tests/aqis_lab/test_aqis_parity.py`; CAP-PARITY-004). It finds exactly one committed bundle per target, each from a clean tree, covering both architectures. For each pair it runs the real `parity` command and requires exit 0, no `DIFFERENT` line, the identical summary line above, and "not compared" only for the four Parakeet items when Colab is in the pair: `1 passed, 8 deselected in 0.91s`.
+- The check can fail. In a scratch copy of the Oracle bundle, I changed the `text_sha256` of one `vosk-batch` row (`ls-test-clean-4077-13751-0014`) and updated `BUNDLE.json` so the bundle still loads. `parity <cloud .tar> <changed copy>` then printed `DIFFERENT vosk-batch ls-test-clean-4077-13751-0014 text_sha256 A=79d2318a… B=e458e028…` and `parity: 1 difference(s) (…)`, exit 1. The new test requires exit 0, so it would fail.
