@@ -6,7 +6,8 @@ Expected values come from the spec (docs/specs/phase-0/WP-0.8-consent-fillers-ta
 import re
 
 import csv
-import subprocess
+
+import pytest
 
 from aqis_docs_testutil import APPROVAL, ROOT, SOURCES, owner_blanks, read, sections, sentences, table_with, words
 
@@ -124,46 +125,93 @@ def test_FR_0_8_01_consent_block_has_signature_date_and_consent_reference():
     assert re.search(r"^Consent reference[^\n]*: ca-c_{3,}", text, re.M)
 
 
-# The owner gave the consent facts (question 6 (a) to (f)) in the approval committed to main at 61c50c7. The
-# approval's later rewrite (b4b327e, BLK-014 answers) no longer lists them, and approves "Questions 2 to 8: as
-# recommended", which does not change them. The facts are read from the owner's commit itself, which must be part of
-# this branch's history (CI checks out the full history).
-FACTS_COMMIT = "61c50c7"
-
-
-def _owner_approval_with_facts():
-    ancestor = subprocess.run(["git", "merge-base", "--is-ancestor", FACTS_COMMIT, "HEAD"], cwd=ROOT,
-                              capture_output=True, text=True, timeout=60)
-    assert ancestor.returncode == 0, ancestor.stderr
-    show = subprocess.run(["git", "show", f"{FACTS_COMMIT}:docs/approvals/WP-0.8.md"], cwd=ROOT,
-                          capture_output=True, text=True, timeout=60, check=True)
-    assert show.stdout.startswith("STATUS: APPROVED\nWP: WP-0.8\nAPPROVED-BY: owner\n")
-    return show.stdout
-
-
 def _approval_fact(label):
-    m = re.search(rf"^\s*\* \({label}\) [^:]+: (.+)$", _owner_approval_with_facts(), re.M)
+    """The owner's answer to question 6 (`label` a to f) in docs/approvals/WP-0.8.md, without its final period."""
+    m = re.search(rf"^\s*\* \({label}\) [^:]+: (.+)$", APPROVAL.read_text(encoding="utf-8"), re.M)
     assert m, label
-    return m.group(1)
+    return m.group(1).strip().rstrip(".")
+
+
+def _flat(text):
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def expected_owner_fact_sections():
+    """{section: exact text} for the consent form's owner-fact sections, built from the approval's wording.
+
+    The owner's words (question 6 (a), (b), (c), (e), and question 5 for the signed form) fill the slots; the rest is
+    the form's fixed connecting prose. A section that differs in any word, including one added beside the owner's
+    wording, does not match (WP-0.8-F01, F03).
+    """
+    approval = APPROVAL.read_text(encoding="utf-8")
+    assert re.search(r"^- Question 5 \(Consent scheme\):.*Signed consent forms kept offline by owner\.", approval, re.M)
+    services, github = _approval_fact("b").split(". ")
+    window, outcome = _approval_fact("e").split("; ")
+    return {
+        "Why we are recording":
+            f"The AQIS Test Lab checks how well voice bot software works. We use your recordings for "
+            f"{_approval_fact('c')}. For example, we test how well software hears when you speak, writes down what "
+            f"you say and reads your tone of voice.",
+        "How we store your recordings":
+            f"Your recordings are stored and processed only in {services}. {github}. The lab owner keeps this signed "
+            f"form offline, apart from your recordings.",
+        "Who can see them": f"{_approval_fact('a')} can see or hear your recordings.",
+        "Your right to withdraw":
+            f"Taking part is your choice. You can withdraw {window}, and you do not need to give a reason. To "
+            f"withdraw, contact us and give your consent reference. Your recordings will then be {outcome}.",
+    }
+
+
+def expected_tick_boxes():
+    window = _approval_fact("e").split("; ")[0]
+    return ["I have read this form, or someone has read it to me.", f"I am {_approval_fact('d')}.",
+            "I agree to be recorded for the purpose above.", f"I understand that I can withdraw {window}."]
+
+
+def owner_fact_problems(text):
+    """Why the consent form's owner facts differ from the approval's wording, section by section, or []."""
+    found = sections(text, 2)
+    problems = []
+    for heading, expected in expected_owner_fact_sections().items():
+        actual = _flat(found.get(heading, ""))
+        if actual != _flat(expected):
+            problems.append(f"section {heading!r} is {actual!r}, expected {_flat(expected)!r}")
+    boxes = re.findall(r"^- \[ \] (.+)$", found.get("Your consent", ""), re.M)
+    if [_flat(b) for b in boxes] != expected_tick_boxes():
+        problems.append(f"tick boxes {boxes!r}, expected {expected_tick_boxes()!r}")
+    return problems
 
 
 def test_FR_0_8_01_owner_facts_appear_as_given():
-    # Facts only the owner can give (approval question 6) appear in the form as the owner wrote them. Each phrase is
-    # first found in the approval, so the test cannot pass on a phrase the owner did not write.
-    text = re.sub(r"\s+", " ", read(CONSENT)).lower()
-    phrases = {
-        "a": ["Only the AQIS test lab owner (@Nasir) and authorized project raters/evaluators"],
-        "b": ["Google Drive (AQIS_LAB), Google Colab, and Oracle Cloud VM", "Audio is never stored on GitHub"],
-        "c": ["Testing, benchmark measurement, and error diagnosis for voice bot pipelines"],
-        "d": ["18 years or older"],
-        "e": ["within 30 days of recording", "deleted from active dataset pools"],
-    }
-    for label, wanted in phrases.items():
-        fact = _approval_fact(label)
-        for phrase in wanted:
-            assert phrase in fact, (label, phrase)
-            assert phrase.lower() in text, (label, phrase)
+    # Facts only the owner can give (approval questions 5 and 6, docs/approvals/WP-0.8.md) appear in their own sections
+    # and tick boxes exactly as the owner wrote them, with nothing changed or added (WP-0.8-F01, F02, F03).
+    assert owner_fact_problems(read(CONSENT)) == []
 
+
+# The auditor's round 1 breaks (docs/progress/WP-0.8/AUDIT.md): M1h changes the owner's withdrawal window in its own
+# section only (the tick box keeps it); E1 to E3 add promises the owner never made beside the owner's wording.
+OWNER_FACT_BREAKS = {
+    "M1h-window-14-days": ("You can withdraw within 30 days of recording,", "You can withdraw within 14 days of recording,"),
+    "E1-wider-access": ("raters/evaluators can see or hear your recordings.",
+                        "raters/evaluators can see or hear your recordings, and our technology partners may also hear them."),
+    "E2-training-and-sale": ("error diagnosis for voice bot pipelines.",
+                             "error diagnosis for voice bot pipelines, and to train and sell speech models."),
+    "E3-deletion-deadline": ("deleted from active dataset pools.",
+                             "deleted from active dataset pools within 7 days of your request."),
+    "tick-box-window": ("- [ ] I understand that I can withdraw within 30 days of recording.",
+                        "- [ ] I understand that I can withdraw at any time."),
+    "tick-box-age": ("- [ ] I am 18 years or older.", "- [ ] I am 16 years or older."),
+    "services-added": ("Google Colab, and Oracle Cloud VM.", "Google Colab, Oracle Cloud VM, and a paid speech API."),
+}
+
+
+@pytest.mark.parametrize("name", sorted(OWNER_FACT_BREAKS))
+def test_FR_0_8_01_owner_fact_check_rejects_changed_window_and_additions(name):
+    # WP-0.8-F01 and F03: a changed owner value, or a promise added beside the owner's wording, must be reported.
+    text = read(CONSENT)
+    old, new = OWNER_FACT_BREAKS[name]
+    assert text.count(old) == 1, name
+    assert owner_fact_problems(text.replace(old, new)) != [], name
 
 
 # --- FR-0.8-02: the campaign A recording guide -----------------------------------------------------------------------
