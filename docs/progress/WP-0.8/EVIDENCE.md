@@ -54,6 +54,38 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0
 - **Owner-run:** a print preview on one page (see "Owner-run checks").
 - Status: DONE
 
+### FR-0.8-04 — Filler library v0 (`docs/fillers/FILLER_LIBRARY_v0.md`, CAP-DOC-017)
+- **Tests** (`tests/aqis_lab/test_aqis_filler_library.py`):
+  - `test_FR_0_8_04_library_has_about_20_fillers`
+  - `test_FR_0_8_04_risk_levels_are_the_blueprint_four_and_all_used`
+  - `test_FR_0_8_04_every_filler_has_id_text_use_and_risk_level`
+  - `test_FR_0_8_04_every_filler_has_a_never_play_context`
+  - `test_FR_0_8_04_ids_and_texts_unique`
+  - `test_FR_0_8_04_every_context_used_is_defined`
+  - `test_FR_0_8_04_blueprint_examples_are_in_the_library_at_their_level`
+  - `test_FR_0_8_04_blueprint_never_play_rules_are_encoded`
+  - `test_FR_0_8_04_checks_detect_missing_level_or_context`
+
+  The risk levels, the 8 examples and the 3 never-play rules are parsed from `docs/specs/sources/AQIS_Test_Lab_Blueprint.md`, not from the library.
+- **Tests first:** `9 failed in 0.47s`, because the library did not exist. The blueprint parse gave:
+```text
+{'0': ('Backchannel', 'Always.', ['Okay.', 'Mm-hmm.']), '1': ('Process', 'Always.', ['One moment.', 'Let me check that.']), '2': ('Empathy or warmth', 'Clear negative or positive tone, with high confidence.', ["I'm sorry to hear that.", 'Great!']), '3': ('Content judgement', 'Right dialogue act and suitable tone, with very high confidence.', ["That's a good point.", 'Good question.'])}
+['Never play Level 2 Empathy (positive/cheerful) on negative/distressed callers or complaints.', 'Never play Level 3 Content judgement on direct questions, yes/no answers, or digit strings.', 'Always fall back to Level 0 or Level 1 when model confidence is low.']
+```
+- **Content:**
+  - 20 fillers, 5 per level. The 8 blueprint examples are used word for word at their level. The other 12 texts are drafted in the style of their level, for owner review.
+  - 12 contexts:
+    - 8 come from the blueprint: rules 1 to 3, and the Level 2 "Allowed when" column;
+    - 4 are marked "Drafted in WP-0.8 for owner review".
+  - **Why there are drafted contexts:** the blueprint allows Levels 0 and 1 "Always", while FR-0.8-04 and must-catch 2 need a never-play context for every filler. The drafted contexts come from what each phrase says, for example that "Okay." after "cancel my order" can sound like a promise.
+  - **"Good question." is a blueprint Level 3 example, but rule 2 forbids Level 3 on direct questions.** Its intended use is therefore an open, indirect question, and it carries the rule 2 contexts.
+- **Run:**
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_filler_library.py -q -p no:cacheprovider
+9 passed in 0.04s
+```
+- Status: DONE
+
 ## Debts closed (question 2)
 
 ### DEBT-010 — registry licence must equal the dataset's licence (WP-0.4-F03)
