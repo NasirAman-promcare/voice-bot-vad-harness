@@ -277,3 +277,38 @@ WP: WP-0.7  ·  Raised: 2026-09-30  ·  Session: https://claude.ai/code/session_
 The code, tests and evidence of every requirement are done and pushed.
 
 **Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `6ed6229`, 2026-10-02): `ALLOW-EDIT: tests/aqis_lab/test_aqis_registry_fetch.py`, changing only `test_FR_0_4_02_no_raw_corpus_committed` so it also accepts `data/runs/phase0-smoke/phase0-smoke-(cloud|colab|oracle)-<YYYYMMDDTHHMMSSZ>.tar` and nothing else; the WP-0.7 test proving committed bundles hold no audio stays. Done after merging `main`: the one-line change, with every other rule of the test unchanged; the test passes (`docs/progress/WP-0.7/EVIDENCE.md`).
+
+## BLK-011 — CI runners' newer git races the fixture repositories (intermittent red CI)
+STATUS: OPEN
+WP: WP-0.7  ·  Raised: 2026-10-02  ·  Session: https://claude.ai/code/session_01DHNEPSgrExgeGVsAYja18g
+
+**What I need:** your decision on a one-function change to the shared test helper `hermetic_git_env` in `tests/aqis_lab/aqis_testutil.py`, a guarded file that no approval lets me edit.
+
+**Why:**
+- CI's push run on `0b12344` (run 278, attempt 1) failed on a WP-0.6 test that WP-0.7 does not touch, `tests/aqis_lab/test_aqis_oracle_setup.py::test_FR_0_6_01_dry_run_explains_each_step_and_changes_nothing`:
+```text
+E       FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-runner/pytest-0/test_FR_0_6_01_dry_run_explain0/tree/.git/objects/maintenance.lock'
+1 failed, 1746 passed, 54 deselected in 149.26s (0:02:29)
+```
+- Root cause:
+  - The CI runner has git 2.55.0 (in the job log); this VM has git 2.43.0.
+  - On newer git, `git commit` starts automatic maintenance in a detached background process.
+  - The test's fixture repository (`make_tree`, with `hermetic_git_env()`) is committed and then listed at once by `tree_snapshot`. The background process created `.git/objects/maintenance.lock` and removed it between the listing and the `lstat`.
+- It is timing-dependent:
+  - the pull-request run on the same commit (279) passed;
+  - one re-run of the failed job (278, attempt 2) passed.
+
+  CI on `0b12344` is now green in both runs. Every fixture repository made with `hermetic_git_env` can hit the same race on CI. The files that use it: `fixture_repo.py`, `test_aqis_colab_doc.py`, `test_aqis_gate_v2.py`, `test_aqis_harness_provision.py`, `test_aqis_oracle_setup.py`, `test_aqis_version.py`.
+
+**What I tried:**
+- Read the job log, `make_tree` and `hermetic_git_env`.
+- Re-ran the failed job once, the one re-run allowed. It passed.
+- Changed nothing outside the round 2 budget.
+
+**Options:**
+1. **(Recommended)** Add `ALLOW-EDIT: tests/aqis_lab/aqis_testutil.py` for the function `hermetic_git_env` only. I'd add `GIT_CONFIG_COUNT=2`, `GIT_CONFIG_KEY_0=maintenance.auto`, `GIT_CONFIG_VALUE_0=false`, `GIT_CONFIG_KEY_1=gc.auto`, `GIT_CONFIG_VALUE_1=0` to the environment it returns. Fixture repositories then never start background maintenance, on any git version. No caller passes its own `GIT_CONFIG_*` values. Every test that uses the helper runs before and after; nothing else changes.
+2. Accept it as debt and re-run CI when it happens. No test file changes, but CI on newer runners turns red now and then for a reason unrelated to the change under test.
+
+**Paused until answered:** nothing in WP-0.7 round 2 depends on this. F01 to F04 are fixed and pushed, the debts are recorded, and CI on `0b12344` is green. Only the helper change waits.
+
+**Owner answer:**
