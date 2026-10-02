@@ -424,3 +424,26 @@ None: `grep -rn "audit-allow" aqis_lab tools` finds no WP-0.7 line (checked with
 ```
 - Checked against names: the pattern accepts `…/phase0-smoke-cloud-20260930T170440Z.tar` and `…/phase0-smoke-oracle-20261003T101010Z.tar`. It still rejects `…/phase0-smoke-kaggle-….tar`, `…/corpus.tar`, `….tar.gz`, `data/runs/other/….tar` and a stamp without a time. Pack archives and `data/tts_smoke/NN.wav` are still accepted.
 - After: the same command, `16 passed, 1 deselected in 30.74s`. `test_FR_0_7_07_committed_bundles_and_their_reports_in_docs` still checks that each committed bundle holds result files only.
+
+### AT-0.7-02 — fast suite, slow suite, audit gate (final, on a clean tree at `4fa02a1`)
+- Slow suite, second full run, nothing edited while it ran (`git status --short` empty before and after): `time .venv/bin/python -m pytest tests/aqis_lab -q -m "slow and not gpu and not colab and not oracle" -p no:cacheprovider`
+```text
+4fa02a1 WP-0.7 BLK-010: accept committed smoke bundles in test_FR_0_4_02_no_raw_corpus_committed (owner option 1)
+34 passed, 1763 deselected in 2224.96s (0:37:04)
+real	37m5.457s
+```
+  This includes the two WP-0.0 provisioning tests that the first run failed on a dirty tree, the 120-run parity exit test, the DEBT-013 overhead test and the real cloud smoke tests. It took longer than the first run (22 min) because WP-0.4's pack-build tests read the large archives from disk again.
+- Fast suite: `.venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider`
+```text
+1744 passed, 53 deselected in 285.31s (0:04:45)
+```
+- Audit gate: `git fetch origin main && .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.7`
+```text
+aqis-audit-gate: base origin/main (merge-base 6ed6229ea0a6), head 4fa02a11a327, approvals origin/main 6ed6229ea0a6, wp WP-0.7
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.9 s)
+```
+- CI on `4fa02a1` (run 270, https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/36969185359): `harness-regression` success; `lab` success (fast suite, then the audit gate). CI on the final commit is in the pull request.
+- Pending by design (approval of 2026-10-02): OC-0.7-01, OC-0.7-02 and the three-way parity (OC-0.7-03) run after the audit on the tagged commits; see "Owner-run checks".
