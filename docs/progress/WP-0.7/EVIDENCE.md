@@ -447,3 +447,8 @@ Findings: 0
 ```
 - CI on `4fa02a1` (run 270, https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/36969185359): `harness-regression` success; `lab` success (fast suite, then the audit gate). CI on the final commit is in the pull request.
 - Pending by design (approval of 2026-10-02): OC-0.7-01, OC-0.7-02 and the three-way parity (OC-0.7-03) run after the audit on the tagged commits; see "Owner-run checks".
+
+## Round 2 (audit round 1 findings)
+F01 to F04 are fixed and recorded in `docs/progress/WP-0.7/FIXES.md`: change budget, baseline, the tests, the auditor's breaks MC6d, X1 and X10 plus an F04 break now caught, and the verify runs. F05 to F08 are accepted debt DEBT-018 to DEBT-021 (`docs/progress/DEBT.md`, approval `a592af0`).
+- `phase0 smoke` has `--from-scratch` (`docs/runs/PHASE0_SMOKE.md`). The Colab and Oracle runbooks say how to run the smoke again at a new tag.
+- Network-only tests at `0615214` (F06): `12 passed, 1789 deselected in 83.28s`.
