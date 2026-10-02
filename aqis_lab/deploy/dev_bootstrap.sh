@@ -5,14 +5,16 @@
 #   CAP-ENV-001: creates .venv with the Python major.minor from docs/environment/colab_probe.txt using uv,
 #                installs requirements/aqis_lab/phase0.txt with hash checking, idempotently; source-only
 #                packages are built only with the lock's own hash-checked setuptools (--build-constraints);
-#                --gpu also installs the GPU extras requirements/aqis_lab/phase0-gpu.txt (Colab)
+#                --gpu also installs the GPU extras requirements/aqis_lab/phase0-gpu.txt (Colab), with both
+#                locks as build constraints
 #                [tests: test_FR_0_0_02_fails_when_probe_missing, test_FR_0_0_02_fails_when_probe_unreadable,
 #                 test_FR_0_0_02_fails_when_uv_missing, test_FR_0_0_02_uses_version_named_by_probe,
 #                 test_FR_0_0_02_creates_venv_with_probe_python, test_FR_0_0_02_second_run_changes_nothing_within_30s,
 #                 test_FR_0_0_02_rejects_lock_with_wrong_hash,
 #                 test_FR_0_7_02_bootstrap_passes_the_lock_as_build_constraints,
 #                 test_FR_0_7_02_source_build_uses_only_the_locked_setuptools,
-#                 test_FR_0_7_02_bootstrap_rejects_unknown_option, test_FR_0_7_03_bootstrap_gpu_needs_the_gpu_lock]
+#                 test_FR_0_7_02_bootstrap_rejects_unknown_option, test_FR_0_7_03_bootstrap_gpu_needs_the_gpu_lock,
+#                 test_FR_0_7_03_bootstrap_gpu_build_constraints_include_the_gpu_lock]
 # INPUTS AND OUTPUTS: reads the Colab probe and the lock(s); writes only <repo>/.venv. Usage:
 #   bash aqis_lab/deploy/dev_bootstrap.sh [--gpu]
 # INVARIANTS:
@@ -26,6 +28,8 @@
 #   2026-09-25 WP-0.0 round 2 F06: header test list names test_FR_0_0_02_uses_version_named_by_probe (header only).
 #   2026-09-30 WP-0.7 FR-0.7-02: the sync passes the lock as --build-constraints (hash-checked source build of
 #     srt, owner decision question 2 (a)); FR-0.7-03: --gpu also syncs requirements/aqis_lab/phase0-gpu.txt.
+#   2026-10-02 WP-0.8 DEBT-021: --gpu passes the GPU lock as a build constraint too (both locks; a differing
+#     setuptools pin between them then fails the source build loudly).
 set -euo pipefail
 
 fail() {
@@ -93,7 +97,8 @@ actual="$("$VENV/bin/python" -I -B -c 'import sys; print("%d.%d" % sys.version_i
 # 4. Exact, hash-checked install of the lock (uninstalls anything not in it). The lock is also the build
 #    constraint: a source-only package (srt) is built with the lock's own hash-checked setuptools.
 if [ "$GPU" -eq 1 ]; then
-    "$UV" pip sync --python "$VENV/bin/python" --require-hashes --strict --build-constraints "$LOCK" "$LOCK" "$GPU_LOCK" \
+    "$UV" pip sync --python "$VENV/bin/python" --require-hashes --strict --build-constraints "$LOCK" \
+        --build-constraints "$GPU_LOCK" "$LOCK" "$GPU_LOCK" \
         || fail "hash-checked install of $LOCK_REL and $GPU_LOCK_REL failed (see the uv message above)."
 else
     "$UV" pip sync --python "$VENV/bin/python" --require-hashes --strict --build-constraints "$LOCK" "$LOCK" \

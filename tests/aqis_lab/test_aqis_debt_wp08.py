@@ -4,6 +4,8 @@
 - DEBT-018 (WP-0.7-F05): `phase0 smoke --bundle-dir` on Google Drive outside MyDrive/AQIS_LAB is refused (NFR-0.5-02).
 - DEBT-020 (WP-0.7-F07): the smoke re-validates each event log before storing it, and the report's summary lines
   equal values recomputed here from the bundle's result rows.
+- DEBT-021 (WP-0.7-F08): `dev_bootstrap.sh --gpu` passes the GPU lock as a build constraint too (owner decision,
+  question 4 (a): both locks).
 """
 import csv
 import io
@@ -234,3 +236,32 @@ def test_FR_0_7_07_report_summary_lines_recomputed_from_bundle_rows(tmp_path, ta
     assert same == len(rows) - 1
     changed = smoke._report(meta, bundle, manifest, smoke.load_config(smoke.DEFAULT_CONFIG))
     assert f"- Real-speed transcript equal to the batch transcript: {same} of {len(rows)} clips." in changed
+
+
+# --- DEBT-021 (b): the --gpu install takes both locks as build constraints -------------------------------------------
+
+def _sync_commands(script):
+    """Each `"$UV" pip sync` command of the script, with its backslash continuation lines joined."""
+    commands, current = [], None
+    for line in script.splitlines():
+        if current is not None:
+            current = current[:-1].rstrip() + " " + line.strip()
+        elif '"$UV" pip sync' in line:
+            current = line.strip()
+        if current is not None and not current.endswith("\\"):
+            commands.append(current)
+            current = None
+    return commands
+
+
+def test_FR_0_7_03_bootstrap_gpu_build_constraints_include_the_gpu_lock():
+    script = (ROOT / "aqis_lab" / "deploy" / "dev_bootstrap.sh").read_text(encoding="utf-8")
+    syncs = _sync_commands(script)
+    gpu = [c for c in syncs if '"$LOCK" "$GPU_LOCK"' in c]
+    cpu = [c for c in syncs if c not in gpu]
+    assert len(gpu) == 1 and len(cpu) == 1, syncs
+    # --gpu: both locks are installed and both are build constraints (a differing setuptools pin then fails loudly).
+    assert '--require-hashes --strict --build-constraints "$LOCK" --build-constraints "$GPU_LOCK" "$LOCK" "$GPU_LOCK"' \
+        in gpu[0], gpu[0]
+    # CPU only: the CPU lock alone, as before.
+    assert '--require-hashes --strict --build-constraints "$LOCK" "$LOCK"' in cpu[0] and "GPU_LOCK" not in cpu[0]
