@@ -201,24 +201,45 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0
 - **Run:** `8 passed, 13 deselected in 0.22s` (`-k FR_0_8_01`).
 
 ## Acceptance
-AT-0.8-01 (the auditor checks completeness, and that no value was invented where the owner must decide) can be run only once FR-0.8-02 and FR-0.8-03 are written and the owner's `DECISION:` lines are on `main` (BLK-014). The evidence for it so far:
-- the source table under FR-0.8-01;
-- the content notes under FR-0.8-04 and FR-0.8-05;
-- the must-catch proof below.
+### AT-0.8-01 — completeness, and no value invented where the owner decides
+The auditor checks this item by hand. Here is where each part stands, with its evidence:
 
-Fast suite at `5819521`:
+| Requirement | Document | Where the content comes from | Owner blanks left | Evidence |
+| --- | --- | --- | --- | --- |
+| FR-0.8-01 | `docs/recording/CONSENT_FORM.md` | approval question 6 (owner commit `61c50c7`), question 5, Build Plan "Campaign A", blueprint title | retention, contact | source table under FR-0.8-01; `test_FR_0_8_01_owner_facts_appear_as_given` |
+| FR-0.8-02 | `docs/recording/RECORDING_GUIDE.md` | Build Plan "Campaign A"; BLK-014 answers A to G | none | `test_FR_0_8_02_*`, expected values parsed from the sources and the approval |
+| FR-0.8-03 | `docs/recording/SESSION_FORM.md` | spec FR-0.8-03; deviation D1; the guide's lists (BLK-014 E, F, G) | none (fill-in fields only) | `test_FR_0_8_03_*` |
+| FR-0.8-04 | `docs/fillers/FILLER_LIBRARY_v0.md` | blueprint risk ladder, examples and never-play rules; 12 drafted texts and 4 drafted contexts, each marked for owner review | none | `test_FR_0_8_04_*`, with the blueprint parsed in the test |
+| FR-0.8-05 | `docs/decisions/TARGETS_OPTIONS.md` | blueprint "Quantitative Targets" and "Timing Budget"; Build Plan "Phases" (500 rated turns) | four decision lines | `test_FR_0_8_05_*`; the decisions are only in the approval (BLK-014 I) |
+
+Commands:
 ```text
+$ .venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider -k "FR_0_8"
+38 passed, 1818 deselected in 1.10s
 $ .venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider
-1785 passed, 55 deselected in 310.70s (0:05:10)
+1801 passed, 55 deselected in 335.27s (0:05:35)
 ```
-Audit gate at `5819521`: the only findings are the parts paused by BLK-014.
+The fast suite ran at `1b1cf43`. The slow, network, gpu, colab and oracle suites were not run in this build. No code a slow test covers changed beyond DEBT-012's schema field (every committed dataset already states `changes`) and DEBT-018's earlier Drive check.
+
+## Audit gate
 ```text
 $ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.8
-docs/specs/phase-0/WP-0.8-consent-fillers-targets.md:17: [F3] MAJOR: FR-0.8-02 is not in any test function name under tests/aqis_lab/ (expected FR_0_8_02)
-docs/specs/phase-0/WP-0.8-consent-fillers-targets.md:18: [F3] MAJOR: FR-0.8-03 is not in any test function name under tests/aqis_lab/ (expected FR_0_8_03)
-docs/specs/phase-0/WP-0.8-consent-fillers-targets.md:23: [F4] MAJOR: AT-0.8-01 does not appear in docs/progress/WP-0.8/EVIDENCE.md
-3 findings: FAIL (0.6 s)
+aqis-audit-gate: base origin/main (merge-base b4b327edd783), head 1b1cf435ca52, approvals origin/main b4b327edd783, wp WP-0.8
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.6 s)
 ```
+
+## Owner-run checks
+| Check | Where | Command | Expected output | Result report |
+| --- | --- | --- | --- | --- |
+| Consent form fits one page | Your computer | Open `docs/recording/CONSENT_FORM.md` on GitHub, then print preview at A4 or US Letter with default margins | One page | Pending (owner) |
+| Wording of the five documents | Pull request | Read the five documents, including the 12 drafted filler texts and the 4 drafted never-play contexts | Your OK, or edits you ask for | Pending (owner) |
+| `--gpu` bootstrap with both locks as build constraints (DEBT-021) | Colab GPU runtime | `bash aqis_lab/deploy/dev_bootstrap.sh --gpu` | `OK: .venv ready: …` and `OK: GPU extras installed: requirements/aqis_lab/phase0-gpu.txt sha256 …` | Pending (owner); the next Colab launcher run covers it |
+
+## audit-allow lines
+None.
 
 ## Debts closed (question 2)
 
@@ -367,18 +388,19 @@ OK: .venv ready: Python 3.13.14, lock sha256 87a1cc34c6d41388cf8ce1e415f95f61c3b
 - Status: DONE
 
 ## Must-catch proof
-Each break was made in a scratch worktree of `5819521` (`$SCRATCHPAD/wt2`, its own checkout, with `.venv` linked in), as one exact text replacement that had to match once, then reverted with `git checkout -- docs`.
+Each break was made in a scratch worktree of `1b1cf43` (`$SCRATCHPAD/wt3`, its own checkout, with `.venv` linked in), as one exact text replacement that had to match once, then reverted with `git checkout -- docs`. The same replacements were first run at `5819521` for M1a, M1b, M2a and M2b, with the same failing tests.
 
 Command:
 ```text
 pytest tests/aqis_lab/test_aqis_recording_docs.py tests/aqis_lab/test_aqis_filler_library.py tests/aqis_lab/test_aqis_targets_options.py -q
 ```
+Unbroken: `38 passed in 0.37s`.
 
 | Must-catch | Break | Named tests that fail | Result |
 | --- | --- | --- | --- |
-| 1. No value the owner must decide is filled in by Claude | M1a: the consent form's retention blank is replaced by "2 years" | `test_FR_0_8_01_retention_is_an_owner_blank_with_no_value`, `test_FR_0_8_01_blank_check_detects_a_filled_in_value` | `2 failed, 22 passed in 0.23s` |
-| 1. (targets) | M1b: `**Decision:** [OWNER DECIDES: harm-rate option]` is replaced by `**Decision:** HR-B` | `test_FR_0_8_05_document_does_not_choose`, `test_FR_0_8_05_choice_check_detects_a_filled_decision` | `2 failed, 22 passed in 0.13s` |
-| 2. Every filler has a risk level and at least one never-play context | M2a: fil-001's "Never play when" cell is emptied | `test_FR_0_8_04_every_filler_has_a_never_play_context` | `1 failed, 23 passed in 0.12s` |
-| 2. (risk level) | M2b: fil-001's level is emptied | `test_FR_0_8_04_every_filler_has_id_text_use_and_risk_level`, `test_FR_0_8_04_risk_levels_are_the_blueprint_four_and_all_used`, `test_FR_0_8_04_blueprint_examples_are_in_the_library_at_their_level` | `3 failed, 21 passed in 0.17s` |
-
-Must-catch 1 also applies to the recording guide and session form (FR-0.8-02 and FR-0.8-03). They are not written yet (BLK-014), so their part of the proof follows once they are.
+| 1. No value the owner must decide is filled in by Claude | M1a: the consent form's retention blank is replaced by "2 years" | `test_FR_0_8_01_retention_is_an_owner_blank_with_no_value`, `test_FR_0_8_01_blank_check_detects_a_filled_in_value` | `2 failed, 36 passed in 0.26s` |
+| 1. (targets) | M1b: `**Decision:** [OWNER DECIDES: harm-rate option]` is replaced by `**Decision:** HR-B` | `test_FR_0_8_05_document_does_not_choose`, `test_FR_0_8_05_choice_check_detects_a_filled_decision` | `2 failed, 36 passed in 0.26s` |
+| 1. (owner threshold) | M1c: the guide's clipping limit is changed from the owner's 0.1 % to 0.5 % | `test_FR_0_8_02_every_quality_check_has_a_pass_rule` | `1 failed, 37 passed in 0.24s` |
+| 1. (owner list) | M1d: an accent group the owner did not give (`acc-british`) is added to the session form | `test_FR_0_8_03_choices_equal_the_recording_guide_lists` | `1 failed, 37 passed in 0.21s` |
+| 2. Every filler has a risk level and at least one never-play context | M2a: fil-001's "Never play when" cell is emptied | `test_FR_0_8_04_every_filler_has_a_never_play_context` | `1 failed, 37 passed in 0.21s` |
+| 2. (risk level) | M2b: fil-001's level is emptied | `test_FR_0_8_04_every_filler_has_id_text_use_and_risk_level`, `test_FR_0_8_04_risk_levels_are_the_blueprint_four_and_all_used`, `test_FR_0_8_04_blueprint_examples_are_in_the_library_at_their_level` | `3 failed, 35 passed in 0.24s` |
