@@ -28,7 +28,7 @@ def _datasets(tmp_path):
         "owner-smoke": {"type": "local", "source": "owner", "kind": "speech", "importer": "owner",
                         "folder": "data/owner_smoke", "split": "owner", "licence": "LicenseRef-AQIS-owner-consent",
                         "consent_file": "data/owner_smoke/CONSENT.md", "speaker_id": "owner",
-                        "clip_prefix": "owner-", "attribution": "owner", "homepage": None},
+                        "clip_prefix": "owner-", "attribution": "owner", "homepage": None, "changes": "owner"},
     }
     path = write_datasets(tmp_path / "datasets.yaml", entries)
     return ds.load_datasets(path)
@@ -201,7 +201,7 @@ def test_FR_0_4_01_rows_round_trip_and_sort(tmp_path):
 def test_FR_0_4_01_datasets_file_rejects_unknown_licence_and_keys(tmp_path):
     entries = {"x": {"type": "local", "source": "tts", "kind": "speech", "importer": "tts", "folder": "d",
                      "split": "tts", "licence": "NOPE", "generation_record": "d/G.md", "clip_prefix": "t-",
-                     "speaker_prefix": "k-", "tags": ["synthetic"], "attribution": "a", "homepage": None}}
+                     "speaker_prefix": "k-", "tags": ["synthetic"], "attribution": "a", "homepage": None, "changes": "c"}}
     with pytest.raises(ds.DatasetsError, match="NOPE"):
         ds.load_datasets(write_datasets(tmp_path / "a.yaml", entries))
     entries["x"]["licence"] = "Apache-2.0"

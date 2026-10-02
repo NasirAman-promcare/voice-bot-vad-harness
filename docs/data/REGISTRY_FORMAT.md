@@ -46,7 +46,7 @@ Schema `aqis_lab/registry/schemas/datasets.v1.json`; duplicate keys are rejected
 - `format_version: 1`.
 - `generated_licence`: licence of clips the pack builder generates from no third-party material (digital silence): `CC0-1.0`.
 - `licences`: licence ID → `name`, `url` (or null), `attribution_required`, `share_alike`, `non_commercial`. A pack spec's licence policy uses the last two.
-- `datasets`: dataset ID → entry. Common fields: `type` (`download` or `local`), `importer`, `source`, `kind` (`speech` or `non-speech`), `licence`, `homepage`, `attribution` (the text `LICENCES.md` quotes) and optional `changes`.
+- `datasets`: dataset ID → entry. Common fields: `type` (`download` or `local`), `importer`, `source`, `kind` (`speech` or `non-speech`), `licence`, `homepage`, `attribution` (the text `LICENCES.md` quotes) and `changes` (required for every dataset: what the lab does to its files, which `LICENCES.md` states under "Changes made").
   - `download` entries add `url`, `bytes`, `sha256`, `md5` (the publisher's) and `extract` (patterns; `**` crosses folders, `*` stays in one). `registry fetch` downloads into `data/raw/aqis_lab/` (git-ignored), checks size, MD5 and SHA-256 before reading any member, and extracts only matching members.
   - `librispeech`: `split`. Every FLAC needs a line in its chapter's trans.txt and every line a FLAC.
   - `musan`: `subsets`, each with `split`, `licence`, `licence_file_sha256` (the subset's LICENSE file is pinned, so a changed licence statement stops the import), `annotations` (`noise-background-list` or `music-table`) and, for rfm, `titles: rfm-licence` and `attribution_template`.

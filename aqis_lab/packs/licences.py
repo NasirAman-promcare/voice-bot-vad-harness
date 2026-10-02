@@ -12,6 +12,8 @@ NOT IN SCOPE:
   - Deciding licences (data/registry/datasets.yaml); checking the file (aqis_lab/packs/verify.py).
 CHANGE LOG:
   2026-09-27 WP-0.4 FR-0.4-07 created.
+  2026-10-02 WP-0.8 DEBT-012 (WP-0.4-F05): "Changes made" is always the dataset's own changes text, which
+    datasets.v1.json now requires; no default text.
 """
 import re
 
@@ -53,7 +55,7 @@ def licences_markdown(spec, manifest, clip_sources, datasets):
         file_licences = sorted({row.licence for row in rows})
         lines.append("- Licences of the files used: " + "; ".join(_licence_text(datasets, lid) for lid in file_licences))
         lines.append(f"- Attribution: {dataset['attribution']}")
-        lines.append(f"- Changes made: {dataset.get('changes', 'none; the files are used as they are')}")
+        lines.append(f"- Changes made: {dataset['changes']}")
         if any("synthetic" in row.tags for row in rows):
             lines.append(f"- Notice: {SYNTHETIC_NOTICE}")
         lines.append(f"- Clips of this pack using it: {len(uses[dataset_id])}")

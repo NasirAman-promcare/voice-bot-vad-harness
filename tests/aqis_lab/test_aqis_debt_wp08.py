@@ -1,6 +1,7 @@
 """Accepted debts closed in WP-0.8 (docs/progress/DEBT.md; docs/approvals/WP-0.8.md, question 2).
 
 - DEBT-010 (WP-0.4-F03): a registry row's licence must equal the licence datasets.yaml gives its dataset and split.
+- DEBT-012 (WP-0.4-F05): every dataset in datasets.yaml must state its `changes` (owner decision, question 3).
 - DEBT-018 (WP-0.7-F05): `phase0 smoke --bundle-dir` on Google Drive outside MyDrive/AQIS_LAB is refused (NFR-0.5-02).
 - DEBT-020 (WP-0.7-F07): the smoke re-validates each event log before storing it, and the report's summary lines
   equal values recomputed here from the bundle's result rows.
@@ -265,3 +266,27 @@ def test_FR_0_7_03_bootstrap_gpu_build_constraints_include_the_gpu_lock():
         in gpu[0], gpu[0]
     # CPU only: the CPU lock alone, as before.
     assert '--require-hashes --strict --build-constraints "$LOCK" "$LOCK"' in cpu[0] and "GPU_LOCK" not in cpu[0]
+
+
+# --- DEBT-012: `changes` is required for every dataset ----------------------------------------------------------------
+
+@pytest.mark.parametrize("kind", ["download", "local"])
+def test_FR_0_4_07_dataset_without_changes_is_rejected(tmp_path, kind):
+    # LICENCES.md quotes each dataset's `changes`; a dataset without it is refused when datasets.yaml is loaded,
+    # never written as "the files are used as they are".
+    if kind == "download":
+        entry = download_entry("http://127.0.0.1/x.tar.gz", b"x", "librispeech", "librispeech", "speech",
+                               ["LibriSpeech/test-clean/**"], "CC-BY-4.0", split="test-clean",
+                               changes="decoded from FLAC")
+        dataset_id = "librispeech-test-clean"
+    else:
+        entry = {"type": "local", "source": "tts", "kind": "speech", "importer": "tts", "folder": "data/tts_smoke",
+                 "split": "tts", "licence": "Apache-2.0", "generation_record": "data/tts_smoke/GENERATION.md",
+                 "clip_prefix": "tts-smoke-", "speaker_prefix": "kokoro-", "tags": ["synthetic"],
+                 "homepage": None, "attribution": "synthetic speech", "changes": "silence added"}
+        dataset_id = "tts-smoke"
+    assert ds.load_datasets(write_datasets(tmp_path / "with.yaml", {dataset_id: entry})).datasets[dataset_id]
+    del entry["changes"]
+    with pytest.raises(ds.DatasetsError) as info:
+        ds.load_datasets(write_datasets(tmp_path / "without.yaml", {dataset_id: entry}))
+    assert "changes" in str(info.value) and dataset_id in str(info.value), str(info.value)

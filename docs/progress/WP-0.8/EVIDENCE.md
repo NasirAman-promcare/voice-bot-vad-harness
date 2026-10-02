@@ -188,9 +188,6 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0
 - **For the owner:** if you want the current approval to list the facts again, re-add the six lines. The test can then read the current file again.
 - **Run:** `8 passed, 13 deselected in 0.22s` (`-k FR_0_8_01`).
 
-### DEBT-012 — `changes` required for every dataset: PARTIAL (not changed; BLK-014, item H)
-This needs `ALLOW-EDIT` for two existing test files. Measured in a scratch worktree: requiring `changes` breaks 70 existing fast tests and errors 64 more, all because test datasets lack `changes`. With 4 added test-data lines in those 2 files, the suite is green.
-
 ## Acceptance
 AT-0.8-01 (the auditor checks completeness, and that no value was invented where the owner must decide) can be run only once FR-0.8-02 and FR-0.8-03 are written and the owner's `DECISION:` lines are on `main` (BLK-014). The evidence for it so far:
 - the source table under FR-0.8-01;
@@ -236,6 +233,43 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0
 99 passed, 1708 deselected in 23.47s
 $ .venv/bin/python -m aqis_lab registry validate; echo "exit $?"
 /home/user/voice-bot-vad-harness/data/registry/sources.csv: OK, 6559 rows (librispeech 5559, musan 990, tts 10)
+exit 0
+```
+- Status: DONE
+
+### DEBT-012 — `changes` required for every dataset (WP-0.4-F05)
+- **Approval:** questions 2 and 3 as recommended; BLK-014 H with `ALLOW-EDIT: tests/aqis_lab/aqis_packs_testutil.py` and `ALLOW-EDIT: tests/aqis_lab/test_aqis_registry_validate.py` (`docs/approvals/WP-0.8.md` on `main`, `b4b327e`).
+- **Code:**
+  - `aqis_lab/registry/schemas/datasets.v1.json`: `"changes"` added to the common `required` list, beside `attribution`.
+  - `aqis_lab/packs/licences.py`, `licences_markdown`: the "Changes made" line is `dataset['changes']`, with no default, and the module CHANGE LOG is updated.
+  - `aqis_lab/registry/datasets.py`: header test list and CHANGE LOG only.
+  - `docs/data/REGISTRY_FORMAT.md`: `changes` is described as required.
+  - `REGISTRY.md` rows CAP-REG-002 and CAP-PACK-007.
+  - `format_version` stays 1, because every committed dataset already states `changes`.
+- **Approved test-data edits** (4 lines; each only adds a `changes` value, and no assertion changes):
+```text
+-             "attribution": f"{source} test attribution text"}
++             "attribution": f"{source} test attribution text", "changes": f"{source} test changes text"}
+-                                  "attribution": "Recorded by the lab owner for AQIS lab use only."}
++                                  "attribution": "Recorded by the lab owner for AQIS lab use only.",
++                                  "changes": "WAV header rewritten in the canonical form (samples unchanged)."}
+-                        "clip_prefix": "owner-", "attribution": "owner", "homepage": None},
++                        "clip_prefix": "owner-", "attribution": "owner", "homepage": None, "changes": "owner"},
+-                     "speaker_prefix": "k-", "tags": ["synthetic"], "attribution": "a", "homepage": None}}
++                     "speaker_prefix": "k-", "tags": ["synthetic"], "attribution": "a", "homepage": None, "changes": "c"}}
+```
+- **Test:** `test_FR_0_4_07_dataset_without_changes_is_rejected`, parametrised `download` and `local`. The same entry loads with `changes`, and is refused with a `DatasetsError` naming `changes` and the dataset without it.
+- **Tests first:** `Failed: DID NOT RAISE DatasetsError` for both cases (`2 failed, 13 deselected in 0.87s`).
+- **Scratch measurement before approval** (BLK-014): requiring `changes` without the 4 test-data lines gave `70 failed, 160 passed, 1509 deselected, 64 errors`.
+- **After the change:**
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_debt_wp08.py tests/aqis_lab/test_aqis_registry_validate.py tests/aqis_lab/test_aqis_packs_licences.py -q -p no:cacheprovider -m "not slow and not network"
+64 passed in 24.90s
+$ .venv/bin/python -m aqis_lab registry validate; echo "exit $?"
+/home/user/voice-bot-vad-harness/data/registry/sources.csv: OK, 6559 rows (librispeech 5559, musan 990, tts 10)
+exit 0
+$ .venv/bin/python -m aqis_lab pack verify data/packs/smoke/v1; echo "exit $?"
+pack smoke 1.0.0: OK, 60 clips in 5 archives; test-clean 20, test-other 10, noisy 10, non-speech 10, tts 10
 exit 0
 ```
 - Status: DONE
