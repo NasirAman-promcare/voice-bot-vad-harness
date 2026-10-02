@@ -395,7 +395,7 @@ Earlier WPs could rely on specs that were complete on their own. This one says o
 **Owner answer:** Option 1 (`docs/approvals/WP-0.8.md` on `main`, `61c50c7`): the owner committed `docs/specs/sources/AQIS_Test_Lab_Blueprint.md` and `docs/specs/sources/AQIS_Test_Lab_Build_Plan.md`, and approved questions 2 to 8 as recommended, with the consent facts and the consent scheme given in the approval. Merged into this branch (`bd0fa9c`).
 
 ## BLK-014 — WP-0.8: recording-guide facts the Build Plan does not give, two test-file edits for DEBT-012, and your target decisions
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.8  ·  Raised: 2026-10-02  ·  Session: https://claude.ai/code/session_01L48B7DHkHhYAqxs9WH35hb
 
 **What I need:**
@@ -486,4 +486,13 @@ DECISION: retention = <your wording>
 
 Done and pushed: DEBT-010, DEBT-018, DEBT-020, DEBT-021, FR-0.8-01, FR-0.8-04 and FR-0.8-05, with must-catch proof. The fast suite is green: `1785 passed, 55 deselected`.
 
-**Owner answer:**
+**Owner answer:** Answered in `docs/approvals/WP-0.8.md` on `main` (`b4b327e`), merged into this branch (`8845e01`):
+- (A) by speaker, 11 quiet-room and 11 everyday-noise speakers;
+- (B) one tar.gz archive per speaker session, uploaded to `MyDrive/AQIS_LAB/campaign_a/raw/`;
+- (C) the phone recorder's original kept, converted to 16 kHz mono 16-bit PCM WAV;
+- (D) clipping at most 0.1 %, peak at least -30 dBFS and at most -1 dBFS, at least 0.3 s of silence padding, verbatim prompt match;
+- (E) noise sources `ns-fan`, `ns-traffic`, `ns-tv`, `ns-chatter`, `ns-kitchen`, `ns-generator`, `ns-ambient`, `ns-none`;
+- (F) accent groups `acc-south-asian-general`, `acc-urdu-influence`, `acc-punjabi-influence`, `acc-pashto-influence`, `acc-sindhi-influence`, `acc-neutral-urban`, `acc-other`;
+- (G) handheld phone 10-15 cm from the mouth, no headset; quiet room or everyday noise room;
+- (H) `ALLOW-EDIT: tests/aqis_lab/aqis_packs_testutil.py` and `ALLOW-EDIT: tests/aqis_lab/test_aqis_registry_validate.py`;
+- (I) `DECISION:` harm-rate = HR-B, margin = PM-B, timing-budget = TB-B, gate-escalation = GE-B, retention = 3 years from the date of recording.

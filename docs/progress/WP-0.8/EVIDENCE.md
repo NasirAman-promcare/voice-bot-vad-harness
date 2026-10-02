@@ -122,11 +122,71 @@ $ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_targets_options.py -q -p n
 - **Still to come:** once the owner's `DECISION:` lines are on `main`, `test_FR_0_8_05_owner_decisions_name_existing_options` is added (PLAN.md; approval question 7 (a)).
 - Status: DONE for the document. The decision check waits for the owner's decisions.
 
-### FR-0.8-02 — Recording guide: PARTIAL (not written; BLK-014, items A to G)
-The committed Build Plan gives the prompt families, the speaker count, the session length, "own phones" and "half quiet rooms, half everyday noise". It does not give the recording format, the transfer route, the quality checks, or how the quiet and noisy halves are split. Writing them would invent values.
+### FR-0.8-02 — Recording guide (`docs/recording/RECORDING_GUIDE.md`, CAP-DOC-015)
+- **Owner inputs:** BLK-014 answers A to G in `docs/approvals/WP-0.8.md` (`b4b327e`, merged as `8845e01`), plus the Build Plan's "Campaign A".
+- **Tests** (`tests/aqis_lab/test_aqis_recording_docs.py`):
+  - `test_FR_0_8_02_guide_has_every_required_section`
+  - `test_FR_0_8_02_prompt_families_total_80`
+  - `test_FR_0_8_02_prompt_families_match_the_build_plan`
+  - `test_FR_0_8_02_file_names_are_valid_and_unique`
+  - `test_FR_0_8_02_delivered_format_is_the_working_format`
+  - `test_FR_0_8_02_every_quality_check_has_a_pass_rule`
+  - `test_FR_0_8_02_owner_values_appear_as_given`
+  - `test_FR_0_8_02_choice_lists_equal_the_owner_lists`
+  - `test_FR_0_8_02_guide_has_no_owner_blank_left`
+- **Where the expected values come from** (never from the guide):
+  - families and counts: parsed from the Build Plan;
+  - thresholds, noise and accent lists, split, transfer path and phone use: parsed from the approval's answers A to G;
+  - working format: the phase 0 overview's sentence;
+  - file-name rule: the registry importer's `[a-z0-9-]+\.wav`;
+  - clash check: the committed `data/registry/sources.csv`.
+- **Tests first:** with the guide and session form missing, 13 tests failed with `FileNotFoundError` (`14 failed, 7 passed in 1.04s`; the 14th failure is explained under "Consent facts after the approval rewrite" below).
+- **One fix to the new test:** the threshold pattern used `\b` after the unit, which cannot match "0.1%," in the approval, so the approval's 0.1 % was not extracted (`At index 2 diff: ('0.3', 's') != ('0.1', '%')`). The pattern now uses `(?![A-Za-z])`. The guide was not changed for it, and the check still requires all four thresholds of answer D in the pass rules.
+- **Content:**
+  - About campaign A, from the Build Plan: 22 speakers, 80 prompts, about 30 minutes, own phones, about 1,760 turns. The 11/11 split is answer A.
+  - Speaker IDs `ca-s001` to `ca-s022` and consent references `ca-cNNN` (question 5).
+  - The 7 families `f1` to `f7` with the Build Plan's counts.
+  - Phone (G); rooms `room-quiet` and `room-everyday-noise` (A, G); the noise list (E); the accent list (F).
+  - File naming `<speaker-id>-<family-id>-<NN>.wav`: all 1,760 names are valid, unique and clash with no registry clip ID.
+  - Format: the original kept, converted to 16 kHz, mono, 16-bit PCM WAV (C).
+  - Transfer: one `ca-sNNN.tar.gz` per speaker session to `MyDrive/AQIS_LAB/campaign_a/raw/` (B).
+  - Quality checks with the thresholds of D, plus a complete-set check that every prompt has exactly one file.
+  - The guide does not say whether sessions are in person or remote, because answer B does not decide it.
+- **Run:**
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_recording_docs.py -q -p no:cacheprovider -k FR_0_8_02
+9 passed, 12 deselected in 0.14s
+```
+- Status: DONE
 
-### FR-0.8-03 — Session form: PARTIAL (not written; BLK-014, items E to G)
-The noise-source and accent-group choice lists are not in the Build Plan or the approval.
+### FR-0.8-03 — Session form (`docs/recording/SESSION_FORM.md`, CAP-DOC-016)
+- **Tests:**
+  - `test_FR_0_8_03_session_form_has_every_field`: the six FR-0.8-03 fields plus session date (UTC) and notes (D1).
+  - `test_FR_0_8_03_choices_equal_the_recording_guide_lists`: room, noise and accent choice IDs equal the guide's tables, in order.
+  - `test_FR_0_8_03_speaker_id_and_consent_reference_formats_match_the_guide`
+  - `test_FR_0_8_03_asks_for_no_identifying_details`: no field for a name, email, phone number, address, birth or age; the device field asks for the phone's make and model.
+- **Tests first:** the 4 tests failed with `FileNotFoundError: … docs/recording/SESSION_FORM.md`.
+- **Run:**
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_recording_docs.py -q -p no:cacheprovider
+21 passed in 0.13s
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0_0_08_repository_registry_is_consistent or FR_0_8_ or test_FR_0_0_04"
+43 passed, 1810 deselected in 9.03s
+```
+- Status: DONE
+
+### Consent facts after the approval rewrite (FR-0.8-01)
+- **What happened:** the owner's rewrite of `docs/approvals/WP-0.8.md` (`b4b327e`) replaced the earlier CONDITIONS. It keeps "Questions 2 to 8: as recommended in PLAN.md", but no longer lists the consent facts of question 6:
+  - (a) access;
+  - (b) services;
+  - (c) purpose;
+  - (e) the 30-day withdrawal window.
+
+  These had no recommendation in PLAN.md, because only the owner could give them. The owner gave them in the approval committed to `main` at `61c50c7`, and nothing in the rewrite changes them.
+- **Effect:** after the merge, `test_FR_0_8_01_owner_facts_appear_as_given` failed with `AssertionError: a`, because the current file no longer holds line (a).
+- **Change:** the test now reads the facts from the owner's commit itself (`git show 61c50c7:docs/approvals/WP-0.8.md`). It first checks that the commit is an ancestor of `HEAD` and that the file there starts `STATUS: APPROVED`, `WP: WP-0.8`, `APPROVED-BY: owner`. CI checks out the full history (`fetch-depth: 0` in `.github/workflows/aqis-lab-ci.yml`). The consent form was not changed.
+- **For the owner:** if you want the current approval to list the facts again, re-add the six lines. The test can then read the current file again.
+- **Run:** `8 passed, 13 deselected in 0.22s` (`-k FR_0_8_01`).
 
 ### DEBT-012 — `changes` required for every dataset: PARTIAL (not changed; BLK-014, item H)
 This needs `ALLOW-EDIT` for two existing test files. Measured in a scratch worktree: requiring `changes` breaks 70 existing fast tests and errors 64 more, all because test datasets lack `changes`. With 4 added test-data lines in those 2 files, the suite is green.
