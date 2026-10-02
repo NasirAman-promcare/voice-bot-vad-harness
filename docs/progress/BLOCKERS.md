@@ -358,3 +358,38 @@ E       AssertionError: assert (-6 == 0)
 Only the store and ingest change waits.
 
 **Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `a7e0d4e`, 2026-10-02): in `check_part_file` (`aqis_lab/results/store.py`) and `from_score_folder` (`aqis_lab/results/ingest.py`), copy the bytes into Arrow-owned memory (`pa.BufferOutputStream`) before `pq.read_table`, and add a repeat regression test. Done after merging `main`: both functions read from the Arrow-owned copy; `test_FR_0_6_02_repeated_results_add_always_exits_cleanly` (slow) runs `results add --run` and `--scores` 60 times each in fresh processes, every one exiting 0 (`docs/progress/WP-0.7/FIXES.md`, BLK-012). The abort never reproduced here, so the test guards the path but cannot prove the fix on its own.
+
+## BLK-013 — WP-0.8 needs the blueprint and Build Plan sections its spec cites
+STATUS: OPEN
+WP: WP-0.8  ·  Raised: 2026-10-02  ·  Session: https://claude.ai/code/session_01L48B7DHkHhYAqxs9WH35hb
+
+**What I need:** the text of the AQIS Test Lab blueprint and Build Plan committed to `main` under `docs/specs/sources/`. At least these parts:
+- blueprint "Test data strategy";
+- blueprint "Voice emotion and the filler selector";
+- Build Plan "Dataset architecture";
+- Build Plan "Phase 1";
+- every blueprint passage on the harm-rate target, the practical margin for model comparisons, the timing budget and the gate escalation limit.
+
+Markdown or plain text is best, because tests can then read them.
+
+**Why:** this spec takes most of its content from these documents:
+- FR-0.8-02 must match the Build Plan: the 80-prompt structure by family, device and room guidance, file naming, format, transfer and quality checks.
+- FR-0.8-04 uses the blueprint's four risk levels.
+- FR-0.8-05 must cite the blueprint for every option.
+- FR-0.8-01 and FR-0.8-03 need the Build Plan's facts on storage, devices, rooms, noise sources and accent groups.
+
+Earlier WPs could rely on specs that were complete on their own. This one says outright that its content comes from these documents, so writing it without them would mean inventing that content.
+
+**What I tried:**
+- `find` for blueprint, Build Plan, `.pdf` and `.docx` files: none in the repository, including `aqis-kit-patch-3/`.
+- `grep -ri` for "blueprint", "build plan", "80-prompt", "risk level", "harm" and "escalation": only the specs and earlier plans match.
+- WP-0.2 to WP-0.7 recorded the same gap. WP-0.5 took its unit rates from figures the owner pasted into the approval.
+
+**Options:**
+1. **(Recommended)** Commit both documents whole, as Markdown or text, to `docs/specs/sources/` on `main`. I cannot change files there, so the auditor can check every citation against them, and nothing I need is left out. About 5 minutes.
+2. Commit only the four named sections plus the passages on the four targets. This works the same if nothing else is cited. The risk is that a needed passage is missing and I have to ask again.
+3. For any item the documents do not cover, decide it yourself in the approval (PLAN.md, question 1 lists these items).
+
+**Paused until answered:** the content of all five WP-0.8 documents. Planning is complete, and no document, code or test has been written. Once the plan is approved, the debt work (PLAN.md, question 2) does not depend on this answer and can be built first.
+
+**Owner answer:**
