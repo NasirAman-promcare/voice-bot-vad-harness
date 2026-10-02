@@ -11,7 +11,8 @@ CONDITIONS:
 - Question 1: WebRTC VAD, mode 2, 20 ms frames (webrtc_vad_mode2 through the harness registry).
 - Question 5: driver 580.82.07 is 580 or newer, so the GPU lock takes torch from PyPI (CUDA 13) as NeMo resolves it. No allowlist change.
 - BLK-010: option 1 (test_FR_0_4_02_no_raw_corpus_committed in test_aqis_registry_fetch.py allows smoke bundles).
-- BLK-011: option 1. In tests/aqis_lab/aqis_testutil.py, update hermetic_git_env only, adding git config to disable background auto-maintenance (maintenance.auto=0, gc.auto=0) in test repositories.
+- BLK-011: option 1 (hermetic_git_env sets maintenance.auto=0 and gc.auto=0).
+- BLK-012: option 1. In check_part_file (aqis_lab/results/store.py) and from_score_folder (aqis_lab/results/ingest.py), copy bytes into PyArrow-owned memory (e.g. pa.BufferOutputStream) to prevent native exit crashes, and add a repeat regression test.
 - Approved: the Vosk adapter reseeds the C library random generator with 1 before every clip, recorded as c_rand_seed_per_clip: 1 in every Vosk run card.
 - Approved: the --bundle-dir option of phase0 smoke; the run mode declared per runner task; the smoke launcher check accepting the approved dev_bootstrap.sh --gpu step.
 - Round 2 Fixes: fix WP-0.7-F01 (full expected lines for parity test including disfluency_aware), WP-0.7-F02 (test smoke trace failure handling), WP-0.7-F03 (test phase0 smoke exit 1 on failure), and WP-0.7-F04 (--from-scratch pass-through in phase0 smoke).
