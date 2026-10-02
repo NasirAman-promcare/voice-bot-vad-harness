@@ -1,7 +1,7 @@
 """Environment health check: Python, lock, disk, RAM, GPU and (on Colab) Google Drive, as a PASS/FAIL report.
 
 CAPABILITIES:
-  CAP-DOCTOR-001: run_doctor() checks, in order: platform equals the target; Python major.minor equals the Colab probe's; installed distributions equal the lock (none missing, none extra, versions equal); free disk and available RAM against the target's minimums in config/aqis_lab/doctor.yaml; a GPU when expect_gpu (else SKIP); on colab, the Drive mount and a writable MyDrive/AQIS_LAB; on oracle, the core reservation of config/aqis_lab/oracle.yaml against this machine (WP-0.6 FR-0.6-04); every check runs even after a FAIL [tests: test_FR_0_6_04_doctor_oracle_cores_row, test_FR_0_5_02_fails_on_python_version_other_than_probe, test_FR_0_5_02_fails_on_package_version_other_than_lock, test_FR_0_5_02_fails_on_package_missing_from_lock, test_FR_0_5_02_fails_on_lock_package_not_installed, test_FR_0_5_02_fails_below_disk_minimum, test_FR_0_5_02_fails_below_ram_minimum, test_FR_0_5_02_gpu_skipped_without_expect_gpu, test_FR_0_5_02_expect_gpu_fails_without_gpu, test_FR_0_5_02_expect_gpu_passes_with_gpu, test_FR_0_5_02_fails_when_target_is_not_this_platform, test_FR_0_5_02_colab_fails_when_drive_not_mounted, test_FR_0_5_02_colab_fails_when_aqis_lab_missing, test_FR_0_5_02_colab_fails_when_aqis_lab_read_only, test_FR_0_5_02_colab_drive_checks_pass_when_writable]
+  CAP-DOCTOR-001: run_doctor() checks, in order: platform equals the target; Python major.minor equals the Colab probe's; installed distributions equal the CPU lock, or the CPU lock plus the GPU extras phase0-gpu.txt (WP-0.7, named in the row) (none missing, none extra, versions equal); free disk and available RAM against the target's minimums in config/aqis_lab/doctor.yaml; a GPU when expect_gpu (else SKIP); on colab, the Drive mount and a writable MyDrive/AQIS_LAB; on oracle, the core reservation of config/aqis_lab/oracle.yaml against this machine (WP-0.6 FR-0.6-04); every check runs even after a FAIL [tests: test_FR_0_6_04_doctor_oracle_cores_row, test_FR_0_5_02_fails_on_python_version_other_than_probe, test_FR_0_5_02_fails_on_package_version_other_than_lock, test_FR_0_5_02_fails_on_package_missing_from_lock, test_FR_0_5_02_fails_on_lock_package_not_installed, test_FR_0_5_02_fails_below_disk_minimum, test_FR_0_5_02_fails_below_ram_minimum, test_FR_0_5_02_gpu_skipped_without_expect_gpu, test_FR_0_5_02_expect_gpu_fails_without_gpu, test_FR_0_5_02_expect_gpu_passes_with_gpu, test_FR_0_5_02_fails_when_target_is_not_this_platform, test_FR_0_5_02_colab_fails_when_drive_not_mounted, test_FR_0_5_02_colab_fails_when_aqis_lab_missing, test_FR_0_5_02_colab_fails_when_aqis_lab_read_only, test_FR_0_5_02_colab_drive_checks_pass_when_writable, test_FR_0_7_03_doctor_lock_row_names_the_lock_set]
   CAP-DOCTOR-002: DoctorReport renders a fixed-width PASS/FAIL table and writes doctor_<platform>_<YYYYMMDDTHHMMSSZ>.json (never replacing a report) [tests: test_FR_0_5_02_cloud_doctor_prints_table_and_writes_json, test_FR_0_5_02_minimums_documented_equal_config]
 INPUTS AND OUTPUTS: target, --expect-gpu, the Drive mount and the inputs below the repository root
   (docs/environment/colab_probe.txt, requirements/aqis_lab/phase0.txt, config/aqis_lab/doctor.yaml) in; a
@@ -12,10 +12,11 @@ INVARIANTS:
   - The Drive write check reuses one file (AQIS_LAB/doctor_write_check.json); nothing is deleted or accumulates.
 NOT IN SCOPE:
   - Installing or repairing anything (aqis_lab/deploy/dev_bootstrap.sh does the install).
-  - The GPU lock (WP-0.7).
 CHANGE LOG:
   2026-09-28 WP-0.5 FR-0.5-02 created.
   2026-09-28 WP-0.6 FR-0.6-04: `cores` check for target oracle (run_doctor, _check_cores).
+  2026-09-30 WP-0.7 FR-0.7-03: _check_lock accepts the CPU lock or the CPU lock plus the GPU extras
+    (aqis_lab.locks), naming the set; messages for the CPU lock unchanged.
 """
 import hashlib
 import importlib.metadata as md
@@ -199,32 +200,21 @@ def _check_python(repo_root):
 
 
 def _check_lock(repo_root):
-    try:
-        entries = parse_lock((repo_root / LOCK_REL).read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, DoctorInputError) as exc:
-        return Check("lock", "FAIL", LOCK_REL, "?", f"cannot read the lock: {exc}")
-    problems, applicable = [], {}
-    for name, (version, marker) in entries.items():
+    from aqis_lab.locks import LockError, lock_differences, lock_sets
+    results = []
+    for recorded, rels in lock_sets(repo_root):
         try:
-            if marker and not Marker(marker).evaluate():
-                continue
-        except InvalidMarker as exc:
-            problems.append(f"{name}: invalid marker {marker!r} ({exc})")
-            continue
-        applicable[name] = version
-    installed = installed_distributions()
-    for name, version in sorted(applicable.items()):
-        if name not in installed:
-            problems.append(f"{name} {version} is in the lock but not installed")
-        elif installed[name] != version:
-            problems.append(f"{name}: installed {installed[name]}, lock {version}")
-    for name in sorted(set(installed) - set(applicable)):
-        problems.append(f"{name} {installed[name]} is installed but not in the lock")
-    if problems:
-        return Check("lock", "FAIL", f"{len(applicable)} packages", f"{len(problems)} difference(s)",
-                     "; ".join(problems))
-    return Check("lock", "PASS", f"{len(applicable)} packages", f"{len(installed)} installed",
-                 f"installed packages equal {LOCK_REL}")
+            n, problems = lock_differences(repo_root, rels)
+        except LockError as exc:
+            return Check("lock", "FAIL", LOCK_REL, "?", f"cannot read the lock: {exc}")
+        if not problems:
+            installed = installed_distributions()
+            return Check("lock", "PASS", f"{n} packages", f"{len(installed)} installed",
+                         f"installed packages equal {' + '.join(rels)}")
+        results.append((len(problems), n, problems, rels))
+    count, n, problems, rels = min(results, key=lambda r: r[0])
+    label = "" if len(rels) == 1 else f"{' + '.join(rels)}: "
+    return Check("lock", "FAIL", f"{n} packages", f"{count} difference(s)", label + "; ".join(problems))
 
 
 def _check_minimum(name, minimums, key, actual_fn, where):

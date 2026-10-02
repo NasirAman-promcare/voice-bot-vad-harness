@@ -1,7 +1,7 @@
 """Source acquisition: download a dataset archive, prove it is the pinned one, and extract only the listed members.
 
 CAPABILITIES:
-  CAP-REG-003: fetch_dataset() downloads a dataset's archive into a git-ignored cache with HTTP range resumption (up to five attempts per call, and a .part left by an earlier call is resumed), checks its size, SHA-256 pin and published MD5 before reading any member and deletes it on a mismatch, then extracts only the members matching the dataset's extract patterns (regular files only; an unsafe member name anywhere in the archive, or a link or device among the listed members, is an error) through a staging folder, and writes a completion marker listing every extracted file with its SHA-256; a second call downloads and extracts nothing while the archive and the extracted files still match; extracted_root() returns a completed extraction or raises [tests: test_FR_0_4_02_fetch_checks_hash_before_extracting, test_FR_0_4_02_fetch_rejects_wrong_hash_and_keeps_nothing, test_FR_0_4_02_fetch_resumes_partial_download, test_FR_0_4_02_second_fetch_downloads_nothing, test_FR_0_4_02_extracts_only_listed_members_safely, test_FR_0_4_02_members_outside_the_patterns_are_never_written, test_FR_0_4_02_refuses_cache_not_ignored_by_git, test_FR_0_4_02_default_cache_is_ignored_by_git, test_FR_0_4_02_dataset_pins_match_openslr]
+  CAP-REG-003: fetch_dataset() downloads a dataset's archive into a git-ignored cache with HTTP range resumption (up to five attempts per call, and a .part left by an earlier call is resumed), checks its size, SHA-256 pin and published MD5 before reading any member and deletes it on a mismatch, then extracts only the members matching the dataset's extract patterns (regular files only; an unsafe member name anywhere in the archive, or a link or device among the listed members, is an error) through a staging folder, and writes a completion marker listing every extracted file with its SHA-256; a second call downloads and extracts nothing while the archive and the extracted files still match; extracted_root() returns a completed extraction or raises; on Google Drive it writes only under MyDrive/AQIS_LAB (NFR-0.5-02): the cache and every path it writes are checked before any download, and another Drive path is a FetchError [tests: test_FR_0_4_02_fetch_checks_hash_before_extracting, test_FR_0_4_02_fetch_rejects_wrong_hash_and_keeps_nothing, test_FR_0_4_02_fetch_resumes_partial_download, test_FR_0_4_02_second_fetch_downloads_nothing, test_FR_0_4_02_extracts_only_listed_members_safely, test_FR_0_4_02_members_outside_the_patterns_are_never_written, test_FR_0_4_02_refuses_cache_not_ignored_by_git, test_FR_0_4_02_default_cache_is_ignored_by_git, test_FR_0_4_02_dataset_pins_match_openslr, test_NFR_0_5_02_registry_fetch_refuses_drive_cache_outside_aqis_lab]
 INPUTS AND OUTPUTS: a download Dataset (URL, bytes, sha256, md5, extract patterns), the cache folder and the
   repository root in; FetchResult (archive path, extracted root, bytes downloaded, whether it extracted) out;
   FetchError naming the dataset and the problem.
@@ -14,6 +14,8 @@ NOT IN SCOPE:
   - Turning extracted files into registry rows (aqis_lab/registry/importers.py).
 CHANGE LOG:
   2026-09-27 WP-0.4 FR-0.4-02 created.
+  2026-09-30 WP-0.7 DEBT-014: fetch_dataset checks the cache, archive, .part, extraction and staging paths with
+    aqis_lab.drive.check_write_path before any download (test_NFR_0_5_02_registry_fetch_refuses_drive_cache_outside_aqis_lab).
 """
 import hashlib
 import http.client
@@ -280,6 +282,13 @@ def fetch_dataset(dataset, cache_dir, repo_root):
     name = dataset["url"].rstrip("/").rsplit("/", 1)[1]
     archive = cache / "downloads" / f"{dataset.dataset_id}-{name}"
     part = archive.with_name(archive.name + ".part")
+    from aqis_lab.drive import DriveError, check_write_path
+    from aqis_lab.platform import PlatformError
+    try:                                     # NFR-0.5-02: on Google Drive, only under MyDrive/AQIS_LAB
+        for path in (cache, archive, part, cache / dataset.dataset_id, cache / f".{dataset.dataset_id}.partial"):
+            check_write_path(path)
+    except (DriveError, PlatformError) as exc:
+        raise FetchError(str(exc)) from exc
     downloaded = 0
     if archive.exists():
         problem = _pin_problem(dataset, *_digests(archive))

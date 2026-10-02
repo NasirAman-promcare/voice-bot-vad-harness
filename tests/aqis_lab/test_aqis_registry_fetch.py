@@ -212,7 +212,8 @@ def test_FR_0_4_02_no_raw_corpus_committed():
                            check=True).stdout.split()
     assert not [f for f in files if f.startswith("data/raw/")]
     audio_like = [f for f in files if re.search(r"\.(wav|flac|mp3|ogg|opus|tar|gz|tgz|zip)$", f)]
-    allowed = re.compile(r"^data/(tts_smoke/[0-9]{2}\.wav|packs/[a-z0-9-]+/v[0-9]+/[a-z0-9.-]+\.tar)$")
+    allowed = re.compile(r"^data/(tts_smoke/[0-9]{2}\.wav|packs/[a-z0-9-]+/v[0-9]+/[a-z0-9.-]+\.tar"
+                         r"|runs/phase0-smoke/phase0-smoke-(cloud|colab|oracle)-[0-9]{8}T[0-9]{6}Z\.tar)$")
     assert [f for f in audio_like if not allowed.match(f)] == []
 
 

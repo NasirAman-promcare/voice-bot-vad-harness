@@ -1,0 +1,26 @@
+# The phase 0 smoke run (WP-0.7 FR-0.7-07), read by aqis_lab/smoke.py. Owner decisions: docs/approvals/WP-0.7.md
+# (questions 8 to 11, as recommended). A test keeps subset.clip_ids equal to what subset.rule computes on the pack.
+schema_version: "1.0"
+pack: data/packs/smoke/v1
+seed: 0
+subset:
+  # Per category, the clips with the lowest sha256(key_prefix + clip_id) (hex, ascending), in this order.
+  key_prefix: "aqis-phase0-subset-v1|"
+  per_split: {test-clean: 2, test-other: 1, noisy: 1, tts: 1}
+  clip_ids: [ls-test-clean-3570-5695-0009, ls-test-clean-6829-68771-0030, ls-test-other-6128-63244-0013,
+             smoke-mix-01, tts-smoke-04]
+targets:
+  cloud: {platform: cloud-vm, gpu: false}
+  colab: {platform: colab, gpu: true}
+  oracle: {platform: oracle, gpu: false}
+runs:
+  - {task: vosk-batch, clips: all, targets: [cloud, colab, oracle]}
+  - {task: harness-vad, clips: all, targets: [cloud, colab, oracle]}
+  - {task: vosk-realspeed, clips: subset, targets: [cloud, colab, oracle]}
+  - {task: parakeet-offline, clips: all, targets: [colab]}
+  - {task: parakeet-compute-delay, clips: subset, targets: [colab]}
+scored_tasks: [vosk-batch, parakeet-offline]
+score_subsets:
+  natural: [test-clean, test-other, noisy]
+  # Synthetic speech: plumbing only, never a model judgement (docs/data/SMOKE_PACK.md; question 10).
+  synthetic-tts: [tts]

@@ -1,0 +1,78 @@
+{
+  "report_version": "1.0",
+  "target": "colab",
+  "expect_gpu": true,
+  "created_utc": "2026-10-02T14:12:12.211840Z",
+  "machine": {
+    "platform": "colab",
+    "gpu": "Tesla T4",
+    "cpu_model": "Intel(R) Xeon(R) CPU @ 2.00GHz",
+    "architecture": "x86_64",
+    "os": "Ubuntu 24.04.4 LTS",
+    "python_version": "3.13.15"
+  },
+  "lock": {
+    "file": "requirements/aqis_lab/phase0.txt",
+    "sha256": "87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef"
+  },
+  "code": "aqis_lab 0.0.1 commit=7c27dd5 python=3.13.15",
+  "checks": [
+    {
+      "name": "platform",
+      "status": "PASS",
+      "expected": "colab",
+      "actual": "colab",
+      "detail": "signal: environment variable COLAB_RELEASE_TAG is set"
+    },
+    {
+      "name": "python",
+      "status": "PASS",
+      "expected": "3.13",
+      "actual": "3.13.15",
+      "detail": "major.minor 3.13 equals the Colab probe's 3.13 (docs/environment/colab_probe.txt; owner decision: major.minor)"
+    },
+    {
+      "name": "lock",
+      "status": "PASS",
+      "expected": "172 packages",
+      "actual": "172 installed",
+      "detail": "installed packages equal requirements/aqis_lab/phase0.txt + requirements/aqis_lab/phase0-gpu.txt"
+    },
+    {
+      "name": "disk",
+      "status": "PASS",
+      "expected": ">= 10 GB",
+      "actual": "197,496,463,360 bytes (197.50 GB)",
+      "detail": "free on the file system of /content/work; minimum 10 GB (config/aqis_lab/doctor.yaml)"
+    },
+    {
+      "name": "ram",
+      "status": "PASS",
+      "expected": ">= 4 GB",
+      "actual": "12,039,626,752 bytes (12.04 GB)",
+      "detail": "MemAvailable; minimum 4 GB (config/aqis_lab/doctor.yaml)"
+    },
+    {
+      "name": "gpu",
+      "status": "PASS",
+      "expected": "a GPU",
+      "actual": "Tesla T4",
+      "detail": "GPU type from aqis_lab.platform"
+    },
+    {
+      "name": "drive-mount",
+      "status": "PASS",
+      "expected": "/content/drive",
+      "actual": "/content/drive",
+      "detail": "Google Drive (fuse.drive) is mounted"
+    },
+    {
+      "name": "drive-folder",
+      "status": "PASS",
+      "expected": "/content/drive/MyDrive/AQIS_LAB",
+      "actual": "writable",
+      "detail": "wrote and read back doctor_write_check.json"
+    }
+  ],
+  "result": "PASS"
+}

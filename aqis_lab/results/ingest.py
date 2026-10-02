@@ -2,7 +2,7 @@
 
 CAPABILITIES:
   CAP-RESULTS-003: from_run_folder() accepts only a finished run: a valid run_card.json, a shard_plan.json naming the same card, and a results.jsonl whose lines are strict JSON objects of this run card covering the plan's clips exactly once; each line becomes a run-result row with identity (kind, run_card_id, clip_id, task, task_version) [tests: test_FR_0_6_02_add_run_folder_writes_partition_by_run_card, test_FR_0_6_02_rejects_incomplete_run_folder, test_FR_0_6_02_rejects_rows_of_another_run_card]
-  CAP-RESULTS-004: from_score_folder() accepts a score folder whose summary.json hashes match scores.parquet and scores.csv, with score table 1.0 columns, one run card and unique (clip, variant) rows; each row becomes a score row with identity (kind, run_card_id, clip_id, variant, normaliser_name, normaliser_version, ref_sha256); an optional run card file must be that run card [tests: test_FR_0_6_02_add_score_folder_rows, test_FR_0_6_02_score_rows_need_their_run_card]
+  CAP-RESULTS-004: from_score_folder() accepts a score folder whose summary.json hashes match scores.parquet and scores.csv, with score table 1.0 columns, one run card and unique (clip, variant) rows; each row becomes a score row with identity (kind, run_card_id, clip_id, variant, normaliser_name, normaliser_version, ref_sha256); an optional run card file must be that run card; the Parquet bytes are read from a copy in Arrow-owned memory, so nothing Arrow releases at interpreter exit needs the Python interpreter (BLK-012) [tests: test_FR_0_6_02_add_score_folder_rows, test_FR_0_6_02_score_rows_need_their_run_card, test_FR_0_6_02_repeated_results_add_always_exits_cleanly]
 INPUTS AND OUTPUTS: a folder (and an optional run card file) in; a store Batch out; StoreInputError naming the file
   and line on any problem.
 CONTRACTS: run folder layout (docs/runner/RUNNER.md); score table (docs/contracts/SCORE_TABLE.md); run-card v1;
@@ -14,6 +14,8 @@ NOT IN SCOPE:
   - Writing the store (aqis_lab/results/store.py).
 CHANGE LOG:
   2026-09-28 WP-0.6 FR-0.6-02 created.
+  2026-10-02 WP-0.7 BLK-012: from_score_folder reads the Parquet bytes from a copy in Arrow-owned memory (pa.BufferOutputStream)
+    (test_FR_0_6_02_repeated_results_add_always_exits_cleanly).
 """
 import hashlib
 from pathlib import Path
@@ -107,7 +109,11 @@ def from_score_folder(score_dir, run_card=None):
         if files.get(name) != hashlib.sha256(contents[name]).hexdigest():
             raise StoreInputError(f"{score_dir / 'summary.json'}: the SHA-256 of {name} does not match the file")
     try:
-        table = pq.read_table(pa.BufferReader(contents["scores.parquet"]), use_threads=False)
+        # Read from a copy in Arrow-owned memory: a Python-owned buffer released by Arrow at interpreter exit needs
+        # the GIL and can abort or hang the exit (BLK-012; the WP-0.7 parity defect).
+        owned = pa.BufferOutputStream()
+        owned.write(contents["scores.parquet"])
+        table = pq.read_table(pa.BufferReader(owned.getvalue()), use_threads=False)
     except (pa.ArrowException, OSError) as exc:
         raise StoreInputError(f"{score_dir / 'scores.parquet'} is unreadable: {exc}") from exc
     metadata = table.schema.metadata or {}

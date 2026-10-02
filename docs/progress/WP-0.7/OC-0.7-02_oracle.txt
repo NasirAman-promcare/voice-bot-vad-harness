@@ -1,0 +1,1 @@
+OC-0.7-02: Oracle aarch64 (Neoverse-N1) setup, doctor PASS, smoke suite (cores 0-1 batch, cores 2-3 timing), and pytest -m oracle (2 passed).

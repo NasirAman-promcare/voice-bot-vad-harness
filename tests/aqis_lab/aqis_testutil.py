@@ -75,12 +75,19 @@ def hermetic_git_env(extra=None):
     """Environment for git in throwaway repositories: no user or system config, fixed identity.
 
     This keeps fixture repositories identical on the cloud VM (which signs commits globally)
-    and on CI runners (which have no identity).
+    and on CI runners (which have no identity). Automatic maintenance and gc are off: newer git
+    (CI runners have 2.55) starts them in a detached background process after a commit, which
+    writes files such as .git/objects/maintenance.lock while a test lists the tree (BLK-011).
     """
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     env.update({
         "GIT_CONFIG_GLOBAL": os.devnull,
         "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_COUNT": "2",
+        "GIT_CONFIG_KEY_0": "maintenance.auto",
+        "GIT_CONFIG_VALUE_0": "0",
+        "GIT_CONFIG_KEY_1": "gc.auto",
+        "GIT_CONFIG_VALUE_1": "0",
         "GIT_AUTHOR_NAME": "AQIS Fixture",
         "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
         "GIT_COMMITTER_NAME": "AQIS Fixture",

@@ -243,3 +243,118 @@ WP: WP-0.6  ·  Raised: 2026-09-28  ·  Session: https://claude.ai/code/session_
 **Paused until answered:** the committed values in `config/aqis_lab/oracle.yaml` (supported operating systems, reserved cores), the Oracle-specific install steps in the runbook, and the owner-run checks. Planning is complete. No code has been written.
 
 **Owner answer:** Owner committed `docs/environment/oracle_probe.txt` and `docs/approvals/WP-0.6.md` to `main` (`6ad251b`). The probe shows VM.Standard.A1.Flex: Ubuntu 24.04.4 LTS on aarch64 (Ampere Altra, Neoverse-N1), 4 CPUs online `0-3`, glibc 2.39, chassis asset tag `OracleCloud.com`, 22 GB available RAM, 38 GB free disk, rclone 1.60.1. The approval sets the reservation: cores 2-3 for timing runs, batch runs on cores 0-1 (highest-numbered half of the physical cores), and questions 1-16 as recommended. Merged into this branch (`f57cfc2`).
+
+## BLK-010 — The committed smoke bundle breaks WP-0.4's "no raw corpus committed" test
+STATUS: RESOLVED
+WP: WP-0.7  ·  Raised: 2026-09-30  ·  Session: https://claude.ai/code/session_01DHNEPSgrExgeGVsAYja18g
+
+**What I need:** your decision on how smoke bundles may be committed, because an existing guarded test forbids the approved place.
+
+**Why:**
+- You approved question 11: smoke bundles are committed as `data/runs/phase0-smoke/<bundle name>.tar`. I committed the cloud bundle there in `175a361` (`phase0-smoke-cloud-20260930T170440Z.tar`, 808,960 bytes).
+- The WP-0.4 test `tests/aqis_lab/test_aqis_registry_fetch.py::test_FR_0_4_02_no_raw_corpus_committed` allows no `.tar`, `.gz`, `.zip` or audio file under `data/` except `data/tts_smoke/NN.wav` and pack archives `data/packs/<id>/v<n>/*.tar`. It now fails: `AssertionError: assert ['data/runs/p...T170440Z.tar'] == []`.
+- The test is an existing, guarded file, and the WP-0.7 approval allows editing only `tests/aqis_lab/test_aqis_oracle_setup.py`. I will not change it, and I will not rename the archive to slip past it.
+- Until this is settled, the fast suite on the branch has this one failure (`1 failed, 1743 passed, 53 deselected` on `28cce63`), so CI is red and the WP cannot be READY FOR AUDIT. The Colab and Oracle bundles (OC-0.7-01, OC-0.7-02) would hit the same rule.
+
+**What I tried:**
+- I checked what the bundle holds: only results, never audio (9 `.json`, 6 `.jsonl`, 3 `.log`, 2 `.csv`, 2 `.parquet`, 1 `.md`). `test_FR_0_7_07_committed_bundles_and_their_reports_in_docs` now checks this for every committed bundle, besides the hashes against `BUNDLE.json`.
+- Everything else is done and pushed:
+  - the audit gate: `0 findings: OK`;
+  - the must-catch proofs 1 to 11;
+  - AT-0.7-01 (CLI smoke, contracts, trace of four rows);
+  - DEBT-013/014/015/017 closed;
+  - EVIDENCE.md up to date.
+
+**Options:**
+1. **(Recommended)** Add `ALLOW-EDIT: tests/aqis_lab/test_aqis_registry_fetch.py` to `docs/approvals/WP-0.7.md`, for the function `test_FR_0_4_02_no_raw_corpus_committed` only. I change one line: the allowed pattern also accepts `data/runs/phase0-smoke/phase0-smoke-(cloud|colab|oracle)-<YYYYMMDDTHHMMSSZ>.tar`, and nothing else. The test's rule against raw corpora stays as strict, and the WP-0.7 test proves those archives hold no audio. The approved location (question 11) and the runbooks stay as they are.
+2. Commit bundles outside `data/`, for example `docs/runs/bundles/<name>.tar`. No protected file changes. But this departs from question 11, so I would move the committed file and change both runbooks, `docs/runs/PHASE0_SMOKE.md`, EVIDENCE.md and the test's path, and bundles would sit among documents.
+
+**Paused until answered:**
+- the final CI run and the pull request;
+- STATUS READY-FOR-AUDIT;
+- the second full slow-suite run on the final commit (the two WP-0.0 provisioning tests need a clean tree and are rerun then).
+
+The code, tests and evidence of every requirement are done and pushed.
+
+**Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `6ed6229`, 2026-10-02): `ALLOW-EDIT: tests/aqis_lab/test_aqis_registry_fetch.py`, changing only `test_FR_0_4_02_no_raw_corpus_committed` so it also accepts `data/runs/phase0-smoke/phase0-smoke-(cloud|colab|oracle)-<YYYYMMDDTHHMMSSZ>.tar` and nothing else; the WP-0.7 test proving committed bundles hold no audio stays. Done after merging `main`: the one-line change, with every other rule of the test unchanged; the test passes (`docs/progress/WP-0.7/EVIDENCE.md`).
+
+## BLK-011 — CI runners' newer git races the fixture repositories (intermittent red CI)
+STATUS: RESOLVED
+WP: WP-0.7  ·  Raised: 2026-10-02  ·  Session: https://claude.ai/code/session_01DHNEPSgrExgeGVsAYja18g
+
+**What I need:** your decision on a one-function change to the shared test helper `hermetic_git_env` in `tests/aqis_lab/aqis_testutil.py`, a guarded file that no approval lets me edit.
+
+**Why:**
+- CI's push run on `0b12344` (run 278, attempt 1) failed on a WP-0.6 test that WP-0.7 does not touch, `tests/aqis_lab/test_aqis_oracle_setup.py::test_FR_0_6_01_dry_run_explains_each_step_and_changes_nothing`:
+```text
+E       FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-runner/pytest-0/test_FR_0_6_01_dry_run_explain0/tree/.git/objects/maintenance.lock'
+1 failed, 1746 passed, 54 deselected in 149.26s (0:02:29)
+```
+- Root cause:
+  - The CI runner has git 2.55.0 (in the job log); this VM has git 2.43.0.
+  - On newer git, `git commit` starts automatic maintenance in a detached background process.
+  - The test's fixture repository (`make_tree`, with `hermetic_git_env()`) is committed and then listed at once by `tree_snapshot`. The background process created `.git/objects/maintenance.lock` and removed it between the listing and the `lstat`.
+- It is timing-dependent:
+  - the pull-request run on the same commit (279) passed;
+  - one re-run of the failed job (278, attempt 2) passed.
+
+  CI on `0b12344` is now green in both runs. Every fixture repository made with `hermetic_git_env` can hit the same race on CI. The files that use it: `fixture_repo.py`, `test_aqis_colab_doc.py`, `test_aqis_gate_v2.py`, `test_aqis_harness_provision.py`, `test_aqis_oracle_setup.py`, `test_aqis_version.py`.
+
+**What I tried:**
+- Read the job log, `make_tree` and `hermetic_git_env`.
+- Re-ran the failed job once, the one re-run allowed. It passed.
+- Changed nothing outside the round 2 budget.
+
+**Options:**
+1. **(Recommended)** Add `ALLOW-EDIT: tests/aqis_lab/aqis_testutil.py` for the function `hermetic_git_env` only. I'd add `GIT_CONFIG_COUNT=2`, `GIT_CONFIG_KEY_0=maintenance.auto`, `GIT_CONFIG_VALUE_0=false`, `GIT_CONFIG_KEY_1=gc.auto`, `GIT_CONFIG_VALUE_1=0` to the environment it returns. Fixture repositories then never start background maintenance, on any git version. No caller passes its own `GIT_CONFIG_*` values. Every test that uses the helper runs before and after; nothing else changes.
+2. Accept it as debt and re-run CI when it happens. No test file changes, but CI on newer runners turns red now and then for a reason unrelated to the change under test.
+
+**Paused until answered:** nothing in WP-0.7 round 2 depends on this. F01 to F04 are fixed and pushed, the debts are recorded, and CI on `0b12344` is green. Only the helper change waits.
+
+**Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `28ab7f4`, 2026-10-02): `ALLOW-EDIT: tests/aqis_lab/aqis_testutil.py`, `hermetic_git_env` only, with `maintenance.auto=0` and `gc.auto=0`. Done after merging `main`: the environment it returns now sets `GIT_CONFIG_COUNT=2`, `maintenance.auto` 0 and `gc.auto` 0 (`git config --show-origin --get maintenance.auto` in a fixture repository: `command line:	0`); the tests that use it pass before and after (`docs/progress/WP-0.7/FIXES.md`, round 2, BLK-011).
+
+## BLK-012 — `results add` aborted at interpreter exit once on CI (WP-0.6 Parquet read from Python-owned bytes)
+STATUS: RESOLVED
+WP: WP-0.7  ·  Raised: 2026-10-02  ·  Session: https://claude.ai/code/session_01DHNEPSgrExgeGVsAYja18g
+
+**What I need:** your decision on an intermittent native crash in WP-0.6's results-store code: fix it now, with an approval covering two WP-0.6 functions, or accept it as debt.
+
+**Why:**
+- CI's push run on `99064c4` (run 283, attempt 1) failed `tests/aqis_lab/test_aqis_results_cli.py::test_FR_0_6_02_add_exit_codes`. The second `python -m aqis_lab results add` of the same run printed its correct result (`… 60 already stored (nothing written)`) and then the process aborted at exit:
+```text
+E       AssertionError: assert (-6 == 0)
+… stderr='terminate called without an active exception\n'
+1 failed, 1746 passed, 54 deselected in 196.42s (0:03:16)
+```
+- That path reads every stored part file through `check_part_file` (`aqis_lab/results/store.py`): `pq.read_table(io.BytesIO(data), use_threads=False)`. `from_score_folder` (`aqis_lab/results/ingest.py`) does the same with `pa.BufferReader(bytes)`. Both hand Arrow a buffer that belongs to Python.
+- Most likely cause, which I could not prove (no reproduction): the mechanism of the WP-0.7 parity defect (FR-0.7-08, EVIDENCE.md).
+  - An Arrow pool thread drops the last reference to a Python-owned buffer during interpreter shutdown. Releasing it needs the GIL.
+  - Under the parity code this hung the exit: gdb showed `PyBuffer::~PyBuffer` → `PyGILState_Ensure` on one thread, and `ThreadPool::Shutdown` from `exit()` on the main thread.
+  - Python 3.13 makes such a late thread exit by a forced unwind. Inside a C++ destructor that may not throw, that ends in `std::terminate`, which prints exactly this message and aborts (-6).
+- WP-0.7 did not change these two functions. Its `store.py` change (DEBT-015) is in `_ensure_store`, which this path does not reach once the store exists.
+
+**What I tried:**
+- No reproduction in 1,200 runs of the exact call (the second `results add` of a finished smoke run), all under pytest:
+  - 600 with this VM's Python 3.13.12 and `PYTHONFAULTHANDLER=1`: `codes {0: 600}`;
+  - 600 in a fresh venv on CI's Python 3.13.7, built from the hash-checked lock: `codes {0: 600}`.
+- Earlier, 600 plain runs of each WP-0.6 read pattern also gave no hang (EVIDENCE.md).
+- One re-run of the failed job (run 283, attempt 2): passed. The pull-request run on the same commit (284) passed as well. CI on `99064c4` is green in both runs, both jobs.
+
+**Options:**
+1. **(Recommended)** Add `ALLOW-EDIT`-style approval for `aqis_lab/results/store.py` (`check_part_file` only) and `aqis_lab/results/ingest.py` (`from_score_folder` only), the same fix as WP-0.7's parity root-cause fix:
+   - copy the bytes into memory Arrow owns (`pa.BufferOutputStream`);
+   - read through a `ParquetFile` that is closed at once;
+   - with a slow regression test that runs `results add` repeatedly and requires every run to exit 0.
+
+   Trade-off: it touches WP-0.6 capabilities CAP-RESULTS-002 and CAP-RESULTS-00x, and the regression test cannot prove the fix, because the abort never reproduced here.
+2. Accept it as debt (target WP-0.8), and re-run CI when it recurs. Nothing changes now, but `results add`, `results query` and `trace` can very rarely abort at exit after doing their work correctly. On Oracle the nightly sync and `results add` run unattended, where an abort would show as a failed command.
+
+**Paused until answered:** nothing in WP-0.7 round 2 depends on this:
+- F01 to F04 are fixed;
+- BLK-011 is fixed;
+- STATUS is READY-FOR-AUDIT;
+- CI on `99064c4` is green.
+
+Only the store and ingest change waits.
+
+**Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `a7e0d4e`, 2026-10-02): in `check_part_file` (`aqis_lab/results/store.py`) and `from_score_folder` (`aqis_lab/results/ingest.py`), copy the bytes into Arrow-owned memory (`pa.BufferOutputStream`) before `pq.read_table`, and add a repeat regression test. Done after merging `main`: both functions read from the Arrow-owned copy; `test_FR_0_6_02_repeated_results_add_always_exits_cleanly` (slow) runs `results add --run` and `--scores` 60 times each in fresh processes, every one exiting 0 (`docs/progress/WP-0.7/FIXES.md`, BLK-012). The abort never reproduced here, so the test guards the path but cannot prove the fix on its own.

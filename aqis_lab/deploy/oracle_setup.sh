@@ -7,7 +7,8 @@
 #                stops with "ERROR: unsupported architecture/operating system ..." before doing anything on a machine
 #                outside the setup pin of config/aqis_lab/oracle.yaml (x86_64 or aarch64, the listed ID:VERSION_ID,
 #                glibc at least setup.min_glibc); needs git and uv 0.8.17; stops naming every package of the lock
-#                that has no binary build for this architecture, glibc and Python; builds .venv with
+#                that has no binary build for this architecture, glibc and Python, except the owner-approved
+#                source-only packages in SOURCE_BUILDS (WP-0.7 question 2 (a)); builds .venv with
 #                aqis_lab/deploy/dev_bootstrap.sh; runs `doctor --target oracle` with the work and report folders from
 #                oracle.yaml and exits with its status; --dry-run runs only the read-only checks, explains each step
 #                and changes nothing; a second run reuses .venv and installs nothing (idempotent)
@@ -16,14 +17,16 @@
 #                 test_FR_0_6_01_refuses_glibc_below_minimum, test_FR_0_6_01_setup_pin_read_by_script_equals_yaml,
 #                 test_FR_0_6_01_missing_build_names_the_package, test_FR_0_6_01_fails_when_uv_missing,
 #                 test_FR_0_6_01_creates_venv_installs_lock_and_runs_oracle_doctor,
-#                 test_FR_0_6_01_second_run_changes_nothing, test_FR_0_6_01_runs_from_any_directory]
+#                 test_FR_0_6_01_second_run_changes_nothing, test_FR_0_6_01_runs_from_any_directory,
+#                 test_FR_0_6_01_every_lock_package_has_x86_64_and_aarch64_builds]
 # INPUTS AND OUTPUTS: config/aqis_lab/oracle.yaml, docs/environment/colab_probe.txt and
 #   requirements/aqis_lab/phase0.txt in; <repo>/.venv and one doctor report out. Usage:
 #   bash aqis_lab/deploy/oracle_setup.sh [--dry-run]
 # INVARIANTS:
 #   - The repository root is derived from this script's location; no absolute paths.
 #   - Nothing is written before step 1 passes; under --dry-run nothing is written at all.
-#   - Only binary builds are accepted: no package is compiled from source on the Oracle VM.
+#   - Only binary builds are accepted, except the pure-Python packages named in SOURCE_BUILDS (owner decision,
+#     WP-0.7 question 2 (a)), which dev_bootstrap.sh builds with the lock's own hash-checked setuptools.
 #   - Exits non-zero with a message starting "ERROR:" on any failure; never continues on a guess.
 # NOT IN SCOPE:
 #   - Installing uv or rclone, configuring rclone, the nightly sync (docs/oracle/ORACLE_RUNBOOK.md).
@@ -31,6 +34,7 @@
 #   2026-09-28 WP-0.6 FR-0.6-01 created.
 #   2026-09-29 WP-0.6 round 2 F05: the step-6 settings reads run in the repository root, so the script works
 #     from any folder.
+#   2026-09-30 WP-0.7 FR-0.7-02: step 4 accepts the source-only packages in SOURCE_BUILDS (srt) and names them.
 set -euo pipefail
 
 UV_VERSION="0.8.17"
@@ -38,6 +42,9 @@ RUNBOOK="docs/oracle/ORACLE_RUNBOOK.md"
 CONFIG_REL="config/aqis_lab/oracle.yaml"
 PROBE_REL="docs/environment/colab_probe.txt"
 LOCK_REL="requirements/aqis_lab/phase0.txt"
+# Source-only, pure-Python packages of the lock the owner approved (docs/approvals/WP-0.7.md, question 2 (a)):
+# srt is imported by vosk and PyPI has no wheel for it. Every other pin must have a binary build.
+SOURCE_BUILDS=(srt)
 
 fail() {
     echo "ERROR: $*" >&2
@@ -148,14 +155,18 @@ TARGET="${ARCH}-manylinux_${GLIBC_MM%%.*}_${GLIBC_MM##*.}"
 mapfile -t PINS < <(sed -nE 's/^([A-Za-z0-9][A-Za-z0-9._-]*==[^ \\]+( ; [^\\]*[^ \\])?)[[:space:]]*\\?$/\1/p' "$LOCK")
 [ "${#PINS[@]}" -gt 0 ] || fail "$LOCK_REL holds no pinned packages."
 if [ "$DRY" -eq 1 ]; then
-    step 4 wheels "would check that each of the ${#PINS[@]} pins in $LOCK_REL has a binary build for $TARGET and Python $PY (uv pip compile --only-binary :all:); it stops naming every package without one"
+    step 4 wheels "would check that each of the ${#PINS[@]} pins in $LOCK_REL has a binary build for $TARGET and Python $PY (uv pip compile --only-binary :all:), except the approved source builds (${SOURCE_BUILDS[*]}); it stops naming every package without one"
 else
     WORK="$(mktemp -d)"
     trap 'rm -rf "$WORK"' EXIT
     printf '%s\n' "${PINS[@]}" > "$WORK/pins.txt"
+    NO_BINARY=()
+    for name in "${SOURCE_BUILDS[@]}"; do
+        NO_BINARY+=(--no-binary "$name")
+    done
     check() {
-        "$UV" pip compile "$1" --no-deps --only-binary :all: --python-platform "$TARGET" --python-version "$PY" \
-            --no-header --quiet --output-file "$WORK/out.txt" 2>&1
+        "$UV" pip compile "$1" --no-deps --only-binary :all: "${NO_BINARY[@]}" --python-platform "$TARGET" \
+            --python-version "$PY" --no-header --quiet --output-file "$WORK/out.txt" 2>&1
     }
     if ! REPORT="$(check "$WORK/pins.txt")"; then
         MISSING=()
@@ -174,7 +185,7 @@ else
         done
         fail "${#MISSING[@]} package(s) of $LOCK_REL have no binary build for $TARGET and Python $PY; nothing was installed."
     fi
-    step 4 wheels "PASS all ${#PINS[@]} pins in $LOCK_REL have a binary build for $TARGET and Python $PY"
+    step 4 wheels "PASS all ${#PINS[@]} pins in $LOCK_REL have a binary build for $TARGET and Python $PY, except the approved source builds (${SOURCE_BUILDS[*]})"
 fi
 
 # 5. The virtual environment and the hashed lock (aqis_lab/deploy/dev_bootstrap.sh, unchanged).

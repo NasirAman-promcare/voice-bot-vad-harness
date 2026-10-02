@@ -112,5 +112,40 @@ The smoke run takes about a second, so it is stopped on purpose after 2 of its 6
 
 **Starting a run again from nothing.** Add `"--from-scratch"` to `RUN_ARGS`. The old run folder is renamed `wp05-smoke-clip-stats.superseded-<UTC>` on Drive, never deleted.
 
+## OC-0.7-01: phase 0 smoke on a T4
+The WP-0.7 smoke run uses its own launcher, `notebooks/aqis_lab/phase0_smoke_launcher.ipynb` (owner decision, WP-0.7 question 13). It follows the same rules and has the same five code cells as the WP-0.5 launcher. Two things differ:
+- Cell 3 installs the GPU extras too.
+- Cell 4 checks the GPU and runs the smoke.
+
+It needs a **T4 GPU** runtime. The run folder is `RUN_OUT = "/content/drive/MyDrive/AQIS_LAB/results/phase0-smoke-colab"`. On Colab the smoke runs `vosk-batch`, `harness-vad`, `vosk-realspeed`, `parakeet-offline` and `parakeet-compute-delay` (`config/aqis_lab/phase0_smoke.yaml`). Details of the bundle are in `docs/runs/PHASE0_SMOKE.md`.
+
+| Cell | What it does | What you see |
+| --- | --- | --- |
+| 1 | Settings (literals only), then mounts Google Drive at `/content/drive` | `Mounted at /content/drive` |
+| 2 | Clones the repository at `AQIS_TAG` into `/content/aqis` | Nothing on success |
+| 3 | Installs `uv` 0.8.17 and runs `bash aqis_lab/deploy/dev_bootstrap.sh --gpu`: the CPU lock plus `requirements/aqis_lab/phase0-gpu.txt` (NeMo, torch; about 5 GB, several minutes) | `OK: .venv ready: Python 3.13.x, lock sha256 …`, then `OK: GPU extras installed: requirements/aqis_lab/phase0-gpu.txt sha256 …` |
+| 4 | `drive layout`, `unitlog start`, `doctor --target colab --expect-gpu`, then `phase0 smoke --target colab --out RUN_OUT --drive-mount /content/drive` | The doctor table, then the runner logs of the five tasks, the `scored …` lines and `smoke complete: bundle … archive …/phase0-smoke-colab-<stamp>.tar` |
+| 5 | `unitlog end` | `session colab-…: <hours> h x <rate> units/h = <units> units` |
+
+1. Download the launcher at the tag `aqis-lab-wp-0.7-colab-1` and upload it to Colab (as in "Running the launcher").
+2. **Runtime → Change runtime type → T4 GPU.**
+3. In cell 1, check `AQIS_TAG = "aqis-lab-wp-0.7-colab-1"` and `RUN_ARGS = []`. Run cells 1 to 4.
+   - **Expected (doctor):** `gpu` PASS with `Tesla T4`, `lock` PASS naming `requirements/aqis_lab/phase0.txt + requirements/aqis_lab/phase0-gpu.txt`, then `result: PASS`.
+   - **Expected (smoke):** the last line starts with `smoke complete:` and names the archive `/content/drive/MyDrive/AQIS_LAB/results/phase0-smoke-colab/phase0-smoke-colab-<stamp>.tar`.
+4. Add one new cell and run:
+   ```text
+   !cd /content/aqis && .venv/bin/python -m pytest tests/aqis_lab -q -m "colab or gpu"
+   ```
+   **Expected:** a last line ending in `passed`, with nothing failed.
+5. Run cell 5.
+6. Commit to the pull request's branch on GitHub (**Add file → Upload files**):
+   - the archive `MyDrive/AQIS_LAB/results/phase0-smoke-colab/phase0-smoke-colab-<stamp>.tar`, into `data/runs/phase0-smoke/`;
+   - the doctor report `MyDrive/AQIS_LAB/logs/doctor_colab_<timestamp>.json`, into `docs/environment/`;
+   - the output of cells 3 and 4 and of the pytest cell, copied into `docs/progress/WP-0.7/OC-0.7-01_colab.txt`.
+
+If the runtime disconnects during the smoke, reconnect and run all cells again with the same `RUN_OUT`: each task's run resumes and skips its finished shards.
+
+**Running it again at a new tag.** The run folders in `RUN_OUT` belong to the commit that made them. The smoke at a new tag stops with `ERROR: … holds another run … --from-scratch`. Set `RUN_ARGS = ["--from-scratch"]` in cell 1 for that run: each old run folder is renamed `<task>.superseded-<UTC>` on Drive, never deleted, and the runs start again. Set it back to `RUN_ARGS = []` afterwards. A task that cannot run on this runtime (for example no GPU) stops with `ERROR:` before anything is written.
+
 ## When something fails
 Commit the output (or the report) to the pull request's branch, start a Claude session, and type `/surgical-fix <path to the report>`. Do not debug inside Colab. Do not run two launchers on the same run folder at once, for example in two browser tabs.

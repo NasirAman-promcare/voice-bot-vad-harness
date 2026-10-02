@@ -1,0 +1,71 @@
+{
+  "report_version": "1.0",
+  "target": "oracle",
+  "expect_gpu": false,
+  "created_utc": "2026-10-02T14:23:08.378620Z",
+  "machine": {
+    "platform": "oracle",
+    "gpu": null,
+    "cpu_model": "Neoverse-N1",
+    "architecture": "aarch64",
+    "os": "Ubuntu 24.04.4 LTS",
+    "python_version": "3.13.7"
+  },
+  "lock": {
+    "file": "requirements/aqis_lab/phase0.txt",
+    "sha256": "87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef"
+  },
+  "code": "aqis_lab 0.0.1 commit=7c27dd5 python=3.13.7",
+  "checks": [
+    {
+      "name": "platform",
+      "status": "PASS",
+      "expected": "oracle",
+      "actual": "oracle",
+      "detail": "signal: /sys/class/dmi/id/chassis_asset_tag reads OracleCloud.com"
+    },
+    {
+      "name": "python",
+      "status": "PASS",
+      "expected": "3.13",
+      "actual": "3.13.7",
+      "detail": "major.minor 3.13 equals the Colab probe's 3.13 (docs/environment/colab_probe.txt; owner decision: major.minor)"
+    },
+    {
+      "name": "lock",
+      "status": "PASS",
+      "expected": "36 packages",
+      "actual": "36 installed",
+      "detail": "installed packages equal requirements/aqis_lab/phase0.txt"
+    },
+    {
+      "name": "disk",
+      "status": "PASS",
+      "expected": ">= 10 GB",
+      "actual": "40,420,249,600 bytes (40.42 GB)",
+      "detail": "free on the file system of /home/ubuntu/aqis/data/raw/aqis_lab/work; minimum 10 GB (config/aqis_lab/doctor.yaml)"
+    },
+    {
+      "name": "ram",
+      "status": "PASS",
+      "expected": ">= 4 GB",
+      "actual": "23,724,666,880 bytes (23.72 GB)",
+      "detail": "MemAvailable; minimum 4 GB (config/aqis_lab/doctor.yaml)"
+    },
+    {
+      "name": "gpu",
+      "status": "SKIP",
+      "expected": "not requested",
+      "actual": "none",
+      "detail": "--expect-gpu not given"
+    },
+    {
+      "name": "cores",
+      "status": "PASS",
+      "expected": "a possible reservation",
+      "actual": "timing on 2-3, batch on 0-1",
+      "detail": "cores.reserved_for_timing in /home/ubuntu/aqis/config/aqis_lab/oracle.yaml; every reserved CPU online, whole physical cores, at least one CPU left for batch runs"
+    }
+  ],
+  "result": "PASS"
+}

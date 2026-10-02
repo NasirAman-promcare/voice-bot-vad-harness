@@ -1,0 +1,13 @@
+# AQIS lab, phase 0, GPU extras for Colab (WP-0.7 FR-0.7-03). The lock is phase0-gpu.txt. Installed on top of the
+# CPU lock with: bash aqis_lab/deploy/dev_bootstrap.sh --gpu (Colab T4 only; x86_64 Linux, Python 3.13).
+#
+# Regenerate the lock from the repository root with uv 0.8.17 after editing this file or phase0.txt:
+#   uv pip compile requirements/aqis_lab/phase0-gpu.in -c requirements/aqis_lab/phase0.txt --python-version 3.13 --python-platform x86_64-manylinux_2_28 --generate-hashes --output-file requirements/aqis_lab/phase0-gpu.txt
+# Pass the same command as --custom-compile-command so the lock header records it, and update the line below to
+# the SHA-256 of the phase0.txt it was compiled against (a test keeps them equal).
+# compiled-against: requirements/aqis_lab/phase0.txt sha256 87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef
+#
+# NeMo 3.0.0 (owner decision, docs/approvals/WP-0.7.md, question 4 (a)): it resolves on top of the CPU pins; the model
+# card's NeMo 2.7.3 needs jiwer<4, which conflicts with the WP-0.3 pin jiwer==4.0.0. torch comes from PyPI as NeMo
+# resolves it (CUDA 13 build; the Colab T4 driver is 580.82.07, question 5).
+nemo_toolkit[asr]==3.0.0
