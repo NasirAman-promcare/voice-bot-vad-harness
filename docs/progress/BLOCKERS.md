@@ -393,3 +393,97 @@ Earlier WPs could rely on specs that were complete on their own. This one says o
 **Paused until answered:** the content of all five WP-0.8 documents. Planning is complete, and no document, code or test has been written. Once the plan is approved, the debt work (PLAN.md, question 2) does not depend on this answer and can be built first.
 
 **Owner answer:** Option 1 (`docs/approvals/WP-0.8.md` on `main`, `61c50c7`): the owner committed `docs/specs/sources/AQIS_Test_Lab_Blueprint.md` and `docs/specs/sources/AQIS_Test_Lab_Build_Plan.md`, and approved questions 2 to 8 as recommended, with the consent facts and the consent scheme given in the approval. Merged into this branch (`bd0fa9c`).
+
+## BLK-014 — WP-0.8: recording-guide facts the Build Plan does not give, two test-file edits for DEBT-012, and your target decisions
+STATUS: OPEN
+WP: WP-0.8  ·  Raised: 2026-10-02  ·  Session: https://claude.ai/code/session_01L48B7DHkHhYAqxs9WH35hb
+
+**What I need:**
+1. Your answers to items A to G below, for the recording guide (FR-0.8-02) and the session form (FR-0.8-03).
+2. Two `ALLOW-EDIT` lines for DEBT-012 (item H).
+3. Your `DECISION:` lines for the four targets and retention (item I), as approved in question 7 (a).
+
+**Why:**
+- **FR-0.8-02 and FR-0.8-03.** FR-0.8-02 asks for "file naming, format, transfer, and quality checks, matching the Build Plan". The committed Build Plan (`docs/specs/sources/AQIS_Test_Lab_Build_Plan.md`) gives the 80-prompt families, 22 speakers, about 30 minutes, "own phones" and "half quiet rooms, half everyday noise". It says nothing on:
+  - recording format;
+  - transfer;
+  - quality checks and their thresholds;
+  - noise sources;
+  - accent groups;
+  - how the quiet and noisy halves are split.
+
+  The session form needs fixed choice lists for noise source and accent group. Writing these myself would invent values.
+- **DEBT-012.** You chose "`changes` required for every dataset" (question 3). I tried it in a scratch worktree: making `changes` required in `aqis_lab/registry/schemas/datasets.v1.json` breaks 70 existing fast tests and errors 64 more, because the test helpers build datasets without `changes`. I cannot edit existing test files without your approval.
+
+**What I tried:**
+- I read both committed sources in full; the facts above are not in them.
+- For DEBT-012, in a scratch worktree only, I added `changes` to 4 lines of 2 existing test files. The fast suite was then green, apart from one test that fails in a scratch worktree even without any change (`test_FR_0_0_06_fails_closed_on_changed_file_it_cannot_read`; it passes in the real checkout). The 4 lines only add a `changes` value to test datasets; no assertion changes:
+```text
+tests/aqis_lab/aqis_packs_testutil.py      download_entry: add "changes": f"{source} test changes text"
+tests/aqis_lab/aqis_packs_testutil.py      owner-smoke entry: add "changes": "WAV header rewritten in the canonical form (samples unchanged)."
+tests/aqis_lab/test_aqis_registry_validate.py  _datasets owner-smoke entry: add "changes": "owner"
+tests/aqis_lab/test_aqis_registry_validate.py  test_FR_0_4_01_datasets_file_rejects_unknown_licence_and_keys entry: add "changes": "c"
+```
+
+**Options** (my recommendation is marked; any value you give is used word for word):
+- **A. Quiet and noisy halves.**
+  - **(a) Recommended:** by speaker. 11 speakers record all 80 prompts in a quiet room and 11 in everyday noise. Each session stays in one place, and every prompt family stays whole.
+  - **(b)** Within each speaker, 40 prompts in each condition. This gives a paired comparison, but needs two places per session and splits the 15-prompt and 5-prompt families unevenly.
+- **B. How sessions run and how files travel.**
+  - **(a) Recommended:**
+    - Sessions are in person with you.
+    - The speaker records on their own phone with its built-in voice recorder.
+    - Before the speaker leaves, you copy the files to your computer and run the quality checks.
+    - You upload one archive per session (`ca-sNNN.zip`) to `MyDrive/AQIS_LAB/campaign_a/raw/`.
+    - With the speaker's agreement, the files are then deleted from their phone.
+  - **(b)** Remote sessions. Each speaker uploads to a Drive folder shared only with them, and you move the files into `AQIS_LAB`.
+- **C. Recording format.**
+  - **(a) Recommended:** whatever the phone's built-in recorder writes (often M4A/AAC), kept as the original. In phase 1 the lab converts a copy to the working format (16 kHz, mono, 16-bit PCM WAV), which the registry importer requires. "Own phones" is the test condition, and the phone's codec is part of it.
+  - **(b)** A recorder app that writes WAV. Cleaner audio, but not what callers' phones send, and speakers must install an app.
+- **D. Quality checks.** I propose these. Accept them, or give other values.
+  1. every prompt has exactly one file, and the file plays;
+  2. you listen, and the speaker said the prompt;
+  3. no clipping: at most 0.1 % of samples at full scale;
+  4. not too quiet: peak at least −30 dBFS;
+  5. at least 0.3 s of silence before and after the speech;
+  6. a quiet-room session has no background noise you can hear; an everyday-noise session has the noise named on the session form.
+
+  A failed check means re-recording that prompt in the same session.
+- **E. Noise sources** (session form choices).
+  - **(a) Proposed:** `none` (quiet room), `tv-radio-music`, `people-talking`, `traffic-street`, `household-appliance`, `other` (described in the notes).
+  - **(b)** Your own list.
+- **F. Accent groups** (session form choices).
+  - **(a) Recommended:** you give the list of groups you recruit for. The Build Plan says only "mixed accents", and I cannot choose groups.
+  - **(b)** The speaker describes their accent in their own words, and groups are formed later.
+- **G. Phone use and room IDs.**
+  - **(a) Recommended:**
+    - hold the phone as for a normal call, using its built-in microphone, with no headset or earbuds;
+    - the device field is the phone's make and model;
+    - the room IDs are `quiet` and `everyday-noise`, plus a free description in the notes.
+  - **(b)** Other phone use, such as speakerphone on a table.
+
+  File naming needs no answer. I will use the approved plan's rule, `<speaker-id>-<family-id>-<NN>.wav` (for example `ca-s001-f2-07.wav`), which satisfies the registry's file and clip ID rules.
+- **H. DEBT-012.**
+  - **(a) Recommended:** add these two lines to `docs/approvals/WP-0.8.md` on `main`:
+```text
+ALLOW-EDIT: tests/aqis_lab/aqis_packs_testutil.py
+ALLOW-EDIT: tests/aqis_lab/test_aqis_registry_validate.py
+```
+  - **(b)** Retarget DEBT-012 to WP-0.9 and close it there.
+- **I. Your decisions** (question 7 (a)). After reading `docs/decisions/TARGETS_OPTIONS.md`, add these lines to `docs/approvals/WP-0.8.md` on `main`. I then add the check that each line names an existing option.
+```text
+DECISION: harm-rate = HR-?
+DECISION: margin = PM-?
+DECISION: timing-budget = TB-?
+DECISION: gate-escalation = GE-?
+DECISION: retention = <your wording>
+```
+
+**Paused until answered:**
+- FR-0.8-02 and FR-0.8-03 (items A to G);
+- DEBT-012 (item H);
+- the decision check, the AT-0.8-01 evidence and READY-FOR-AUDIT (item I).
+
+Done and pushed: DEBT-010, DEBT-018, DEBT-020, DEBT-021, FR-0.8-01, FR-0.8-04 and FR-0.8-05, with must-catch proof. The fast suite is green: `1785 passed, 55 deselected`.
+
+**Owner answer:**

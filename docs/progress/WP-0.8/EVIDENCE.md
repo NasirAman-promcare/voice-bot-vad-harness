@@ -122,6 +122,35 @@ $ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_targets_options.py -q -p n
 - **Still to come:** once the owner's `DECISION:` lines are on `main`, `test_FR_0_8_05_owner_decisions_name_existing_options` is added (PLAN.md; approval question 7 (a)).
 - Status: DONE for the document. The decision check waits for the owner's decisions.
 
+### FR-0.8-02 — Recording guide: PARTIAL (not written; BLK-014, items A to G)
+The committed Build Plan gives the prompt families, the speaker count, the session length, "own phones" and "half quiet rooms, half everyday noise". It does not give the recording format, the transfer route, the quality checks, or how the quiet and noisy halves are split. Writing them would invent values.
+
+### FR-0.8-03 — Session form: PARTIAL (not written; BLK-014, items E to G)
+The noise-source and accent-group choice lists are not in the Build Plan or the approval.
+
+### DEBT-012 — `changes` required for every dataset: PARTIAL (not changed; BLK-014, item H)
+This needs `ALLOW-EDIT` for two existing test files. Measured in a scratch worktree: requiring `changes` breaks 70 existing fast tests and errors 64 more, all because test datasets lack `changes`. With 4 added test-data lines in those 2 files, the suite is green.
+
+## Acceptance
+AT-0.8-01 (the auditor checks completeness, and that no value was invented where the owner must decide) can be run only once FR-0.8-02 and FR-0.8-03 are written and the owner's `DECISION:` lines are on `main` (BLK-014). The evidence for it so far:
+- the source table under FR-0.8-01;
+- the content notes under FR-0.8-04 and FR-0.8-05;
+- the must-catch proof below.
+
+Fast suite at `5819521`:
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider
+1785 passed, 55 deselected in 310.70s (0:05:10)
+```
+Audit gate at `5819521`: the only findings are the parts paused by BLK-014.
+```text
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.8
+docs/specs/phase-0/WP-0.8-consent-fillers-targets.md:17: [F3] MAJOR: FR-0.8-02 is not in any test function name under tests/aqis_lab/ (expected FR_0_8_02)
+docs/specs/phase-0/WP-0.8-consent-fillers-targets.md:18: [F3] MAJOR: FR-0.8-03 is not in any test function name under tests/aqis_lab/ (expected FR_0_8_03)
+docs/specs/phase-0/WP-0.8-consent-fillers-targets.md:23: [F4] MAJOR: AT-0.8-01 does not appear in docs/progress/WP-0.8/EVIDENCE.md
+3 findings: FAIL (0.6 s)
+```
+
 ## Debts closed (question 2)
 
 ### DEBT-010 — registry licence must equal the dataset's licence (WP-0.4-F03)
@@ -230,3 +259,20 @@ OK: .venv ready: Python 3.13.14, lock sha256 87a1cc34c6d41388cf8ce1e415f95f61c3b
 ```
   - **Owner-run:** `bash aqis_lab/deploy/dev_bootstrap.sh --gpu` on Colab. It is part of the existing Colab launcher flow, and its output is listed under "Owner-run checks".
 - Status: DONE
+
+## Must-catch proof
+Each break was made in a scratch worktree of `5819521` (`$SCRATCHPAD/wt2`, its own checkout, with `.venv` linked in), as one exact text replacement that had to match once, then reverted with `git checkout -- docs`.
+
+Command:
+```text
+pytest tests/aqis_lab/test_aqis_recording_docs.py tests/aqis_lab/test_aqis_filler_library.py tests/aqis_lab/test_aqis_targets_options.py -q
+```
+
+| Must-catch | Break | Named tests that fail | Result |
+| --- | --- | --- | --- |
+| 1. No value the owner must decide is filled in by Claude | M1a: the consent form's retention blank is replaced by "2 years" | `test_FR_0_8_01_retention_is_an_owner_blank_with_no_value`, `test_FR_0_8_01_blank_check_detects_a_filled_in_value` | `2 failed, 22 passed in 0.23s` |
+| 1. (targets) | M1b: `**Decision:** [OWNER DECIDES: harm-rate option]` is replaced by `**Decision:** HR-B` | `test_FR_0_8_05_document_does_not_choose`, `test_FR_0_8_05_choice_check_detects_a_filled_decision` | `2 failed, 22 passed in 0.13s` |
+| 2. Every filler has a risk level and at least one never-play context | M2a: fil-001's "Never play when" cell is emptied | `test_FR_0_8_04_every_filler_has_a_never_play_context` | `1 failed, 23 passed in 0.12s` |
+| 2. (risk level) | M2b: fil-001's level is emptied | `test_FR_0_8_04_every_filler_has_id_text_use_and_risk_level`, `test_FR_0_8_04_risk_levels_are_the_blueprint_four_and_all_used`, `test_FR_0_8_04_blueprint_examples_are_in_the_library_at_their_level` | `3 failed, 21 passed in 0.17s` |
+
+Must-catch 1 also applies to the recording guide and session form (FR-0.8-02 and FR-0.8-03). They are not written yet (BLK-014), so their part of the proof follows once they are.
