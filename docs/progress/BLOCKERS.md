@@ -312,3 +312,49 @@ E       FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-
 **Paused until answered:** nothing in WP-0.7 round 2 depends on this. F01 to F04 are fixed and pushed, the debts are recorded, and CI on `0b12344` is green. Only the helper change waits.
 
 **Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `28ab7f4`, 2026-10-02): `ALLOW-EDIT: tests/aqis_lab/aqis_testutil.py`, `hermetic_git_env` only, with `maintenance.auto=0` and `gc.auto=0`. Done after merging `main`: the environment it returns now sets `GIT_CONFIG_COUNT=2`, `maintenance.auto` 0 and `gc.auto` 0 (`git config --show-origin --get maintenance.auto` in a fixture repository: `command line:	0`); the tests that use it pass before and after (`docs/progress/WP-0.7/FIXES.md`, round 2, BLK-011).
+
+## BLK-012 — `results add` aborted at interpreter exit once on CI (WP-0.6 Parquet read from Python-owned bytes)
+STATUS: OPEN
+WP: WP-0.7  ·  Raised: 2026-10-02  ·  Session: https://claude.ai/code/session_01DHNEPSgrExgeGVsAYja18g
+
+**What I need:** your decision on an intermittent native crash in WP-0.6's results-store code: fix it now, with an approval covering two WP-0.6 functions, or accept it as debt.
+
+**Why:**
+- CI's push run on `99064c4` (run 283, attempt 1) failed `tests/aqis_lab/test_aqis_results_cli.py::test_FR_0_6_02_add_exit_codes`. The second `python -m aqis_lab results add` of the same run printed its correct result (`… 60 already stored (nothing written)`) and then the process aborted at exit:
+```text
+E       AssertionError: assert (-6 == 0)
+… stderr='terminate called without an active exception\n'
+1 failed, 1746 passed, 54 deselected in 196.42s (0:03:16)
+```
+- That path reads every stored part file through `check_part_file` (`aqis_lab/results/store.py`): `pq.read_table(io.BytesIO(data), use_threads=False)`. `from_score_folder` (`aqis_lab/results/ingest.py`) does the same with `pa.BufferReader(bytes)`. Both hand Arrow a buffer that belongs to Python.
+- Most likely cause, which I could not prove (no reproduction): the mechanism of the WP-0.7 parity defect (FR-0.7-08, EVIDENCE.md).
+  - An Arrow pool thread drops the last reference to a Python-owned buffer during interpreter shutdown. Releasing it needs the GIL.
+  - Under the parity code this hung the exit: gdb showed `PyBuffer::~PyBuffer` → `PyGILState_Ensure` on one thread, and `ThreadPool::Shutdown` from `exit()` on the main thread.
+  - Python 3.13 makes such a late thread exit by a forced unwind. Inside a C++ destructor that may not throw, that ends in `std::terminate`, which prints exactly this message and aborts (-6).
+- WP-0.7 did not change these two functions. Its `store.py` change (DEBT-015) is in `_ensure_store`, which this path does not reach once the store exists.
+
+**What I tried:**
+- No reproduction in 1,200 runs of the exact call (the second `results add` of a finished smoke run), all under pytest:
+  - 600 with this VM's Python 3.13.12 and `PYTHONFAULTHANDLER=1`: `codes {0: 600}`;
+  - 600 in a fresh venv on CI's Python 3.13.7, built from the hash-checked lock: `codes {0: 600}`.
+- Earlier, 600 plain runs of each WP-0.6 read pattern also gave no hang (EVIDENCE.md).
+- One re-run of the failed job (run 283, attempt 2): passed. The pull-request run on the same commit (284) passed as well. CI on `99064c4` is green in both runs, both jobs.
+
+**Options:**
+1. **(Recommended)** Add `ALLOW-EDIT`-style approval for `aqis_lab/results/store.py` (`check_part_file` only) and `aqis_lab/results/ingest.py` (`from_score_folder` only), the same fix as WP-0.7's parity root-cause fix:
+   - copy the bytes into memory Arrow owns (`pa.BufferOutputStream`);
+   - read through a `ParquetFile` that is closed at once;
+   - with a slow regression test that runs `results add` repeatedly and requires every run to exit 0.
+
+   Trade-off: it touches WP-0.6 capabilities CAP-RESULTS-002 and CAP-RESULTS-00x, and the regression test cannot prove the fix, because the abort never reproduced here.
+2. Accept it as debt (target WP-0.8), and re-run CI when it recurs. Nothing changes now, but `results add`, `results query` and `trace` can very rarely abort at exit after doing their work correctly. On Oracle the nightly sync and `results add` run unattended, where an abort would show as a failed command.
+
+**Paused until answered:** nothing in WP-0.7 round 2 depends on this:
+- F01 to F04 are fixed;
+- BLK-011 is fixed;
+- STATUS is READY-FOR-AUDIT;
+- CI on `99064c4` is green.
+
+Only the store and ingest change waits.
+
+**Owner answer:**
