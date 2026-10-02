@@ -314,7 +314,7 @@ E       FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-
 **Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `28ab7f4`, 2026-10-02): `ALLOW-EDIT: tests/aqis_lab/aqis_testutil.py`, `hermetic_git_env` only, with `maintenance.auto=0` and `gc.auto=0`. Done after merging `main`: the environment it returns now sets `GIT_CONFIG_COUNT=2`, `maintenance.auto` 0 and `gc.auto` 0 (`git config --show-origin --get maintenance.auto` in a fixture repository: `command line:	0`); the tests that use it pass before and after (`docs/progress/WP-0.7/FIXES.md`, round 2, BLK-011).
 
 ## BLK-012 — `results add` aborted at interpreter exit once on CI (WP-0.6 Parquet read from Python-owned bytes)
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.7  ·  Raised: 2026-10-02  ·  Session: https://claude.ai/code/session_01DHNEPSgrExgeGVsAYja18g
 
 **What I need:** your decision on an intermittent native crash in WP-0.6's results-store code: fix it now, with an approval covering two WP-0.6 functions, or accept it as debt.
@@ -357,4 +357,4 @@ E       AssertionError: assert (-6 == 0)
 
 Only the store and ingest change waits.
 
-**Owner answer:**
+**Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `a7e0d4e`, 2026-10-02): in `check_part_file` (`aqis_lab/results/store.py`) and `from_score_folder` (`aqis_lab/results/ingest.py`), copy the bytes into Arrow-owned memory (`pa.BufferOutputStream`) before `pq.read_table`, and add a repeat regression test. Done after merging `main`: both functions read from the Arrow-owned copy; `test_FR_0_6_02_repeated_results_add_always_exits_cleanly` (slow) runs `results add --run` and `--scores` 60 times each in fresh processes, every one exiting 0 (`docs/progress/WP-0.7/FIXES.md`, BLK-012). The abort never reproduced here, so the test guards the path but cannot prove the fix on its own.

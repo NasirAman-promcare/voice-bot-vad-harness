@@ -2,7 +2,7 @@
 
 CAPABILITIES:
   CAP-RESULTS-001: add_batch() appends a batch of result rows under <store>/run_card_id=<id>/: the run card is written once, new rows go into one new part-<SHA-256>.parquet file published by hard link (an existing file can never be replaced), rows already stored with identical content are reported and not stored again, and a row whose identity is stored with other content stops the whole add with nothing written; adds hold an exclusive lock on <store>/.lock; a store on a Google Drive mount is refused; a new store's STORE.json is published only while holding the store lock (a folder that holds anything else is refused before any file is made in it), so adds that start at the same moment on a new store all succeed (DEBT-015) [tests: test_FR_0_6_02_add_run_folder_writes_partition_by_run_card, test_FR_0_6_02_add_score_folder_rows, test_FR_0_6_02_refuses_to_overwrite_existing_rows, test_FR_0_6_02_existing_files_never_replaced, test_FR_0_6_02_identical_rows_not_stored_twice, test_FR_0_6_02_score_rows_need_their_run_card, test_FR_0_6_02_interrupted_add_leaves_no_row, test_FR_0_6_02_concurrent_adds_are_serialised, test_FR_0_6_02_store_on_drive_refused, test_FR_0_6_02_simultaneous_first_adds_are_safe]
-  CAP-RESULTS-002: result_row_id() is the SHA-256 of the canonical JSON of a row's identity fields; check_part_file(), read_partition() and verify_record() check every stored file and row (schema version, columns, content-addressed name, row ID, row SHA-256, partition) and raise StoreIntegrityError on any difference [tests: test_FR_0_6_02_row_id_computed_from_identity, test_FR_0_6_02_schema_documented_equals_code, test_FR_0_6_03_row_not_matching_its_id_is_reported, test_FR_0_6_02_add_rejects_tampered_stored_rows, test_FR_0_6_02_query_trace_and_add_reject_a_damaged_store]
+  CAP-RESULTS-002: result_row_id() is the SHA-256 of the canonical JSON of a row's identity fields; check_part_file(), read_partition() and verify_record() check every stored file and row (schema version, columns, content-addressed name, row ID, row SHA-256, partition) and raise StoreIntegrityError on any difference; the Parquet bytes are read from a copy in Arrow-owned memory, so nothing Arrow releases at interpreter exit needs the Python interpreter (BLK-012) [tests: test_FR_0_6_02_row_id_computed_from_identity, test_FR_0_6_02_schema_documented_equals_code, test_FR_0_6_03_row_not_matching_its_id_is_reported, test_FR_0_6_02_add_rejects_tampered_stored_rows, test_FR_0_6_02_query_trace_and_add_reject_a_damaged_store, test_FR_0_6_02_repeated_results_add_always_exits_cleanly]
 INPUTS AND OUTPUTS: a store folder and a Batch (from aqis_lab/results/ingest.py) in; files in the store and an
   AddResult out; StoreInputError (usage or input, exit 2), StoreConflictError and StoreIntegrityError (exit 1).
 CONTRACTS: store layout and schema in docs/results/RESULTS_STORE.md; run-card v1.
@@ -21,6 +21,8 @@ CHANGE LOG:
     aqis_lab/results/views.py also calls.
   2026-09-30 WP-0.7 DEBT-015 (4): _ensure_store creates the folder race-safely and publishes STORE.json only while
     holding the store lock (test_FR_0_6_02_simultaneous_first_adds_are_safe).
+  2026-10-02 WP-0.7 BLK-012: check_part_file reads the Parquet bytes from a copy in Arrow-owned memory (pa.BufferOutputStream)
+    (test_FR_0_6_02_repeated_results_add_always_exits_cleanly).
 """
 import fcntl
 import hashlib
@@ -291,7 +293,11 @@ def check_part_file(part):
     if hashlib.sha256(data).hexdigest() != PART_RE.fullmatch(part.name).group(1):
         raise StoreIntegrityError(f"{part}: its content no longer matches the SHA-256 in its name")
     try:
-        table = pq.read_table(io.BytesIO(data), use_threads=False)
+        # Read from a copy in Arrow-owned memory: a Python-owned buffer released by Arrow at interpreter exit needs
+        # the GIL and can abort or hang the exit (BLK-012; the WP-0.7 parity defect).
+        owned = pa.BufferOutputStream()
+        owned.write(data)
+        table = pq.read_table(pa.BufferReader(owned.getvalue()), use_threads=False)
     except (pa.ArrowException, OSError) as exc:
         raise StoreIntegrityError(f"{part} is not a readable Parquet file: {exc}") from exc
     metadata = table.schema.metadata or {}

@@ -30,7 +30,7 @@ from aqis_lab import platform as lp
 from aqis_adapters_testutil import SESSION_MODEL_CACHE, drive_view, vosk_model
 from aqis_packs_testutil import (librispeech_members, musan_members, serve, tar_gz, world_datasets, write_datasets,
                                  make_world, write_registry, write_spec)
-from aqis_results_testutil import smoke_run, write_oracle_config
+from aqis_results_testutil import score_folder, smoke_run, write_oracle_config
 from aqis_runner_testutil import SMOKE_PACK, tree_snapshot
 
 
@@ -282,3 +282,32 @@ def test_NFR_0_5_01_runner_overhead_under_5_percent_on_vosk_batch(tmp_path):
     print(f"NFR-0.5-01 on vosk-batch: direct median {direct_s:.2f} s, runner median {runner_s:.2f} s, overhead "
           f"{overhead * 100:.2f} % (limit 5 %); all times {times}")
     assert overhead < 0.05, (direct_s, runner_s, times)
+
+
+# --- BLK-012 ---
+
+@pytest.mark.slow
+def test_FR_0_6_02_repeated_results_add_always_exits_cleanly(tmp_path):
+    # BLK-012: on CI a second `results add` of the same run printed its correct result and then aborted at
+    # interpreter exit ("terminate called without an active exception", exit -6). The store read stored part files,
+    # and ingest read score tables, from Python-owned bytes, which Arrow may release only at exit. Both paths run here
+    # repeatedly in fresh processes (store parts read by check_part_file, the score table by from_score_folder); every
+    # process must exit 0 with its result.
+    import sys
+    from aqis_lab.results import ingest
+    from aqis_testutil import ROOT
+    run_dir = smoke_run(tmp_path / "run", tmp_path / "work")
+    card = ingest.from_run_folder(run_dir).run_card_id
+    scores = score_folder(tmp_path / "scores", card)
+    store = tmp_path / "store"
+    cli = lambda *args: subprocess.run([sys.executable, "-m", "aqis_lab", "results", "add", *map(str, args),
+                                        "--store", str(store)], cwd=ROOT, capture_output=True, text=True, timeout=120)
+    first = cli("--run", run_dir)
+    assert first.returncode == 0, first.stderr
+    stored_scores = cli("--scores", scores)
+    assert stored_scores.returncode == 0, stored_scores.stderr
+    for _ in range(60):
+        again = cli("--run", run_dir)
+        assert again.returncode == 0 and "60 already stored" in again.stdout, (again.returncode, again.stderr)
+        again = cli("--scores", scores)
+        assert again.returncode == 0 and "already stored" in again.stdout, (again.returncode, again.stderr)
