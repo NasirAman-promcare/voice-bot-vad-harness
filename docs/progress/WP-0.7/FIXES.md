@@ -91,3 +91,18 @@ exit 0
 ```
   `parity data/runs/phase0-smoke/phase0-smoke-cloud-20260930T170440Z.tar data/raw/aqis_lab/smoke/cloud/phase0-smoke-cloud-20261002T104515Z.tar`: `parity: identical (vosk-batch: 60 clips; vosk-realspeed: 5 clips; vosk-batch-natural: 80 rows; vosk-batch-synthetic-tts: 20 rows)`, exit 0. The bundle made at `0615214` equals the committed one from `0a534ce`.
 - CI on the pushed commit: in the pull request, https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/7.
+
+### BLK-011 — fixture git repositories and background maintenance (owner option 1, `28ab7f4`)
+- Cause: CI's push run on `0b12344` (run 278, attempt 1) failed `test_FR_0_6_01_dry_run_explains_each_step_and_changes_nothing` with `FileNotFoundError: … tree/.git/objects/maintenance.lock`. The CI runner's git 2.55.0 starts automatic maintenance in a detached background process after `git commit`, and the test listed the fixture tree while that process wrote and removed the lock. The pull-request run on the same commit and one re-run passed. This VM has git 2.43.0, which does not show it.
+- Change budget: `tests/aqis_lab/aqis_testutil.py`, `hermetic_git_env` only (docstring and returned environment). The `git diff -U0` hunks are `@@ -78 +78,3 @@` and `@@ -83,0 +86,5 @@`, both in `hermetic_git_env`. It now sets `GIT_CONFIG_COUNT=2`, `GIT_CONFIG_KEY_0=maintenance.auto`, `GIT_CONFIG_VALUE_0=0`, `GIT_CONFIG_KEY_1=gc.auto` and `GIT_CONFIG_VALUE_1=0`. In a fixture repository, `git config --get` reads `maintenance.auto = 0` and `gc.auto = 0`, and `--show-origin` reads `command line:	0`.
+- Baseline, every test file that uses `hermetic_git_env` or `fixture_repo`: `.venv/bin/python -m pytest <the 11 files> -q -m "not gpu and not colab and not oracle" -p no:cacheprovider`. Its first runs failed `test_FR_0_6_01_creates_venv_installs_lock_and_runs_oracle_doctor` (`1 failed, 224 passed`, twice). That test runs the doctor, whose disk minimum is 10 GB, and the VM had 11 GB free before pytest's temporary folders grew. After I removed my old pytest folders, the `/tmp` clone and the superseded smoke runs (14 GB free), the baseline was `225 passed, 1 deselected in 116.54s`.
+- After the change, on a clean tree at `97aa673`: the same command gave `225 passed, 1 deselected in 113.73s (0:01:53)`.
+- Fast suite: `1747 passed, 54 deselected in 249.68s (0:04:09)`. Audit gate:
+```text
+aqis-audit-gate: base origin/main (merge-base 28ab7f4fc2f8), head 97aa6735b207, approvals origin/main 28ab7f4fc2f8, wp WP-0.7
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.7 s)
+```
+- The race cannot be reproduced on this VM's git 2.43.0. CI on the newer runners is the check: see the pull request.
