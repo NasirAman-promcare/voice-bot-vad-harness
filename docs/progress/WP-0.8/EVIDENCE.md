@@ -14,6 +14,46 @@ Owner inputs used:
 - The failure was `test_FR_0_0_12_asset_pins_match_repository`: `git cat-file blob 14796262…:corpus-v1.tar.gz` exited 128, because this session's clone was shallow (`git rev-parse --is-shallow-repository` → `true`).
 - After `git fetch --unshallow origin`, the same test gives `1 passed, 63 deselected in 5.53s`. That is an environment fact of this checkout, not a code fault. No file was changed.
 
+## Requirements
+
+### FR-0.8-01 — Consent form (`docs/recording/CONSENT_FORM.md`, CAP-DOC-014)
+- **Tests** (`tests/aqis_lab/test_aqis_recording_docs.py`, with the helpers in `tests/aqis_lab/aqis_docs_testutil.py`):
+  - `test_FR_0_8_01_consent_form_has_every_required_section`
+  - `test_FR_0_8_01_retention_is_an_owner_blank_with_no_value`
+  - `test_FR_0_8_01_contact_is_an_owner_blank`
+  - `test_FR_0_8_01_blank_check_detects_a_filled_in_value`
+  - `test_FR_0_8_01_fits_one_page_word_budget`
+  - `test_FR_0_8_01_plain_english_sentences_and_no_legal_jargon`
+  - `test_FR_0_8_01_consent_block_has_signature_date_and_consent_reference`
+  - `test_FR_0_8_01_owner_facts_appear_as_given`
+- **Tests first:** all 8 failed with `FileNotFoundError: … docs/recording/CONSENT_FORM.md` (`8 failed in 0.34s`).
+- **Where each statement comes from:**
+
+  | Form section | Content | Source |
+  | --- | --- | --- |
+  | Why we are recording | "testing, benchmark measurement, and error diagnosis for voice bot pipelines" | approval, question 6 (c), word for word |
+  | Why we are recording | hears when you speak, writes down what you say, reads your tone of voice | blueprint title: "Testing VAD, Transcription and Voice Emotion Models" |
+  | What we record | about 80 prompts, own phone, about 30 minutes; some prompts ask for a feeling | Build Plan, "Campaign A" (80 prompts, about 30 minutes, own phones, 20 emotional variants) |
+  | What we record | phone, room, background noise, accent group; a speaker code, no name | spec FR-0.8-03 (session form fields); approval question 5 (pseudonymous `ca-sNNN`) |
+  | How we store your recordings | "Google Drive (AQIS_LAB), Google Colab, and Oracle Cloud VM", "Audio is never stored on GitHub" | approval, question 6 (b), word for word |
+  | How we store your recordings | the signed form is kept offline by the owner | approval, question 5 ("Signed consent forms kept offline by owner") |
+  | Who can see them | "Only the AQIS test lab owner (@Nasir) and authorized project raters/evaluators" | approval, question 6 (a), word for word |
+  | How long we keep them | `[OWNER DECIDES: how long recordings are kept]` | FR-0.8-01: a blank for the owner |
+  | Your right to withdraw | "within 30 days of recording", "deleted from active dataset pools" | approval, question 6 (e), word for word |
+  | Contact | `[OWNER DECIDES: contact email/phone]` | approval, question 6 (f), word for word |
+  | Your consent | tick boxes (read, 18 years or older, agree, withdrawal), name, signature, date; consent reference `ca-c___` | deviation D2 (accepted, question 8); approval question 6 (d); approval question 5 |
+
+- **Measures:** 325 words (limit 450); 25 sentences, average 11.4 words, longest 22 (limits 20 and 30).
+- **Run:**
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_recording_docs.py -q -p no:cacheprovider
+8 passed in 0.04s
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0_0_08_repository_registry_is_consistent or FR_0_8_01 or test_FR_0_0_04"
+14 passed, 1810 deselected in 6.27s
+```
+- **Owner-run:** a print preview on one page (see "Owner-run checks").
+- Status: DONE
+
 ## Debts closed (question 2)
 
 ### DEBT-010 — registry licence must equal the dataset's licence (WP-0.4-F03)
