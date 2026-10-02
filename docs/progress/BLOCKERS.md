@@ -245,7 +245,7 @@ WP: WP-0.6  ·  Raised: 2026-09-28  ·  Session: https://claude.ai/code/session_
 **Owner answer:** Owner committed `docs/environment/oracle_probe.txt` and `docs/approvals/WP-0.6.md` to `main` (`6ad251b`). The probe shows VM.Standard.A1.Flex: Ubuntu 24.04.4 LTS on aarch64 (Ampere Altra, Neoverse-N1), 4 CPUs online `0-3`, glibc 2.39, chassis asset tag `OracleCloud.com`, 22 GB available RAM, 38 GB free disk, rclone 1.60.1. The approval sets the reservation: cores 2-3 for timing runs, batch runs on cores 0-1 (highest-numbered half of the physical cores), and questions 1-16 as recommended. Merged into this branch (`f57cfc2`).
 
 ## BLK-010 — The committed smoke bundle breaks WP-0.4's "no raw corpus committed" test
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.7  ·  Raised: 2026-09-30  ·  Session: https://claude.ai/code/session_01DHNEPSgrExgeGVsAYja18g
 
 **What I need:** your decision on how smoke bundles may be committed, because an existing guarded test forbids the approved place.
@@ -276,4 +276,4 @@ WP: WP-0.7  ·  Raised: 2026-09-30  ·  Session: https://claude.ai/code/session_
 
 The code, tests and evidence of every requirement are done and pushed.
 
-**Owner answer:**
+**Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `6ed6229`, 2026-10-02): `ALLOW-EDIT: tests/aqis_lab/test_aqis_registry_fetch.py`, changing only `test_FR_0_4_02_no_raw_corpus_committed` so it also accepts `data/runs/phase0-smoke/phase0-smoke-(cloud|colab|oracle)-<YYYYMMDDTHHMMSSZ>.tar` and nothing else; the WP-0.7 test proving committed bundles hold no audio stays. Done after merging `main`: the one-line change, with every other rule of the test unchanged; the test passes (`docs/progress/WP-0.7/EVIDENCE.md`).

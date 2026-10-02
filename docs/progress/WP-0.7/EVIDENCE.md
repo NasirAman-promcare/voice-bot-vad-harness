@@ -405,3 +405,22 @@ None: `grep -rn "audit-allow" aqis_lab tools` finds no WP-0.7 line (checked with
 - The next fast-suite run failed 6 tests: `6 failed, 1738 passed, 53 deselected`.
   - Five were WP-0.5 doctor tests, with the doctor's `disk` row FAIL: 5.66 GB free against the 10 GB minimum. The disk was full of my own leftovers: the scratch GPU environment (6.4 GB) and its packages in the uv cache (`uv cache clean` of the GPU-only packages: `Removed 18295 files (5.3GiB)`), and old pytest folders (2.3 GB). After cleaning, the doctor gives `disk PASS … 14,007,123,968 bytes (14.01 GB)` and `result: PASS`, and the doctor tests pass. Nothing in the code changed for this.
   - The sixth was `tests/aqis_lab/test_aqis_registry_fetch.py::test_FR_0_4_02_no_raw_corpus_committed`: `AssertionError: assert ['data/runs/p...T170440Z.tar'] == []`. This WP-0.4 test allows no `.tar` under `data/` except pack archives, and the approved plan (question 11) commits the smoke bundles as `data/runs/phase0-smoke/<name>.tar`. The test is an existing, guarded file, so this is BLK-010 (`docs/progress/BLOCKERS.md`), for the owner. `test_FR_0_7_07_committed_bundles_and_their_reports_in_docs` now also checks that a committed bundle holds only result files (`.json`, `.jsonl`, `.md`, `.csv`, `.parquet`, `.log`), never audio; the cloud bundle holds 9, 6, 1, 2, 2 and 3 of those.
+
+### BLK-010 resolved — the approved change to `test_FR_0_4_02_no_raw_corpus_committed`
+- Owner answer: option 1 (`docs/approvals/WP-0.7.md` on `main`, `6ed6229`, merged into this branch as `bb901b9`). The same approval also approves:
+  - the per-clip Vosk reseed (`c_rand_seed_per_clip: 1`);
+  - `--bundle-dir`;
+  - the run mode declared per runner task;
+  - the smoke launcher check accepting `dev_bootstrap.sh --gpu`.
+
+  It notes the two tests written after their code, and sets OC-0.7-01, OC-0.7-02 and the three-way parity to run after the audit on the tagged commits.
+- Before the change: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_registry_fetch.py -q -p no:cacheprovider -m "not slow and not network"`: `1 failed, 15 passed, 1 deselected in 14.85s` (`test_FR_0_4_02_no_raw_corpus_committed`).
+- The change, the whole `git diff -U0`:
+```text
+@@ -215 +215,2 @@ def test_FR_0_4_02_no_raw_corpus_committed():
+-    allowed = re.compile(r"^data/(tts_smoke/[0-9]{2}\.wav|packs/[a-z0-9-]+/v[0-9]+/[a-z0-9.-]+\.tar)$")
++    allowed = re.compile(r"^data/(tts_smoke/[0-9]{2}\.wav|packs/[a-z0-9-]+/v[0-9]+/[a-z0-9.-]+\.tar"
++                         r"|runs/phase0-smoke/phase0-smoke-(cloud|colab|oracle)-[0-9]{8}T[0-9]{6}Z\.tar)$")
+```
+- Checked against names: the pattern accepts `…/phase0-smoke-cloud-20260930T170440Z.tar` and `…/phase0-smoke-oracle-20261003T101010Z.tar`. It still rejects `…/phase0-smoke-kaggle-….tar`, `…/corpus.tar`, `….tar.gz`, `data/runs/other/….tar` and a stamp without a time. Pack archives and `data/tts_smoke/NN.wav` are still accepted.
+- After: the same command, `16 passed, 1 deselected in 30.74s`. `test_FR_0_7_07_committed_bundles_and_their_reports_in_docs` still checks that each committed bundle holds result files only.
