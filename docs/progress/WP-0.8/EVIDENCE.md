@@ -231,6 +231,33 @@ Findings: 0
 0 findings: OK (0.6 s)
 ```
 
+## CI
+Commit `8fac4b5` (PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/8). Every job is green:
+
+| Run | Event | Job | Conclusion |
+| --- | --- | --- | --- |
+| 37042854060 | push | lab | success |
+| 37042854060 | push | harness-regression | success |
+| 37042880300 | pull_request | lab | success |
+| 37042880300 | pull_request | harness-regression | success |
+
+Excerpts from the pull-request run:
+```text
+lab (job 110957037105):
+1801 passed, 55 deselected in 192.86s (0:03:12)
+Work package from the pull request title: WP-0.8
+aqis-audit-gate: base origin/main (merge-base b4b327edd783), head 643cd5ca9998, approvals origin/main b4b327edd783, wp WP-0.8
+Findings: 0
+0 findings: OK (0.4 s)
+
+harness-regression (job 110957036735):
+FAILED tests/regression/test_loss_category.py::test_packet_loss_category_applies_drop_impairment_in_bridge - … did not complete within 3.0s
+========================= 1 failed, 21 passed in 4.29s =========================
+baseline: 22 tests, 21 passed; this run: 22 tests, 21 passed
+RESULT: PASS
+```
+The one harness failure is the known baseline failure (`docs/baselines/harness_tests_baseline.md`: 21 passed, 1 failed). The regression check compares against that baseline and passes.
+
 ## Owner-run checks
 | Check | Where | Command | Expected output | Result report |
 | --- | --- | --- | --- | --- |
