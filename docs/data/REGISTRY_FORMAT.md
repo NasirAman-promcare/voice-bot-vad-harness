@@ -32,6 +32,7 @@ The first eight columns are the fields FR-0.4-01 names; the others locate and de
 ## Validation
 `registry validate` (and every `registry build` and `pack build`) reports every problem as `line <n> column <name>: <reason>`, never only the first:
 - a missing licence, or a licence not in the licence table;
+- a licence that differs from the one `datasets.yaml` gives the row's dataset (for MUSAN, the licence of the subset with the row's split);
 - an `owner` or `campaign` row without a consent reference, or one that does not resolve to a non-empty file inside the repository (absolute paths, `..` and folders are rejected);
 - a consent reference on any other source;
 - a speech row without a transcript or speaker, or a non-speech row with either;

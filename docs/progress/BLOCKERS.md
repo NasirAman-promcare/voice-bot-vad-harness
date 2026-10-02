@@ -360,7 +360,7 @@ Only the store and ingest change waits.
 **Owner answer:** Option 1 (`docs/approvals/WP-0.7.md` on `main`, `a7e0d4e`, 2026-10-02): in `check_part_file` (`aqis_lab/results/store.py`) and `from_score_folder` (`aqis_lab/results/ingest.py`), copy the bytes into Arrow-owned memory (`pa.BufferOutputStream`) before `pq.read_table`, and add a repeat regression test. Done after merging `main`: both functions read from the Arrow-owned copy; `test_FR_0_6_02_repeated_results_add_always_exits_cleanly` (slow) runs `results add --run` and `--scores` 60 times each in fresh processes, every one exiting 0 (`docs/progress/WP-0.7/FIXES.md`, BLK-012). The abort never reproduced here, so the test guards the path but cannot prove the fix on its own.
 
 ## BLK-013 — WP-0.8 needs the blueprint and Build Plan sections its spec cites
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.8  ·  Raised: 2026-10-02  ·  Session: https://claude.ai/code/session_01L48B7DHkHhYAqxs9WH35hb
 
 **What I need:** the text of the AQIS Test Lab blueprint and Build Plan committed to `main` under `docs/specs/sources/`. At least these parts:
@@ -392,4 +392,4 @@ Earlier WPs could rely on specs that were complete on their own. This one says o
 
 **Paused until answered:** the content of all five WP-0.8 documents. Planning is complete, and no document, code or test has been written. Once the plan is approved, the debt work (PLAN.md, question 2) does not depend on this answer and can be built first.
 
-**Owner answer:**
+**Owner answer:** Option 1 (`docs/approvals/WP-0.8.md` on `main`, `61c50c7`): the owner committed `docs/specs/sources/AQIS_Test_Lab_Blueprint.md` and `docs/specs/sources/AQIS_Test_Lab_Build_Plan.md`, and approved questions 2 to 8 as recommended, with the consent facts and the consent scheme given in the approval. Merged into this branch (`bd0fa9c`).

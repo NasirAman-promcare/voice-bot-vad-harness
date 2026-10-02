@@ -1,7 +1,7 @@
 """The source registry (data/registry/sources.csv): one row per source clip, its CSV form and its validation.
 
 CAPABILITIES:
-  CAP-REG-001: check_registry_bytes() reports every problem of a registry file by line and column (header, field count, UTF-8, clip_id form and uniqueness, dataset and source, a missing or unknown licence, consent references for owner and campaign recordings that must name an existing non-empty file in the repository, transcript and speaker for speech only, split, tags, file facts); load_registry() turns a valid file into RegistryRow values or raises RegistryValidationError; registry_bytes() writes rows in the one canonical form (sorted by clip_id) [tests: test_FR_0_4_01_registry_has_spec_columns, test_FR_0_4_01_valid_rows_pass, test_FR_0_4_01_rejects_missing_licence, test_FR_0_4_01_rejects_unknown_licence, test_FR_0_4_01_rejects_owner_row_without_consent, test_FR_0_4_01_rejects_consent_ref_that_does_not_resolve, test_FR_0_4_01_rejects_consent_ref_on_other_sources, test_FR_0_4_01_rejects_speech_row_without_transcript_or_speaker, test_FR_0_4_01_rejects_non_speech_row_with_transcript, test_FR_0_4_01_rejects_invalid_or_duplicate_clip_id, test_FR_0_4_01_rejects_malformed_file_facts, test_FR_0_4_01_reports_every_problem_by_row_and_column, test_FR_0_4_01_rejects_wrong_header_and_field_count, test_FR_0_4_01_rows_round_trip_and_sort]
+  CAP-REG-001: check_registry_bytes() reports every problem of a registry file by line and column (header, field count, UTF-8, clip_id form and uniqueness, dataset and source, a missing or unknown licence, a licence that differs from the one datasets.yaml gives the row's dataset and split, consent references for owner and campaign recordings that must name an existing non-empty file in the repository, transcript and speaker for speech only, split, tags, file facts); load_registry() turns a valid file into RegistryRow values or raises RegistryValidationError; registry_bytes() writes rows in the one canonical form (sorted by clip_id) [tests: test_FR_0_4_01_registry_has_spec_columns, test_FR_0_4_01_valid_rows_pass, test_FR_0_4_01_rejects_missing_licence, test_FR_0_4_01_rejects_unknown_licence, test_FR_0_4_01_rejects_owner_row_without_consent, test_FR_0_4_01_rejects_consent_ref_that_does_not_resolve, test_FR_0_4_01_rejects_consent_ref_on_other_sources, test_FR_0_4_01_rejects_speech_row_without_transcript_or_speaker, test_FR_0_4_01_rejects_non_speech_row_with_transcript, test_FR_0_4_01_rejects_invalid_or_duplicate_clip_id, test_FR_0_4_01_rejects_malformed_file_facts, test_FR_0_4_01_reports_every_problem_by_row_and_column, test_FR_0_4_01_rejects_wrong_header_and_field_count, test_FR_0_4_01_rows_round_trip_and_sort, test_FR_0_4_01_rejects_licence_that_differs_from_its_dataset, test_FR_0_4_01_committed_registry_licences_equal_dataset_licences]
 INPUTS AND OUTPUTS: registry CSV bytes, a Datasets value and the repository root in; a list of Problem values,
   RegistryRow values or canonical CSV bytes out.
 CONTRACTS: registry format (docs/data/REGISTRY_FORMAT.md); datasets.yaml format 1.
@@ -13,6 +13,8 @@ NOT IN SCOPE:
   - Producing rows from source files (aqis_lab/registry/importers.py).
 CHANGE LOG:
   2026-09-27 WP-0.4 FR-0.4-01 created.
+  2026-10-02 WP-0.8 DEBT-010 (WP-0.4-F03): check_records rejects a licence that differs from
+    Dataset.licence_for_split of the row's dataset and split.
 """
 import csv
 import io
@@ -138,6 +140,12 @@ def check_records(records, datasets, repo_root):
         elif rec["licence"] not in datasets.licences:
             bad(line, "licence", f"licence {rec['licence']!r} is not defined in the licence table of "
                                  f"{datasets.path.name}")
+        elif dataset is not None and rec["split"] in dataset.splits:
+            expected = dataset.licence_for_split(rec["split"])
+            if rec["licence"] != expected:
+                bad(line, "licence", f"licence {rec['licence']!r} differs from {expected!r}, the licence "
+                                     f"{datasets.path.name} gives dataset {dataset.dataset_id!r} for split "
+                                     f"{rec['split']!r}")
         if rec["source"] in CONSENT_SOURCES:
             if not rec["consent_ref"]:
                 bad(line, "consent_ref", f"missing consent reference (required for {rec['source']} recordings)")
