@@ -188,17 +188,9 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0
 - Status: DONE
 
 ### Consent facts after the approval rewrite (FR-0.8-01)
-- **What happened:** the owner's rewrite of `docs/approvals/WP-0.8.md` (`b4b327e`) replaced the earlier CONDITIONS. It keeps "Questions 2 to 8: as recommended in PLAN.md", but no longer lists the consent facts of question 6:
-  - (a) access;
-  - (b) services;
-  - (c) purpose;
-  - (e) the 30-day withdrawal window.
-
-  These had no recommendation in PLAN.md, because only the owner could give them. The owner gave them in the approval committed to `main` at `61c50c7`, and nothing in the rewrite changes them.
-- **Effect:** after the merge, `test_FR_0_8_01_owner_facts_appear_as_given` failed with `AssertionError: a`, because the current file no longer holds line (a).
-- **Change:** the test now reads the facts from the owner's commit itself (`git show 61c50c7:docs/approvals/WP-0.8.md`). It first checks that the commit is an ancestor of `HEAD` and that the file there starts `STATUS: APPROVED`, `WP: WP-0.8`, `APPROVED-BY: owner`. CI checks out the full history (`fetch-depth: 0` in `.github/workflows/aqis-lab-ci.yml`). The consent form was not changed.
-- **For the owner:** if you want the current approval to list the facts again, re-add the six lines. The test can then read the current file again.
-- **Run:** `8 passed, 13 deselected in 0.22s` (`-k FR_0_8_01`).
+- **Round 1.** The approval rewrite `b4b327e` had dropped the question 5 and 6 lines, and the owner-fact test read them from commit `61c50c7` (audit F02).
+- **Round 2.** The owner restored the lines on `main` (`f97f492`). The test now reads them from the current `docs/approvals/WP-0.8.md`, and checks each owner-fact section and the tick boxes for exact wording (audit F01 and F03; `docs/progress/WP-0.8/FIXES.md`).
+- New test: `test_FR_0_8_01_owner_fact_check_rejects_changed_window_and_additions`.
 
 ## Acceptance
 ### AT-0.8-01 — completeness, and no value invented where the owner decides
@@ -429,5 +421,6 @@ Unbroken: `38 passed in 0.37s`.
 | 1. (targets) | M1b: `**Decision:** [OWNER DECIDES: harm-rate option]` is replaced by `**Decision:** HR-B` | `test_FR_0_8_05_document_does_not_choose`, `test_FR_0_8_05_choice_check_detects_a_filled_decision` | `2 failed, 36 passed in 0.26s` |
 | 1. (owner threshold) | M1c: the guide's clipping limit is changed from the owner's 0.1 % to 0.5 % | `test_FR_0_8_02_every_quality_check_has_a_pass_rule` | `1 failed, 37 passed in 0.24s` |
 | 1. (owner list) | M1d: an accent group the owner did not give (`acc-british`) is added to the session form | `test_FR_0_8_03_choices_equal_the_recording_guide_lists` | `1 failed, 37 passed in 0.21s` |
+| 1. (round 2, owner consent facts) | M1h, E1, E2, E3 from audit round 1 | `test_FR_0_8_01_owner_facts_appear_as_given` | each `2 failed, 43 passed` at `fdf0129` (`FIXES.md`) |
 | 2. Every filler has a risk level and at least one never-play context | M2a: fil-001's "Never play when" cell is emptied | `test_FR_0_8_04_every_filler_has_a_never_play_context` | `1 failed, 37 passed in 0.21s` |
 | 2. (risk level) | M2b: fil-001's level is emptied | `test_FR_0_8_04_every_filler_has_id_text_use_and_risk_level`, `test_FR_0_8_04_risk_levels_are_the_blueprint_four_and_all_used`, `test_FR_0_8_04_blueprint_examples_are_in_the_library_at_their_level` | `3 failed, 35 passed in 0.24s` |
