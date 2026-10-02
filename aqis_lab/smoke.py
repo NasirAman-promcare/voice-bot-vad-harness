@@ -3,8 +3,8 @@ bundle (FR-0.7-07, NFR-0.7-01).
 
 CAPABILITIES:
   CAP-SMOKE-001: load_config() reads config/aqis_lab/phase0_smoke.yaml strictly: pack, seed, the 5-clip subset (its clip IDs must equal what its rule computes on the pack), targets with their platform and GPU need, the runs per target (task, all clips or the subset), the scored tasks and the score subsets; any problem is a SmokeInputError [tests: test_FR_0_7_07_config_subset_equals_rule, test_FR_0_7_07_config_is_checked]
-  CAP-SMOKE-002: run_smoke() refuses a target that is not this machine's platform and runs every task's preflight before anything is written (on a GPU target without a GPU it stops: Parakeet is never skipped), then runs each task of the target as a resumable runner run with its own run card: vosk-batch and harness-vad on all 60 clips, vosk-realspeed on the subset, and on colab parakeet-offline (60) and parakeet-compute-delay (subset) [tests: test_FR_0_7_07_target_must_match_platform, test_FR_0_7_03_colab_smoke_without_gpu_fails_never_skips, test_FR_0_7_07_smoke_creates_valid_run_card_for_every_run, test_FR_0_7_07_vosk_batch_on_all_60_clips, test_FR_0_7_07_harness_vad_on_all_clips, test_FR_0_7_07_realspeed_vosk_on_5_clips, test_FR_0_7_07_second_run_resumes_and_stores_nothing_new, test_NFR_0_7_01_cloud_smoke_within_15_minutes]
-  CAP-SMOKE-003: the transcripts of the scored tasks are scored with the WP-0.3 `score` command per score subset (natural speech, and synthetic TTS apart); every run and score folder is added to a results store, every run card and event log is validated and every stored row is traced [tests: test_FR_0_7_07_speech_clips_scored_with_wp03_scorer, test_FR_0_7_07_trace_works_on_every_row]
+  CAP-SMOKE-002: run_smoke() refuses a target that is not this machine's platform and runs every task's preflight before anything is written (on a GPU target without a GPU it stops: Parakeet is never skipped), then runs each task of the target as a resumable runner run with its own run card: vosk-batch and harness-vad on all 60 clips, vosk-realspeed on the subset, and on colab parakeet-offline (60) and parakeet-compute-delay (subset); with from_scratch every run folder under --out that holds another run is moved aside by the runner (<folder>.superseded-<UTC>) and the run starts again [tests: test_FR_0_7_07_target_must_match_platform, test_FR_0_7_03_colab_smoke_without_gpu_fails_never_skips, test_FR_0_7_07_smoke_creates_valid_run_card_for_every_run, test_FR_0_7_07_vosk_batch_on_all_60_clips, test_FR_0_7_07_harness_vad_on_all_clips, test_FR_0_7_07_realspeed_vosk_on_5_clips, test_FR_0_7_07_second_run_resumes_and_stores_nothing_new, test_NFR_0_7_01_cloud_smoke_within_15_minutes, test_FR_0_7_07_from_scratch_supersedes_the_old_runs]
+  CAP-SMOKE-003: the transcripts of the scored tasks are scored with the WP-0.3 `score` command per score subset (natural speech, and synthetic TTS apart); every run and score folder is added to a results store, every run card and event log is validated and every stored row is traced [tests: test_FR_0_7_07_speech_clips_scored_with_wp03_scorer, test_FR_0_7_07_trace_works_on_every_row, test_FR_0_7_07_smoke_traced_rows_equal_the_stored_rows, test_FR_0_7_07_failed_trace_of_any_row_stops_the_smoke]
   CAP-SMOKE-004: the bundle phase0-smoke-<target>-<UTC> holds BUNDLE.json (target, platform, machine, git, locks, elapsed time, run cards, score summaries and the SHA-256 and size of every file), PHASE0_SMOKE.md, runs/<task>/ (run card, plan, results, events, log) and scores/<task>-<subset>/, and is written as one deterministic .tar; every number of the report is printed from a bundle file and each table row names its result row [tests: test_FR_0_7_07_bundle_files_match_bundle_json, test_FR_0_7_07_every_report_number_traces_to_a_row, test_FR_0_7_07_parakeet_only_on_gpu_target_and_report_says_so, test_FR_0_7_07_committed_bundles_and_their_reports_in_docs]
 INPUTS AND OUTPUTS: a target and folders in; run folders under --out, the bundle folder and .tar, a results store
   and a summary on stdout out; SmokeInputError (exit 2) or SmokeFailure (exit 1) on failure.
@@ -17,6 +17,8 @@ NOT IN SCOPE:
   - Comparing bundles across machines (aqis_lab/parity.py).
 CHANGE LOG:
   2026-09-30 WP-0.7 FR-0.7-07 created.
+  2026-10-02 WP-0.7 round 2 F04: run_smoke takes from_scratch and passes it to every run; F02: header lists the
+    trace tests (test_FR_0_7_07_from_scratch_supersedes_the_old_runs, test_FR_0_7_07_failed_trace_of_any_row_stops_the_smoke).
 """
 import contextlib
 import csv
@@ -350,7 +352,7 @@ def _tar_bytes(bundle, created):
 
 
 def run_smoke(target, out=None, store=None, model_cache=None, work_dir=None, bundle_dir=None, drive_mount=None,
-              config=DEFAULT_CONFIG, system=None, echo=print):
+              config=DEFAULT_CONFIG, system=None, echo=print, from_scratch=False):
     """Run the smoke for `target`; returns a SmokeResult. See the module header."""
     cache = Path(model_cache) if model_cache is not None else models.DEFAULT_CACHE
     cfg = load_config(config)
@@ -388,7 +390,8 @@ def run_smoke(target, out=None, store=None, model_cache=None, work_dir=None, bun
         options = RunOptions(task=task, pack=cfg.pack, out=out / "runs" / task, seed=cfg.seed,
                              work_dir=Path(work_dir) if work_dir is not None else DEFAULT_WORK_DIR,
                              clips=cfg.subset if clips == "subset" else None, model_cache=cache,
-                             drive_mount=drive_mount, notes=f"phase0 smoke, target {target}")
+                             drive_mount=drive_mount, notes=f"phase0 smoke, target {target}",
+                             from_scratch=from_scratch)
         try:
             outcome = run(options, system=system, echo=echo, on_shard=on_shard)
         except RunInputError as exc:

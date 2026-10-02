@@ -143,7 +143,9 @@ It needs a **T4 GPU** runtime. The run folder is `RUN_OUT = "/content/drive/MyDr
    - the doctor report `MyDrive/AQIS_LAB/logs/doctor_colab_<timestamp>.json`, into `docs/environment/`;
    - the output of cells 3 and 4 and of the pytest cell, copied into `docs/progress/WP-0.7/OC-0.7-01_colab.txt`.
 
-If the runtime disconnects during the smoke, reconnect and run all cells again with the same `RUN_OUT`: each task's run resumes and skips its finished shards. A task that cannot run on this runtime (for example no GPU) stops with `ERROR:` before anything is written.
+If the runtime disconnects during the smoke, reconnect and run all cells again with the same `RUN_OUT`: each task's run resumes and skips its finished shards.
+
+**Running it again at a new tag.** The run folders in `RUN_OUT` belong to the commit that made them. The smoke at a new tag stops with `ERROR: … holds another run … --from-scratch`. Set `RUN_ARGS = ["--from-scratch"]` in cell 1 for that run: each old run folder is renamed `<task>.superseded-<UTC>` on Drive, never deleted, and the runs start again. Set it back to `RUN_ARGS = []` afterwards. A task that cannot run on this runtime (for example no GPU) stops with `ERROR:` before anything is written.
 
 ## When something fails
 Commit the output (or the report) to the pull request's branch, start a Claude session, and type `/surgical-fix <path to the report>`. Do not debug inside Colab. Do not run two launchers on the same run folder at once, for example in two browser tabs.

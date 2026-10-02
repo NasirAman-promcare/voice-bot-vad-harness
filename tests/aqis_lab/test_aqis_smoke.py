@@ -341,11 +341,107 @@ def test_FR_0_7_07_committed_bundles_and_their_reports_in_docs():
         assert m and m.group(1).encode("utf-8") == bundle.files["PHASE0_SMOKE.md"], name
 
 
+@pytest.mark.slow
+@pytest.mark.network
+def test_FR_0_7_07_smoke_traced_rows_equal_the_stored_rows(cloud):
+    # Audit round 1, F02: the smoke's own trace count is the number of rows its store holds for its run cards.
+    from aqis_lab.results import views
+    meta = json.loads((cloud.bundle / "BUNDLE.json").read_text(encoding="utf-8"))
+    stored = {r["result_row_id"] for card in cloud.runs.values() for r in views.query_run_card(cloud.store, card)}
+    assert meta["traced_rows"] == len(stored) == len(_row_ids(cloud.bundle)) == 60 + 60 + 5 + 2 * 50
+
+
+def _harness_vad_bundle(root):
+    """A bundle folder holding one real, finished harness-vad run (the smoke's run files), and its run card ID."""
+    from aqis_lab.runner.run import RunOptions, run
+    out = root / "out"
+    outcome = run(RunOptions(task="harness-vad", pack=SMOKE_PACK, out=out, seed=0, work_dir=root / "work"), echo=None)
+    assert outcome.status == "complete"
+    bundle = root / "bundle"
+    (bundle / "runs" / "harness-vad").mkdir(parents=True)
+    for name in smoke.RUN_FILES:
+        (bundle / "runs" / "harness-vad" / name).write_bytes((out / name).read_bytes())
+    return bundle, outcome.run_card_id
+
+
+def test_FR_0_7_07_failed_trace_of_any_row_stops_the_smoke(tmp_path):
+    # Audit round 1, F02: the smoke traces every stored row, and the trace of any one row failing stops it with
+    # SmokeFailure (exit 1). The store already holds, in another run card's folder, a copy of the harness-vad row
+    # that sorts last, so that row (and only that row) is found twice and its trace is refused.
+    import dataclasses
+    import shutil
+    from aqis_lab.results import views
+    from aqis_lab.runner.run import RunOptions, run
+    bundle, card = _harness_vad_bundle(tmp_path)
+    clean = tmp_path / "clean-store"
+    traced = smoke._check_and_store(bundle, clean, {"harness-vad": card}, [])
+    assert traced == len(views.query_run_card(clean, card)) == 60
+    damaged = tmp_path / "damaged-store"
+    other = run(RunOptions(task="clip-stats", pack=SMOKE_PACK, out=tmp_path / "other", seed=0,
+                           work_dir=tmp_path / "work"), echo=None)
+    rstore.add_batch(damaged, ingest.from_run_folder(tmp_path / "other"))
+    batch = ingest.from_run_folder(bundle / "runs" / "harness-vad")
+    last = max(batch.records, key=lambda rec: (rec.identity["clip_id"], rec.row_id))
+    one = rstore.add_batch(tmp_path / "scratch-store", dataclasses.replace(batch, records=[last]))
+    shutil.copy2(one.part, rstore.partition_dir(damaged, other.run_card_id) / one.part.name)
+    first = min(batch.records, key=lambda rec: (rec.identity["clip_id"], rec.row_id))
+    assert last.row_id != first.row_id
+    with pytest.raises(smoke.SmokeFailure) as info:
+        smoke._check_and_store(bundle, damaged, {"harness-vad": card}, [])
+    assert info.value.exit_code == 1 and last.row_id in str(info.value) and "stored 2 times" in str(info.value)
+
+
+def _unverified_model_cache(root):
+    """A model cache whose Vosk folder has no verification marker: the Vosk adapter refuses to open it."""
+    cache = root / "models"
+    (cache / "vosk-model-small-en-us-0.15" / "30f26242c4eb449f").mkdir(parents=True)
+    return cache
+
+
+def _smoke_cli(root, *extra):
+    return subprocess.run([sys.executable, "-m", "aqis_lab", "phase0", "smoke", "--target", "cloud", "--out",
+                           str(root / "out"), "--store", str(root / "store"), "--model-cache", str(root / "models"),
+                           "--work-dir", str(root / "work"), "--bundle-dir", str(root / "bundles"), *extra],
+                          cwd=ROOT, capture_output=True, text=True, timeout=600)
+
+
+def test_FR_0_7_07_failed_run_exits_1_with_error(tmp_path):
+    # Audit round 1, F03: a run that fails (here the Vosk model cannot be opened) ends the smoke with ERROR: and
+    # exit 1, and no bundle is written.
+    _unverified_model_cache(tmp_path)
+    proc = _smoke_cli(tmp_path)
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert proc.stderr.startswith("ERROR: task vosk-batch:") and "without its verification marker" in proc.stderr
+    assert not (tmp_path / "bundles").exists() or not any((tmp_path / "bundles").iterdir())
+
+
+def test_FR_0_7_07_from_scratch_supersedes_the_old_runs(tmp_path):
+    # Audit round 1, F04: --out holds a run that differs from today's (here: seed 1). Without --from-scratch the smoke
+    # refuses (exit 2) and names the option; with it, the runner moves the old run folder aside and starts again.
+    from aqis_lab.runner.run import RunFailure, RunOptions, run
+    cache = _unverified_model_cache(tmp_path)
+    old = tmp_path / "out" / "runs" / "vosk-batch"
+    with pytest.raises(RunFailure):
+        run(RunOptions(task="vosk-batch", pack=SMOKE_PACK, out=old, seed=1, work_dir=tmp_path / "work",
+                       model_cache=cache), echo=None)
+    old_card = (old / "run_card.json").read_bytes()
+    refused = _smoke_cli(tmp_path)
+    assert refused.returncode == 2 and "holds another run" in refused.stderr and "--from-scratch" in refused.stderr
+    assert (old / "run_card.json").read_bytes() == old_card
+    again = _smoke_cli(tmp_path, "--from-scratch")
+    superseded = sorted(old.parent.glob("vosk-batch.superseded-*"))
+    assert len(superseded) == 1 and (superseded[0] / "run_card.json").read_bytes() == old_card
+    assert json.loads((old / "run_card.json").read_text(encoding="utf-8"))["seed"] == 0
+    assert "previous run folder moved to" in (old / "runner.log").read_text(encoding="utf-8")
+    assert again.returncode == 1 and "without its verification marker" in again.stderr    # the run itself started
+
+
 def test_FR_0_7_07_cli_parses_every_option():
     from aqis_lab.commands.phase0 import build_parser
     ns = build_parser().parse_args(["smoke", "--target", "oracle", "--out", "o", "--store", "s", "--model-cache", "m",
-                                    "--work-dir", "w", "--bundle-dir", "b", "--drive-mount", "d"])
-    assert (ns.target, ns.out, ns.store, ns.model_cache, ns.work_dir, ns.bundle_dir, ns.drive_mount) == \
-        ("oracle", "o", "s", "m", "w", "b", "d")
+                                    "--work-dir", "w", "--bundle-dir", "b", "--drive-mount", "d", "--from-scratch"])
+    assert (ns.target, ns.out, ns.store, ns.model_cache, ns.work_dir, ns.bundle_dir, ns.drive_mount,
+            ns.from_scratch) == ("oracle", "o", "s", "m", "w", "b", "d", True)
+    assert build_parser().parse_args(["smoke", "--target", "cloud"]).from_scratch is False
     with pytest.raises(SystemExit):
         build_parser().parse_args(["smoke", "--target", "kaggle"])

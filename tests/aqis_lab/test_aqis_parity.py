@@ -44,31 +44,68 @@ def test_FR_0_7_08_identical_bundles_report_no_difference(tmp_path):
     assert "phase0-smoke-cloud-1" in proc.stdout and "phase0-smoke-oracle-1" in proc.stdout
 
 
+def expected_difference_lines(texts_a, texts_b, a, b):
+    """Every DIFFERENT line the spec requires for two bundles, computed without aqis_lab.parity: transcript hashes
+    from the texts the test wrote; WER per clip and variant, and each variant's totals, from the bundles' score files
+    (written by the WP-0.3 scorer). Strings are printed as they are, other values with repr."""
+    import pyarrow.parquet as pq
+    shown = lambda v: v if isinstance(v, str) else repr(v)
+    sha = lambda text: hashlib.sha256(text.encode("utf-8")).hexdigest()
+    where = lambda present: "present" if present else "missing"
+    lines = []
+    for clip in sorted(set(texts_a) | set(texts_b)):
+        if clip not in texts_a or clip not in texts_b:
+            lines.append(f"DIFFERENT vosk-batch {clip} clip A={where(clip in texts_a)} B={where(clip in texts_b)}")
+        elif sha(texts_a[clip]) != sha(texts_b[clip]):
+            lines.append(f"DIFFERENT vosk-batch {clip} text_sha256 A={sha(texts_a[clip])} B={sha(texts_b[clip])}")
+    tables = sorted({p.name for p in (a / "scores").iterdir()} & {p.name for p in (b / "scores").iterdir()})
+    for table in tables:
+        wer = {}
+        summary = {}
+        for side, root in (("A", a), ("B", b)):
+            rows = pq.read_table(root / "scores" / table / "scores.parquet").to_pylist()
+            wer[side] = {(r["clip_id"], r["variant"]): r["wer"] for r in rows}
+            summary[side] = json.loads((root / "scores" / table / "summary.json").read_text())["variants"]
+        for clip, variant in sorted(set(wer["A"]) | set(wer["B"])):
+            key = (clip, variant)
+            if key not in wer["A"] or key not in wer["B"]:
+                lines.append(f"DIFFERENT {table} {clip} {variant} row A={where(key in wer['A'])} "
+                             f"B={where(key in wer['B'])}")
+            elif wer["A"][key] != wer["B"][key]:
+                lines.append(f"DIFFERENT {table} {clip} {variant} wer A={wer['A'][key]!r} B={wer['B'][key]!r}")
+        for variant in sorted(set(summary["A"]) | set(summary["B"])):
+            for name in ("corpus_wer", "errors", "ref_words", "corpus_cer"):
+                va = summary["A"].get(variant, {}).get(name)
+                vb = summary["B"].get(variant, {}).get(name)
+                if va != vb:
+                    lines.append(f"DIFFERENT {table} total {variant} {name} A={shown(va)} B={shown(vb)}")
+    return lines
+
+
 def test_FR_0_7_08_reports_every_per_clip_difference(tmp_path):
-    # Must-catch 6: three changed transcripts (hash and WER), one clip missing and one extra; every one is listed.
+    # Must-catch 6: three changed transcripts (hash and WER), one clip missing and one extra. Every difference of
+    # both score variants is listed, and nothing else (audit round 1, F01: the expected set is complete).
     changed = {"clip-01": "the quick brown fox number 1 jumps over a lazy dog",
                "clip-05": "the quick brown fox number 5 leaps over the lazy dog",
                "clip-09": "the quick brown fox number 9 jumps over the lazy dog."}
-    a = bundle(tmp_path, "a", texts())
-    b = bundle(tmp_path, "b", texts(changed, drop=("clip-11",), add={"clip-12": "an extra clip"}))
+    texts_a, texts_b = texts(), texts(changed, drop=("clip-11",), add={"clip-12": "an extra clip"})
+    a = bundle(tmp_path, "a", texts_a)
+    b = bundle(tmp_path, "b", texts_b)
     proc = run_parity(a, b)
     assert proc.returncode == 1, proc.stdout + proc.stderr
     lines = [l for l in proc.stdout.splitlines() if l.startswith("DIFFERENT")]
-    for clip, text in changed.items():
-        want = f"DIFFERENT vosk-batch {clip} text_sha256 A={hashlib.sha256(REFS[clip].encode()).hexdigest()} " \
-               f"B={hashlib.sha256(text.encode()).hexdigest()}"
-        assert want in lines, want
-    # clip-09 differs only in punctuation: the hash differs, the normalised WER does not
-    wer_lines = [l for l in lines if " wer " in l]
-    assert any(l.startswith("DIFFERENT vosk-batch-natural clip-01 main wer ") for l in wer_lines)
-    assert any(l.startswith("DIFFERENT vosk-batch-natural clip-05 main wer ") for l in wer_lines)
-    assert not any("clip-09" in l for l in wer_lines)
-    assert "DIFFERENT vosk-batch clip-11 clip A=present B=missing" in lines
-    assert "DIFFERENT vosk-batch clip-12 clip A=missing B=present" in lines
-    assert "DIFFERENT vosk-batch-natural clip-11 main row A=present B=missing" in lines
-    report = parity.compare(parity.load_bundle(a), parity.load_bundle(b))
-    assert len([d for d in report.differences if d.field == "text_sha256"]) == 3
-    assert f"parity: {len(lines)} difference(s)" in proc.stdout
+    expected = expected_difference_lines(texts_a, texts_b, a, b)
+    assert len(lines) == len(set(lines)) and sorted(lines) == sorted(expected), \
+        (sorted(set(expected) - set(lines)), sorted(set(lines) - set(expected)))
+    # what the set holds: 3 hashes, 2 clips, and for both variants the WER of clip-01 and clip-05, the row of
+    # clip-11 and the changed totals; clip-09 differs only in punctuation, so its normalised WER does not differ
+    assert len(expected) == 19
+    for variant in ("main", "disfluency_aware"):
+        for clip in ("clip-01", "clip-05"):
+            assert any(l.startswith(f"DIFFERENT vosk-batch-natural {clip} {variant} wer ") for l in expected)
+        assert f"DIFFERENT vosk-batch-natural clip-11 {variant} row A=present B=missing" in expected
+    assert not any("clip-09" in l and " wer " in l for l in expected)
+    assert f"parity: {len(expected)} difference(s)" in proc.stdout
 
 
 def test_FR_0_7_08_total_wer_difference_reported(tmp_path):

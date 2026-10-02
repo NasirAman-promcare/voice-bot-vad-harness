@@ -16,6 +16,7 @@ The phase 0 smoke run (WP-0.7, FR-0.7-07) runs the first three real components o
 | `--work-dir DIR` | Local folder the pack is staged in | the runner's default |
 | `--bundle-dir DIR` | Local folder where the bundle is assembled and scored | `data/raw/aqis_lab/smoke-bundles` |
 | `--drive-mount DIR` | The Google Drive mount on Colab: keeps the unit log current after every shard | none |
+| `--from-scratch` | Start every run again. A run folder under `--out` that holds another run (for example one made at an earlier commit, which the runner refuses to resume) is renamed `<folder>.superseded-<UTC>`, never deleted | off: unfinished runs of the same commit resume |
 
 Exit codes: 0 complete; 1 a run, score, store add, validation or trace failed; 2 a usage, configuration or machine problem found before anything is written (for example a GPU target without a GPU, or NeMo not installed).
 

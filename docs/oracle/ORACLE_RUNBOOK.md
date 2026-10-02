@@ -175,6 +175,7 @@ Upload the output of all three as `docs/progress/WP-0.6/OC-0.6-02_sync_dry_run.t
 3. `.venv/bin/python -m aqis_lab phase0 smoke --target oracle`
    - **Expected:** the runner logs of `vosk-batch`, `harness-vad` and `vosk-realspeed`. The batch runs log `cores: batch on 0-1`; the real-speed run logs `cores: timing on 2-3`. The last line starts with `smoke complete:` and names the archive `data/raw/aqis_lab/smoke/oracle/phase0-smoke-oracle-<stamp>.tar`.
    - The real-speed run plays its 5 clips (25.6 s of audio) at real time, never faster.
+   - At a later tag, the old run folders in `data/raw/aqis_lab/smoke/oracle/runs/` belong to the earlier commit, and the smoke stops with `ERROR: … holds another run …`. Run `.venv/bin/python -m aqis_lab phase0 smoke --target oracle --from-scratch` instead: the old folders are renamed `<task>.superseded-<UTC>`, never deleted.
 4. `.venv/bin/python -m pytest tests/aqis_lab -q -m oracle`
    - **Expected:** a last line ending in `passed`, with nothing failed.
 
