@@ -6,7 +6,7 @@ The targets, the blueprint passages and the section headings cited are read from
 import re
 from math import comb
 
-from aqis_docs_testutil import SOURCES, headings, owner_blanks, read, sections, table_with
+from aqis_docs_testutil import APPROVAL, SOURCES, headings, owner_blanks, read, sections, table_with
 
 TARGETS_DOC = "docs/decisions/TARGETS_OPTIONS.md"
 BLUEPRINT = SOURCES / "AQIS_Test_Lab_Blueprint.md"
@@ -132,3 +132,38 @@ def test_FR_0_8_05_harm_rate_counts_recomputed():
         target = float(re.fullmatch(r"below (\d+(?:\.\d+)?) ?%", row["Value"]).group(1)) / 100
         stated = re.search(r"at most (\d+) of 500", row["What it costs"] + " " + row["What it gives"])
         assert stated and int(stated.group(1)) == _max_wrong(500, target), (row["Option"], target)
+
+
+DECISION_RE = re.compile(r"\bDECISION: ([a-z-]+) = (.+?)\s*$", re.M)
+
+
+def decision_problems(approval_text, doc_text):
+    """Why the owner's DECISION lines do not each name one existing option of each target, or []."""
+    found = target_sections(doc_text)
+    problems, seen = [], {}
+    for target, value in DECISION_RE.findall(approval_text):
+        if target in seen:
+            problems.append(f"{target}: decided twice")
+        seen[target] = value
+    for heading, target, _, _ in TARGETS:
+        if target not in seen:
+            problems.append(f"{target}: no DECISION line")
+        elif seen[target] not in [r["Option"] for r in options(found[heading])]:
+            problems.append(f"{target}: {seen[target]!r} is not one of its options")
+    if not seen.get("retention"):
+        problems.append("retention: no DECISION line")
+    unknown = set(seen) - {t for _, t, _, _ in TARGETS} - {"retention"}
+    if unknown:
+        problems.append(f"unknown targets {sorted(unknown)}")
+    return problems
+
+
+def test_FR_0_8_05_owner_decisions_name_existing_options():
+    # Approval question 7 (a): the owner records each decision as a DECISION line in docs/approvals/WP-0.8.md.
+    approval, doc = APPROVAL.read_text(encoding="utf-8"), read(TARGETS_DOC)
+    assert decision_problems(approval, doc) == []
+    # The check is not empty: a misnamed option, a missing line or a second line is reported.
+    assert decision_problems(approval.replace("harm-rate = HR-", "harm-rate = XX-", 1), doc) != []
+    without = "\n".join(l for l in approval.splitlines() if "DECISION: margin" not in l)
+    assert decision_problems(without, doc) != []
+    assert decision_problems(approval + "\n  * (I) DECISION: timing-budget = TB-A\n", doc) != []

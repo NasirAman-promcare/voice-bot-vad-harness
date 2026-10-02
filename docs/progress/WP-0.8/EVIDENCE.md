@@ -119,8 +119,20 @@ $ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_filler_library.py -q -p no
 $ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_targets_options.py -q -p no:cacheprovider
 7 passed in 0.04s
 ```
-- **Still to come:** once the owner's `DECISION:` lines are on `main`, `test_FR_0_8_05_owner_decisions_name_existing_options` is added (PLAN.md; approval question 7 (a)).
-- Status: DONE for the document. The decision check waits for the owner's decisions.
+- **Owner decisions** (BLK-014 I, `docs/approvals/WP-0.8.md` on `main`, `b4b327e`):
+  - harm-rate = HR-B;
+  - margin = PM-B;
+  - timing-budget = TB-B;
+  - gate-escalation = GE-B;
+  - retention = "3 years from the date of recording, after which all voice recordings are permanently deleted."
+
+  As approved in question 7 (a), the documents keep their owner blanks, and the decisions live only in the approval file.
+- **Decision test:** `test_FR_0_8_05_owner_decisions_name_existing_options`. Every target has exactly one `DECISION:` line naming one of that target's option IDs in `TARGETS_OPTIONS.md`, and there is a retention line. The same check rejects a misnamed option (`XX-`), a missing margin line and a second timing-budget line, so it is not empty.
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_targets_options.py -q -p no:cacheprovider
+8 passed in 0.07s
+```
+- Status: DONE
 
 ### FR-0.8-02 — Recording guide (`docs/recording/RECORDING_GUIDE.md`, CAP-DOC-015)
 - **Owner inputs:** BLK-014 answers A to G in `docs/approvals/WP-0.8.md` (`b4b327e`, merged as `8845e01`), plus the Build Plan's "Campaign A".
