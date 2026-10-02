@@ -42,3 +42,26 @@ $ .venv/bin/python -m aqis_lab registry validate; echo "exit $?"
 exit 0
 ```
 - Status: DONE
+
+### DEBT-018 — smoke `--bundle-dir` goes through the Drive write guard (WP-0.7-F05)
+- **Code:** `aqis_lab/smoke.py`, `run_smoke`:
+  - the `bundle_dir` default is resolved right after the platform check;
+  - then `drive.check_write_path(bundle_dir, system)` runs, and a `DriveError` becomes `SmokeInputError` (`ERROR:`, exit 2), before any preflight, run or write.
+
+  Also changed: the module docstring (CAP-SMOKE-002, CHANGE LOG) and the `REGISTRY.md` row CAP-SMOKE-002.
+- **Tests:**
+  - `test_NFR_0_5_02_smoke_refuses_bundle_dir_on_drive_outside_aqis_lab`: a Colab view with a stand-in Drive mount; the bundle folder is `MyDrive/elsewhere/bundles`. Expected: exit 2, the message names the path and `AQIS_LAB`, the mount tree is unchanged and `--work-dir` is not created.
+  - `test_NFR_0_5_02_smoke_accepts_bundle_dir_inside_aqis_lab`: the guard lets `MyDrive/AQIS_LAB/bundles` through, and the smoke stops later at the GPU preflight's own message.
+- **Tests first:** before the fix, the refusal test failed because the GPU preflight stopped first:
+```text
+E       assert ('refusing to write' in 'task parakeet-offline cannot run on this machine: Parakeet Unified runs only on a CUDA GPU and this machine has no GP...rm found none). It is never skipped or replaced: run it on a GPU target (the Colab T4 runtime; runbook in docs/colab/)')
+1 failed, 1 passed, 4 deselected in 0.46s
+```
+- **After the fix:**
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_debt_wp08.py tests/aqis_lab/test_aqis_smoke.py tests/aqis_lab/test_aqis_smoke_launcher.py -q -p no:cacheprovider -m "not slow and not network"
+22 passed, 12 deselected in 10.64s
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0_0_08_repository_registry_is_consistent"
+1 passed, 1808 deselected in 1.48s
+```
+- Status: DONE

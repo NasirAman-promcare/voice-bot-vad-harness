@@ -1,13 +1,17 @@
 """Accepted debts closed in WP-0.8 (docs/progress/DEBT.md; docs/approvals/WP-0.8.md, question 2).
 
 - DEBT-010 (WP-0.4-F03): a registry row's licence must equal the licence datasets.yaml gives its dataset and split.
+- DEBT-018 (WP-0.7-F05): `phase0 smoke --bundle-dir` on Google Drive outside MyDrive/AQIS_LAB is refused (NFR-0.5-02).
 """
 import csv
 import io
 
 import pytest
 
+from aqis_adapters_testutil import drive_view
 from aqis_packs_testutil import ROOT, download_entry, write_datasets
+from aqis_runner_testutil import tree_snapshot
+from aqis_lab import smoke
 from aqis_lab.registry import datasets as ds
 from aqis_lab.registry import registry as reg
 
@@ -94,3 +98,36 @@ def test_FR_0_4_01_committed_registry_licences_equal_dataset_licences():
         entry = datasets.datasets[row["dataset"]].fields
         subsets = [s for s in entry.get("subsets", {}).values() if s["split"] == row["split"]]
         assert row["licence"] == (subsets[0]["licence"] if subsets else entry["licence"]), row["clip_id"]
+
+
+# --- DEBT-018: the smoke's bundle folder goes through the Drive write guard -----------------------------------------
+
+def test_NFR_0_5_02_smoke_refuses_bundle_dir_on_drive_outside_aqis_lab(tmp_path):
+    # A Colab runtime with a Drive mount: --bundle-dir on Drive but outside MyDrive/AQIS_LAB is refused with exit 2
+    # before any task runs (the GPU preflight would otherwise stop first) and before anything is written.
+    system, mount = drive_view(tmp_path)
+    out = mount / "MyDrive" / "AQIS_LAB" / "results" / "phase0-smoke-colab"
+    bundles = mount / "MyDrive" / "elsewhere" / "bundles"
+    work = tmp_path / "work"
+    before = tree_snapshot(mount)
+    with pytest.raises(smoke.SmokeInputError) as info:
+        smoke.run_smoke("colab", out=out, work_dir=work, bundle_dir=bundles, drive_mount=mount, system=system,
+                        echo=None)
+    message = str(info.value)
+    assert info.value.exit_code == 2
+    assert "refusing to write" in message and str(bundles) in message and "AQIS_LAB" in message, message
+    assert tree_snapshot(mount) == before and not work.exists()
+
+
+def test_NFR_0_5_02_smoke_accepts_bundle_dir_inside_aqis_lab(tmp_path):
+    # The guard does not refuse a bundle folder inside MyDrive/AQIS_LAB: the smoke passes it and stops later, at the
+    # GPU preflight's own message (this runtime has no GPU), still before anything is written.
+    system, mount = drive_view(tmp_path)
+    out = mount / "MyDrive" / "AQIS_LAB" / "results" / "phase0-smoke-colab"
+    bundles = mount / "MyDrive" / "AQIS_LAB" / "bundles"
+    before = tree_snapshot(mount)
+    with pytest.raises(smoke.SmokeInputError, match="no GPU") as info:
+        smoke.run_smoke("colab", out=out, work_dir=tmp_path / "work", bundle_dir=bundles, drive_mount=mount,
+                        system=system, echo=None)
+    assert info.value.exit_code == 2 and "refusing to write" not in str(info.value)
+    assert tree_snapshot(mount) == before
