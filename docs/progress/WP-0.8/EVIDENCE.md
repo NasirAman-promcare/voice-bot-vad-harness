@@ -86,6 +86,42 @@ $ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_filler_library.py -q -p no
 ```
 - Status: DONE
 
+### FR-0.8-05 — Targets options (`docs/decisions/TARGETS_OPTIONS.md`, CAP-DOC-018)
+- **Tests** (`tests/aqis_lab/test_aqis_targets_options.py`):
+  - `test_FR_0_8_05_four_targets_each_with_2_or_3_options`
+  - `test_FR_0_8_05_every_option_has_trade_offs_and_a_citation`
+  - `test_FR_0_8_05_citations_name_sections_of_the_committed_blueprint`
+  - `test_FR_0_8_05_document_does_not_choose`
+  - `test_FR_0_8_05_choice_check_detects_a_filled_decision`
+  - `test_FR_0_8_05_decision_record_format_is_documented`
+  - `test_FR_0_8_05_harm_rate_counts_recomputed`
+- **Tests first:** `7 failed in 0.35s`, because the document did not exist.
+- **Failures fixed in the document while writing it** (the tests were not changed):
+  - "(example value)" inside a citation named a heading that does not exist;
+  - quoting the consent form's retention blank counted as a fifth owner blank;
+  - two "What it gives" cells said only "the blueprint's example value";
+  - one count was written "At most", not "at most".
+
+  The citation pattern was tightened before the document was written, because a citation at the end of a table cell (followed by `|`) would not have matched, and the whole-document check would have skipped it.
+- **Content and sources:**
+  - Each section quotes its blueprint bullet from "Quantitative Targets" word for word.
+  - Options:
+    - harm rate: below 1 %, 2 % (blueprint example) or 5 %;
+    - practical margin: 0.25, 0.5 (blueprint example) or 1.0 points;
+    - timing budget: 95 %, 90 % (blueprint value) or 80 % of turns;
+    - gate escalation: 10 %, 20 % or 30 %, the three rates the blueprint evaluates.
+
+    Values that are not the blueprint's are proposals to show the range, and the document says so.
+  - The harm-rate options state the exact one-sided binomial thresholds out of the Build Plan's 500 rated filler turns (phase 4 filler pack): at most 1, 4 and 16 wrong. `test_FR_0_8_05_harm_rate_counts_recomputed` recomputes them from `math.comb`. A scratchpad check gave the same values: `0.01 max wrong 1 cdf 0.0398 next 0.1234`; `0.02 max wrong 4 cdf 0.0281 next 0.0652`; `0.05 max wrong 16 cdf 0.0343 next 0.0559`.
+  - Every decision line is `**Decision:** [OWNER DECIDES: <target> option]`. The section "How the owner decides" gives the `DECISION:` line format for `docs/approvals/WP-0.8.md`, as approved in question 7 (a).
+- **Run:**
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_targets_options.py -q -p no:cacheprovider
+7 passed in 0.04s
+```
+- **Still to come:** once the owner's `DECISION:` lines are on `main`, `test_FR_0_8_05_owner_decisions_name_existing_options` is added (PLAN.md; approval question 7 (a)).
+- Status: DONE for the document. The decision check waits for the owner's decisions.
+
 ## Debts closed (question 2)
 
 ### DEBT-010 — registry licence must equal the dataset's licence (WP-0.4-F03)
