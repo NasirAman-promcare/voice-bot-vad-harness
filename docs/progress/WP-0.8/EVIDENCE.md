@@ -65,3 +65,29 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0
 1 passed, 1808 deselected in 1.48s
 ```
 - Status: DONE
+
+### DEBT-020 — two smoke behaviours get tests (WP-0.7-F07)
+- **Code:** none. `aqis_lab/smoke.py` changed only in its module docstring (CAP-SMOKE-003 and CAP-SMOKE-004 test lists, CHANGE LOG). The `REGISTRY.md` rows CAP-SMOKE-003 and CAP-SMOKE-004 also list the new tests.
+- **Tests:**
+  - `test_FR_0_7_07_smoke_revalidates_each_event_log_before_storing` (parametrised `first`, `middle`, `last`):
+    - a real harness-vad run is copied into a bundle folder;
+    - one `events.jsonl` record loses its `run_id`;
+    - `_check_and_store` must raise `SmokeFailure` (exit 1) naming `events.jsonl line <n> is not valid event log v1` and `run_id`, and nothing must be stored.
+  - `test_FR_0_7_07_report_summary_lines_recomputed_from_bundle_rows` (parametrised over the three committed bundles):
+    - `_report` regenerates the committed `PHASE0_SMOKE.md` byte for byte, once the runs and score tables are put back in the config's order (`BUNDLE.json` stores them sorted);
+    - the summary lines equal values recomputed in the test from `results.jsonl` (median and maximum with `statistics`, 4 decimals; transcripts equal to batch; Parakeet processing time and GPU);
+    - the count is also checked after one real-speed transcript hash is changed, because in every committed bundle all transcripts are equal.
+- **Break proof** (scratch worktree `wt2` of `1ae1fee`, the new test file copied in, one exact replacement per break, `git checkout` after each):
+
+  | Break | Change | Result of `pytest tests/aqis_lab/test_aqis_debt_wp08.py -k FR_0_7_07` |
+  | --- | --- | --- |
+  | none | — | `6 passed, 6 deselected in 2.21s` |
+  | B1 | `_check_and_store`: `bad = []` (re-validation removed) | `3 failed, 3 passed, 6 deselected in 7.77s` (the three re-validation cases) |
+  | B2 | `_stats`: `statistics.mean` instead of `median` | `3 failed, 3 passed, 6 deselected in 2.05s` (the three bundles) |
+  | B3 | `_report`: `same = len(rows)` | `3 failed, 3 passed, 6 deselected in 1.99s` (the three bundles; before the changed-hash step was added, B3 gave `6 passed`) |
+- **Run here:**
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0_0_08_repository_registry_is_consistent or debt_wp08"
+13 passed, 1802 deselected in 3.24s
+```
+- Status: DONE

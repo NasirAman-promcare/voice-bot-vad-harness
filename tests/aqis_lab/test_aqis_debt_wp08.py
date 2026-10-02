@@ -2,15 +2,22 @@
 
 - DEBT-010 (WP-0.4-F03): a registry row's licence must equal the licence datasets.yaml gives its dataset and split.
 - DEBT-018 (WP-0.7-F05): `phase0 smoke --bundle-dir` on Google Drive outside MyDrive/AQIS_LAB is refused (NFR-0.5-02).
+- DEBT-020 (WP-0.7-F07): the smoke re-validates each event log before storing it, and the report's summary lines
+  equal values recomputed here from the bundle's result rows.
 """
 import csv
 import io
+import json
+import shutil
+import statistics
+import tarfile
 
 import pytest
+import yaml
 
 from aqis_adapters_testutil import drive_view
 from aqis_packs_testutil import ROOT, download_entry, write_datasets
-from aqis_runner_testutil import tree_snapshot
+from aqis_runner_testutil import SMOKE_PACK, tree_snapshot
 from aqis_lab import smoke
 from aqis_lab.registry import datasets as ds
 from aqis_lab.registry import registry as reg
@@ -131,3 +138,99 @@ def test_NFR_0_5_02_smoke_accepts_bundle_dir_inside_aqis_lab(tmp_path):
                         system=system, echo=None)
     assert info.value.exit_code == 2 and "refusing to write" not in str(info.value)
     assert tree_snapshot(mount) == before
+
+
+# --- DEBT-020: the smoke's own event-log re-validation, and the report's summary lines --------------------------------
+
+@pytest.fixture(scope="module")
+def harness_vad_run(tmp_path_factory):
+    """The folder and run card ID of one real, finished harness-vad run on the smoke pack."""
+    from aqis_lab.runner.run import RunOptions, run
+    root = tmp_path_factory.mktemp("harness-vad")
+    outcome = run(RunOptions(task="harness-vad", pack=SMOKE_PACK, out=root / "out", seed=0, work_dir=root / "work"),
+                  echo=None)
+    assert outcome.status == "complete"
+    return root / "out", outcome.run_card_id
+
+
+@pytest.mark.parametrize("where", ["first", "middle", "last"])
+def test_FR_0_7_07_smoke_revalidates_each_event_log_before_storing(tmp_path, harness_vad_run, where):
+    # The bundle copy of a run's events.jsonl is checked again before the run is stored: one record made invalid
+    # (its run_id removed) anywhere in the file stops the smoke (SmokeFailure, exit 1) at that line, and nothing is
+    # stored.
+    out, card = harness_vad_run
+    folder = tmp_path / "bundle" / "runs" / "harness-vad"
+    folder.mkdir(parents=True)
+    for name in smoke.RUN_FILES:
+        shutil.copyfile(out / name, folder / name)
+    lines = (folder / "events.jsonl").read_text(encoding="utf-8").splitlines()
+    index = {"first": 0, "middle": len(lines) // 2, "last": len(lines) - 1}[where]
+    record = json.loads(lines[index])
+    del record["run_id"]
+    lines[index] = json.dumps(record)
+    (folder / "events.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    store = tmp_path / "store"
+    with pytest.raises(smoke.SmokeFailure) as info:
+        smoke._check_and_store(tmp_path / "bundle", store, {"harness-vad": card}, [])
+    message = str(info.value)
+    assert info.value.exit_code == 1
+    assert f"events.jsonl line {index + 1} is not valid event log v1" in message and "run_id" in message, message
+    assert not store.exists() or not any(p.is_file() for p in store.rglob("*"))
+
+
+def _median_max(values):
+    values = [v for v in values if v is not None]
+    return f"median {statistics.median(values):.4f}, maximum {max(values):.4f}"
+
+
+def _results(bundle, task):
+    path = bundle / "runs" / task / "results.jsonl"
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+@pytest.mark.parametrize("tar", sorted((ROOT / "data" / "runs" / "phase0-smoke").glob("phase0-smoke-*.tar")),
+                         ids=lambda p: p.name.split("-")[2])
+def test_FR_0_7_07_report_summary_lines_recomputed_from_bundle_rows(tmp_path, tar):
+    with tarfile.open(tar) as archive:
+        archive.extractall(tmp_path, filter="data")
+    bundle = tmp_path / tar.name[:-len(".tar")]
+    meta = json.loads((bundle / "BUNDLE.json").read_text(encoding="utf-8"))
+    # BUNDLE.json is written with sorted keys; the smoke builds the report with the runs in the target's task order
+    # and the score tables in scored-task, then score-subset order of the config. Put them back in that order.
+    config = yaml.safe_load((ROOT / "config" / "aqis_lab" / "phase0_smoke.yaml").read_text(encoding="utf-8"))
+    tasks = [r["task"] for r in config["runs"] if meta["target"] in r["targets"]]
+    tables = [f"{t}-{s}" for t in config["scored_tasks"] if t in meta["runs"] for s in config["score_subsets"]]
+    assert sorted(tasks) == sorted(meta["runs"]) and sorted(tables) == sorted(meta["scores"])
+    meta["runs"] = {t: meta["runs"][t] for t in tasks}
+    meta["scores"] = {t: meta["scores"][t] for t in tables}
+    manifest = json.loads((SMOKE_PACK / "manifest.json").read_text(encoding="utf-8"))
+    report = smoke._report(meta, bundle, manifest, smoke.load_config(smoke.DEFAULT_CONFIG))
+    assert report.encode("utf-8") == (bundle / "PHASE0_SMOKE.md").read_bytes()
+    # Summary lines from values computed here from the result rows (4 decimals, docs/runs/PHASE0_SMOKE.md).
+    realspeed = _results(bundle, "vosk-realspeed")
+    batch = {r["clip_id"]: r["text_sha256"] for r in _results(bundle, "vosk-batch")}
+    same = sum(1 for r in realspeed if r["text_sha256"] == batch[r["clip_id"]])
+    expected = [
+        f"- First-partial latency: {_median_max([r['first_partial_latency_ms'] for r in realspeed])} ms.",
+        f"- Finalisation latency: {_median_max([r['finalisation_latency_ms'] for r in realspeed])} ms.",
+        f"- Real-speed transcript equal to the batch transcript: {same} of {len(realspeed)} clips.",
+    ]
+    if "parakeet-compute-delay" in meta["runs"]:
+        delay = _results(bundle, "parakeet-compute-delay")
+        gpus = {r["gpu"] for r in delay}
+        assert len(gpus) == 1
+        expected.append(f"- Processing time: {_median_max([r['processing_ms'] for r in delay])} ms per clip on "
+                        f"{gpus.pop()}.")
+    summary = [line for line in report.splitlines() if line.startswith(("- First-partial", "- Finalisation",
+                                                                         "- Real-speed transcript", "- Processing"))]
+    assert summary == expected
+    # In every committed bundle all real-speed transcripts equal the batch ones, so the count is also checked on
+    # this extracted copy with one real-speed transcript hash changed: the line must count only the equal ones.
+    path = bundle / "runs" / "vosk-realspeed" / "results.jsonl"
+    rows = _results(bundle, "vosk-realspeed")
+    rows[0]["text_sha256"] = "0" * 64
+    path.write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+    same = sum(1 for r in rows if r["text_sha256"] == batch[r["clip_id"]])
+    assert same == len(rows) - 1
+    changed = smoke._report(meta, bundle, manifest, smoke.load_config(smoke.DEFAULT_CONFIG))
+    assert f"- Real-speed transcript equal to the batch transcript: {same} of {len(rows)} clips." in changed
