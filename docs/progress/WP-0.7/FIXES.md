@@ -106,3 +106,19 @@ Findings: 0
 0 findings: OK (0.7 s)
 ```
 - The race cannot be reproduced on this VM's git 2.43.0. CI on the newer runners is the check: see the pull request.
+
+### BLK-012 — Parquet read from Arrow-owned memory in the results store (owner option 1, `a7e0d4e`)
+- Cause: CI's push run on `99064c4` (run 283, attempt 1) failed `test_FR_0_6_02_add_exit_codes`. The second `results add` printed `… 60 already stored (nothing written)` and then aborted at exit (`terminate called without an active exception`, exit -6).
+  - Both `check_part_file` (`pq.read_table(io.BytesIO(data), use_threads=False)`) and `from_score_folder` (`pq.read_table(pa.BufferReader(bytes), use_threads=False)`) handed Arrow Python-owned bytes. That is the mechanism of the WP-0.7 parity exit defect.
+  - The abort did not reproduce here in 1,200 runs (BLK-012), so the cause is the most likely one, not a proven one.
+- Change budget: `aqis_lab/results/store.py` `check_part_file` and `aqis_lab/results/ingest.py` `from_score_folder`. Each now copies the bytes into Arrow-owned memory (`pa.BufferOutputStream`) and reads them with `pq.read_table(pa.BufferReader(owned.getvalue()), use_threads=False)`. The headers (CAP-RESULTS-002, CAP-RESULTS-004 and CHANGE LOG) and the two registry rows are updated, keeping the rows' own wording and adding one clause and the test. `git diff -U0`: one hunk in each function, plus the header lines. `io` is still used elsewhere in `store.py`.
+- Baseline, every test file that reaches the store or ingest (tests/aqis_lab/test_aqis_debt_wp07.py tests/aqis_lab/test_aqis_drive.py tests/aqis_lab/test_aqis_drive_guard.py tests/aqis_lab/test_aqis_oracle_config.py tests/aqis_lab/test_aqis_oracle_runbook.py tests/aqis_lab/test_aqis_results_cli.py tests/aqis_lab/test_aqis_results_store.py tests/aqis_lab/test_aqis_smoke.py tests/aqis_lab/test_aqis_sync.py tests/aqis_lab/test_aqis_trace.py ), fast markers: before `117 passed, 13 deselected in 66.32s (0:01:06)`, after `117 passed, 14 deselected in 58.61s`.
+- New test `test_FR_0_6_02_repeated_results_add_always_exits_cleanly` (`slow`, `tests/aqis_lab/test_aqis_debt_wp07.py`): after a first add, it runs `results add --run` (stored parts read by `check_part_file`) and `results add --scores` (the score table read by `from_score_folder`) 60 times each in fresh processes. Every process must exit 0 with its "already stored" result: `1 passed, 8 deselected in 51.56s`. The abort never reproduced on this VM, so this test guards the path on every run but cannot by itself prove the fix.
+- Fast suite: `1747 passed, 55 deselected in 255.48s (0:04:15)`. Audit gate:
+```text
+aqis-audit-gate: base origin/main (merge-base a7e0d4e1d584), head 703328c284c8, approvals origin/main a7e0d4e1d584, wp WP-0.7
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.8 s)
+```
