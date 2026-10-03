@@ -10,6 +10,13 @@ A baseline folder holds the owner's raw outputs in raw/ and Claude's SUMMARY.md 
 
 Both return a list of problem strings (empty means the check passed), so the self-tests can run them on edited
 copies. Every expected value is read or recomputed from the raw files here, never taken from SUMMARY.md.
+
+CHANGE LOG:
+  2026-10-03 WP-0.1 FR-0.1-01, FR-0.1-02, FR-0.1-03 created.
+  2026-10-03 WP-0.1 round 2: F1 binding_problems (each table cell cites its own row's and column's Sources, also
+             through 'expr' rows), part of summary_problems; F2 body_text checks every section, exempting only the
+             quoted owner statement, the Raw inventory Bytes and SHA-256 cells and the Sources table cells; F7
+             raw_problems reports a missing speaker or listener log as "R8 missing".
 """
 import ast
 import hashlib
@@ -51,14 +58,20 @@ R4_POINTS = {
     "start time (UTC)": r"Start Time",
     "end time (UTC)": r"End Time",
 }
+# R8: the Jingle stanza logs of both bots; each must be listed, else it is reported as missing (audit F7).
+R8_ROLES = ("speaker", "listener")
 # The report row the approval names as a known quirk: the run-context record listed as an adapter (approval, R6).
 REPORT_NON_OPERATING_POINT = "orchestrator"
 
 SUMMARY_SECTIONS = ("Run", "Setup", "VADs", "Conditions", "Headline metrics per VAD", "Run health",
                     "Owner's statement", "Raw inventory", "Sources")
-# Numbers there are locators, sizes and hashes (checked by inventory_hash_problems and resolve_sources), or the
-# owner's statement quoted word for word from docs/approvals/WP-0.1.md (checked against the approval).
-UNCHECKED_SECTIONS = ("Owner's statement", "Raw inventory", "Sources")
+# The only text exempt from the citation check (audit F2): the owner's statement quoted word for word from
+# docs/approvals/WP-0.1.md (checked against the approval), the Bytes and SHA-256 cells of the Raw inventory (checked
+# by inventory_hash_problems) and the cells of the Sources table (locators and formulas, checked by resolve_sources).
+OWNER_SECTION = "Owner's statement"
+INVENTORY_SECTION = "Raw inventory"
+INVENTORY_EXEMPT_COLUMNS = ("Bytes", "SHA-256")
+SOURCES_SECTION = "Sources"
 SOURCES_COLUMNS = ("ID", "Value", "File", "Kind", "Locator", "Formula and inputs", "Rounding")
 INVENTORY_COLUMNS = ("Item", "File", "Bytes", "SHA-256", "What it is")
 CITE_RE = re.compile(r"\[(S\d+)\]")
@@ -266,6 +279,9 @@ def raw_problems(folder):
         for name in files:
             if not (raw / name).is_file():
                 problems.append(f"{item} missing: raw/{name} does not exist")
+    for role in R8_ROLES:
+        if listed.get("R8") and not any(role in name for name in listed["R8"]):
+            problems.append(f"R8 missing: no {role} log listed in the Raw inventory")
     if any(p.startswith(tuple(f"{i} missing" for i in REQUIRED_ITEMS)) for p in problems):
         return problems
 
@@ -275,8 +291,9 @@ def raw_problems(folder):
     for item in ("R1", "R2", "R3", "R4", "R5", "R6", "R7"):
         if len(listed[item]) != 1:
             problems.append(f"{item}: exactly one file expected, the Raw inventory lists {listed[item]}")
-    if len(listed["R8"]) != 2:
-        problems.append(f"R8: the speaker and the listener log expected, the Raw inventory lists {listed['R8']}")
+    if len(listed["R8"]) != len(R8_ROLES):
+        problems.append(f"R8: exactly one speaker and one listener log expected, the Raw inventory lists "
+                        f"{listed['R8']}")
     if problems:
         return problems
 
@@ -441,8 +458,6 @@ def raw_problems(folder):
         if not (utc(stamps[0]) <= first_clip and utc(stamps[-1]) >= last_clip):
             problems.append(f"R8 raw/{name}: covers {stamps[0]} to {stamps[-1]}, not every clip record "
                             f"({first_clip.isoformat()} to {last_clip.isoformat()})")
-    if not any("speaker" in n for n in listed["R8"]) or not any("listener" in n for n in listed["R8"]):
-        problems.append(f"R8: expected a speaker and a listener log, the Raw inventory lists {listed['R8']}")
     return problems
 
 
@@ -680,19 +695,34 @@ def _resolve_direct(row, loc, load):
 
 
 # ---------------------------------------------------------------------------------------------- body citations
+def owner_statement():
+    """The owner's statement on negative latencies, as quoted in docs/approvals/WP-0.1.md (condition on question 6)."""
+    m = re.search(r'"(Negative wall-clock pipeline latencies.+?)"', read_text(APPROVAL), re.S)
+    if not m:
+        raise ValueError(f"{APPROVAL}: no quoted owner's statement on negative wall-clock latencies")
+    return " ".join(m.group(1).split())
+
+
 def body_text(text):
-    """SUMMARY.md without the sections whose numbers are locators, sizes and hashes, and without HTML comments."""
-    out, excluded = [], False
-    for line in text.splitlines():
-        if line.startswith("# "):
-            continue
+    """The SUMMARY.md text the citation check reads: everything except the exempt parts named above, and comments."""
+    statement = owner_statement()
+    out, section, exempt_cols = [], None, None
+    for line in re.sub(r"<!--.*?-->", "", text, flags=re.S).splitlines():
         m = re.match(r"^## +(.+?) *$", line)
         if m:
-            excluded = m.group(1) in UNCHECKED_SECTIONS
+            section, exempt_cols = m.group(1), None
             continue
-        if not excluded:
-            out.append(line)
-    return re.sub(r"<!--.*?-->", "", "\n".join(out), flags=re.S)
+        if section == OWNER_SECTION and line.startswith(">") and " ".join(line[1:].split()) == statement:
+            continue
+        if section == SOURCES_SECTION and line.lstrip().startswith("|"):
+            continue
+        if section == INVENTORY_SECTION and line.lstrip().startswith("|"):
+            cells = line.split("|")
+            if exempt_cols is None:
+                exempt_cols = [i for i, c in enumerate(cells) if c.strip() in INVENTORY_EXEMPT_COLUMNS]
+            line = "|".join("" if i in exempt_cols else c for i, c in enumerate(cells))
+        out.append(line)
+    return "\n".join(out)
 
 
 def citation_problems(text, sources, identifiers):
@@ -734,6 +764,182 @@ def citation_problems(text, sources, identifiers):
     return problems
 
 
+# ---------------------------------------------------------------------------------------------- cell binding (F1)
+SCORING, LATENCY, FAILURE = "scoring_clip", "tier2_pipeline_latency", "clip_failure"
+ONSET, OFFSET = "payload.mean_onset_latency_ms", "payload.mean_offset_hangover_latency_ms"
+WALLCLOCK = "payload.mean_wallclock_pipeline_latency_ms"
+SILENCE = {"payload.category": "silence-only"}
+QUIET = {"payload.category": "quiet/whispered speech"}
+HAS_SPEECH = {"payload.has_speech": True}
+
+
+def _report(col):
+    """A cell of the harness report's summary table, in this row's operating point and the given column."""
+    return (f"report column {col!r}",
+            lambda ctx, key, row, loc: (row["Kind"] == "direct" and row["File"] == ctx["R6"]
+                                        and loc.get("row") == key and loc.get("col") == col))
+
+
+def _log(label):
+    """A value after `label` on the run log's "Tier 2 Completed for '<this operating point>'" line."""
+    def ok(ctx, key, row, loc):
+        if row["Kind"] != "direct" or row["File"] != ctx["R7"] or loc.get("after") != label:
+            return False
+        n = loc.get("line")
+        return isinstance(n, int) and 1 <= n <= len(ctx["log"]) and \
+            f"Tier 2 Completed for '{key}'" in ctx["log"][n - 1]
+    return f"run log {label!r}", ok
+
+
+def _agg(op, record_type, field=None, extra=None):
+    """A derived row: `op` over this row's operating point's `record_type` records (plus `extra` conditions)."""
+    def ok(ctx, key, row, loc):
+        return (row["Kind"] == "derived" and loc.get("op") == op and loc.get("field") == field
+                and loc.get("where") == {"record_type": record_type, "adapter_id": key, **(extra or {})})
+    return f"{op}({field or ''}) of {record_type} {extra or ''}".replace(" {}", ""), ok
+
+
+def _shape(shape, **parts):
+    """A derived 'expr' row of the given shape (source IDs as A, B in order of first use), each part bound in turn."""
+    def ok(ctx, key, row, loc):
+        if row["Kind"] != "derived" or "expr" not in loc:
+            return False
+        ids = list(dict.fromkeys(re.findall(r"S\d+", loc["expr"])))
+        names = dict(zip(ids, "ABCDEFGH"))
+        got = re.sub(r"S\d+", lambda m: names[m.group(0)], loc["expr"]).replace(" ", "")
+        if got != shape.replace(" ", "") or len(ids) != len(parts):
+            return False
+        for sid, name in zip(ids, "ABCDEFGH"):
+            sub = ctx["sources"].get(sid)
+            if sub is None or not parts[name][1](ctx, key, sub, json.loads(sub["Locator"])):
+                return False
+        return True
+    return f"{shape} of " + ", ".join(f"{k} = {v[0]}" for k, v in parts.items()), ok
+
+
+def _mode():
+    """The WebRTC aggressiveness mode m in the run configuration that makes this row's webrtc_vad_mode<m>."""
+    def ok(ctx, key, row, loc):
+        k = loc.get("key")
+        return (row["Kind"] == "direct" and row["File"] == ctx["R1"] and isinstance(k, list) and len(k) == 2
+                and k[0] == "webrtc_aggressiveness_modes" and key == f"webrtc_vad_mode{row['Value']}")
+    return "run configuration webrtc_aggressiveness_modes entry", ok
+
+
+def _sum(name, extra=None):
+    return _agg("sum", SCORING, f"payload.metrics.{name}", extra)
+
+
+PRECISION = _shape("A / (A + B)", A=_sum("tp"), B=_sum("fp"))
+RECALL = _shape("A / (A + B)", A=_sum("tp"), B=_sum("fn"))
+# {(section, first header): {column: specs(row key) -> [(description, predicate)]}}
+CELL_SPECS = {
+    ("VADs", "Operating point"): {
+        "Library version": lambda key: [_report("Version")],
+        "WebRTC aggressiveness mode": lambda key: [_mode()] if key.startswith("webrtc_vad_mode") else [],
+    },
+    ("Headline metrics per VAD", "Operating point"): {
+        "F1": lambda key: [_report("F1"), _log("F1:"), _shape("2 * A * B / (A + B)", A=PRECISION, B=RECALL)],
+        "Precision": lambda key: [_report("Precision"), _log("Precision:"), PRECISION],
+        "Recall": lambda key: [_report("Recall"), _log("Recall:"), RECALL],
+        "FPR (silence-only)": lambda key: [_report("FPR (Silence)"),
+                                           _shape("A / (A + B)", A=_sum("fp", SILENCE), B=_sum("tn", SILENCE))],
+        "FNR (quiet/whispered)": lambda key: [_report("FNR (Quiet)"),
+                                              _shape("A / (A + B)", A=_sum("fn", QUIET), B=_sum("tp", QUIET))],
+        "Onset mean (ms)": lambda key: [_report("Onset Latency"), _agg("mean", LATENCY, ONSET)],
+        "Onset median (ms)": lambda key: [_agg("median", LATENCY, ONSET)],
+        "Offset hangover mean (ms)": lambda key: [_report("Offset Hangover"), _agg("mean", LATENCY, OFFSET)],
+        "Offset hangover median (ms)": lambda key: [_agg("median", LATENCY, OFFSET)],
+        "Wall-clock pipeline mean (ms)": lambda key: [_agg("mean", LATENCY, WALLCLOCK)],
+        "Wall-clock pipeline median (ms)": lambda key: [_agg("median", LATENCY, WALLCLOCK)],
+        "Clips scored": lambda key: [_log("Evaluated"), _agg("count", SCORING)],
+        "Clips with no onset": lambda key: [_agg("count_null", LATENCY, ONSET, HAS_SPEECH)],
+        "Clips with no resolved hangover": lambda key: [_agg("count_null", LATENCY, OFFSET, HAS_SPEECH)],
+    },
+    ("Headline metrics per VAD", "Operating point (frame counts)"): {
+        "Σtp": lambda key: [_sum("tp")], "Σfp": lambda key: [_sum("fp")],
+        "Σtn": lambda key: [_sum("tn")], "Σfn": lambda key: [_sum("fn")],
+        "Silence-only Σfp": lambda key: [_sum("fp", SILENCE)], "Silence-only Σtn": lambda key: [_sum("tn", SILENCE)],
+        "Quiet/whispered Σfn": lambda key: [_sum("fn", QUIET)], "Quiet/whispered Σtp": lambda key: [_sum("tp", QUIET)],
+    },
+    ("Run health", "Operating point (run health)"): {
+        "Clip failures": lambda key: [_agg("count", FAILURE)],
+        "Packets received": lambda key: [_agg("sum", SCORING, "payload.diagnostics.packet_count")],
+        "Packet gaps": lambda key: [_agg("sum", SCORING, "payload.diagnostics.gap_count")],
+        "Missing packets": lambda key: [_agg("sum", SCORING, "payload.diagnostics.missing_packets")],
+        "Null onset": lambda key: [_agg("count_null", LATENCY, ONSET)],
+        "Negative onset": lambda key: [_agg("count_negative", LATENCY, ONSET)],
+        "Null offset hangover": lambda key: [_agg("count_null", LATENCY, OFFSET)],
+        "Negative offset hangover": lambda key: [_agg("count_negative", LATENCY, OFFSET)],
+        "Null wall-clock": lambda key: [_agg("count_null", LATENCY, WALLCLOCK)],
+        "Negative wall-clock": lambda key: [_agg("count_negative", LATENCY, WALLCLOCK)],
+    },
+}
+CATEGORY_TABLE = ("Conditions", "Category", "Scored clips per operating point")
+
+
+def _cell_problems(ctx, where, key, cited, specs):
+    problems, used = [], set()
+    for desc, ok in specs:
+        hits = [sid for sid in cited if sid in ctx["sources"]
+                and ok(ctx, key, ctx["sources"][sid], json.loads(ctx["sources"][sid]["Locator"]))]
+        if len(hits) != 1:
+            problems.append(f"{where}: cites {len(hits)} sources for {desc} of this row and column, one expected")
+        used.update(hits)
+    for sid in cited:
+        if sid not in used:
+            problems.append(f"{where}: cites {sid}, which is not a source of this row and column")
+    return problems
+
+
+def binding_problems(folder):
+    """Every cell of the per-operating-point and per-category tables cites exactly the Sources of its own row
+    (operating point or category) and its column (metric): one source per expected kind, and nothing else."""
+    text = read_text(folder / "SUMMARY.md")
+    try:
+        sources = sources_table(text)
+        listed = inventory_files(folder)
+        sections = summary_sections(text)
+        ctx = {"sources": sources, "R1": listed["R1"][0], "R6": listed["R6"][0], "R7": listed["R7"][0],
+               "log": read_text(folder / "raw" / listed["R7"][0]).splitlines()}
+        records = read_records(folder / "raw" / listed["R5"][0])
+    except (OSError, ValueError, KeyError, IndexError) as exc:
+        return [f"cannot read SUMMARY.md tables or the raw files they cite ({exc})"]
+    points = sorted({r["adapter_id"] for r in records if r.get("record_type") != "run_context"})
+    problems = []
+    for (section, first), columns in CELL_SPECS.items():
+        try:
+            header, rows = pipe_table(sections.get(section, ""), first)
+        except ValueError as exc:
+            problems.append(f"{section}: {exc}")
+            continue
+        if header[1:] != list(columns):
+            problems.append(f"{section} table {first!r}: columns {header[1:]}, expected {list(columns)}")
+            continue
+        keys = sorted(strip_code(r[first]) for r in rows)
+        if keys != points:
+            problems.append(f"{section} table {first!r}: rows {keys}, expected one per operating point {points}")
+        for r in rows:
+            key = strip_code(r[first])
+            for col, specs in columns.items():
+                problems += _cell_problems(ctx, f"{section} table {first!r} row {key!r}, column {col!r}", key,
+                                           CITE_RE.findall(r[col]), specs(key))
+    section, first, col = CATEGORY_TABLE
+    try:
+        header, rows = pipe_table(sections.get(section, ""), first)
+    except ValueError as exc:
+        return problems + [f"{section}: {exc}"]
+    for r in rows:
+        key = r[first]
+        specs = [(f"count of {SCORING} for {p} in this category",
+                  (lambda p: lambda ctx, k, row, loc: row["Kind"] == "derived" and loc.get("op") == "count"
+                   and loc.get("where") == {"record_type": SCORING, "adapter_id": p, "payload.category": k})(p))
+                 for p in points]
+        problems += _cell_problems(ctx, f"{section} table {first!r} row {key!r}, column {col!r}", key,
+                                   CITE_RE.findall(r.get(col, "")), specs)
+    return problems
+
+
 def summary_problems(folder, identifiers):
     """Citation problems plus every Sources row that does not resolve to its shown value."""
     text = read_text(folder / "SUMMARY.md")
@@ -742,4 +948,4 @@ def summary_problems(folder, identifiers):
     except ValueError as exc:
         return [str(exc)]
     _, problems = resolve_sources(folder, sources)
-    return citation_problems(text, sources, identifiers) + problems
+    return citation_problems(text, sources, identifiers) + problems + binding_problems(folder)

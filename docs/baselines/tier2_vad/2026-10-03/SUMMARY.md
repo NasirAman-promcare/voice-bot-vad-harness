@@ -1,4 +1,4 @@
-# Tier 2 VAD transport baseline, 2026-10-03
+# Tier 2 VAD transport baseline, `2026-10-03`
 
 This is the transport baseline for every later live test (WP-0.1). The owner ran the full Tier 2 run with the existing harness, unchanged, and committed its raw outputs to `raw/`. Every number and every quoted value below cites a row of **Sources** as `[S…]`. That row names the raw file and the field or line it comes from; a derived number also shows its formula, its inputs and its rounding. Nothing is estimated, and nothing is explained or corrected: values are reported as recorded.
 
@@ -96,11 +96,11 @@ Counts per operating point, as recorded. Packet figures are sums of each scored 
 
 ## Owner's statement
 
-The owner's statement on negative latencies, quoted word for word from the WP-0.1 approval (condition on question 6). It is the owner's statement, not a finding of this summary:
+The owner's statement on negative latencies, quoted word for word from the WP-0.1 approval (its condition on negative and null latencies). It is the owner's statement, not a finding of this summary:
 
 > Negative wall-clock pipeline latencies are a known measurement artefact. The harness estimates when a sample arrived by counting forward at the nominal rate from the first packet, while audio arrives in 20 ms packets, so decisions can look up to about one packet early, plus some arrival jitter. They are not real. Fixing the calculation is harness work outside this WP.
 
-Fixing the calculation is recorded as accepted debt DEBT-027 in `docs/progress/DEBT.md`.
+Fixing the calculation is recorded as accepted debt in `docs/progress/DEBT.md`, in the row on wall-clock pipeline latency.
 
 ## Raw inventory
 

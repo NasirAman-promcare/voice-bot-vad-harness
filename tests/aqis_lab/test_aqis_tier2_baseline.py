@@ -21,7 +21,7 @@ from aqis_baseline_testutil import (APPROVAL, BASELINES, DATE_RE, INVENTORY_COLU
                                     REQUIRED_ITEMS, ROUNDING_RE, SUMMARY_SECTIONS, baseline_folders, inventory_files,
                                     inventory_hash_problems, notebook_texts, pipe_table,
                                     raw_problems, read_records, read_text, resolve_sources, sources_table,
-                                    summary_problems, summary_sections, citation_problems)
+                                    summary_problems, summary_sections, citation_problems, binding_problems)
 
 AUDIO_MAGIC = (b"RIFF", b"fLaC", b"OggS", b"ID3", b"\x1aE\xdf\xa3")
 HEADLINE_FIRST_HEADER = "Operating point"
@@ -63,11 +63,11 @@ def points_of(folder):
 
 
 def identifiers(folder):
-    """Code spans that may hold digits without a citation: raw file names, the run ID, operating point IDs and the
-    harness record types."""
+    """Code spans that may hold digits without a citation: the baseline folder's date, raw file names, the run ID,
+    operating point IDs and the harness record types."""
     records = run_records(folder)
-    return ({p.name for p in (folder / "raw").iterdir()} | {r["run_id"] for r in records} | set(points_of(folder))
-            | set(RECORD_TYPES))
+    return ({folder.name} | {p.name for p in (folder / "raw").iterdir()} | {r["run_id"] for r in records}
+            | set(points_of(folder)) | set(RECORD_TYPES))
 
 
 def kind_of(row):
@@ -189,6 +189,13 @@ def test_FR_0_1_02_headline_metrics_cover_every_operating_point():
             for col, kinds in HEADLINE_SOURCES.items():
                 cited = re.findall(r"\[(S\d+)\]", r[col])
                 assert sorted(kind_of(rows[s]) for s in cited) == sorted(kinds), (r[HEADLINE_FIRST_HEADER], col)
+
+
+def test_FR_0_1_02_cells_cite_their_own_row_and_column():
+    """WP-0.1-F1: each table cell cites exactly the Sources of its row's operating point or category and of its
+    column's metric (report column, run-log label, or record field and selection, through 'expr' formulas)."""
+    for folder in folders():
+        assert binding_problems(folder) == []
 
 
 def _harness_metrics(records, point):
@@ -331,3 +338,214 @@ def test_FR_0_1_03_raw_files_unchanged_since_inventory():
     for folder in folders():
         assert inventory_hash_problems(folder) == []
         assert len(inventory_files(folder)) >= len(REQUIRED_ITEMS)
+
+
+# ---------------------------------------------------------------------------------------------- round 2 self-tests
+def _header_index(lines, section, first_header):
+    """Index of the header line of the first pipe table headed first_header after the '## section' heading."""
+    top = lines.index(f"## {section}")
+    return next(i for i in range(top, len(lines)) if lines[i].startswith(f"| {first_header} |"))
+
+
+def _table_lines(lines, section, first_header):
+    """Indexes of the data rows of that SUMMARY.md pipe table."""
+    start = _header_index(lines, section, first_header)
+    out = []
+    for i in range(start + 2, len(lines)):
+        if not lines[i].startswith("|"):
+            break
+        out.append(i)
+    return out
+
+
+def _cells(line):
+    return line.split("|")
+
+
+def _swap_rows(section, first_header, a, b):
+    """Swap every cell but the first between the rows labelled a and b; the row labels stay."""
+    def edit(lines):
+        rows = {_cells(lines[i])[1].strip().strip("`"): i for i in _table_lines(lines, section, first_header)}
+        ca, cb = _cells(lines[rows[a]]), _cells(lines[rows[b]])
+        lines[rows[a]] = "|".join(ca[:2] + cb[2:])
+        lines[rows[b]] = "|".join(cb[:2] + ca[2:])
+    return edit
+
+
+def _swap_columns(section, first_header, row, col_a, col_b):
+    """Swap two cells of one row."""
+    def edit(lines):
+        header = [c.strip() for c in _cells(lines[_header_index(lines, section, first_header)])]
+        ia, ib = header.index(col_a), header.index(col_b)
+        i = next(i for i in _table_lines(lines, section, first_header)
+                 if _cells(lines[i])[1].strip().strip("`") == row)
+        cells = _cells(lines[i])
+        cells[ia], cells[ib] = cells[ib], cells[ia]
+        lines[i] = "|".join(cells)
+    return edit
+
+
+HEADLINE = "Headline metrics per VAD"
+CELL_SWAPS = {
+    "headline-rows": _swap_rows(HEADLINE, "Operating point", "ten_vad", "firered_vad"),
+    "headline-f1-precision": _swap_columns(HEADLINE, "Operating point", "ten_vad", "F1", "Precision"),
+    "headline-mean-median": _swap_columns(HEADLINE, "Operating point", "webrtc_vad_mode1", "Onset mean (ms)",
+                                          "Onset median (ms)"),
+    "frame-counts": _swap_columns(HEADLINE, "Operating point (frame counts)", "ten_vad", "Σtp", "Σfp"),
+    "run-health-rows": _swap_rows("Run health", "Operating point (run health)", "webrtc_vad_mode0",
+                                  "webrtc_vad_mode1"),
+    "category-rows": _swap_rows("Conditions", "Category", "speech + transient noise", "quiet/whispered speech"),
+    "vad-library-rows": _swap_rows("VADs", "Operating point", "webrtc_vad_mode0", "webrtc_vad_mode1"),
+}
+
+
+@pytest.mark.parametrize("swap", list(CELL_SWAPS), ids=list(CELL_SWAPS))
+def test_FR_0_1_02_check_reports_cells_in_the_wrong_row_or_column(tmp_path, swap):
+    """WP-0.1-F1: a cell that cites the Sources of another row's operating point or category, or of another column's
+    metric, is reported, even where the shown values happen to be equal."""
+    for folder in folders():
+        copy = tmp_path / folder.name
+        shutil.copytree(folder, copy)
+        path = copy / "SUMMARY.md"
+        lines = read_text(path).split("\n")
+        before = list(lines)
+        CELL_SWAPS[swap](lines)
+        assert lines != before
+        path.write_text("\n".join(lines), encoding="utf-8")
+        problems = summary_problems(copy, identifiers(folder))
+        assert any("cites" in p and ("row" in p or "column" in p) for p in problems), problems[:5]
+
+
+def _insert_after(heading_or_line, text):
+    def edit(lines):
+        i = next(i for i, line in enumerate(lines) if line.startswith(heading_or_line))
+        lines.insert(i + 1, text)
+    return edit
+
+
+def _append_to_cell(section, first_header, row, col, text):
+    def edit(lines):
+        header = [c.strip() for c in _cells(lines[_header_index(lines, section, first_header)])]
+        j = header.index(col)
+        i = next(i for i in _table_lines(lines, section, first_header)
+                 if _cells(lines[i])[header.index("File") if "File" in header else 1].strip().strip("`") == row)
+        cells = _cells(lines[i])
+        cells[j] = cells[j].rstrip() + text + " "
+        lines[i] = "|".join(cells)
+    return edit
+
+
+UNCITED_INSERTS = {
+    "owner-statement-outside-quote": _insert_after("## Owner's statement", "Decisions in this run arrive 15 ms early."),
+    "owner-statement-second-quote": _insert_after("## Owner's statement", "> Packets were lost in 3 clips."),
+    "inventory-what-it-is": _append_to_cell("Raw inventory", "Item", "raw_evaluations.jsonl", "What it is",
+                                            " (1500 scored clips)"),
+    "inventory-intro": _insert_after("## Raw inventory", "The folder holds 11 files."),
+    "sources-intro": _insert_after("## Sources", "There are 400 rows."),
+    "title": lambda lines: lines.__setitem__(0, lines[0] + " (run 2)"),
+}
+
+
+@pytest.mark.parametrize("insert", list(UNCITED_INSERTS), ids=list(UNCITED_INSERTS))
+def test_FR_0_1_02_check_reports_uncited_numbers_in_every_section(tmp_path, insert):
+    """WP-0.1-F2: only the quoted owner statement, the Bytes and SHA-256 cells and the Sources table cells are
+    exempt from the citation check; an uncited number anywhere else is reported."""
+    for folder in folders():
+        copy = tmp_path / folder.name
+        shutil.copytree(folder, copy)
+        path = copy / "SUMMARY.md"
+        lines = read_text(path).split("\n")
+        UNCITED_INSERTS[insert](lines)
+        path.write_text("\n".join(lines), encoding="utf-8")
+        problems = summary_problems(copy, identifiers(folder))
+        assert any("a number without a citation" in p for p in problems), problems[:5]
+
+
+def _rewrite(name, fn):
+    def edit(raw):
+        path = raw / name
+        path.write_text(fn(path.read_text(encoding="utf-8")), encoding="utf-8")
+    return edit
+
+
+def _drop_records(raw):
+    """Drop both records of one scored clip of one operating point (a run that is not full)."""
+    path = raw / "raw_evaluations.jsonl"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    first = json.loads(lines[1])
+    keep = [l for l in lines if not (json.loads(l).get("clip_id") == first["clip_id"]
+                                     and json.loads(l).get("adapter_id") == first["adapter_id"])]
+    assert len(keep) == len(lines) - 2
+    path.write_text("\n".join(keep) + "\n", encoding="utf-8")
+
+
+def _add_failure(raw):
+    path = raw / "raw_evaluations.jsonl"
+    lines = path.read_text(encoding="utf-8").splitlines()
+    r = json.loads(lines[1])
+    r.update(record_type="clip_failure", payload={"tier": "tier2", "stage": "transport", "error": "edited copy"})
+    path.write_text("\n".join(lines + [json.dumps(r)]) + "\n", encoding="utf-8")
+
+
+def _second_run_in_report(text):
+    nb = json.loads(text)
+    for cell in nb["cells"]:
+        for out in cell.get("outputs", []):
+            if out.get("output_type") == "stream":
+                body = "".join(out["text"])
+                if "Discovered Run ID(s):" in body:
+                    out["text"] = re.sub(r"Discovered Run ID\(s\):(\s*)\['", r"Discovered Run ID(s):\1['older_run', '",
+                                         body)
+    return json.dumps(nb)
+
+
+def _trim_head(text):
+    """Keep only the lines stamped 09:00 UTC or later, so the log starts after the first clip record (08:00:04)."""
+    kept = [l for l in text.splitlines(keepends=True) if l[1:20] >= "2026-10-03T09:00:00"]
+    assert kept and len(kept) < len(text.splitlines())
+    return "".join(kept)
+
+
+def _drop_listener_log(raw):
+    """Delete the listener log and remove its Raw inventory row (F7: it must be reported as missing)."""
+    (raw / "jingle_stanzas_debug_listener.log").unlink()
+    summary = raw.parent / "SUMMARY.md"
+    summary.write_text("\n".join(l for l in read_text(summary).split("\n")
+                                 if "`jingle_stanzas_debug_listener.log`" not in l or not l.startswith("| R8 |")),
+                       encoding="utf-8")
+
+
+RAW_BREAKS = {
+    "R1-config-differs-from-run-context": ("R1", _rewrite("run_config.yaml", lambda t: t.replace(
+        "concurrency_mode: sequential", "concurrency_mode: parallel"))),
+    "R1-tier2-not-run": ("R1", _rewrite("run_config.yaml", lambda t: re.sub(r"tiers_to_run:\n- tier2",
+                                                                             "tiers_to_run:\n- tier1", t))),
+    "R2-key-missing": ("R2", _rewrite("bridge_config.yaml", lambda t: re.sub(r"^opus_fec_enabled:.*\n", "", t,
+                                                                              flags=re.M))),
+    "R3-harness-file-changed": ("R3", _rewrite("harness_version.txt", lambda t: t + " M orchestrator.py\n")),
+    "R4-point-unanswered": ("R4", _rewrite("NETWORK.md", lambda t: re.sub(r"^- TURN Relay:.*\n", "", t, flags=re.M))),
+    "R4-start-after-the-run-began": ("R4", _rewrite("NETWORK.md", lambda t: re.sub(
+        r"Start Time: \S+ \S+ UTC", "Start Time: 2026-10-03 08:30:00 UTC", t))),
+    "R5-clip-records-missing": ("R5", _drop_records),
+    "R5-clip-failure": ("R5", _add_failure),
+    "R6-mixed-runs": ("R6", _rewrite("03_report.ipynb", _second_run_in_report)),
+    "R7-operating-point-line-missing": ("R7", _rewrite("run.log", lambda t: re.sub(
+        r"^.*Tier 2 Completed for 'firered_vad'.*\n", "", t, flags=re.M))),
+    "R8-log-starts-after-first-clip": ("R8", _rewrite("jingle_stanzas_debug_speaker.log", _trim_head)),
+    "R8-listener-log-missing": ("R8 missing", _drop_listener_log),
+}
+
+
+@pytest.mark.parametrize("brk", list(RAW_BREAKS), ids=list(RAW_BREAKS))
+def test_FR_0_1_01_check_reports_each_inconsistency(tmp_path, brk):
+    """WP-0.1-F3 and F7: every consistency rule of raw_problems reports an edited copy, naming the item it breaks."""
+    item, edit = RAW_BREAKS[brk]
+    for folder in folders():
+        copy = tmp_path / folder.name
+        shutil.copytree(folder, copy)
+        assert raw_problems(copy) == []
+        edit(copy / "raw")
+        problems = raw_problems(copy)
+        assert problems, f"{brk} went unnoticed"
+        assert all(p.startswith(item.split()[0]) for p in problems), problems
+        assert any(p.startswith(item) for p in problems), problems

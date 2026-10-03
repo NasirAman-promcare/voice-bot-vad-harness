@@ -32,7 +32,10 @@ PASSED tests/aqis_lab/test_aqis_tier2_baseline.py::test_FR_0_1_01_raw_folder_hol
 PASSED tests/aqis_lab/test_aqis_tier2_baseline.py::test_FR_0_1_01_check_reports_each_missing_item
 5 passed, 1880 deselected in 4.82s
 ```
-- Test first: before SUMMARY.md existed, every test failed with `FileNotFoundError: … docs/baselines/tier2_vad/2026-10-03/SUMMARY.md`, because there was no Raw inventory yet. `test_FR_0_1_03_baseline_folder_holds_only_summary_and_raw` failed with `assert ['raw'] == ['SUMMARY.md', 'raw']`.
+- Test first: at the tests-only commit `cb49333`, before SUMMARY.md existed, the run gave 17 failed and 1 passed (corrected in round 2, audit finding WP-0.1-F6; the round 1 text said every test failed).
+  - 16 tests failed with `FileNotFoundError: … docs/baselines/tier2_vad/2026-10-03/SUMMARY.md`, because there was no Raw inventory yet.
+  - `test_FR_0_1_03_baseline_folder_holds_only_summary_and_raw` failed with `assert ['raw'] == ['SUMMARY.md', 'raw']`.
+  - `test_FR_0_1_01_raw_folder_holds_no_audio` passed, as it should: it reads only `raw/`, never SUMMARY.md, and `raw/` holds no audio.
 - Status: DONE
 
 ### FR-0.1-02 — SUMMARY.md, every number cited
@@ -197,3 +200,26 @@ None. The Tier 2 run itself was the owner's input (spec "Owner steps"). Nothing 
 
 ## audit-allow lines
 None.
+
+## Round 2 (audit round 1 fixes; approval "Round 2 Fixes")
+Full record: `docs/progress/WP-0.1/FIXES.md`. F4 and F5 were accepted as debt: DEBT-028 and DEBT-029, target WP-0.9.
+
+| Finding | New tests | Result |
+| --- | --- | --- |
+| F1 | `test_FR_0_1_02_cells_cite_their_own_row_and_column`; `test_FR_0_1_02_check_reports_cells_in_the_wrong_row_or_column` (7 swaps, including swaps of equal values) | pass; each swap case failed before the fix |
+| F2 | `test_FR_0_1_02_check_reports_uncited_numbers_in_every_section` (6 inserts) | pass; each failed before the fix |
+| F3 | `test_FR_0_1_01_check_reports_each_inconsistency` (12 cases, R1 to R8) | pass; the R1 and R5 cases fail under the auditor's E6 and E10 mutations |
+| F6 | — | "Test first" line corrected above (17 failed, 1 passed at `cb49333`) |
+| F7 | `test_FR_0_1_01_check_reports_each_inconsistency[R8-listener-log-missing]` | pass; failed before the fix |
+
+Commands and real output:
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_tier2_baseline.py -q -p no:cacheprovider
+44 passed in 17.09s
+$ .venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network"
+1856 passed, 55 deselected in 225.93s (0:03:45)
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.1
+Findings: 0
+0 findings: OK (0.4 s)
+```
+Round 2 CI: recorded below after the push.
