@@ -595,3 +595,34 @@ def test_FR_0_8_04_level_2_tone_is_explicit_and_rule_1_keys_on_it():
                                    "['ctx-complaint', 'ctx-negative-caller']"]
     untoned = text.replace("| fil-013 | 2 | negative |", "| fil-013 | 2 | n/a |")
     assert tone_problems(untoned) == ["fil-013: Level 2 tone 'n/a', expected one of ['negative', 'positive']"]
+
+
+# ---------------------------------------------------------------------------------------------
+# DEBT-028 (WP-0.1-F4): the raw Tier 2 baseline files are owner-only for the hooks and the gate
+# ---------------------------------------------------------------------------------------------
+def hook_classes(paths):
+    """{path: class} from the Stop and edit hooks' own parser (.claude/hooks/_protected.py), run without writing
+    bytecode into .claude/."""
+    code = ("import json, sys\nsys.path.insert(0, sys.argv[1])\nfrom pathlib import Path\nimport _protected as p\n"
+            "sections = p.load_patterns(Path(sys.argv[2]))\n"
+            "print(json.dumps({rel: p.classify(rel, sections) for rel in sys.argv[3:]}))")
+    proc = subprocess.run([sys.executable, "-B", "-c", code, str(ROOT / ".claude" / "hooks"), str(ROOT), *paths],
+                          capture_output=True, text=True, timeout=60, cwd=ROOT)
+    assert proc.returncode == 0, proc.stderr
+    return json.loads(proc.stdout)
+
+
+def test_FR_0_1_03_raw_baseline_files_are_never_editable():
+    # Owner decision (docs/approvals/WP-0.9.md, Q3): the raw baseline is in [NEVER], which no approval can unlock.
+    from tools.audit import gate
+
+    raw = sorted(p.relative_to(ROOT).as_posix() for p in ROOT.glob("docs/baselines/tier2_vad/*/raw/**/*") if p.is_file())
+    assert len(raw) >= 10, raw
+    summaries = sorted(p.relative_to(ROOT).as_posix() for p in ROOT.glob("docs/baselines/tier2_vad/*/SUMMARY.md"))
+    assert summaries
+    hook = hook_classes(raw + summaries)
+    sections = gate.load_protected(ROOT)
+    for rel in raw:
+        assert (hook[rel], gate.classify(rel, sections)) == ("NEVER", "NEVER"), rel
+    for rel in summaries:  # the summary stays editable; only the owner's raw outputs are locked
+        assert (hook[rel], gate.classify(rel, sections)) == (None, None), rel

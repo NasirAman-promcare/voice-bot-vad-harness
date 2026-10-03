@@ -399,6 +399,65 @@ CELL_SWAPS = {
 }
 
 
+def _citations_of(lines, section, first_header, row, col):
+    header = [c.strip() for c in _cells(lines[_header_index(lines, section, first_header)])]
+    i = next(i for i in _table_lines(lines, section, first_header) if _cells(lines[i])[1].strip().strip("`") == row)
+    return i, header.index(col)
+
+
+def _swap_citations(section, first_header, row_a, row_b, col):
+    """Swap only the [S..] citations of one column between two rows whose shown values are equal, so no value
+    changes and every source stays cited (an isolating case for the row binding)."""
+    def edit(lines):
+        (ia, j), (ib, _) = (_citations_of(lines, section, first_header, r, col) for r in (row_a, row_b))
+        ca, cb = _cells(lines[ia]), _cells(lines[ib])
+        va, vb = re.sub(r"\s*\[S\d+\]", "", ca[j]).strip(), re.sub(r"\s*\[S\d+\]", "", cb[j]).strip()
+        assert va == vb, (va, vb)
+        sa, sb = re.findall(r"\[S\d+\]", ca[j]), re.findall(r"\[S\d+\]", cb[j])
+        ca[j], cb[j] = f" {va} {' '.join(sb)} ", f" {vb} {' '.join(sa)} "
+        lines[ia], lines[ib] = "|".join(ca), "|".join(cb)
+    return edit
+
+
+def _add_citation_of(section, first_header, row, other, col):
+    """Append to one cell the citation of the same column in another row whose shown value is equal."""
+    def edit(lines):
+        (i, j), (k, _) = (_citations_of(lines, section, first_header, r, col) for r in (row, other))
+        cells, extra = _cells(lines[i]), re.findall(r"\[S\d+\]", _cells(lines[k])[j])[0]
+        cells[j] = cells[j].rstrip() + f" {extra} "
+        lines[i] = "|".join(cells)
+    return edit
+
+
+def _expr_operand_of_another_row(lines):
+    """In the 'expr' Source behind firered_vad's Precision, replace its second operand by another row's Source with
+    the same value, so every value still resolves and only the operand binding can catch it."""
+    sources = sources_table("\n".join(lines))
+    i, j = _citations_of(lines, HEADLINE, "Operating point", "firered_vad", "Precision")
+    expr_ids = [s for s in re.findall(r"S\d+", _cells(lines[i])[j]) if "expr" in sources[s]["Locator"]]
+    assert len(expr_ids) == 1, expr_ids
+    expr_id = expr_ids[0]
+    operand = list(dict.fromkeys(re.findall(r"S\d+", json.loads(sources[expr_id]["Locator"])["expr"])))[1]
+    same = [s for s, r in sources.items() if s != operand and r["Value"] == sources[operand]["Value"]
+            and r["Locator"] != sources[operand]["Locator"] and r["Kind"] == "derived" and "expr" not in r["Locator"]]
+    assert same, f"no other Source shows {sources[operand]['Value']}"
+    k = next(k for k, line in enumerate(lines) if line.startswith(f"| {expr_id} |"))
+    lines[k] = re.sub(rf"\b{operand}\b", same[0], lines[k])
+
+
+CELL_SWAPS.update({
+    # WP-0.9 DEBT-031: one case for each part of the binding check that no case above isolates.
+    "report-row-binding": _swap_citations("VADs", "Operating point", "webrtc_vad_mode0", "webrtc_vad_mode1",
+                                          "Library version"),                                       # H1 (_report)
+    "extra-citation": _add_citation_of("VADs", "Operating point", "webrtc_vad_mode0", "webrtc_vad_mode1",
+                                       "Library version"),                                          # H4
+    "expr-operand-binding": _expr_operand_of_another_row,                                           # H5 (_shape)
+    # WP-0.9 DEBT-029: the manifest count cites its own category.
+    "manifest-count-category": _swap_citations("Conditions", "Category", "speech + transient noise",
+                                               "quiet/whispered speech", "Clips in the manifest (warm-up included)"),
+})
+
+
 @pytest.mark.parametrize("swap", list(CELL_SWAPS), ids=list(CELL_SWAPS))
 def test_FR_0_1_02_check_reports_cells_in_the_wrong_row_or_column(tmp_path, swap):
     """WP-0.1-F1: a cell that cites the Sources of another row's operating point or category, or of another column's
@@ -444,6 +503,22 @@ UNCITED_INSERTS = {
     "sources-intro": _insert_after("## Sources", "There are 400 rows."),
     "title": lambda lines: lines.__setitem__(0, lines[0] + " (run 2)"),
 }
+
+
+def _insert_after_table(section, first_header, new_lines):
+    def edit(lines):
+        end = _table_lines(lines, section, first_header)[-1]
+        lines[end + 1:end + 1] = ["", *new_lines]
+    return edit
+
+
+UNCITED_INSERTS.update({
+    # WP-0.9 DEBT-030 (auditor breaks X4 and X4-inv): only the Sources table headed ID, and only the Bytes and SHA-256
+    # cells of the Raw inventory table headed Item, are exempt; a second table in either section is checked.
+    "sources-second-table": _insert_after_table("Sources", "ID", ["| Note | Rows |", "| --- | --- |", "| extra | 12 |"]),
+    "inventory-second-table": _insert_after_table("Raw inventory", "Item", [
+        "| Kind | Name | Size | Checksum | Note |", "| --- | --- | --- | --- | --- |", "| x | y | 4000 | 1234 | z |"]),
+})
 
 
 @pytest.mark.parametrize("insert", list(UNCITED_INSERTS), ids=list(UNCITED_INSERTS))
@@ -549,3 +624,83 @@ def test_FR_0_1_01_check_reports_each_inconsistency(tmp_path, brk):
         assert problems, f"{brk} went unnoticed"
         assert all(p.startswith(item.split()[0]) for p in problems), problems
         assert any(p.startswith(item) for p in problems), problems
+
+
+# ---------------------------------------------------------------------------------------------- WP-0.9 DEBT-029, DEBT-031
+def _repeat_row(section, first_header, row):
+    def edit(lines):
+        i = next(i for i in _table_lines(lines, section, first_header) if _cells(lines[i])[1].strip().strip("`") == row)
+        lines.insert(i + 1, lines[i])
+    return edit
+
+
+def _drop_row_and_its_sources(section, first_header, row):
+    """Remove one table row and the Sources rows only it cites, so nothing but the row check can notice."""
+    def edit(lines):
+        i = next(i for i in _table_lines(lines, section, first_header) if _cells(lines[i])[1].strip().strip("`") == row)
+        cited = set(re.findall(r"\[(S\d+)\]", lines.pop(i)))
+        others = "\n".join(lines)
+        cited = {s for s in cited if f"[{s}]" not in others and not re.search(rf"\b{s}\b", "\n".join(
+            l for l in lines if l.startswith("| S") and not l.startswith(f"| {s} |")))}
+        lines[:] = [l for l in lines if not any(l.startswith(f"| {s} |") for s in cited)]
+    return edit
+
+
+ROW_SET_BREAKS = {
+    # H3: one row per operating point; a repeated row cites only valid Sources of its own operating point.
+    "headline-row-repeated": (_repeat_row(HEADLINE, "Operating point", "ten_vad"), "expected one per operating point"),
+    # The Conditions table has one row per category of the run (scored records and run-log clip lines).
+    "category-row-missing": (_drop_row_and_its_sources("Conditions", "Category", "music/singing"),
+                             "expected one per category"),
+    "category-row-repeated": (_repeat_row("Conditions", "Category", "silence-only"), "expected one per category"),
+}
+
+
+@pytest.mark.parametrize("brk", list(ROW_SET_BREAKS), ids=list(ROW_SET_BREAKS))
+def test_FR_0_1_02_check_reports_missing_or_repeated_rows(tmp_path, brk):
+    """WP-0.1-F9 (DEBT-031): a per-operating-point or per-category table must hold exactly one row for each."""
+    edit, expected = ROW_SET_BREAKS[brk]
+    for folder in folders():
+        copy = tmp_path / folder.name
+        shutil.copytree(folder, copy)
+        path = copy / "SUMMARY.md"
+        lines = read_text(path).split("\n")
+        before = list(lines)
+        edit(lines)
+        assert lines != before
+        path.write_text("\n".join(lines), encoding="utf-8")
+        problems = summary_problems(copy, identifiers(folder))
+        assert any(expected in p for p in problems), problems[:5]
+
+
+CLIP_LINE = re.compile(r"Tier 2 \[(?P<point>[\w-]+)\] clip \[\d+/\d+\] '(?P<clip>[^']+)' "
+                       r"\(Category: '(?P<category>[^']+)', Warmup: (?P<warmup>True|False)\)")
+MANIFEST_COLUMN = "Clips in the manifest (warm-up included)"
+
+
+def test_FR_0_1_02_conditions_show_clips_in_the_manifest_per_category():
+    """WP-0.1-F5 (DEBT-029): the Conditions table gives each category's clip count in the manifest, warm-up clips
+    included, recomputed here from the run log's clip lines; the counts add up to the manifest total."""
+    for folder in folders():
+        text = read_text(folder / "SUMMARY.md")
+        header, rows = pipe_table(summary_sections(text)["Conditions"], "Category")
+        assert MANIFEST_COLUMN in header
+        log = read_text(folder / "raw" / inventory_files(folder)["R7"][0])
+        per_point = {}
+        for m in CLIP_LINE.finditer(log):
+            per_point.setdefault(m["point"], {}).setdefault(m["category"], set()).add(m["clip"])
+        counts = {p: {c: len(clips) for c, clips in cats.items()} for p, cats in per_point.items()}
+        assert len({json.dumps(c, sort_keys=True) for c in counts.values()}) == 1, "operating points differ"
+        expected = next(iter(counts.values()))
+        shown = {r["Category"]: int(re.sub(r"\s*\[S\d+\]", "", r[MANIFEST_COLUMN])) for r in rows}
+        assert shown == expected
+        total = re.search(r"Corpus manifest version `[^`]+` \[S\d+\], (\d+) \[S\d+\] clips", text)
+        assert total and sum(shown.values()) == int(total.group(1))
+        records = read_records(folder / "raw" / inventory_files(folder)["R5"][0])
+        warmups = {m["clip"] for m in CLIP_LINE.finditer(log) if m["warmup"] == "True"}
+        for r in rows:  # scored clips plus warm-up clips of the category give the manifest count
+            scored = {x["clip_id"] for x in records if x.get("record_type") == "scoring_clip"
+                      and x["payload"]["category"] == r["Category"]}
+            warm = {c for c in warmups if any(m["clip"] == c and m["category"] == r["Category"]
+                                               for m in CLIP_LINE.finditer(log))}
+            assert len(scored) + len(warm) == shown[r["Category"]], r["Category"]
