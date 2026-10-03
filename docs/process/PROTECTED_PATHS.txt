@@ -45,3 +45,5 @@ notebooks/aqis_lab/**
 requirements/aqis_lab/**
 tests/aqis_lab/**
 .github/workflows/aqis-lab-*.yml
+
+docs/baselines/tier2_vad/*/raw/**
