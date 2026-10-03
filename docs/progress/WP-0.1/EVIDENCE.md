@@ -183,7 +183,14 @@ Findings: 0
 ```
 
 ## CI
-Recorded below after the push.
+Workflow `aqis-lab-ci.yml` on commit `59162cc`, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/9 (GitHub check runs, read 2026-10-03):
+
+| Run | Job | Started (UTC) | Completed (UTC) | Conclusion |
+| --- | --- | --- | --- | --- |
+| 37122361388 (push) | `lab` | 12:16:59 | 12:20:51 | success |
+| 37122361388 (push) | `harness-regression` | 12:17:01 | 12:18:12 | success |
+| 37122374004 (pull_request) | `lab` | 12:17:15 | 12:21:09 | success |
+| 37122374004 (pull_request) | `harness-regression` | 12:17:13 | 12:18:30 | success |
 
 ## Owner-run checks
 None. The Tier 2 run itself was the owner's input (spec "Owner steps"). Nothing this WP builds runs on Colab or Oracle.
