@@ -187,3 +187,20 @@ $ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.8
 Findings: 0
 0 findings: OK (0.5 s)
 ```
+
+### CI on the round 3 head
+Commit `04494b1`, PR #8. Every job is green:
+
+| Run | Event | Job | Conclusion |
+| --- | --- | --- | --- |
+| 37100771492 | push | lab | success |
+| 37100771492 | push | harness-regression | success |
+| 37100775090 | pull_request | lab | success |
+| 37100775090 | pull_request | harness-regression | success |
+
+The pull-request `lab` job (111139711802) runs the gate with `--wp WP-0.8`:
+```text
+aqis-audit-gate: base origin/main (merge-base 019d84584158), head 3f79bf10f47d, approvals origin/main 019d84584158, wp WP-0.8
+Findings: 0
+0 findings: OK (0.5 s)
+```
