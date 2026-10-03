@@ -306,6 +306,8 @@ DEBT004_PROBE = {
         "class TestObjectBase(object):\n    def test_in_class_with_object_base(self):\n        assert 2 + 2 == 4\n\n\n"
         "class TestRebound:\n    def test_only_in_rebound_class(self):\n        assert 2 + 2 == 4\n\n\n"
         "TestRebound = None\n"),
+    f"{PROBE_DIR}/test_star_import.py": ("def test_defined_before_star_import():\n    assert 2 + 2 == 4\n\n\n"
+                                         "from os.path import *  # noqa: E402,F403\n"),
 }
 DEBT004_COLLECTED = sorted([
     "test_in_plain_subfolder", "test_in_file_only_the_far_conftest_ignores", "test_in_module_switched_back_on",
@@ -323,7 +325,8 @@ DEBT004_NOT_COLLECTED = sorted([
     "test_only_as_call_form_fixture", "test_method_rebound_in_class", "test_only_in_rebound_class"])
 # Collected by pytest but not counted by the gate: a metaclass other than ABCMeta can change what a class holds,
 # and the gate cannot read it, so it does not count the class (stricter than pytest; docs/tools/AUDIT_GATE.md).
-DEBT004_STRICTER = ["test_in_class_with_unknown_metaclass"]
+# The same holds for a definition before a star import, which the import may rebind (os.path does not here).
+DEBT004_STRICTER = ["test_in_class_with_unknown_metaclass", "test_defined_before_star_import"]
 
 
 def pytest_collected(path, target):
