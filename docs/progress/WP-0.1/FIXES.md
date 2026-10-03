@@ -71,7 +71,7 @@ FAILED test_FR_0_1_01_check_reports_each_inconsistency[R8-listener-log-missing]
 - **F7** In `raw_problems`, a speaker or listener log missing from the R8 inventory is reported as `R8 missing: no <role> log listed in the Raw inventory`, together with the other missing items. The old role check at the end of the function was removed, because it reported the same condition.
 
 ### Verification
-- `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_tier2_baseline.py -q -p no:cacheprovider` → `44 passed in 17.09s`. The 18 round-1 tests are unchanged and pass; 26 new collected tests are added.
+- `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_tier2_baseline.py -q -p no:cacheprovider` → `44 passed in 17.09s`. The 18 round-1 test functions are unchanged and pass. The shared test helper `identifiers()`, which several of them use, now also accepts the baseline folder's date, because the title line is checked (F2). 26 new collected tests are added.
 - Guards cannot be disabled silently. Each mutation was applied to the fixed helper, which was then restored byte for byte (`cmp`):
 
   | Mutation | Result |
@@ -83,3 +83,4 @@ FAILED test_FR_0_1_01_check_reports_each_inconsistency[R8-listener-log-missing]
 - Gate: `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.1` → `0 findings: OK`.
 - `git diff -U0` touches only the budgeted functions and parts listed above.
 - Registry: the `CAP-BASE-002` row now lists 18 test functions and describes the round-2 checks.
+- CI on `fe2808b`: jobs `lab` and `harness-regression` succeeded in runs 37124751369 and 37124755651.

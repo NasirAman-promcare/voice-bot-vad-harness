@@ -222,4 +222,11 @@ $ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.1
 Findings: 0
 0 findings: OK (0.4 s)
 ```
-Round 2 CI: recorded below after the push.
+Round 2 CI, workflow `aqis-lab-ci.yml` on `fe2808b` (GitHub check runs, read 2026-10-03):
+
+| Run | Job | Started (UTC) | Completed (UTC) | Conclusion |
+| --- | --- | --- | --- | --- |
+| 37124751369 | `lab` | 13:00:54 | 13:04:55 | success |
+| 37124751369 | `harness-regression` | 13:00:54 | 13:02:11 | success |
+| 37124755651 | `lab` | 13:00:57 | 13:04:55 | success |
+| 37124755651 | `harness-regression` | 13:00:57 | 13:02:08 | success |
