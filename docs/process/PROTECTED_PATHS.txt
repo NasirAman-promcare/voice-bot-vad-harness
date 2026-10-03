@@ -3,6 +3,7 @@
 # Order of checks: NEVER, then LAB-OWNED exceptions, then GUARDED.
 
 [NEVER]
+docs/baselines/tier2_vad/*/raw/**
 # Claude can never change these. Approvals cannot unlock them. The owner edits them directly.
 CLAUDE.md
 .claude/**
@@ -46,4 +47,3 @@ requirements/aqis_lab/**
 tests/aqis_lab/**
 .github/workflows/aqis-lab-*.yml
 
-docs/baselines/tier2_vad/*/raw/**

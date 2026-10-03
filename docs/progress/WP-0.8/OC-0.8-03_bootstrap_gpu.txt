@@ -1,0 +1,1 @@
+OC-0.8-03: Colab GPU bootstrap dev_bootstrap.sh --gpu verified (172 packages installed, lock sha256 87a1cc34...).
