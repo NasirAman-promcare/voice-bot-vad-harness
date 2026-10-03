@@ -217,3 +217,49 @@ clone clean afterwards
 - **Registry row inconsistent with its module header:** I first added two DEBT-006/007 tests to registry row CAP-CONTRACTS-006 without its module's header listing them. `test_FR_0_0_08_module_headers_match_registry` caught it. The row was put back byte-identical to `main`; the tests stay listed under CAP-CONTRACTS-001 and CAP-CONTRACTS-007, whose headers list them.
 
 ## Final runs
+All at `8365189` on a clean tree (`git status --porcelain` empty), full history:
+
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network" -k "FR_0_9"
+20 passed, 1958 deselected in 10.75s
+
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_debt_wp09.py -q -p no:cacheprovider
+33 passed in 10.21s
+
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"
+1923 passed, 55 deselected in 295.22s (0:04:55)
+```
+
+Network-only suite (the new CI job's selection), run locally at `882ac4c`, whose code and tests are the same as `8365189`'s: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "network and not slow and not gpu and not colab and not oracle"` → `12 passed, 1966 deselected in 82.18s`.
+
+## Acceptance commands
+- AT-0.9-01 (`/phase-audit 0` returns PASS): not run yet; see "Owner-run checks". The spec has no other acceptance command.
+
+## Audit gate
+```text
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.9
+aqis-audit-gate: base origin/main (merge-base 699acd501838), head 8365189746a3, approvals origin/main 699acd501838, wp WP-0.9
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.7 s)
+```
+The four edited existing test files are each covered by an `ALLOW-EDIT` line in the approval. No NEVER or GUARDED path changed: the deleted `aqis-kit-patch-3/.claude/…` files are copies inside the leftover folder, not the project's `.claude/`.
+
+## CI
+- `8365189`: [run 379](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37143595686), all three jobs success: `lab` (fast suite and gate), `lab-network` (the new job; step "Lab tests marked only network (WP-0.9 DEBT-019)" success) and `harness-regression` (regression check success).
+- Red runs earlier on this branch, both explained and fixed:
+  - [run 377](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37142549275) (`18283bf`) failed with `1 failed, 1900 passed`: `test_FR_0_0_08_module_headers_match_registry`, the CAP-CONTRACTS-006 mismatch under "Incidents".
+  - Run 378 (`882ac4c`) failed on that test and on the two memo tests that needed this file.
+- This EVIDENCE update only adds text; CI on it is in the pull request.
+
+## Owner-run checks
+| Check | Where | Command | Expected output | Result report |
+| --- | --- | --- | --- | --- |
+| AT-0.9-01 phase audit | A Claude Code session on branch `claude/great-heisenberg-h85gm9` (the updated skill clones the current branch) | `/phase-audit 0` | `docs/progress/PHASE-0-AUDIT.md` with `## Verdict: PASS` and its audited commit; E6 covers WP-0.0 to WP-0.8 (D1) | Pending (owner) |
+| OC-0.9-01 unit log copy | Drive | Committed by the owner | `docs/progress/WP-0.9/OC-0.9-01_units.csv` | Done (`0ce38e1`; BLK-017 answer `699acd5`) |
+
+No WP-0.9 code runs only on Colab or Oracle. The DEBT-006 test runs as uid 65534 when root (cloud VM, Colab) and as the runner user on CI, where run 379 passed.
+
+## audit-allow lines
+None.
