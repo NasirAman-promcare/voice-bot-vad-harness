@@ -1,7 +1,7 @@
 STATUS: APPROVED
 WP: WP-0.8
 APPROVED-BY: owner
-DATE: 2026-10-02
+DATE: 2026-10-03
 PLAN: docs/progress/WP-0.8/PLAN.md
 ALLOW-EDIT: tests/aqis_lab/aqis_packs_testutil.py
 ALLOW-EDIT: tests/aqis_lab/test_aqis_registry_validate.py
@@ -30,5 +30,6 @@ CONDITIONS:
   * (e) Withdrawal: within 30 days of recording; deleted from active dataset pools.
   * (f) Contact: Owner blank [OWNER DECIDES: contact email/phone] filled in per printed copy.
 - Questions 2 to 8: as recommended in PLAN.md.
-- Round 2 Fixes: fix WP-0.8-F01, WP-0.8-F02, WP-0.8-F03.
+- Round 2: fix WP-0.8-F01, WP-0.8-F02, WP-0.8-F03.
 - Debt accepted: WP-0.8-F04 (target WP-0.9), WP-0.8-F05 (target WP-0.9), WP-0.8-F06 (target WP-0.9), and WP-0.8-F07 (target WP-0.9) accepted in docs/progress/DEBT.md.
+- Round 3 Fixes: fix WP-0.8-F09, WP-0.8-F10, WP-0.8-F11.
