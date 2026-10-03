@@ -566,3 +566,46 @@ WP: WP-0.1  ·  Raised: 2026-10-03  ·  Session: https://claude.ai/code/session_
 - (a) NETWORK.md on `main` (`a3420c3`) now states the Jitsi version, "No TURN relay" and start and end times (UTC). Merged into this branch (`c9932e3`).
 - (b) Confirmed: the root `run.log` change was only the console capture from `tee`, so R3 allows it.
 - (c) Accepted: R8 is met when the Jingle logs cover every clip evaluation record (08:00:04 to 11:34:52).
+
+## BLK-017 — WP-0.9: the approval's ALLOW-EDIT lines name other files than the approved debt rows need; the unit-log copy misses the Colab GPU sessions
+STATUS: OPEN
+WP: WP-0.9  ·  Raised: 2026-10-04  ·  Session: https://claude.ai/code/session_01FYixR4QztgtCJqCD8TQGUi
+
+**What I need:** (A) the four `ALLOW-EDIT` lines the approved debt table needs; (B) a complete copy of the Colab unit log, or your ruling on the missing sessions.
+
+**Why:**
+- (A) `docs/approvals/WP-0.9.md` (`0ce38e1`) accepts the per-row debt table (Q2), but its `ALLOW-EDIT` lines are:
+  - `tests/aqis_lab/test_aqis_gate_v2.py` and `tests/aqis_lab/test_aqis_scoring_cli.py`, which exist but no planned row edits;
+  - `tests/aqis_lab/test_aqis_gate.py` and `tests/aqis_lab/test_aqis_contracts.py`, which do not exist.
+
+  The plan (question 2) needs these instead:
+
+  | File | Rows |
+  | --- | --- |
+  | `tests/aqis_lab/test_aqis_ci.py` | DEBT-019 (job set at line 38) |
+  | `tests/aqis_lab/test_aqis_recording_docs.py` | DEBT-026 (`OWNER_FACT_BREAKS`) |
+  | `tests/aqis_lab/aqis_baseline_testutil.py` | DEBT-029, DEBT-030, DEBT-031 |
+  | `tests/aqis_lab/test_aqis_tier2_baseline.py` | DEBT-029, DEBT-030, DEBT-031 |
+
+  Without them those five rows cannot be closed as approved, and must-catch 2 cannot be met. I will not use the four granted lines, because they are outside the plan's change budget.
+- (B) FR-0.9-02 reports the Colab units used so far "from the unit log". `docs/progress/WP-0.9/OC-0.9-01_units.csv` has two sessions:
+  - `colab-2026-09-28-531d3d09acdc` (CPU, 0.0002 units);
+  - `colab-2026-10-02-1e6bd941ec9e` (Tesla T4, 14:12:11Z to 14:14:22Z, 0.0432 units).
+
+  The second matches the doctor report `docs/environment/doctor_colab_20261002T141212Z.json` (created 14:12:12Z). Committed evidence shows Colab GPU work that no row covers:
+  - the T4 smoke run behind `data/runs/phase0-smoke/phase0-smoke-colab-20261002T140101Z.tar` (`BUNDLE.json`: created 2026-10-02T14:01:01Z, `elapsed_s` 374.45, GPU Tesla T4; its runner logs start at 14:01:04Z);
+  - the `--gpu` bootstrap of OC-0.8-03.
+
+  The memo would therefore report 0.0434 units, which looks understated. I will not estimate the missing sessions.
+
+**What I tried:** compared each `ALLOW-EDIT` path with `tests/aqis_lab/` (`ls`); recomputed both unit-log rows from start, end and rate (both correct: 0.03629 h × 1.19 = 0.0432); read the Colab bundle's `BUNDLE.json` and runner logs.
+
+**Options:**
+1. (A) Replace the four `ALLOW-EDIT` lines in `docs/approvals/WP-0.9.md` on `main` with the four above. **Recommended.** It takes a minute and keeps the approved table.
+2. (A) Move DEBT-019, 026, 029, 030 and 031 to a later WP you name. This needs no test edits, but carries the gaps into phase 1.
+3. (B) Commit the full `MyDrive/AQIS_LAB/logs/units.csv` if it has more rows than the copy. **Recommended** if it does.
+4. (B) If those sessions were run without `unitlog start`/`end`, say so in the approval. The memo then reports the logged 0.0434 units, lists the unlogged sessions by name as unmetered, and records your statement. Nothing is estimated.
+
+**Paused until answered:** all WP-0.9 build work. The plan does not mark any part as independent of this answer.
+
+**Owner answer:**
