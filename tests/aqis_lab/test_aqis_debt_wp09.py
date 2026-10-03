@@ -19,7 +19,8 @@ from pathlib import Path
 import pytest
 
 import test_aqis_harness_provision as provision_tests
-from aqis_lab.contracts.validate import POOL_MIN_RECORDS, validate_event_lines
+from aqis_lab.contracts.validate import (POOL_MIN_RECORDS, ContractValidationError, validate_event,
+                                       validate_event_lines)
 from aqis_testutil import ROOT, git, probe_python_major_minor
 from fixture_repo import FixtureRepo, normalise_gate, normalise_hook
 from test_aqis_bootstrap import make_tree as bootstrap_tree, run as run_bootstrap
@@ -451,3 +452,16 @@ def test_FR_0_2_04_one_report_line_per_failing_field():
     # Both rules that fail at /clip_id (the envelope's type and the clip-level rule) stay on the one line.
     assert line26 == ["line 26: INVALID /clip_id: 7 is not of type 'string', 'null'; 7 is not of type 'string'. "
                       "Rule: this event type belongs to a clip; clip_id must name it."]
+
+
+def test_FR_0_2_04_validator_api_gives_one_error_per_field():
+    # The same rule for the validator API itself (validate_event raises one ContractValidationError), which
+    # validate_document and the run-card and manifest command lines use without validate_event_lines.
+    fixture = ROOT / "tests/aqis_lab/fixtures/contracts/invalid_events.jsonl"
+    record = json.loads(fixture.read_bytes().splitlines()[25])
+    with pytest.raises(ContractValidationError) as failure:
+        validate_event(record)
+    assert [(e.pointer, e.message) for e in failure.value.errors] == [
+        ("/clip_id", "7 is not of type 'string', 'null'; 7 is not of type 'string'. "
+                     "Rule: this event type belongs to a clip; clip_id must name it.")]
+    assert "  /clip_id: 7 is not of type 'string', 'null'; 7 is not of type" in str(failure.value)
