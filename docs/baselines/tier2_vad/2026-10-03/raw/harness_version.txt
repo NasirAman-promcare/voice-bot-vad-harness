@@ -1,0 +1,10 @@
+75e39d95c4921dd0448e6da80842d8477d11f1cc
+ M config/run_config.yaml
+ M notebooks/02_tier2_live_pipeline.ipynb
+ M notebooks/03_report.ipynb
+ D results/run_output/jingle_stanzas_debug.log
+ M results/run_output/jingle_stanzas_debug_listener.log
+ M results/run_output/jingle_stanzas_debug_speaker.log
+ M results/run_output/raw_evaluations.jsonl
+ M run.log
+?? docs/baselines/tier2_vad/
