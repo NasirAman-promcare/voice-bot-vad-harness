@@ -16,7 +16,8 @@ import shutil
 
 import pytest
 
-from aqis_baseline_testutil import (APPROVAL, BASELINES, DATE_RE, INVENTORY_COLUMNS, RECORD_TYPES,
+from aqis_baseline_testutil import (APPROVAL, BASELINES, DATE_RE, INVENTORY_COLUMNS, RECORD_TYPES, SourceError,
+                                    run_log_clips,
                                     REPORT_NON_OPERATING_POINT,
                                     REQUIRED_ITEMS, ROUNDING_RE, SUMMARY_SECTIONS, baseline_folders, inventory_files,
                                     inventory_hash_problems, notebook_texts, pipe_table,
@@ -518,6 +519,9 @@ UNCITED_INSERTS.update({
     "sources-second-table": _insert_after_table("Sources", "ID", ["| Note | Rows |", "| --- | --- |", "| extra | 12 |"]),
     "inventory-second-table": _insert_after_table("Raw inventory", "Item", [
         "| Kind | Name | Size | Checksum | Note |", "| --- | --- | --- | --- | --- |", "| x | y | 4000 | 1234 | z |"]),
+    "inventory-second-table-same-columns": _insert_after_table("Raw inventory", "Item", [
+        "| Extra | File | Bytes | SHA-256 | What it is |", "| --- | --- | --- | --- | --- |",
+        "| x | `y.log` | 4000 | 1234 | z |"]),
 })
 
 
@@ -704,3 +708,20 @@ def test_FR_0_1_02_conditions_show_clips_in_the_manifest_per_category():
             warm = {c for c in warmups if any(m["clip"] == c and m["category"] == r["Category"]
                                                for m in CLIP_LINE.finditer(log))}
             assert len(scored) + len(warm) == shown[r["Category"]], r["Category"]
+
+
+def test_FR_0_1_02_run_log_clip_count_counts_each_clip_once():
+    """DEBT-029: a clip the run log lists twice for one operating point counts once; listed twice with different
+    details, it is an error rather than a guess."""
+    line = "2026-10-03 07:59:12,159 [INFO] [orchestrator] Tier 2 [ten_vad] clip [1/2] '{clip}' (Category: '{cat}', " \
+           "Warmup: {warm})"
+    lines = [line.format(clip="a.wav", cat="clean speech", warm="True"),
+             line.format(clip="a.wav", cat="clean speech", warm="True"),     # a retried clip
+             line.format(clip="b.wav", cat="silence-only", warm="False"), "an unrelated log line"]
+    assert run_log_clips(lines) == [
+        {"operating_point": "ten_vad", "clip": "a.wav", "category": "clean speech", "warmup": True},
+        {"operating_point": "ten_vad", "clip": "b.wav", "category": "silence-only", "warmup": False}]
+    with pytest.raises(SourceError, match="twice with different details"):
+        run_log_clips(lines + [line.format(clip="a.wav", cat="music/singing", warm="True")])
+    with pytest.raises(SourceError, match="no Tier 2 clip lines"):
+        run_log_clips(["an unrelated log line"])
