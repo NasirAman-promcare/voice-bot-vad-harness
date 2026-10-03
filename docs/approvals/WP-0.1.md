@@ -10,4 +10,4 @@ CONDITIONS:
 - R6: if the report's summary table shows an "orchestrator" row, it is the run-context record listed as an adapter, a known reporting quirk. It is not an operating point. Record it and do not count it.
 - BLK-016 Rulings Confirmed: (1) root run.log modification was the console output capture and is allowed under R3; (2) Jingle logs covering all clip evaluation records satisfies R8.
 - Round 2 Fixes: fix WP-0.1-F1 (cell operating-point and metric citation binding), WP-0.1-F2 (narrow section exclusions for number-source check), WP-0.1-F3 and F7 (raw_problems consistency self-tests and exact missing log reporting), and WP-0.1-F6 (EVIDENCE.md test-first correction).
-- Debt accepted: WP-0.1-F4 (target WP-0.9) and WP-0.1-F5 (target WP-0.9) accepted in docs/progress/DEBT.md.
+- Debt accepted: WP-0.1-F4 (target WP-0.9), WP-0.1-F5 (target WP-0.9), WP-0.1-F8 (target WP-0.9), and WP-0.1-F9 (target WP-0.9) accepted in docs/progress/DEBT.md.
