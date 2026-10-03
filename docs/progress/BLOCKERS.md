@@ -568,7 +568,7 @@ WP: WP-0.1  ·  Raised: 2026-10-03  ·  Session: https://claude.ai/code/session_
 - (c) Accepted: R8 is met when the Jingle logs cover every clip evaluation record (08:00:04 to 11:34:52).
 
 ## BLK-017 — WP-0.9: the approval's ALLOW-EDIT lines name other files than the approved debt rows need; the unit-log copy misses the Colab GPU sessions
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.9  ·  Raised: 2026-10-04  ·  Session: https://claude.ai/code/session_01FYixR4QztgtCJqCD8TQGUi
 
 **What I need:** (A) the four `ALLOW-EDIT` lines the approved debt table needs; (B) a complete copy of the Colab unit log, or your ruling on the missing sessions.
@@ -608,4 +608,6 @@ WP: WP-0.9  ·  Raised: 2026-10-04  ·  Session: https://claude.ai/code/session_
 
 **Paused until answered:** all WP-0.9 build work. The plan does not mark any part as independent of this answer.
 
-**Owner answer:**
+**Owner answer:** Options 1 and 4 (`docs/approvals/WP-0.9.md` on `main`, `699acd5`, merged into this branch):
+- (A) The four `ALLOW-EDIT` lines now name `tests/aqis_lab/test_aqis_ci.py`, `tests/aqis_lab/test_aqis_recording_docs.py`, `tests/aqis_lab/aqis_baseline_testutil.py` and `tests/aqis_lab/test_aqis_tier2_baseline.py`.
+- (B) "Unit log: the logged 0.0434 units in docs/progress/WP-0.9/OC-0.9-01_units.csv is accepted; the Colab T4 smoke run (14:01Z, ~374 s) and OC-0.8-03 bootstrap are noted as unmetered sessions." The owner confirmed in the session chat (2026-10-04) that the committed CSV is the Drive file.
