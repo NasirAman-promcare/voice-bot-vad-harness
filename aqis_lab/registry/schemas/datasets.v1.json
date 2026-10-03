@@ -92,7 +92,8 @@
         "importer",
         "licence",
         "homepage",
-        "attribution"
+        "attribution",
+        "changes"
       ],
       "properties": {
         "source": {

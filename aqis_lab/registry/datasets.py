@@ -1,7 +1,7 @@
 """The source datasets and the licence table (data/registry/datasets.yaml), loaded strictly.
 
 CAPABILITIES:
-  CAP-REG-002: load_datasets() reads datasets.yaml with duplicate keys rejected, checks it against datasets.v1.json (each dataset against the schema of its importer) and checks that every licence it names is in its licence table, that local paths are safe relative paths and that only the owner importer produces sources that need consent; load_yaml_strict() is the duplicate-rejecting YAML loader the pack spec uses too [tests: test_FR_0_4_01_datasets_file_rejects_unknown_licence_and_keys, test_FR_0_4_01_committed_datasets_file_is_valid]
+  CAP-REG-002: load_datasets() reads datasets.yaml with duplicate keys rejected, checks it against datasets.v1.json (each dataset against the schema of its importer) and checks that every licence it names is in its licence table, that local paths are safe relative paths and that only the owner importer produces sources that need consent; load_yaml_strict() is the duplicate-rejecting YAML loader the pack spec uses too [tests: test_FR_0_4_01_datasets_file_rejects_unknown_licence_and_keys, test_FR_0_4_01_committed_datasets_file_is_valid, test_FR_0_4_07_dataset_without_changes_is_rejected]
 INPUTS AND OUTPUTS: a YAML file path in; a Datasets value (licences, datasets, the licence of generated clips)
   out; DatasetsError naming the file and every problem.
 CONTRACTS: datasets.yaml format 1 (docs/data/REGISTRY_FORMAT.md, aqis_lab/registry/schemas/datasets.v1.json).
@@ -12,6 +12,7 @@ NOT IN SCOPE:
   - Downloading (aqis_lab/registry/fetch.py); turning files into registry rows (aqis_lab/registry/importers.py).
 CHANGE LOG:
   2026-09-27 WP-0.4 FR-0.4-01 created.
+  2026-10-02 WP-0.8 DEBT-012: datasets.v1.json requires `changes` for every dataset (header test list only here).
 """
 import json
 from dataclasses import dataclass

@@ -283,7 +283,7 @@ def download_entry(url, data, source, importer, kind, extract, licence, **extra)
     entry = {"type": "download", "source": source, "kind": kind, "importer": importer, "url": url,
              "bytes": len(data), "sha256": sha256(data), "md5": hashlib.md5(data).hexdigest(),
              "extract": extract, "licence": licence, "homepage": "https://www.openslr.org/",
-             "attribution": f"{source} test attribution text"}
+             "attribution": f"{source} test attribution text", "changes": f"{source} test changes text"}
     entry.update(extra)
     return entry
 
@@ -360,7 +360,8 @@ def world_datasets(base, archives, musan, owner=False, tts=True):
                                   "licence": "LicenseRef-AQIS-owner-consent",
                                   "consent_file": "data/owner_smoke/CONSENT.md", "speaker_id": "owner",
                                   "clip_prefix": "owner-", "homepage": None,
-                                  "attribution": "Recorded by the lab owner for AQIS lab use only."}
+                                  "attribution": "Recorded by the lab owner for AQIS lab use only.",
+                                  "changes": "WAV header rewritten in the canonical form (samples unchanged)."}
     return entries
 
 
