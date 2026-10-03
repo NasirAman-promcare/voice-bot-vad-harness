@@ -230,3 +230,13 @@ Round 2 CI, workflow `aqis-lab-ci.yml` on `fe2808b` (GitHub check runs, read 202
 | 37124751369 | `harness-regression` | 13:00:54 | 13:02:11 | success |
 | 37124755651 | `lab` | 13:00:57 | 13:04:55 | success |
 | 37124755651 | `harness-regression` | 13:00:57 | 13:02:08 | success |
+
+## Round 3 (audit rounds 2 and 3)
+The approval on `main` accepts WP-0.1-F8 and WP-0.1-F9 as debt, target WP-0.9. They are recorded as DEBT-030 and DEBT-031 in `docs/progress/DEBT.md`. No code, test or SUMMARY.md change in this round. Fast suite and gate results are below.
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network"
+1856 passed, 55 deselected in 222.36s (0:03:42)
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.1
+Findings: 0
+0 findings: OK (0.4 s)
+```
