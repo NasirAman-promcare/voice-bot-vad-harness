@@ -33,3 +33,4 @@ CONDITIONS:
 - Round 2: fix WP-0.8-F01, WP-0.8-F02, WP-0.8-F03.
 - Debt accepted: WP-0.8-F04 (target WP-0.9), WP-0.8-F05 (target WP-0.9), WP-0.8-F06 (target WP-0.9), and WP-0.8-F07 (target WP-0.9) accepted in docs/progress/DEBT.md.
 - Round 3 Fixes: fix WP-0.8-F09, WP-0.8-F10, WP-0.8-F11.
+- Debt accepted: WP-0.8-F12 (target WP-0.9).
