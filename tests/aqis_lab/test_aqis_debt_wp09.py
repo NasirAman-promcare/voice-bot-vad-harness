@@ -8,6 +8,7 @@ is broken; the breaks are recorded in docs/progress/WP-0.9/EVIDENCE.md.
 """
 import json
 import os
+import re
 import resource
 import shutil
 import subprocess
@@ -500,3 +501,97 @@ def test_FR_0_0_10_ci_runs_network_only_tests():
     assert network_only and not network_only & fast
     assert network_only | fast == without_other_markers
     assert network_only == without_other_markers - fast
+
+
+# ---------------------------------------------------------------------------------------------
+# DEBT-022 (WP-0.8-F04): TARGETS_OPTIONS.md names option IDs only where the owner reads or picks them
+# ---------------------------------------------------------------------------------------------
+TARGETS_DOC = ROOT / "docs/decisions/TARGETS_OPTIONS.md"
+OPTION_ID_RE = re.compile(r"(?<![A-Za-z0-9])(?:HR|PM|TB|GE)-(?:[A-Z]|\?)(?![A-Za-z0-9])")
+DECIDES_SECTION = "How the owner decides"
+
+
+def option_id_problems(text):
+    """Every place an option ID appears outside the Option cell of its own table row and outside the
+    "How the owner decides" block, as 'line <n>: <line>'. Naming an option anywhere else can choose one for the
+    owner in words a word list does not know (for example "The lab will work to HR-B.")."""
+    problems, section = [], None
+    for number, line in enumerate(text.splitlines(), start=1):
+        if line.startswith("## "):
+            section = line[3:].strip()
+        if not OPTION_ID_RE.search(line) or section == DECIDES_SECTION and not line.startswith("#"):
+            continue
+        if line.startswith("|"):
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if OPTION_ID_RE.fullmatch(cells[0]) and not any(OPTION_ID_RE.search(c) for c in cells[1:]):
+                continue
+        problems.append(f"line {number}: {line.strip()}")
+    return problems
+
+
+def test_FR_0_8_05_option_ids_only_in_option_column_and_decision_block():
+    text = TARGETS_DOC.read_text(encoding="utf-8")
+    assert option_id_problems(text) == []
+    # The check reads the real document: every option row and the decision block hold IDs.
+    assert len(re.findall(r"^\| (?:HR|PM|TB|GE)-[A-C] \|", text, re.M)) == 12
+    assert "DECISION: harm-rate = HR-?" in text
+
+
+@pytest.mark.parametrize("old, new", [
+    ("**Decision:** [OWNER DECIDES: harm-rate option]",
+     "The lab will work to HR-B.\n\n**Decision:** [OWNER DECIDES: harm-rate option]"),   # a choice in prose
+    ("| A middle point between correction and cost. |",
+     "| A middle point between correction and cost, and the one to use over GE-C. |"),     # an ID in a trade-off cell
+    ("## Timing budget", "## Timing budget (TB-B)"),                                       # an ID in a heading
+])
+def test_FR_0_8_05_option_id_check_detects_a_choice_in_other_words(old, new):
+    text = TARGETS_DOC.read_text(encoding="utf-8")
+    assert text.count(old) == 1
+    problems = option_id_problems(text.replace(old, new))
+    assert len(problems) == 1 and new.splitlines()[0].strip() in problems[0], problems
+
+
+# ---------------------------------------------------------------------------------------------
+# DEBT-023 (WP-0.8-F05): the blueprint's rule 1 is keyed on an explicit Tone field, not on wording
+# ---------------------------------------------------------------------------------------------
+FILLER_LIBRARY = ROOT / "docs/fillers/FILLER_LIBRARY_v0.md"
+RULE_1_CONTEXTS = {"ctx-negative-caller", "ctx-complaint"}  # Blueprint, Never-Play Contexts, rule 1
+TONES = {"2": {"negative", "positive"}}                      # the risk ladder: Level 2 needs a clear tone
+
+
+def filler_rows(text):
+    lines = [l for l in text.splitlines() if l.startswith("| fil-") or l.startswith("| ID | Level")]
+    header = [c.strip() for c in lines[0].strip().strip("|").split("|")]
+    return [dict(zip(header, (c.strip() for c in l.strip().strip("|").split("|")))) for l in lines[1:]]
+
+
+def tone_problems(text):
+    problems = []
+    for row in filler_rows(text):
+        tone, level = row.get("Tone"), row["Level"]
+        allowed = TONES.get(level, {"n/a"})
+        if tone not in allowed:
+            problems.append(f"{row['ID']}: Level {level} tone {tone!r}, expected one of {sorted(allowed)}")
+        contexts = {c.strip() for c in row["Never play when"].split(",")}
+        if level == "2" and tone == "positive" and not RULE_1_CONTEXTS <= contexts:
+            problems.append(f"{row['ID']}: positive Level 2 filler must never play in {sorted(RULE_1_CONTEXTS)}")
+    return problems
+
+
+def test_FR_0_8_04_level_2_tone_is_explicit_and_rule_1_keys_on_it():
+    text = FILLER_LIBRARY.read_text(encoding="utf-8")
+    rows = filler_rows(text)
+    assert len(rows) == 20 and all("Tone" in row for row in rows)
+    assert tone_problems(text) == []
+    assert sorted(r["ID"] for r in rows if r.get("Tone") == "positive") == ["fil-012", "fil-014"]
+    assert sorted(r["ID"] for r in rows if r.get("Tone") == "negative") == ["fil-011", "fil-013", "fil-015"]
+    # Breaks the check must catch: a cheerful filler worded without "positive" that lost a rule 1 context,
+    # and a Level 2 filler without a tone.
+    lost = text.replace('| fil-014 | 2 | positive | "Oh, that\'s lovely." | Respond to a clear positive tone,',
+                        '| fil-014 | 2 | positive | "Oh, that\'s lovely." | Respond to a cheerful caller,').replace(
+        "ctx-negative-caller, ctx-complaint, ctx-unclear-tone, ctx-low-confidence |\n| fil-015",
+        "ctx-negative-caller, ctx-unclear-tone, ctx-low-confidence |\n| fil-015")
+    assert tone_problems(lost) == ["fil-014: positive Level 2 filler must never play in "
+                                   "['ctx-complaint', 'ctx-negative-caller']"]
+    untoned = text.replace("| fil-013 | 2 | negative |", "| fil-013 | 2 | n/a |")
+    assert tone_problems(untoned) == ["fil-013: Level 2 tone 'n/a', expected one of ['negative', 'positive']"]
