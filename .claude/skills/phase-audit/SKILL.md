@@ -10,8 +10,8 @@ argument-hint: "[phase number, for example 0]"
 
 Audit phase $ARGUMENTS as a whole.
 
-1. Confirm every WP of the phase has an AUDIT.md with verdict PASS and status MERGED; list exceptions.
-2. In a fresh clone of `origin/main` under `/tmp`, install from the lock files exactly as documented, run the full lab test suite (fast plus slow CPU tests), and run the phase's end-to-end smoke command.
+1. Confirm every WP of the phase, except the phase-review WP when this audit runs inside it, has an AUDIT.md with verdict PASS and status MERGED; list exceptions.
+2. In a fresh, full (not shallow) clone under `/tmp` of the branch under review (the current branch when run inside a work package, otherwise `origin/main`), install from the lock files exactly as documented, run the full lab test suite (fast plus slow CPU tests), and run the phase's end-to-end smoke command.
 3. Check each exit criterion in `docs/specs/phase-$ARGUMENTS/00-PHASE-$ARGUMENTS-OVERVIEW.md` with evidence. Owner-run results (Colab, Oracle) must exist as committed reports; a missing one is a MAJOR finding.
 4. Traceability: pick 5 random result rows and trace each to its run card, pack manifest version, clip, git commit and lock hash.
 5. Reproducibility: re-run one run card and compare result hashes.
