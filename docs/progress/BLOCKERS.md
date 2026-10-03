@@ -498,7 +498,7 @@ Done and pushed: DEBT-010, DEBT-018, DEBT-020, DEBT-021, FR-0.8-01, FR-0.8-04 an
 - (I) `DECISION:` harm-rate = HR-B, margin = PM-B, timing-budget = TB-B, gate-escalation = GE-B, retention = 3 years from the date of recording.
 
 ## BLK-015 — WP-0.1 needs your Tier 2 raw outputs and your choice of baseline run
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.1  ·  Raised: 2026-10-03  ·  Session: https://claude.ai/code/session_01NVq6FhCHSL6tz42EFj3VhC
 
 **What I need:**
@@ -521,5 +521,45 @@ WP: WP-0.1  ·  Raised: 2026-10-03  ·  Session: https://claude.ai/code/session_
 2. Use the 2026-09-23 run. You also supply its run configuration as used, the harness commit and local changes, and its console log. This accepts deviation D2 (an older harness). If any of these cannot be supplied, it is missing, and I must stop again.
 
 **Paused until answered:** all of `/wp-build WP-0.1`. Every requirement reads the raw folder, so no part of the build is independent of it.
+
+**Owner answer:** Option 1 (`docs/approvals/WP-0.1.md` on `main`, `75e39d9`: questions 1 to 6 as recommended, plus conditions on question 6 and R6). The owner committed a new run, `vad_eval_run_20260913_001_20261003_075907`, to `docs/baselines/tier2_vad/2026-10-03/raw/` (`e3786b5`). Merged into this branch. The completeness check found gaps, raised as BLK-016.
+
+## BLK-016 — WP-0.1: NETWORK.md misses three required points; two raw details differ from the approved checks
+STATUS: OPEN
+WP: WP-0.1  ·  Raised: 2026-10-03  ·  Session: https://claude.ai/code/session_01NVq6FhCHSL6tz42EFj3VhC
+
+**What I need:**
+- the three facts missing from `docs/baselines/tier2_vad/2026-10-03/raw/NETWORK.md`;
+- your ruling on two small differences between the raw files and the checks approved in PLAN.md (R3 and R8).
+
+**Why:** FR-0.1-01 says: "List anything missing and stop and ask; never reconstruct missing data." The approved definition of "complete" (PLAN.md, R1 to R8) needs NETWORK.md to answer five points. It answers three of them.
+
+**What I checked** (read-only, after merging `origin/main` at `e3786b5`):
+- **R1, R2, R5, R6, R7 are complete and consistent.**
+  - `raw_evaluations.jsonl` holds one run, `vad_eval_run_20260913_001_20261003_075907`: 1 `run_context` record, 224 `scoring_clip` and 224 `tier2_pipeline_latency` records for each of the 6 operating points, and no `clip_failure` record. All 10 categories are covered.
+  - `run_config.yaml` agrees with the `run_context` record.
+  - `run.log` runs from "Loaded run configuration" (line 1) to "Completed Successfully" (line 3993), with one "Tier 2 Completed" line per operating point (lines 3987-3992).
+  - The `03_report.ipynb` output shows exactly this run ID. Its `orchestrator` row is the quirk named in the approval.
+- **R3 commit is fine.** `harness_version.txt` names `75e39d9`, committed at 06:38 UTC, before the run started at 07:59 UTC.
+- **`02_tier2_live_pipeline.ipynb` is not the baseline run's log.** Its outputs belong to an earlier, aborted attempt, `…_20261003_074053`, which failed at 07:40 with `libc++.so.1: cannot open shared object file`. I will list it in the inventory as that attempt. `run.log` serves as R7.
+- **R4 gaps.** `NETWORK.md` answers the VM shape and region, where both bots ran (Google Colab), "public internet", and "Impairment: None". It does **not** state:
+  1. the Jitsi version;
+  2. whether a TURN relay was used (or "no TURN relay");
+  3. the run's start and end time in UTC (it gives only the date).
+- **R3 difference.** The approved check allows changed tracked files only in `config/run_config.yaml`, `results/run_output/` and the notebooks the run rewrites. `harness_version.txt` also lists ` M run.log`, the repository-root log, which I take to be where you captured the console output.
+- **R8 difference.** The approved check says the Jingle logs cover the run "from the first to the last record time stamp".
+  - Both logs start at 07:59:11, which is 3.4 s after the `run_context` record (07:59:07.75), so the check fails by 3.4 s.
+  - They do cover every clip record (first 08:00:04.52, last 11:34:52.93): the listener log ends 11:34:52.94, the speaker log 11:34:53.03.
+  - The gap is consistent with signalling starting only after the results store opens (`orchestrator.py`: `store_run_context` runs before the bots join).
+
+**Options:**
+1. **(Recommended)** Do all three:
+   - (a) Add the three missing facts to `NETWORK.md` on `main`. If a fact is unknown, write "not recorded"; SUMMARY.md then says so and cites that line.
+   - (b) Confirm that the root `run.log` change was your capture of the console output, so R3 also allows it.
+   - (c) Accept R8 as "the logs cover every clip record". I record the 3.4 s before the first clip as a fact, with sources.
+2. For the start and end times only: let SUMMARY.md take them from `run.log` lines 1 and 3993 (direct citations, not reconstruction), instead of from NETWORK.md. The Jitsi version and the TURN statement are still needed from you.
+3. Keep R3 and R8 exactly as approved. Then the raw folder fails them, and you would need a new run with the console log captured outside the repository and Jingle logging starting before the store opens. That second part would mean a harness change, which this WP does not allow, so R8 could not be met.
+
+**Paused until answered:** all of `/wp-build WP-0.1`. The plan makes every requirement depend on a complete raw folder. No test, test helper, SUMMARY.md or registry row has been written.
 
 **Owner answer:**
