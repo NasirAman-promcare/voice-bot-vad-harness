@@ -3,7 +3,7 @@
 Environment: cloud VM (`cloud-vm`), Ubuntu 24.04, x86_64, 4 CPUs, Python 3.13.14 in `.venv` (`dev_bootstrap.sh`: "OK: .venv ready: Python 3.13.14, lock sha256 87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef"), uv 0.8.17. Branch `claude/beautiful-bohr-gf9yck`.
 
 Owner inputs used:
-- `docs/approvals/WP-0.8.md` on `main` (`61c50c7`):
+- `docs/approvals/WP-0.8.md` on `main`. First version `61c50c7`, then the BLK-014 answers `b4b327e`, the restored question 5 and 6 lines `f97f492` (round 2), and the round 3 approval `019d845`:
   - BLK-013: option 1 (a), with the sources committed in `docs/specs/sources/`;
   - questions 2 to 8 as recommended: close all five debts here; `changes` required for every dataset; both locks as `--gpu` build constraints;
   - the consent scheme `ca-sNNN` / `ca-cNNN`, the consent facts (a) to (f), owner blanks for targets and retention, and deviations D1 to D3 accepted.
@@ -25,7 +25,8 @@ Owner inputs used:
   - `test_FR_0_8_01_fits_one_page_word_budget`
   - `test_FR_0_8_01_plain_english_sentences_and_no_legal_jargon`
   - `test_FR_0_8_01_consent_block_has_signature_date_and_consent_reference`
-  - `test_FR_0_8_01_owner_facts_appear_as_given`
+  - `test_FR_0_8_01_owner_facts_appear_as_given`: the owner's facts from the current `docs/approvals/WP-0.8.md` (questions 5 and 6), exactly, in their own sections, and the whole consent block line by line (rounds 2 and 3, F01 to F03 and F09)
+  - `test_FR_0_8_01_owner_fact_check_rejects_changed_window_and_additions` (11 cases: M1h, E1 to E3, tick-box window, tick-box age, services added, X1, X2 with `*` and `+ [x]` markers, X3; rounds 2 and 3)
 - **Tests first:** all 8 failed with `FileNotFoundError: … docs/recording/CONSENT_FORM.md` (`8 failed in 0.34s`).
 - **Where each statement comes from:**
 
@@ -51,6 +52,14 @@ $ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_recording_docs.py -q -p no
 $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0_0_08_repository_registry_is_consistent or FR_0_8_01 or test_FR_0_0_04"
 14 passed, 1810 deselected in 6.27s
 ```
+  These are the round 1 runs. Current runs, at round 3 (`3a5c541`):
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_recording_docs.py tests/aqis_lab/test_aqis_filler_library.py tests/aqis_lab/test_aqis_targets_options.py -q -p no:cacheprovider
+49 passed in 0.16s
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0_0_08_repository_registry_is_consistent or FR_0_8_ or test_FR_0_0_04"
+55 passed, 1812 deselected in 5.05s
+```
+  Rounds 2 and 3: `docs/progress/WP-0.8/FIXES.md`.
 - **Owner-run:** a print preview on one page (see "Owner-run checks").
 - Status: DONE
 
@@ -191,6 +200,7 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0
 - **Round 1.** The approval rewrite `b4b327e` had dropped the question 5 and 6 lines, and the owner-fact test read them from commit `61c50c7` (audit F02).
 - **Round 2.** The owner restored the lines on `main` (`f97f492`). The test now reads them from the current `docs/approvals/WP-0.8.md`, and checks each owner-fact section and the tick boxes for exact wording (audit F01 and F03; `docs/progress/WP-0.8/FIXES.md`).
 - New test: `test_FR_0_8_01_owner_fact_check_rejects_changed_window_and_additions`.
+- **Round 3.** The whole "Your consent" block is checked line by line (F09). The guard test gained X1, X2 and X3, so a check loosened from "equals" to "contains" is caught (F10). This file was refreshed (F11). Details: `FIXES.md`, round 3.
 
 ## Acceptance
 ### AT-0.8-01 — completeness, and no value invented where the owner decides
@@ -198,7 +208,7 @@ The auditor checks this item by hand. Here is where each part stands, with its e
 
 | Requirement | Document | Where the content comes from | Owner blanks left | Evidence |
 | --- | --- | --- | --- | --- |
-| FR-0.8-01 | `docs/recording/CONSENT_FORM.md` | approval question 6 (owner commit `61c50c7`), question 5, Build Plan "Campaign A", blueprint title | retention, contact | source table under FR-0.8-01; `test_FR_0_8_01_owner_facts_appear_as_given` |
+| FR-0.8-01 | `docs/recording/CONSENT_FORM.md` | approval questions 5 and 6 in the current `docs/approvals/WP-0.8.md` (restored in `f97f492`), Build Plan "Campaign A", blueprint title | retention, contact | source table under FR-0.8-01; `test_FR_0_8_01_owner_facts_appear_as_given` |
 | FR-0.8-02 | `docs/recording/RECORDING_GUIDE.md` | Build Plan "Campaign A"; BLK-014 answers A to G | none | `test_FR_0_8_02_*`, expected values parsed from the sources and the approval |
 | FR-0.8-03 | `docs/recording/SESSION_FORM.md` | spec FR-0.8-03; deviation D1; the guide's lists (BLK-014 E, F, G) | none (fill-in fields only) | `test_FR_0_8_03_*` |
 | FR-0.8-04 | `docs/fillers/FILLER_LIBRARY_v0.md` | blueprint risk ladder, examples and never-play rules; 12 drafted texts and 4 drafted contexts, each marked for owner review | none | `test_FR_0_8_04_*`, with the blueprint parsed in the test |

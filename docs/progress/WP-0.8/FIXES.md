@@ -150,3 +150,40 @@ FAILED …::test_FR_0_8_01_owner_fact_check_rejects_changed_window_and_additions
 3 failed, 9 passed, 20 deselected in 0.11s
 ```
 X3 was already reported, because the section check compares for equality. X3 exists to catch the X7 weakening; that proof is under "Verify".
+
+### Fix
+- **F09.** `owner_fact_problems` now reads every non-empty line of "Your consent" and requires exactly this order:
+  - the intro line "Tick each box that is true for you.";
+  - the 4 tick boxes built from the approval, each unticked. Any list marker `-`, `*` or `+` and any box state `[ ]`, `[x]` or `[X]` is read as a tick box, as GitHub renders it, so an extra box cannot hide behind another marker;
+  - the Name, Signature and Date fill-in lines.
+
+  Any other line, extra box, pre-ticked box or changed wording is reported.
+- **F10.** `OWNER_FACT_BREAKS` gains X3, a whole sentence appended after the owner's access wording. A check loosened from equality to containment would accept it, so the guard test now fails on that weakening. X1 and the two X2 variants were added for F09.
+- **F11.** `EVIDENCE.md` lists both FR-0.8-01 tests added in rounds 2 and 3 with the current runs, and cites the current approval file (`f97f492`, round 3 `019d845`) in place of `61c50c7` for the consent facts.
+
+### Verify
+- Tests at `3a5c541`:
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_recording_docs.py tests/aqis_lab/test_aqis_filler_library.py tests/aqis_lab/test_aqis_targets_options.py -q -p no:cacheprovider
+49 passed in 0.16s
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -k "test_FR_0_0_08_repository_registry_is_consistent or FR_0_8_ or test_FR_0_0_04"
+55 passed, 1812 deselected in 5.05s
+```
+- **Break proof** in a scratch worktree of `3a5c541`; each break is one exact replacement, reverted after its run. Unbroken: `49 passed in 0.19s`.
+
+  | Break | Where | Fails | Result |
+  | --- | --- | --- | --- |
+  | X1 sentence added to "Your consent" | form | `test_FR_0_8_01_owner_facts_appear_as_given` | `1 failed, 48 passed in 0.13s` |
+  | X2 fifth tick box `* [ ] …technology partners…` | form | `test_FR_0_8_01_owner_facts_appear_as_given` | `1 failed, 48 passed in 0.14s` |
+  | X3 new paragraph after the access wording | form | `test_FR_0_8_01_owner_facts_appear_as_given` | `1 failed, 48 passed in 0.14s` |
+  | X7 section check loosened to `if _flat(expected) not in actual:` | test check | `…_rejects_changed_window_and_additions[X3-appended-sentence]` | `1 failed, 48 passed in 0.18s` |
+  | X8 consent-block check loosened to compare unticked boxes only | test check | `…[X1-consent-block-sentence]`, `…[X2-extra-tick-box-plus-checked]` | `2 failed, 47 passed in 0.19s` |
+- **Scope:** `git diff -U0 HEAD~1 -- tests/aqis_lab/test_aqis_recording_docs.py` shows two hunks, `@@ -179,3 +179,20 @@ def owner_fact_problems(text):` and `@@ -204,0 +222,15 @@ OWNER_FACT_BREAKS = {`. No document or production file changed.
+- **Full fast suite and gate** (round 3, after `3a5c541`):
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider
+1812 passed, 55 deselected in 235.48s (0:03:55)
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.8
+Findings: 0
+0 findings: OK (0.5 s)
+```
