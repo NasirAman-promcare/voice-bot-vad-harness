@@ -525,7 +525,7 @@ WP: WP-0.1  ·  Raised: 2026-10-03  ·  Session: https://claude.ai/code/session_
 **Owner answer:** Option 1 (`docs/approvals/WP-0.1.md` on `main`, `75e39d9`: questions 1 to 6 as recommended, plus conditions on question 6 and R6). The owner committed a new run, `vad_eval_run_20260913_001_20261003_075907`, to `docs/baselines/tier2_vad/2026-10-03/raw/` (`e3786b5`). Merged into this branch. The completeness check found gaps, raised as BLK-016.
 
 ## BLK-016 — WP-0.1: NETWORK.md misses three required points; two raw details differ from the approved checks
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.1  ·  Raised: 2026-10-03  ·  Session: https://claude.ai/code/session_01NVq6FhCHSL6tz42EFj3VhC
 
 **What I need:**
@@ -562,4 +562,7 @@ WP: WP-0.1  ·  Raised: 2026-10-03  ·  Session: https://claude.ai/code/session_
 
 **Paused until answered:** all of `/wp-build WP-0.1`. The plan makes every requirement depend on a complete raw folder. No test, test helper, SUMMARY.md or registry row has been written.
 
-**Owner answer:**
+**Owner answer:** Option 1 (session chat, 2026-10-03):
+- (a) NETWORK.md on `main` (`a3420c3`) now states the Jitsi version, "No TURN relay" and start and end times (UTC). Merged into this branch (`c9932e3`).
+- (b) Confirmed: the root `run.log` change was only the console capture from `tee`, so R3 allows it.
+- (c) Accepted: R8 is met when the Jingle logs cover every clip evaluation record (08:00:04 to 11:34:52).
