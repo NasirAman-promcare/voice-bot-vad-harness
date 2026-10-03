@@ -35,7 +35,7 @@ def test_FR_0_0_10_ci_triggers_push_and_pull_request():
     doc, triggers = load()
     keys = set(triggers) if isinstance(triggers, dict) else set(triggers if isinstance(triggers, list) else [triggers])
     assert keys == {"push", "pull_request"}
-    assert set(doc["jobs"]) == {"lab", "harness-regression"}
+    assert set(doc["jobs"]) == {"lab", "harness-regression", "lab-network"}  # lab-network: WP-0.9 DEBT-019
 
 
 def test_FR_0_0_10_ci_bootstraps_probe_python_and_hashed_lock():

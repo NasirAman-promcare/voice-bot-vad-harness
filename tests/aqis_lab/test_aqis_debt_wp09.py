@@ -17,6 +17,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+import yaml
 
 import test_aqis_harness_provision as provision_tests
 from aqis_lab.contracts.validate import (POOL_MIN_RECORDS, ContractValidationError, validate_event,
@@ -465,3 +466,37 @@ def test_FR_0_2_04_validator_api_gives_one_error_per_field():
         ("/clip_id", "7 is not of type 'string', 'null'; 7 is not of type 'string'. "
                      "Rule: this event type belongs to a clip; clip_id must name it.")]
     assert "  /clip_id: 7 is not of type 'string', 'null'; 7 is not of type" in str(failure.value)
+
+
+# ---------------------------------------------------------------------------------------------
+# DEBT-019 (WP-0.7-F06): tests marked only `network` run in CI (job lab-network)
+# ---------------------------------------------------------------------------------------------
+NETWORK_ONLY = "network and not slow and not gpu and not colab and not oracle"
+
+
+def collected_ids(expression):
+    proc = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider",
+                           "tests/aqis_lab", "-m", expression], cwd=ROOT, capture_output=True, text=True, timeout=300)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    return {line for line in proc.stdout.splitlines() if "::" in line}
+
+
+def test_FR_0_0_10_ci_runs_network_only_tests():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/aqis-lab-ci.yml").read_text(encoding="utf-8"))
+    job = workflow["jobs"]["lab-network"]
+    assert job["runs-on"] == "ubuntu-24.04" and "permissions" not in job
+    steps = job["steps"]
+    assert [s.get("uses", "").split("@")[0] for s in steps[:2]] == ["actions/checkout", "astral-sh/setup-uv"]
+    assert steps[0]["with"]["fetch-depth"] == 0 and str(steps[1]["with"]["version"]) == "0.8.17"
+    runs = [s.get("run", "") for s in steps]
+    assert runs.index("bash aqis_lab/deploy/dev_bootstrap.sh") < runs.index(
+        f'.venv/bin/python -m pytest tests/aqis_lab -q -m "{NETWORK_ONLY}"')
+    assert [r for r in runs if "pytest" in r] == [f'.venv/bin/python -m pytest tests/aqis_lab -q -m "{NETWORK_ONLY}"']
+    assert not any(s.get("continue-on-error") for s in steps)
+    # Every test whose only lab marker is `network` runs in exactly one of the two CI suites, with nothing else.
+    network_only = collected_ids(NETWORK_ONLY)
+    fast = collected_ids("not slow and not gpu and not colab and not oracle and not network")
+    without_other_markers = collected_ids("not slow and not gpu and not colab and not oracle")
+    assert network_only and not network_only & fast
+    assert network_only | fast == without_other_markers
+    assert network_only == without_other_markers - fast
