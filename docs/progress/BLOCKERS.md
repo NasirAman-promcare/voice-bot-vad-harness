@@ -496,3 +496,30 @@ Done and pushed: DEBT-010, DEBT-018, DEBT-020, DEBT-021, FR-0.8-01, FR-0.8-04 an
 - (G) handheld phone 10-15 cm from the mouth, no headset; quiet room or everyday noise room;
 - (H) `ALLOW-EDIT: tests/aqis_lab/aqis_packs_testutil.py` and `ALLOW-EDIT: tests/aqis_lab/test_aqis_registry_validate.py`;
 - (I) `DECISION:` harm-rate = HR-B, margin = PM-B, timing-budget = TB-B, gate-escalation = GE-B, retention = 3 years from the date of recording.
+
+## BLK-015 — WP-0.1 needs your Tier 2 raw outputs and your choice of baseline run
+STATUS: OPEN
+WP: WP-0.1  ·  Raised: 2026-10-03  ·  Session: https://claude.ai/code/session_01NVq6FhCHSL6tz42EFj3VhC
+
+**What I need:**
+- your choice of the Tier 2 run that becomes the baseline;
+- that run's raw outputs (items R1 to R8 in `docs/progress/WP-0.1/PLAN.md`) committed to `main` under `docs/baselines/tier2_vad/<YYYY-MM-DD>/raw/`, including `NETWORK.md`, which only you can write.
+
+**Why:**
+- FR-0.1-01 checks this folder for completeness, and FR-0.1-02 takes every number in `SUMMARY.md` from it.
+- The spec puts the run and the commit on you ("Owner steps" 1 and 2). The folder does not exist yet.
+- The repository already holds a Tier 2 run, but it was made with the harness before commit `bb0ed2e`. Its configuration, harness version and console log are not recorded (PLAN.md finding 2). So I cannot simply use it.
+
+**What I tried:**
+- `git ls-tree -r --name-only origin/main -- docs/baselines`: only `harness_tests_baseline.md`.
+- Read `results/run_output/raw_evaluations.jsonl`: one Tier 2 run, `vad_eval_run_20260913_001_20260923_072436`, 1,344 scored clips over 6 operating points, no failures.
+- `git show bb0ed2e`: the same commit changed `orchestrator.py`, `bots/listener_bot.py`, `webrtc_bridge/media_session.py`, `reporting.py` and set `config/run_config.yaml` back to `tier1`.
+- `git log` on `README.md`: it holds only the title in every commit, so there are no written Tier 2 run instructions.
+
+**Options:**
+1. **(Recommended)** Make a new full Tier 2 run with today's harness on `main`, using the suggested steps in PLAN.md ("Owner needs"), and commit `raw/`. This matches the spec, and every required item can be captured.
+2. Use the 2026-09-23 run. You also supply its run configuration as used, the harness commit and local changes, and its console log. This accepts deviation D2 (an older harness). If any of these cannot be supplied, it is missing, and I must stop again.
+
+**Paused until answered:** all of `/wp-build WP-0.1`. Every requirement reads the raw folder, so no part of the build is independent of it.
+
+**Owner answer:**
