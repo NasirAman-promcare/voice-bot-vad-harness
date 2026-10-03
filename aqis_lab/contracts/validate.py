@@ -1,11 +1,11 @@
 """Validators for the AQIS lab contracts, naming every failing field by JSON Pointer.
 
 CAPABILITIES:
-  CAP-CONTRACTS-001: validate_event checks one event-log record against event_log.v1.json (dispatched by event type) plus the word-timing order rule; validate_event_lines checks a JSON Lines file record by record, including the per-run seq order [tests: test_FR_0_2_01_schema_is_valid_draft_2020_12, test_FR_0_2_01_valid_fixture_covers_every_event_type, test_FR_0_2_01_valid_fixture_passes, test_FR_0_2_01_rejects_missing_required_field, test_FR_0_2_01_rejects_missing_required_payload_field, test_FR_0_2_01_rejects_missing_required_word_field, test_FR_0_2_01_rejects_wrong_type_or_enum, test_FR_0_2_01_clip_id_null_only_for_run_level_events, test_FR_0_2_01_null_audio_time_needs_reason, test_FR_0_2_01_final_word_timings, test_FR_0_2_01_error_payload_fields, test_FR_0_2_01_rejects_unknown_field, test_FR_0_2_01_invalid_fixture_names_expected_pointers, test_FR_0_2_01_rejects_wrong_clip_id_type_on_either_level_events, test_FR_0_2_01_rejects_non_object_word_items]
+  CAP-CONTRACTS-001: validate_event checks one event-log record against event_log.v1.json (dispatched by event type) plus the word-timing order rule; validate_event_lines checks a JSON Lines file record by record, including the per-run seq order [tests: test_FR_0_2_01_schema_is_valid_draft_2020_12, test_FR_0_2_01_valid_fixture_covers_every_event_type, test_FR_0_2_01_valid_fixture_passes, test_FR_0_2_01_rejects_missing_required_field, test_FR_0_2_01_rejects_missing_required_payload_field, test_FR_0_2_01_rejects_missing_required_word_field, test_FR_0_2_01_rejects_wrong_type_or_enum, test_FR_0_2_01_clip_id_null_only_for_run_level_events, test_FR_0_2_01_null_audio_time_needs_reason, test_FR_0_2_01_final_word_timings, test_FR_0_2_01_error_payload_fields, test_FR_0_2_01_rejects_unknown_field, test_FR_0_2_01_invalid_fixture_names_expected_pointers, test_FR_0_2_01_rejects_wrong_clip_id_type_on_either_level_events, test_FR_0_2_01_rejects_non_object_word_items, test_FR_0_2_04_cli_worker_start_failure_exits_2_with_rerun_hint]
   CAP-CONTRACTS-002: validate_run_card checks a run card against run_card.v1.json (pack null only for human_session, a model version or checksum) and that run_card_id is the SHA-256 of the canonical card without run_card_id, created_utc and notes [tests: test_FR_0_2_02_schema_is_valid_draft_2020_12, test_FR_0_2_02_valid_fixture_passes, test_FR_0_2_02_rejects_missing_required_field, test_FR_0_2_02_rejects_wrong_type_or_enum, test_FR_0_2_02_model_needs_version_or_checksum, test_FR_0_2_02_pack_null_only_for_human_session, test_FR_0_2_02_processing_keeps_step_order_per_path, test_FR_0_2_02_rejects_run_card_id_mismatch, test_FR_0_2_02_rejects_unknown_field, test_FR_0_2_02_open_objects_accept_any_members, test_FR_0_2_02_human_session_pack_must_be_object_or_null]
   CAP-CONTRACTS-003: validate_manifest checks a pack manifest against pack_manifest.v1.json (consent_ref for owner and campaign clips, safe archive names and member paths) plus unique clip_id and archive names and every clip's archive listed in archives [tests: test_FR_0_2_03_schema_is_valid_draft_2020_12, test_FR_0_2_03_valid_fixture_passes, test_FR_0_2_03_rejects_missing_required_field, test_FR_0_2_03_rejects_wrong_type_or_enum, test_FR_0_2_03_version_must_be_semver, test_FR_0_2_03_owner_and_campaign_clips_need_consent_ref, test_FR_0_2_03_rejects_duplicate_clip_id, test_FR_0_2_03_rejects_duplicate_archive_name, test_FR_0_2_03_clip_archive_must_be_listed, test_FR_0_2_03_rejects_unsafe_archive_name, test_FR_0_2_03_rejects_unsafe_member_path, test_FR_0_2_03_rejects_unknown_field, test_FR_0_2_03_recipe_accepts_any_members, test_FR_0_2_03_invalid_fixture_names_expected_pointers, test_FR_0_2_03_rejects_non_object_archive_items]
   CAP-CONTRACTS-005: schema_version is checked before anything else: a missing or malformed version, an unknown major version and a newer minor version are rejected at /schema_version with a clear message (UnsupportedSchemaVersionError for the last two); each schema $id carries <major>.<minor> [tests: test_FR_0_2_06_schema_ids_carry_version, test_FR_0_2_06_rejects_unknown_major_version, test_FR_0_2_06_rejects_newer_minor_version, test_FR_0_2_06_rejects_malformed_schema_version, test_FR_0_2_06_documents_describe_change_policy]
-  CAP-CONTRACTS-007: the validator API: one ContractValidationError naming every failing field by RFC 6901 pointer (missing fields at their own pointer, 'Rule:' text for cross-field rules), strict JSON (UTF-8, no NaN or Infinity, no duplicate keys, integers without a fraction), per-run seq order in JSON Lines, and a worker-process pool for large event files giving the same reports as one process [tests: test_FR_0_2_04_error_names_every_failing_pointer, test_FR_0_2_04_pointer_escapes_tilde_and_slash, test_FR_0_2_04_missing_field_pointer_names_the_field, test_FR_0_2_04_rejects_nan_infinity_and_overflow, test_FR_0_2_04_rejects_duplicate_keys, test_FR_0_2_04_rejects_integer_written_as_float, test_FR_0_2_04_patterns_reject_trailing_newline_and_non_ascii_digits, test_FR_0_2_04_non_json_python_values_rejected, test_FR_0_2_04_non_object_record_rejected, test_FR_0_2_04_rule_errors_explain_the_rule, test_FR_0_2_04_dispatch_matches_full_schema_on_all_fixtures, test_FR_0_2_04_seq_counts_from_zero_per_run, test_FR_0_2_04_worker_pool_report_identical_to_single_process, test_NFR_0_2_01_validates_100k_events_under_10s, test_NFR_0_2_02_contracts_code_is_pure_python_with_pinned_jsonschema, test_FR_0_2_04_last_record_without_final_newline_is_validated]
+  CAP-CONTRACTS-007: the validator API: one ContractValidationError naming every failing field by RFC 6901 pointer, one error per field (messages of the same field joined) (missing fields at their own pointer, 'Rule:' text for cross-field rules), strict JSON (UTF-8, no NaN or Infinity, no duplicate keys, integers without a fraction), per-run seq order in JSON Lines, and a worker-process pool for large event files giving the same reports as one process [tests: test_FR_0_2_04_error_names_every_failing_pointer, test_FR_0_2_04_pointer_escapes_tilde_and_slash, test_FR_0_2_04_missing_field_pointer_names_the_field, test_FR_0_2_04_rejects_nan_infinity_and_overflow, test_FR_0_2_04_rejects_duplicate_keys, test_FR_0_2_04_rejects_integer_written_as_float, test_FR_0_2_04_patterns_reject_trailing_newline_and_non_ascii_digits, test_FR_0_2_04_non_json_python_values_rejected, test_FR_0_2_04_non_object_record_rejected, test_FR_0_2_04_rule_errors_explain_the_rule, test_FR_0_2_04_dispatch_matches_full_schema_on_all_fixtures, test_FR_0_2_04_seq_counts_from_zero_per_run, test_FR_0_2_04_worker_pool_report_identical_to_single_process, test_NFR_0_2_01_validates_100k_events_under_10s, test_NFR_0_2_02_contracts_code_is_pure_python_with_pinned_jsonschema, test_FR_0_2_04_last_record_without_final_newline_is_validated, test_FR_0_2_04_one_report_line_per_failing_field]
 INPUTS AND OUTPUTS: parsed JSON values (or raw JSON text for the parsers) in; None when valid, otherwise
   ContractValidationError listing (JSON Pointer, message) for every failing field.
 CONTRACTS: event-log v1 (docs/contracts/EVENT_LOG.md), run-card v1 (docs/contracts/RUN_CARD.md),
@@ -27,6 +27,7 @@ CHANGE LOG:
   2026-09-27 WP-0.2 FR-0.2-06 schema_version check and UnsupportedSchemaVersionError.
   2026-09-27 WP-0.2 NFR-0.2-01 per-type event validators use inlined local references.
   2026-09-27 WP-0.2 round 2 F01, F02: header lists the new gap tests (header only).
+  2026-10-04 WP-0.9 DEBT-007: errors that share a pointer are merged into one per failing field (_one_per_pointer).
 """
 import datetime
 import functools
@@ -412,7 +413,16 @@ def _validate(kind, record, validator, rules):
     _json_value_errors(record, (), errors)
     errors.extend(rules(record))
     if errors:
-        raise ContractValidationError(kind, errors)
+        raise ContractValidationError(kind, _one_per_pointer(errors))
+
+
+def _one_per_pointer(errors):
+    """One FieldError per failing field: the distinct messages of errors that share a pointer, sorted and joined
+    with '; ' (for example a wrong-typed clip_id that breaks both the envelope's type and a clip-level rule)."""
+    messages = {}
+    for error in sorted(set(errors)):
+        messages.setdefault(error.pointer, []).append(error.message)
+    return [FieldError(pointer, "; ".join(texts)) for pointer, texts in messages.items()]
 
 
 def validate_event(record):
@@ -541,7 +551,7 @@ def validate_event_lines(data, workers=1):
     else:
         results = _check_event_chunk(lines)
     sequence = _sequence_errors(results)
-    return [RecordReport(number, tuple(sorted(set(errors) | set(extra))))
+    return [RecordReport(number, tuple(sorted(_one_per_pointer(set(errors) | set(extra)))))
             for number, ((errors, _, _), extra) in enumerate(zip(results, sequence), start=1)]
 
 

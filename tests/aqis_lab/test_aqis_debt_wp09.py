@@ -4,15 +4,22 @@ Each test is named after the requirement whose behaviour it protects, and each m
 is broken; the breaks are recorded in docs/progress/WP-0.9/EVIDENCE.md.
 - DEBT-001 to DEBT-005: WP-0.0 gate, regression check, provisioning and bootstrap behaviours without a test,
   and the pytest collection rules the gate's test index did not model (DEBT-004).
+- DEBT-006, DEBT-007: the worker-pool failure path and one report line per field of `contracts validate`.
 """
 import json
+import os
+import resource
+import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
+from pathlib import Path
 
 import pytest
 
 import test_aqis_harness_provision as provision_tests
+from aqis_lab.contracts.validate import POOL_MIN_RECORDS, validate_event_lines
 from aqis_testutil import ROOT, git, probe_python_major_minor
 from fixture_repo import FixtureRepo, normalise_gate, normalise_hook
 from test_aqis_bootstrap import make_tree as bootstrap_tree, run as run_bootstrap
@@ -381,3 +388,66 @@ def test_FR_0_0_09_non_literal_collect_ignore_is_an_error(tmp_path, conftest, li
     assert proc.stderr.startswith(f"ERROR: tests/lab_support/conftest.py:{line}: cannot tell which files pytest "
                                   "collects: "), proc.stderr
     assert "is not a single literal list of strings" in proc.stderr
+
+
+# ---------------------------------------------------------------------------------------------
+# DEBT-006 (WP-0.2-F04): worker processes that cannot start give exit 2 and the rerun hint, never a traceback
+# ---------------------------------------------------------------------------------------------
+def test_FR_0_2_04_cli_worker_start_failure_exits_2_with_rerun_hint():
+    # A real OS limit, not a test double: RLIMIT_NPROC 1 lets the validator's own process run but no worker
+    # process start. Root ignores the limit, so as root the command runs as the unprivileged uid 65534 (the
+    # precedent of test_FR_0_0_06_fails_closed_on_changed_file_it_cannot_read). The control run, made the same
+    # way without the limit, proves that this user can run the command here.
+    first = json.loads((ROOT / "tests/aqis_lab/fixtures/contracts/valid_events.jsonl").read_bytes().splitlines()[0])
+    count = POOL_MIN_RECORDS + 1000
+    lines = [json.dumps({**first, "seq": i}) for i in range(count)]
+    as_root = os.geteuid() == 0
+    folder = Path(tempfile.mkdtemp(prefix="aqis-worker-limit-"))
+    try:
+        folder.chmod(0o755)
+        events = folder / "events.jsonl"
+        events.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        events.chmod(0o644)
+
+        def run(limit):
+            def child():
+                if limit:
+                    resource.setrlimit(resource.RLIMIT_NPROC, (1, 1))
+                if as_root:
+                    os.setgroups([])
+                    os.setgid(65534)
+                    os.setuid(65534)
+            return subprocess.run([sys.executable, "-B", "-m", "aqis_lab", "contracts", "validate", str(events),
+                                   "--kind", "event", "--workers", "2"], cwd=ROOT, capture_output=True, text=True,
+                                  preexec_fn=child, env={"PATH": os.environ["PATH"], "HOME": str(folder)},
+                                  timeout=600)
+
+        control = run(limit=False)
+        assert control.returncode == 0, control.stdout + control.stderr
+        assert f"event: {count} records, {count} valid, 0 invalid" in control.stdout
+        proc = run(limit=True)
+        assert proc.returncode == 2, proc.stdout + proc.stderr
+        assert "Traceback" not in proc.stderr
+        error = [line for line in proc.stderr.splitlines() if line.startswith("ERROR:")]
+        assert len(error) == 1 and error[0].startswith("ERROR: cannot run 2 worker processes: ")
+        assert error[0].endswith("; rerun with --workers 1"), error
+        assert f"{count} valid" not in proc.stdout
+    finally:
+        shutil.rmtree(folder)
+
+
+# ---------------------------------------------------------------------------------------------
+# DEBT-007 (WP-0.2-F06): one report line per failing field
+# ---------------------------------------------------------------------------------------------
+def test_FR_0_2_04_one_report_line_per_failing_field():
+    fixture = ROOT / "tests/aqis_lab/fixtures/contracts/invalid_events.jsonl"
+    for report in validate_event_lines(fixture.read_bytes()):
+        pointers = [e.pointer for e in report.errors]
+        assert len(pointers) == len(set(pointers)), (report.number, pointers)
+    proc = subprocess.run([sys.executable, "-B", "-m", "aqis_lab", "contracts", "validate", str(fixture), "--kind",
+                           "event"], cwd=ROOT, capture_output=True, text=True, timeout=300)
+    assert proc.returncode == 1, proc.stderr
+    line26 = [line for line in proc.stdout.splitlines() if line.startswith("line 26: ")]
+    # Both rules that fail at /clip_id (the envelope's type and the clip-level rule) stay on the one line.
+    assert line26 == ["line 26: INVALID /clip_id: 7 is not of type 'string', 'null'; 7 is not of type 'string'. "
+                      "Rule: this event type belongs to a clip; clip_id must name it."]
