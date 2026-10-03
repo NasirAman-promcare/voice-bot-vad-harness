@@ -89,19 +89,17 @@ Exemptions never count as findings. They are printed first, so the findings stay
 The table in `docs/capabilities/REGISTRY.md` has exactly the columns `Capability ID | Module | Functions | What it does | Tests | Introduced by | Status`. Cells cannot contain `|`, and backticks around values are ignored.
 - **Module**: a repo-relative file path, for example `aqis_lab/commands/version.py` or `aqis_lab/deploy/dev_bootstrap.sh`, or a dotted Python module such as `aqis_lab.commands.version`, resolved to `.py` or `/__init__.py`.
 - **Tests**: comma-separated test function names such as `test_FR_0_0_01_x`, or `path::name`, or `path::Class::name`. A name exists when pytest's default collection would run it, read from the source without running pytest. The rules (corrected for audit finding F47):
-  - The file is under `tests/`, outside `tests/aqis_lab/fixtures/`, and named `test_*.py` or `*_test.py`. A module that sets `__test__ = False` has no tests.
+  - The file is under `tests/`, outside `tests/aqis_lab/fixtures/`, and named `test_*.py` or `*_test.py`. A module whose `__test__` is a false value (`False`, `0`, `None`, an empty string or list, …) has no tests; so has a module whose `__test__` is not a literal the gate can read.
+  - The gate collects the folder as pytest 9.1 would when run on it with no ini options (corrected for DEBT-004, WP-0.9):
+    - It does not enter `__pycache__`, the folders of pytest's default `norecursedirs` (`*.egg`, hidden folders, `_darcs`, `build`, `CVS`, `dist`, `node_modules`, `venv`, `{arch}`) or a virtual environment (a folder holding `pyvenv.cfg` or `conda-meta/history`).
+    - It skips a file or folder listed in the `collect_ignore`, or matched by the `collect_ignore_glob`, of the nearest `conftest.py` that defines that name. Each name must be bound once, at module level, to a literal list of strings. Any other form stops the gate (`ERROR: <conftest>:<line>: cannot tell which files pytest collects: …`, exit 2), because the gate would otherwise have to guess.
+  - A definition counts only if its name still refers to it after the whole module or class body has run. A name assigned, deleted or defined again after its `def`, rebound inside an `if`, `try` or other block, or defined before a star import, counts only for its last plain `def`.
   - The function name starts with `test` and is defined with `def` or `async def` at module level. It can also be a method of a class whose name starts with `Test`, including a class nested in such a class.
-  - The class must not set `__test__ = False`. It must not define `__init__` or `__new__`, either itself or through a base class. Every base class must be defined in the same file (or be `object`). A base class imported from elsewhere cannot be read, so the class does not count; this is stricter than pytest.
-  - Functions decorated with `fixture` or `property` are not tests. Functions nested inside other functions, and methods of any other class, are not tests either.
+  - The class's `__test__` must not be a false value or a value the gate cannot read: its own last binding counts first, then the one it inherits from a base class in the same file. It must not define `__init__` or `__new__`, either itself or through a base class. Every base class must be defined in the same file (or be `object`). A base class imported from elsewhere cannot be read, so the class does not count; this is stricter than pytest.
+  - An abstract class (metaclass `ABCMeta`, with an abstract method that neither it nor a base class in the same file overrides) has no tests, as pytest skips it. A class with any other metaclass does not count, because a metaclass can change what the class holds and the gate cannot read it; this is stricter than pytest.
+  - Functions decorated with `fixture` (with or without arguments) or `property` are not tests. Functions nested inside other functions, and methods of any other class, are not tests either.
   - Tests inherited from a base class, and tests bound by assignment (`test_x = f`), are not counted either. This is also stricter than pytest.
-  - **Known gaps (accepted debt DEBT-004, audit finding F55):** some pytest rules are not modelled, so the gate can still accept a name pytest does not run. These rules cover:
-    - folders pytest skips, such as `build`, `dist`, `venv` and hidden folders;
-    - files a `conftest.py` ignores;
-    - a module or class switched off with a false `__test__` value other than `False`;
-    - abstract `Test` classes;
-    - a test name rebound after its `def`.
-
-    Each case needs an unusual layout or construct that is visible in review (corrected for audit finding F61).
+  - **Checked against pytest itself:** `test_FR_0_0_09_index_follows_pytest_collection_rules` builds a probe with one case of each rule above, has the pinned pytest collect it, and requires the gate to count exactly what pytest collects, apart from the documented stricter cases. This closes the gaps accepted as DEBT-004 (audit finding F55). Custom collection hooks in a `conftest.py`, plugins and pytest ini options are still not read; the repository uses none of them.
 
 ## Traceability (check f, `--wp`)
 - The spec is the single file `docs/specs/**/<WP>-*.md`.

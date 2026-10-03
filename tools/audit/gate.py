@@ -4,13 +4,13 @@ Usage (from inside the repository):
   python -m tools.audit.gate --base <ref> [--wp <WP-ID>] [--json]
 
 CAPABILITIES:
-  CAP-AUDIT-001: check (a) protected paths per docs/process/PROTECTED_PATHS.txt with approvals read from origin/main [tests: test_FR_0_0_05_a_detects_never_path, test_FR_0_0_05_a_detects_guarded_path_without_approval, test_FR_0_0_05_a_passes_guarded_path_with_main_approval, test_FR_0_0_05_a_ignores_approval_committed_only_on_branch, test_FR_0_0_05_a_ignores_expired_or_withdrawn_approval, test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point, test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point, test_FR_0_0_06_approvals_none_when_origin_main_unverifiable, test_FR_0_0_06_fails_closed_when_protected_paths_unreadable, test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed, test_FR_0_0_05_a_approvals_readme_approves_nothing, test_FR_0_0_05_a_detects_renamed_guarded_harness_test, test_FR_0_0_05_a_approval_lines_must_start_the_line, test_FR_0_0_05_a_standard_approval_lines_still_approve, test_FR_0_0_05_a_fetches_missing_origin_main_once]
+  CAP-AUDIT-001: check (a) protected paths per docs/process/PROTECTED_PATHS.txt with approvals read from origin/main [tests: test_FR_0_0_05_a_detects_never_path, test_FR_0_0_05_a_detects_guarded_path_without_approval, test_FR_0_0_05_a_passes_guarded_path_with_main_approval, test_FR_0_0_05_a_ignores_approval_committed_only_on_branch, test_FR_0_0_05_a_ignores_expired_or_withdrawn_approval, test_FR_0_0_05_a_uses_approval_added_on_main_after_branch_point, test_FR_0_0_05_a_honours_withdrawal_on_main_after_branch_point, test_FR_0_0_06_approvals_none_when_origin_main_unverifiable, test_FR_0_0_06_fails_closed_when_protected_paths_unreadable, test_FR_0_0_05_a_builtin_never_list_applies_when_policy_section_removed, test_FR_0_0_05_a_approvals_readme_approves_nothing, test_FR_0_0_05_a_detects_renamed_guarded_harness_test, test_FR_0_0_05_a_approval_lines_must_start_the_line, test_FR_0_0_05_a_standard_approval_lines_still_approve, test_FR_0_0_05_a_fetches_missing_origin_main_once, test_FR_0_0_06_parity_lowercase_readme_approval_approves_nothing]
   CAP-AUDIT-002: check (b) existing tests modified or deleted without ALLOW-EDIT [tests: test_FR_0_0_05_b_detects_modified_existing_test, test_FR_0_0_05_b_detects_deleted_existing_test, test_FR_0_0_05_b_passes_new_test_and_approved_edit, test_FR_0_0_05_b_detects_renamed_existing_lab_test, test_FR_0_0_05_b_allow_patterns_in_does_not_approve_test_edits]
   CAP-AUDIT-003: check (c) compromise patterns in added lab code lines and test-integrity patterns in added lab test lines [tests: test_FR_0_0_05_c_detects_each_code_pattern, test_FR_0_0_05_c_detects_each_test_pattern, test_FR_0_0_05_c_scans_only_added_lines, test_FR_0_0_05_c_includes_uncommitted_and_untracked_work, test_FR_0_0_06_scans_v2_file_types_and_dirs, test_FR_0_0_06_flags_pytestmark_and_param_skips, test_FR_0_0_06_decodes_non_utf8_with_replacement, test_FR_0_0_06_fails_closed_on_unreadable_changed_file, test_FR_0_0_06_fails_closed_on_git_error, test_FR_0_0_05_c_indented_allow_patterns_in_exempts_nothing, test_FR_0_0_06_fails_closed_when_branch_diff_fails, test_FR_0_0_06_fails_closed_when_git_status_fails, test_FR_0_0_06_fails_closed_on_changed_file_it_cannot_read]
   CAP-AUDIT-004: check (d) CAPABILITIES header in new aqis_lab/ modules [tests: test_FR_0_0_05_d_detects_new_module_without_header, test_FR_0_0_05_d_passes_module_with_header_or_short_file]
-  CAP-AUDIT-005: check (e) capability registry consistency [tests: test_FR_0_0_08_detects_row_with_missing_test, test_FR_0_0_08_detects_row_with_missing_module, test_FR_0_0_08_detects_row_removed_since_base, test_FR_0_0_08_detects_malformed_row, test_FR_0_0_08_detects_missing_registry, test_FR_0_0_08_passes_consistent_registry, test_FR_0_0_08_repository_registry_is_consistent, test_FR_0_0_08_detects_reordered_header_columns, test_FR_0_0_08_table_ends_at_first_non_table_line, test_FR_0_0_08_row_names_only_tests_pytest_collects, test_FR_0_0_08_row_naming_collected_tests_passes, test_FR_0_0_06_fails_closed_when_base_registry_unreadable]
-  CAP-AUDIT-006: check (f) requirement traceability for --wp [tests: test_FR_0_0_09_detects_id_missing_from_plan, test_FR_0_0_09_detects_id_missing_from_test_names, test_FR_0_0_09_detects_id_missing_from_evidence, test_FR_0_0_09_underscore_matching_respects_boundaries, test_FR_0_0_09_ignores_other_wp_ids_in_spec, test_FR_0_0_09_reports_unknown_wp, test_FR_0_0_09_passes_complete_traceability, test_FR_0_0_09_detects_nfr_id_missing_from_test_names, test_FR_0_0_09_detects_id_only_in_uncollected_test, test_FR_0_0_06_fails_closed_when_spec_unreadable]
-  CAP-AUDIT-007: lists every audit-allow line and every ALLOW-PATTERNS-IN exempted file [tests: test_FR_0_0_07_audit_allow_with_reason_exempts_and_is_listed, test_FR_0_0_07_audit_allow_without_reason_does_not_exempt, test_FR_0_0_07_audit_allow_exempts_only_its_line, test_FR_0_0_07_allow_patterns_in_exempts_file_and_is_listed]
+  CAP-AUDIT-005: check (e) capability registry consistency [tests: test_FR_0_0_08_detects_row_with_missing_test, test_FR_0_0_08_detects_row_with_missing_module, test_FR_0_0_08_detects_row_removed_since_base, test_FR_0_0_08_detects_malformed_row, test_FR_0_0_08_detects_missing_registry, test_FR_0_0_08_passes_consistent_registry, test_FR_0_0_08_repository_registry_is_consistent, test_FR_0_0_08_detects_reordered_header_columns, test_FR_0_0_08_table_ends_at_first_non_table_line, test_FR_0_0_08_row_names_only_tests_pytest_collects, test_FR_0_0_08_row_naming_collected_tests_passes, test_FR_0_0_06_fails_closed_when_base_registry_unreadable, test_FR_0_0_08_registry_module_that_is_a_folder_is_a_finding, test_FR_0_0_08_registry_row_without_capability_id_is_malformed, test_FR_0_0_09_index_follows_pytest_collection_rules, test_FR_0_0_09_index_counts_every_collected_probe_test, test_FR_0_0_09_non_literal_collect_ignore_is_an_error, test_FR_0_0_06_fails_closed_on_unparsable_lab_test_file]
+  CAP-AUDIT-006: check (f) requirement traceability for --wp [tests: test_FR_0_0_09_detects_id_missing_from_plan, test_FR_0_0_09_detects_id_missing_from_test_names, test_FR_0_0_09_detects_id_missing_from_evidence, test_FR_0_0_09_underscore_matching_respects_boundaries, test_FR_0_0_09_ignores_other_wp_ids_in_spec, test_FR_0_0_09_reports_unknown_wp, test_FR_0_0_09_passes_complete_traceability, test_FR_0_0_09_detects_nfr_id_missing_from_test_names, test_FR_0_0_09_detects_id_only_in_uncollected_test, test_FR_0_0_06_fails_closed_when_spec_unreadable, test_FR_0_0_09_two_specs_for_one_wp_is_a_finding, test_FR_0_0_09_only_lab_test_names_count, test_FR_0_0_09_traces_every_id_on_a_spec_line]
+  CAP-AUDIT-007: lists every audit-allow line and every ALLOW-PATTERNS-IN exempted file [tests: test_FR_0_0_07_audit_allow_with_reason_exempts_and_is_listed, test_FR_0_0_07_audit_allow_without_reason_does_not_exempt, test_FR_0_0_07_audit_allow_exempts_only_its_line, test_FR_0_0_07_allow_patterns_in_exempts_file_and_is_listed, test_FR_0_0_07_exempted_files_list_only_scanned_files]
   CAP-AUDIT-009: command line, merge-base diffing, text and JSON reports, exit codes 0/1/2 [tests: test_FR_0_0_05_clean_branch_exits_zero, test_FR_0_0_05_uses_merge_base_not_ref_tip, test_FR_0_0_05_json_output_schema, test_FR_0_0_05_bad_base_ref_exits_2, test_NFR_0_0_01_gate_runtime_under_60s, test_NFR_0_0_02_every_message_names_file_line_and_rule, test_NFR_0_0_03_imports_are_stdlib_or_pinned]
 INPUTS AND OUTPUTS: git state of the repository containing the cwd; a report on stdout; exit 0 (no findings),
   1 (findings) or 2 (the gate could not run, message on stderr).
@@ -36,6 +36,9 @@ CHANGE LOG:
   2026-09-26 WP-0.0 round 8 must-catch 7: header lists the branch-diff and git-status fail-closed tests (header only).
   2026-09-27 WP-0.0 audit round 9 F56/F57: header lists the ALLOW-PATTERNS-IN and read-error tests; F61: the
              test_functions docstring states the pytest rules it does not model (docstring only).
+  2026-10-04 WP-0.9 DEBT-004: test_functions follows pytest 9.1's collection rules for skipped folders, conftest
+             collect_ignore(_glob), false or unreadable __test__ values, abstract classes and rebound names;
+             DEBT-001 to DEBT-003 and DEBT-005: header lists the new tests.
 """
 import argparse
 import ast
@@ -423,12 +426,152 @@ def _is_test_def(node):
 
 
 def _sets_test_false(body):
-    """True when the body assigns __test__ = False, which stops pytest collecting it."""
-    for node in body:
-        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant) and node.value.value is False:
-            if any(isinstance(t, ast.Name) and t.id == "__test__" for t in node.targets):
-                return True
-    return False
+    """True when the body leaves __test__ bound to a false value (pytest then collects nothing from it), or to
+    a value the gate cannot read (not a literal), which does not count either (fails closed)."""
+    statement = _final_bindings(body).get("__test__")
+    if statement is None:
+        return False
+    value = _literal_test_value(statement)
+    return value is _UNREADABLE or not value
+
+
+_UNREADABLE = object()
+
+
+def _literal_test_value(statement):
+    """The value a plain `__test__ = <literal>` statement binds, else _UNREADABLE."""
+    if isinstance(statement, ast.Assign) and all(isinstance(t, ast.Name) for t in statement.targets):
+        value = statement.value
+    elif isinstance(statement, ast.AnnAssign) and isinstance(statement.target, ast.Name) and statement.value:
+        value = statement.value
+    else:
+        return _UNREADABLE
+    try:
+        return ast.literal_eval(value)
+    except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+        return _UNREADABLE
+
+
+COMPREHENSIONS = (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)
+
+
+def _bound_names(statement):
+    """Names a module- or class-level statement binds, including inside compound statements; function, class
+    and lambda bodies and comprehension scopes are not entered. A star import binds '*'."""
+    names = set()
+
+    def visit(node):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            names.add(node.name)
+            for child in node.decorator_list:
+                visit(child)
+            return
+        if isinstance(node, ast.Lambda):
+            return
+        if isinstance(node, COMPREHENSIONS):
+            names.update(n.target.id for n in ast.walk(node) if isinstance(n, ast.NamedExpr))
+            return
+        if isinstance(node, ast.Name) and isinstance(node.ctx, (ast.Store, ast.Del)):
+            names.add(node.id)
+        elif isinstance(node, ast.alias):
+            names.add("*" if node.name == "*" else (node.asname or node.name).split(".")[0])
+        elif isinstance(node, ast.ExceptHandler) and node.name:
+            names.add(node.name)
+        elif isinstance(node, (ast.MatchAs, ast.MatchStar)) and node.name:
+            names.add(node.name)
+        elif isinstance(node, ast.MatchMapping) and node.rest:
+            names.add(node.rest)
+        for child in ast.iter_child_nodes(node):
+            visit(child)
+
+    visit(statement)
+    return names
+
+
+def _final_bindings(body):
+    """{name: the last statement of body that binds it}. A binding inside a compound statement (if, try, for,
+    ...) maps to that compound statement, which is never a def, so a conditionally rebound name does not count."""
+    last = {}
+    for statement in body:
+        for name in _bound_names(statement):
+            last[name] = statement
+    return last
+
+
+def _defs_pytest_keeps(body):
+    """The defs and class definitions of body whose name still refers to them after the whole body has run (pytest
+    collects a module's or class's final namespace). A star import after a definition may rebind it, so such a
+    definition does not count."""
+    final = _final_bindings(body)
+    star = max((i for i, s in enumerate(body) if "*" in _bound_names(s)), default=-1)
+    return [node for i, node in enumerate(body)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            and final.get(node.name) is node and i > star]
+
+
+def _class_test_flag(cls, classes, seen=()):
+    """True or False when the class or a base class in the same module binds __test__ (the class's own, last
+    binding first, then its bases in order); None when none does; _UNREADABLE for a value that is not a literal."""
+    statement = _final_bindings(cls.body).get("__test__")
+    if statement is not None:
+        value = _literal_test_value(statement)
+        return value if value is _UNREADABLE else bool(value)
+    for base in cls.bases:
+        if isinstance(base, ast.Name) and base.id in classes and base.id not in seen:
+            inherited = _class_test_flag(classes[base.id], classes, (*seen, cls.name))
+            if inherited is not None:
+                return inherited
+    return None
+
+
+ABSTRACT_DECORATORS = ("abstractmethod", "abstractproperty", "abstractclassmethod", "abstractstaticmethod")
+
+
+def _metaclass(cls, classes, seen=()):
+    """The metaclass expression of the class or of its first base in the same module that names one, else None."""
+    for keyword in cls.keywords:
+        if keyword.arg == "metaclass":
+            return keyword.value
+    for base in cls.bases:
+        if isinstance(base, ast.Name) and base.id in classes and base.id not in seen:
+            found = _metaclass(classes[base.id], classes, (*seen, cls.name))
+            if found is not None:
+                return found
+    return None
+
+
+def _is_abcmeta(node):
+    return ((isinstance(node, ast.Name) and node.id == "ABCMeta")
+            or (isinstance(node, ast.Attribute) and node.attr == "ABCMeta"
+                and isinstance(node.value, ast.Name) and node.value.id == "abc"))
+
+
+def _abstract_names(cls, classes, seen=()):
+    """Names still abstract in the class: its own abstract methods plus those of its same-module bases that it does
+    not bind again (the rule ABCMeta applies when it builds __abstractmethods__)."""
+    final = _final_bindings(cls.body)
+    own = {name for name, node in final.items()
+           if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+           and any(_decorator_name(d) in ABSTRACT_DECORATORS for d in node.decorator_list)}
+    inherited = set()
+    for base in cls.bases:
+        if isinstance(base, ast.Name) and base.id in classes and base.id not in seen:
+            inherited |= _abstract_names(classes[base.id], classes, (*seen, cls.name))
+    return own | {name for name in inherited if name not in final}
+
+
+def _is_collected_class(cls, classes):
+    """True when pytest collects tests from this Test class. A class whose metaclass is not ABCMeta is not
+    counted: another metaclass can change what the class holds, and the gate cannot read it (fails closed)."""
+    if not cls.name.startswith("Test") or _may_have_constructor(cls, classes):
+        return False
+    flag = _class_test_flag(cls, classes)
+    if flag is _UNREADABLE or flag is False:
+        return False
+    metaclass = _metaclass(cls, classes)
+    if metaclass is None:
+        return True
+    return _is_abcmeta(metaclass) and not _abstract_names(cls, classes)
 
 
 def _may_have_constructor(cls, classes, seen=()):
@@ -448,48 +591,135 @@ def _may_have_constructor(cls, classes, seen=()):
 
 
 def _collect_class(cls, prefix, classes, index):
-    if not cls.name.startswith("Test") or _sets_test_false(cls.body) or _may_have_constructor(cls, classes):
+    if not _is_collected_class(cls, classes):
         return
     path = f"{prefix}::{cls.name}"
-    for item in cls.body:
+    for item in _defs_pytest_keeps(cls.body):
         if _is_test_def(item):
             index.update({item.name, f"{path}::{item.name}"})
         elif isinstance(item, ast.ClassDef):
             _collect_class(item, path, classes, index)
 
 
+# pytest 9.1's default norecursedirs (requirements/aqis_lab/phase0.txt pins pytest); the repository sets no
+# pytest ini options.
+PYTEST_NORECURSEDIRS = ("*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}")
+CONFTEST_IGNORE_NAMES = ("collect_ignore", "collect_ignore_glob")
+
+
+def _parse_python(path, rel, what):
+    try:
+        source = path.read_bytes().decode("utf-8", errors="replace")
+    except OSError as exc:
+        raise GateError(f"{rel}:1: cannot read {what}: {exc}") from exc
+    try:
+        return ast.parse(source, filename=rel)
+    except SyntaxError as exc:
+        raise GateError(f"{rel}:{exc.lineno}: cannot parse {what}: {exc.msg}") from exc
+
+
+def _conftest_ignores(path, rel):
+    """{name: [entries]} for collect_ignore and collect_ignore_glob in a conftest.py. Each name the file mentions
+    must be bound once, at module level, to a literal list or tuple of strings and used nowhere else; anything
+    else is a GateError, because the gate would have to guess which files pytest skips."""
+    tree = _parse_python(path, rel, "conftest file")
+    found = {}
+    for name in CONFTEST_IGNORE_NAMES:
+        uses = [n for n in ast.walk(tree) if isinstance(n, ast.Name) and n.id == name]
+        if not uses:
+            continue
+        binds = [s for s in tree.body if isinstance(s, (ast.Assign, ast.AnnAssign)) and name in _bound_names(s)]
+        value = _literal_test_value(binds[0]) if len(uses) == 1 and len(binds) == 1 else _UNREADABLE
+        if not (isinstance(value, (list, tuple)) and all(isinstance(v, str) for v in value)):
+            line = min(n.lineno for n in uses)
+            raise GateError(f"{rel}:{line}: cannot tell which files pytest collects: {name} is not a single "
+                            f"literal list of strings")
+        found[name] = list(value)
+    return found
+
+
+def _ignores_for(directory, base, root, cache):
+    """{name: [absolute paths or globs]} pytest applies to entries of `directory` when it collects `base`: for each
+    name, the entries of the nearest conftest.py between `directory` and `base` that defines it."""
+    result = {}
+    current = directory
+    while True:
+        conftest = current / "conftest.py"
+        if conftest.is_file():
+            if conftest not in cache:
+                cache[conftest] = _conftest_ignores(conftest, conftest.relative_to(root).as_posix())
+            for name, entries in cache[conftest].items():
+                result.setdefault(name, [os.path.abspath(current / e.replace("/", os.sep)) for e in entries])
+        if current == base:
+            return {name: result.get(name, []) for name in CONFTEST_IGNORE_NAMES}
+        current = current.parent
+
+
+def _in_virtualenv(directory):
+    return (directory / "pyvenv.cfg").is_file() or (directory / "conda-meta" / "history").is_file()
+
+
+def _pytest_skips(path, base, root, cache):
+    """True when pytest, collecting the folder `base`, never reaches the file `path`: a folder or file on the way
+    is __pycache__, is listed in the nearest conftest's collect_ignore or matches its collect_ignore_glob, or is a
+    folder pytest does not enter (default norecursedirs, a virtual environment)."""
+    current = base
+    parts = path.relative_to(base).parts
+    for i, part in enumerate(parts):
+        parent, current = current, current / part
+        if part == "__pycache__":
+            return True
+        ignores = _ignores_for(parent, base, root, cache)
+        absolute = os.path.abspath(current)
+        if absolute in ignores["collect_ignore"]:
+            return True
+        if any(fnmatch.fnmatch(absolute, pattern) for pattern in ignores["collect_ignore_glob"]):
+            return True
+        is_folder = i < len(parts) - 1
+        if is_folder and (_in_virtualenv(current) or any(fnmatch.fnmatch(part, p) for p in PYTEST_NORECURSEDIRS)):
+            return True
+    return False
+
+
 def test_functions(root, folder):
     """{path::name, path::Class::name, name} for test functions under folder, fixtures excluded.
 
-    Applies these rules of pytest's default collection (not all of them: folders pytest skips such as build/ or
-    hidden ones, conftest.py collect_ignore, other false __test__ values, abstract classes and rebound names are
-    not modelled; accepted debt DEBT-004): files named test_*.py or *_test.py; module-level functions whose
-    name starts with 'test'; such methods of classes whose name starts with 'Test' (nested ones too) that
-    have no __init__ or __new__ of their own or from a base class, and whose base classes are all defined in
-    the same module (others cannot be read, so they do not count). Functions
-    decorated as fixtures or properties, and modules or classes that set __test__ = False, are not tests.
+    Applies pytest's default collection as if pytest were run on `folder` (pytest 9.1, no ini options):
+    - files named test_*.py or *_test.py, outside tests/aqis_lab/fixtures/;
+    - not under a folder pytest does not enter: __pycache__, the default norecursedirs (*.egg, hidden folders,
+      _darcs, build, CVS, dist, node_modules, venv, {arch}) or a virtual environment (pyvenv.cfg or
+      conda-meta/history);
+    - not listed in the collect_ignore, or matched by the collect_ignore_glob, of the nearest conftest.py between
+      folder and the file that defines it; a conftest whose list is not a literal is a GateError;
+    - module-level functions whose name starts with 'test', and such methods of classes whose name starts with
+      'Test' (nested ones too) that have no __init__ or __new__ of their own or from a base class and whose base
+      classes are all defined in the same module (others cannot be read, so they do not count);
+    - a definition counts only if its name still refers to it after the whole module or class body has run, so a
+      name rebound after its def (assigned, deleted, defined again, rebound conditionally or possibly by a later
+      star import) counts only for the last plain def;
+    - a module or class whose __test__ is a false value (its own last binding, or for a class the one inherited
+      from a same-module base), or not a literal the gate can read, has no tests;
+    - an abstract Test class (metaclass ABCMeta with an abstract method left) has no tests, and a class with any
+      other metaclass is not counted (the gate cannot read the metaclass);
+    - functions decorated as fixtures (either form) or properties are not tests.
     Files that do not parse are reported as a GateError, never skipped.
     """
     index = set()
     base = Path(root) / folder
     if not base.is_dir():
         return index
+    conftests = {}
     for path in sorted(base.rglob("*.py")):
         rel = path.relative_to(root).as_posix()
         if rel.startswith(FIXTURE_DIR) or not any(fnmatch.fnmatchcase(path.name, g) for g in TEST_FILE_GLOBS):
             continue
-        try:
-            source = path.read_bytes().decode("utf-8", errors="replace")
-        except OSError as exc:
-            raise GateError(f"{rel}:1: cannot read test file: {exc}") from exc
-        try:
-            tree = ast.parse(source, filename=rel)
-        except SyntaxError as exc:
-            raise GateError(f"{rel}:{exc.lineno}: cannot parse test file: {exc.msg}") from exc
+        if _pytest_skips(path, base, Path(root), conftests):
+            continue
+        tree = _parse_python(path, rel, "test file")
         if _sets_test_false(tree.body):
             continue
         classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
-        for node in tree.body:
+        for node in _defs_pytest_keeps(tree.body):
             if _is_test_def(node):
                 index.update({node.name, f"{rel}::{node.name}"})
             elif isinstance(node, ast.ClassDef):

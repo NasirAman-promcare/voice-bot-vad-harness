@@ -14,7 +14,9 @@
 #                 test_FR_0_7_02_bootstrap_passes_the_lock_as_build_constraints,
 #                 test_FR_0_7_02_source_build_uses_only_the_locked_setuptools,
 #                 test_FR_0_7_02_bootstrap_rejects_unknown_option, test_FR_0_7_03_bootstrap_gpu_needs_the_gpu_lock,
-#                 test_FR_0_7_03_bootstrap_gpu_build_constraints_include_the_gpu_lock]
+#                 test_FR_0_7_03_bootstrap_gpu_build_constraints_include_the_gpu_lock,
+#                 test_FR_0_0_02_probe_repeating_one_version_is_accepted,
+#                 test_FR_0_0_02_recreates_venv_built_on_another_python]
 # INPUTS AND OUTPUTS: reads the Colab probe and the lock(s); writes only <repo>/.venv. Usage:
 #   bash aqis_lab/deploy/dev_bootstrap.sh [--gpu]
 # INVARIANTS:
@@ -30,6 +32,8 @@
 #     srt, owner decision question 2 (a)); FR-0.7-03: --gpu also syncs requirements/aqis_lab/phase0-gpu.txt.
 #   2026-10-02 WP-0.8 DEBT-021: --gpu passes the GPU lock as a build constraint too (both locks; a differing
 #     setuptools pin between them then fails the source build loudly).
+#   2026-10-04 WP-0.9 DEBT-003, DEBT-005: header lists the repeated-probe-version and wrong-Python .venv tests
+#     (header only).
 set -euo pipefail
 
 fail() {
