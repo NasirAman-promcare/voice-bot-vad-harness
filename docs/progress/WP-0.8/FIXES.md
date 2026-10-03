@@ -110,3 +110,43 @@ aqis-audit-gate: base origin/main (merge-base f97f4929b4d5), head 0c1459161e65, 
 Findings: 0
 0 findings: OK (0.4 s)
 ```
+
+## Round 3: WP-0.8-F09, WP-0.8-F10, WP-0.8-F11 (`/surgical-fix`)
+Owner instruction and approval: `docs/approvals/WP-0.8.md` on `main` (`019d845`), "Round 3 Fixes: fix WP-0.8-F09, WP-0.8-F10, WP-0.8-F11". `origin/main` was merged first (`dfb01a5`).
+
+### Findings and root cause
+- **F09 (MAJOR).** `owner_fact_problems` read only the consent-block lines written exactly `- [ ] `, so two kinds of addition passed every test:
+  - X1: a sentence added to "Your consent";
+  - X2: a fifth tick box written with another list marker (`* [ ]`).
+
+  Root cause: the consent block was compared by its tick boxes only, not as a whole section.
+- **F10 (MINOR).** The guard test's breaks all changed text inside an existing sentence. A check weakened from equality to containment (X7) would still report them, so the guard did not prove the check is strict.
+- **F11 (MINOR).** `EVIDENCE.md` still listed the round 1 FR-0.8-01 tests and runs, and said the consent facts come from commit `61c50c7`.
+
+### Change budget
+| File | Functions or lines | Change |
+| --- | --- | --- |
+| `tests/aqis_lab/test_aqis_recording_docs.py` | `owner_fact_problems`, `expected_tick_boxes` (unchanged; reused), `OWNER_FACT_BREAKS` | `owner_fact_problems` checks every non-empty line of "Your consent": the intro line, then the 4 expected tick boxes under any list marker and box state (`^[-*+] \[[ xX]\]`), then the Name, Signature and Date fill-in lines, in that order and nothing else. `OWNER_FACT_BREAKS` gains X1, X2 (`*` marker; `+ [x]` marker) and X3 (a sentence appended after the owner's access wording) |
+| `docs/capabilities/REGISTRY.md` | row CAP-DOC-014 | Text: the whole consent block is checked |
+| `docs/progress/WP-0.8/EVIDENCE.md` | FR-0.8-01 test list and runs; AT-0.8-01 row FR-0.8-01 | F11 |
+| `docs/progress/WP-0.8/FIXES.md` | this section | Evidence |
+
+The documents and the production code are not changed.
+
+**Capabilities at risk:** CAP-DOC-014; every other test in `test_aqis_recording_docs.py` must stay green and unchanged.
+
+### Baseline (before any change)
+```text
+$ .venv/bin/python -m pytest tests/aqis_lab/test_aqis_recording_docs.py tests/aqis_lab/test_aqis_filler_library.py tests/aqis_lab/test_aqis_targets_options.py -q -p no:cacheprovider
+45 passed in 0.34s
+```
+
+### Reproduce (tests first)
+X1, the two X2 variants and X3 were added to `OWNER_FACT_BREAKS` before the check was changed. With the round 2 check, the three consent-block breaks were not reported:
+```text
+FAILED …::test_FR_0_8_01_owner_fact_check_rejects_changed_window_and_additions[X1-consent-block-sentence]
+FAILED …::test_FR_0_8_01_owner_fact_check_rejects_changed_window_and_additions[X2-extra-tick-box-plus-checked]
+FAILED …::test_FR_0_8_01_owner_fact_check_rejects_changed_window_and_additions[X2-extra-tick-box-star]
+3 failed, 9 passed, 20 deselected in 0.11s
+```
+X3 was already reported, because the section check compares for equality. X3 exists to catch the X7 weakening; that proof is under "Verify".

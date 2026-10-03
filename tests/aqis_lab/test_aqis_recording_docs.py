@@ -176,9 +176,26 @@ def owner_fact_problems(text):
         actual = _flat(found.get(heading, ""))
         if actual != _flat(expected):
             problems.append(f"section {heading!r} is {actual!r}, expected {_flat(expected)!r}")
-    boxes = re.findall(r"^- \[ \] (.+)$", found.get("Your consent", ""), re.M)
-    if [_flat(b) for b in boxes] != expected_tick_boxes():
-        problems.append(f"tick boxes {boxes!r}, expected {expected_tick_boxes()!r}")
+    # The whole consent block participants tick and sign (WP-0.8-F09): every non-empty line, in order, is the intro
+    # line, one of the 4 expected tick boxes (unticked; any list marker is read as a tick box, as GitHub renders it),
+    # or one of the Name, Signature and Date fill-in lines. Nothing else may appear.
+    expected = ([("text", "Tick each box that is true for you.")] + [("box", " ", b) for b in expected_tick_boxes()]
+                + [("field", f) for f in ("Name", "Signature", "Date")])
+    actual = []
+    for line in found.get("Your consent", "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        box = re.match(r"^[-*+] \[([ xX])\] (.+)$", line)
+        field = re.fullmatch(r"(Name|Signature|Date): _{4,}", line)
+        if box:
+            actual.append(("box", box.group(1), _flat(box.group(2))))
+        elif field:
+            actual.append(("field", field.group(1)))
+        else:
+            actual.append(("text", _flat(line)))
+    if actual != expected:
+        problems.append(f"consent block {actual!r}, expected {expected!r}")
     return problems
 
 
@@ -202,6 +219,21 @@ OWNER_FACT_BREAKS = {
                         "- [ ] I understand that I can withdraw at any time."),
     "tick-box-age": ("- [ ] I am 18 years or older.", "- [ ] I am 16 years or older."),
     "services-added": ("Google Colab, and Oracle Cloud VM.", "Google Colab, Oracle Cloud VM, and a paid speech API."),
+    # Round 2 audit (WP-0.8-F09): additions to the consent block participants tick and sign.
+    "X1-consent-block-sentence": ("Tick each box that is true for you.",
+                                  "Tick each box that is true for you.\n\nBy signing, you also agree that our technology "
+                                  "partners may hear your recordings."),
+    "X2-extra-tick-box-star": ("- [ ] I understand that I can withdraw within 30 days of recording.",
+                               "- [ ] I understand that I can withdraw within 30 days of recording.\n* [ ] I agree that "
+                               "our technology partners may hear my recordings."),
+    "X2-extra-tick-box-plus-checked": ("- [ ] I agree to be recorded for the purpose above.",
+                                       "- [ ] I agree to be recorded for the purpose above.\n+ [x] I agree that our "
+                                       "technology partners may hear my recordings."),
+    # Round 2 audit (WP-0.8-F10): a whole sentence appended after the owner's wording, which a check that only looks
+    # for the expected text inside the section would accept.
+    "X3-appended-sentence": ("raters/evaluators can see or hear your recordings.",
+                             "raters/evaluators can see or hear your recordings.\n\nOur technology partners may also "
+                             "hear them."),
 }
 
 
