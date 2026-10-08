@@ -43,6 +43,8 @@ The owner's decisions that shape phase 0's results, each quoted from its approva
 Debt still open (`docs/progress/DEBT.md`):
 - DEBT-025: the decision rule (method and confidence) behind the harm-rate target is undecided; moved to WP-4.5 by the owner.
 - DEBT-027: wall-clock pipeline latencies in the Tier 2 baseline are estimated from the first packet, so some look negative; the fix is harness work for the phase 2 VAD timing work.
+- DEBT-032: the WP-0.8 owner-run results are one-line notes, and the `--gpu` bootstrap note does not show the GPU-extras line; WP-1.0 commits the full output of the `--gpu` bootstrap on a Colab GPU (phase audit finding PH0-F3).
+- DEBT-033: `docs/adapters/PARAKEET_UNIFIED.md` names the wrong file for the CPU lock hash a GPU lock is compiled against (it is `requirements/aqis_lab/phase0-gpu.in`); a one-sentence fix in WP-1.0 (phase audit finding PH0-F4).
 
 Recorded permanent limits, closed by the owner's ruling (`docs/approvals/WP-0.9.md`, question 5):
 - DEBT-009 permanent limit: no real input makes the normaliser exceed its pass limit, so `score`'s handling of a `NormalisationError` has no test.
@@ -53,6 +55,7 @@ Other open points:
 - Two Colab GPU sessions are not in the unit log: the T4 smoke run behind `data/runs/phase0-smoke/phase0-smoke-colab-20261002T140101Z.tar` and the `--gpu` bootstrap of `docs/progress/WP-0.8/OC-0.8-03_bootstrap_gpu.txt`. The owner recorded them as unmetered (`docs/approvals/WP-0.9.md`).
 - Some owner-run results are committed as one-line summaries, not full command output: `docs/progress/WP-0.7/OC-0.7-01_colab.txt`, `docs/progress/WP-0.7/OC-0.7-02_oracle.txt` and the three `docs/progress/WP-0.8/OC-0.8-0*` notes. The bundles themselves carry the WP-0.7 results.
 - The audit gate's test index reads pytest's default collection rules, but not custom collection hooks in a `conftest.py`, plugins or pytest ini options (`docs/tools/AUDIT_GATE.md`). The repository uses none of them.
+- WP-0.5's planned report of `pytest -m colab` on a Colab CPU runtime (OC-0.5-01) was never committed (phase audit finding PH0-F2; `docs/progress/WP-0.5/EVIDENCE.md`, Owner-run checks). The result is held by a later owner report: OC-0.7-01, `docs/progress/WP-0.7/OC-0.7-01_colab.txt`, reports `pytest -m 'colab or gpu'` with 5 passed at `7c27dd5`, which include the same three tests, run on a T4 runtime. The doctor half of OC-0.5-01 is committed (`docs/environment/doctor_colab_20260928T143840Z.json`).
 - No blocker is open (`docs/progress/BLOCKERS.md`).
 
 ## Lessons for the process
@@ -124,4 +127,10 @@ The owner's budget and the sessions the log does not hold (`docs/approvals/WP-0.
 ## Phase audit
 Report: `docs/progress/PHASE-0-AUDIT.md`
 
-Verdict: pending (`/phase-audit 0` has not run yet)
+Verdict: PASS
+
+Commit audited: `079571e147527f395782611d3f6cca9bd7c7f4a3`
+
+The owner ran `/phase-audit 0` on this branch (approval, question 1). It found 0 CRITICAL, 0 MAJOR and 4 MINOR findings:
+- PH0-F1 and PH0-F2 are records, fixed in WP-0.9 (`docs/progress/WP-0.9/EVIDENCE.md`; Open issues above).
+- PH0-F3 and PH0-F4 are accepted as debt for WP-1.0: DEBT-032 and DEBT-033 (`docs/progress/DEBT.md`).

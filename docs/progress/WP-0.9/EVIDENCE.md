@@ -2,7 +2,7 @@
 
 Environment: cloud VM (Ubuntu 24.04, x86_64), `.venv` Python 3.13.14 (`docs/environment/colab_probe.txt`: 3.13.15, same major.minor), lock `requirements/aqis_lab/phase0.txt` sha256 `87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef`, branch `claude/great-heisenberg-h85gm9`. Approval: `docs/approvals/WP-0.9.md` on `main` (`0ce38e1`, corrected for BLK-017 in `699acd5`).
 
-**Status: IN-BUILD, waiting for `/phase-audit 0`.** FR-0.9-01 and FR-0.9-02 are done. FR-0.9-03 and AT-0.9-01 follow the approved order (approval, Q1): the owner runs `/phase-audit 0` on this branch, then the memo links its report, then `/wp-audit WP-0.9`. They are not done yet, and this WP is not ready for audit.
+**Status:** every requirement is done. The owner ran `/phase-audit 0` on this branch (approval Q1): verdict PASS at `079571e` (`docs/progress/PHASE-0-AUDIT.md`), with 4 MINOR findings handled under "Phase audit findings". Next in the approved order: `/wp-audit WP-0.9`.
 
 ## Baseline before any change
 - At planning (`254c1e3`, then a shallow clone): `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"` gave `1 failed, 1855 passed, 55 deselected in 285.26s`. The failure was `test_FR_0_0_12_asset_pins_match_repository`: `git cat-file` cannot find the pinned corpus commit in a shallow clone (`git rev-parse --is-shallow-repository` → `true`). After `git fetch --unshallow origin`: `1 passed, 63 deselected in 3.28s`. So the baseline is green with full history (`docs/progress/WP-0.9/PLAN.md`, finding 9).
@@ -53,10 +53,12 @@ The debt work was built before the memo, because the memo's open issues and must
   - from READY-FOR-AUDIT on, a missing report is a failure.
 
   The second test checks all four states on a copy of the records.
-- Status: PARTIAL. Waiting for the owner to run `/phase-audit 0` (approval Q1). I then link the report, record the verdict here, and only then set READY-FOR-AUDIT.
+- Result: the owner ran `/phase-audit 0`; the report `docs/progress/PHASE-0-AUDIT.md` (commit `5e2bf2e`) has `## Verdict: PASS` and "Commit audited: `079571e147527f395782611d3f6cca9bd7c7f4a3`". The memo's "Phase audit" section now links it with `Verdict: PASS` and that commit, and summarises the four findings.
+- Test first: with the report present and the memo still pending, `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_phase0_memo.py -q -p no:cacheprovider` gave `1 failed, 19 passed`, with `'docs/progress/PHASE-0-AUDIT.md exists, but the memo still says the audit is pending'`. After the memo update: `20 passed in 21.02s`.
+- Status: DONE
 
 ### AT-0.9-01 — `/phase-audit 0` returns PASS
-- Not run yet; only the owner can start it (`disable-model-invocation: true` in `.claude/skills/phase-audit/SKILL.md`). See "Owner-run checks".
+- Run by the owner (only the owner can start it): PASS, `CRITICAL: 0 · MAJOR: 0 · MINOR: 4 (open 4; none blocks)` at `079571e` (`docs/progress/PHASE-0-AUDIT.md`). As the report summarises: a fresh full clone of this branch, the full lab suite `1971 passed`, the smoke command in 155.6 s and identical to the three committed bundles, five random rows traced, a run card re-run byte-identical, and the harness regression unchanged.
 
 ## Debt closed
 Every row below was OPEN with target WP-0.9; dispositions follow `docs/approvals/WP-0.9.md` (Q2, Q3, Q5, Q7, Q8). New tests are in `tests/aqis_lab/test_aqis_debt_wp09.py` unless named otherwise. Every break was made alone in a throwaway clone (`/tmp/wp09-breaks`, a `git clone` of this branch with `.venv` linked), run with `.venv/bin/python -m pytest <file> -q -p no:cacheprovider -k <tests>`, and reverted with `git checkout`; the clone was clean after each batch ("clone clean afterwards").
@@ -233,7 +235,7 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow 
 Network-only suite (the new CI job's selection), run locally at `882ac4c`, whose code and tests are the same as `8365189`'s: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "network and not slow and not gpu and not colab and not oracle"` → `12 passed, 1966 deselected in 82.18s`.
 
 ## Acceptance commands
-- AT-0.9-01 (`/phase-audit 0` returns PASS): not run yet; see "Owner-run checks". The spec has no other acceptance command.
+- AT-0.9-01 (`/phase-audit 0` returns PASS): PASS (`docs/progress/PHASE-0-AUDIT.md`, "## Verdict: PASS"). The spec has no other acceptance command.
 
 ## Audit gate
 ```text
@@ -248,18 +250,29 @@ The four edited existing test files are each covered by an `ALLOW-EDIT` line in 
 
 ## CI
 - `8365189`: [run 379](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37143595686), all three jobs success: `lab` (fast suite and gate), `lab-network` (the new job; step "Lab tests marked only network (WP-0.9 DEBT-019)" success) and `harness-regression` (regression check success).
-- Red runs earlier on this branch, both explained and fixed:
-  - [run 377](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37142549275) (`18283bf`) failed with `1 failed, 1900 passed`: `test_FR_0_0_08_module_headers_match_registry`, the CAP-CONTRACTS-006 mismatch under "Incidents".
-  - Run 378 (`882ac4c`) failed on that test and on the two memo tests that needed this file.
+- Red runs on this branch, all explained (corrected for phase audit finding PH0-F1, which found runs 375 and 376 missing from this list):
+  - [run 375](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37141915556) (`7d59019`), [run 376](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37142130245) (`4760f58`) and [run 377](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37142549275) (`18283bf`, `1 failed, 1900 passed`) failed in "Fast lab test suite" on `test_FR_0_0_08_module_headers_match_registry`: the CAP-CONTRACTS-006 mismatch under "Incidents", introduced in `4f91f72` and fixed in `8365189`. The auditor reproduced the failure at `7d59019` and `4760f58` (`1 failed` each).
+  - [run 378](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37143036198) (`882ac4c`) failed on that test and on the two memo tests that needed this file.
+  - [run 381](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37186012354) (`5e2bf2e`, the phase audit report) failed by design on `test_FR_0_9_03_memo_links_phase_audit_report_and_its_verdict`, because the report existed and the memo still said pending; the auditor confirmed it was the only failure (`1 failed, 1922 passed`).
+- Green: [run 380](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37143974245) on `079571e`, the commit the phase audit audited.
 - This EVIDENCE update only adds text; CI on it is in the pull request.
 
 ## Owner-run checks
 | Check | Where | Command | Expected output | Result report |
 | --- | --- | --- | --- | --- |
-| AT-0.9-01 phase audit | A Claude Code session on branch `claude/great-heisenberg-h85gm9` (the updated skill clones the current branch) | `/phase-audit 0` | `docs/progress/PHASE-0-AUDIT.md` with `## Verdict: PASS` and its audited commit; E6 covers WP-0.0 to WP-0.8 (D1) | Pending (owner) |
+| AT-0.9-01 phase audit | A Claude Code session on branch `claude/great-heisenberg-h85gm9` (the updated skill clones the current branch) | `/phase-audit 0` | `docs/progress/PHASE-0-AUDIT.md` with `## Verdict: PASS` and its audited commit; E6 covers WP-0.0 to WP-0.8 (D1) | Done: PASS at `079571e` (`5e2bf2e`) |
 | OC-0.9-01 unit log copy | Drive | Committed by the owner | `docs/progress/WP-0.9/OC-0.9-01_units.csv` | Done (`0ce38e1`; BLK-017 answer `699acd5`) |
 
 No WP-0.9 code runs only on Colab or Oracle. The DEBT-006 test runs as uid 65534 when root (cloud VM, Colab) and as the runner user on CI, where run 379 passed.
 
 ## audit-allow lines
 None.
+
+## Phase audit findings
+From `docs/progress/PHASE-0-AUDIT.md`, all MINOR; handled as the owner instructed in the session chat (2026-10-08):
+- **PH0-F1** (fixed, record only): the CI section above now lists runs 375 and 376 as well, both checked through the GitHub API (conclusion `failure`, heads `7d59019` and `4760f58`).
+- **PH0-F2** (fixed, record only): the memo's Open issues names the missing OC-0.5-01 report (`docs/progress/WP-0.5/OC-0.5-01_colab_tests.txt` was never committed) and points to OC-0.7-01 (`docs/progress/WP-0.7/OC-0.7-01_colab.txt`, `pytest -m 'colab or gpu'` 5 passed at `7c27dd5`, including the same three tests on a T4 runtime) and to the committed doctor report.
+- **PH0-F3** (accepted as debt): DEBT-032, target WP-1.0. Commit the full `bash aqis_lab/deploy/dev_bootstrap.sh --gpu` output on a Colab GPU runtime.
+- **PH0-F4** (accepted as debt): DEBT-033, target WP-1.0. One sentence in `docs/adapters/PARAKEET_UNIFIED.md` naming `requirements/aqis_lab/phase0-gpu.in`.
+
+The protocol lets the builder record MINOR findings in `DEBT.md` without an approval line, so the "Accepted in" cells of DEBT-032 and DEBT-033 cite the owner's chat instruction. The must-catch 2 check (`test_FR_0_9_01_no_open_debt_row_targets_phase_0`) stays clean: their target, WP-1.0, is not a phase 0 WP. The memo's Open issues names both rows, which `test_FR_0_9_01_open_issues_list_every_open_debt_and_blocker` requires.
