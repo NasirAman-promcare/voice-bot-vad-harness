@@ -98,3 +98,15 @@ Each break was applied alone in the clone at `9c1c317`, the named tests were run
 
 ### Verification
 Baseline modules after the change, same command: `300 passed in 70.09s` (283 before; the 17 added are this round's new tests and cases). `git diff -U0 464b201` touches only the budgeted functions and records. Fast suite at `49c57e4`: `1987 passed, 55 deselected`. Gate: 0 findings. CI run 398 on `49c57e4`: success, all three jobs. Details: `EVIDENCE.md`, "Round 3".
+
+## BLK-018 (after audit round 3): the F11 case's new-row ID
+Owner approval: `docs/approvals/WP-0.9.md` on `main` (`6d4b9f2`), "BLK-018: Option 1", with `ALLOW-EDIT: tests/aqis_lab/test_aqis_phase0_memo.py`; merged at `aaea984`.
+
+| File | Part | Root cause |
+| --- | --- | --- |
+| `tests/aqis_lab/test_aqis_phase0_memo.py` | new constant `NEW_DEBT_ID`; the `DEBT_BREAKS` case `new-unpinned-row-open-at-phase-0` | the case inserted a made-up row with the literal ID DEBT-034. When F12 was recorded as the real DEBT-034, `debt_problems` (rows keyed by ID) kept only the real row, and the case failed |
+| `docs/progress/DEBT.md`, `docs/progress/PHASE0_MEMO.md`, `docs/progress/BLOCKERS.md` | DEBT-034 row (F12); Open issues names DEBT-034 and no longer names BLK-018; BLK-018 RESOLVED | records |
+
+- **Reproduced:** with the DEBT-034 row added, `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_phase0_memo.py -q -p no:cacheprovider` gave `1 failed, 76 passed`. The failure was `[new-unpinned-row-open-at-phase-0]`.
+- **Fix:** the case now takes `NEW_DEBT_ID`, one above the highest ID in `DEBT.md` (today DEBT-035), and expects that ID in the message. Result: `77 passed in 1.57s`.
+- **Break proof:** in the clone at `045ca49`, the check was limited to pinned rows (`if new and new.group(2) == "0" and debt in PHASE0_DEBT_IDS:`). Result: `CAUGHT: 1 failed, 4 passed`, the failure being `test_FR_0_9_01_debt_check_reports_open_or_unapproved_rows[new-unpinned-row-open-at-phase-0]`. The clone was clean afterwards.
