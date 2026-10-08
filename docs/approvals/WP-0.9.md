@@ -7,6 +7,8 @@ ALLOW-EDIT: tests/aqis_lab/test_aqis_ci.py
 ALLOW-EDIT: tests/aqis_lab/test_aqis_recording_docs.py
 ALLOW-EDIT: tests/aqis_lab/aqis_baseline_testutil.py
 ALLOW-EDIT: tests/aqis_lab/test_aqis_tier2_baseline.py
+ALLOW-EDIT: tests/aqis_lab/aqis_memo_testutil.py
+ALLOW-EDIT: tests/aqis_lab/test_aqis_debt_wp09.py
 CONDITIONS:
 - Questions 1 to 10: as recommended in PLAN.md, except where stated below.
 - Q1: accepted. Order: build, then /phase-audit 0 on this branch, then the memo links its report, then /wp-audit WP-0.9, then merge. E6 covers WP-0.0 to WP-0.8 (deviation D1). The owner has updated .claude/skills/phase-audit/SKILL.md.
@@ -21,3 +23,5 @@ CONDITIONS:
 - Q10: remove aqis-kit-patch-2.zip and aqis-kit-patch-3/ from the repository in this WP.
 - Unit log: the logged 0.0434 units in docs/progress/WP-0.9/OC-0.9-01_units.csv is accepted; the Colab T4 smoke run (14:01Z, ~374 s) and OC-0.8-03 bootstrap are noted as unmetered sessions.
 - Round 2 Fixes: fix WP-0.9-F01, WP-0.9-F02, WP-0.9-F03, WP-0.9-F04, WP-0.9-F05, WP-0.9-F06, and WP-0.9-F07.
+- Debt IDs: confirmed that pinning all 30 phase 0 rows is correct, overriding the 19 initially named.
+- Round 3 Fixes: fix WP-0.9-F08, WP-0.9-F09, WP-0.9-F10, WP-0.9-F11.
