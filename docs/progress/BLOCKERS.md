@@ -611,3 +611,22 @@ WP: WP-0.9  ·  Raised: 2026-10-04  ·  Session: https://claude.ai/code/session_
 **Owner answer:** Options 1 and 4 (`docs/approvals/WP-0.9.md` on `main`, `699acd5`, merged into this branch):
 - (A) The four `ALLOW-EDIT` lines now name `tests/aqis_lab/test_aqis_ci.py`, `tests/aqis_lab/test_aqis_recording_docs.py`, `tests/aqis_lab/aqis_baseline_testutil.py` and `tests/aqis_lab/test_aqis_tier2_baseline.py`.
 - (B) "Unit log: the logged 0.0434 units in docs/progress/WP-0.9/OC-0.9-01_units.csv is accepted; the Colab T4 smoke run (14:01Z, ~374 s) and OC-0.8-03 bootstrap are noted as unmetered sessions." The owner confirmed in the session chat (2026-10-04) that the committed CSV is the Drive file.
+
+## BLK-018 — WP-0.9: recording F12 as DEBT-034 collides with a test case that uses DEBT-034 as its "new row" ID
+STATUS: OPEN
+WP: WP-0.9  ·  Raised: 2026-10-08  ·  Session: https://claude.ai/code/session_01FYixR4QztgtCJqCD8TQGUi
+
+**What I need:** your choice of how to record WP-0.9-F12 without the collision below. You ruled out code and test changes, and the approval line on `main` (`136ffc7`) fixes the ID as DEBT-034.
+
+**Why:** the round 3 test case `test_FR_0_9_01_debt_check_reports_open_or_unapproved_rows[new-unpinned-row-open-at-phase-0]` (F11, in `tests/aqis_lab/test_aqis_phase0_memo.py`) inserts a made-up row with the hard-coded ID DEBT-034 (target WP-0.9, OPEN) and expects `DEBT-034: targets WP-0.9 (phase 0) but is OPEN`. Once a real DEBT-034 row exists, the register holds two rows with that ID. `debt_problems` keys rows by ID, so the real row (later in the file) replaces the made-up one, and the test fails. The fault is the test's choice of a literal ID that a future row could take; the checker is right.
+
+**What I tried:** merged `origin/main` (`f68aad7`). Added the DEBT-034 row and the memo's Open issues line exactly as instructed. `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_phase0_memo.py -q -p no:cacheprovider` gave `1 failed, 76 passed`, the failure being that case (`AssertionError: []`, no problem reported). I then removed both edits again. Nothing about DEBT-034 is committed; this commit holds only the merge of `main` and this entry.
+
+**Options:**
+1. Allow one test change: the F11 case picks the next unused ID (one above the highest in `DEBT.md`) instead of the literal DEBT-034, and expects that ID. Then record DEBT-034 as you instructed. **Recommended.** It is a change to WP-0.9's own new test file, made after the audit. I would prove the case still fails when the F11 check is removed, and record it in `FIXES.md`. You may want the auditor to look at that one change.
+2. Record F12 under another ID, such as DEBT-035, with no test change. This needs your approval line on `main` changed to the new ID. It leaves a gap at DEBT-034, and the test still uses a literal ID that a later row will hit.
+3. Fix F12 instead (one test case, `"- X{debt} moves to {wp}."`), with no debt row. This needs a new approval line and probably a short re-audit.
+
+**Paused until answered:** recording F12 (the DEBT row and the memo line), the final fast suite, gate and CI run, and cancelling the check-ins. Nothing else is open in WP-0.9.
+
+**Owner answer:**
