@@ -14,4 +14,4 @@ Values: NOT-STARTED, PLANNED, APPROVED, IN-BUILD, READY-FOR-AUDIT, AUDIT-FAIL, A
 | WP-0.6 | Oracle worker, results store, traceability | MERGED | claude/relaxed-davinci-iwk5gi, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/6 | 2026-09-30 |
 | WP-0.7 | First adapters and smoke run | MERGED | claude/clever-wright-gmps92, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/7 | 2026-10-02 |
 | WP-0.8 | Consent, recording guide, fillers, targets | MERGED | claude/beautiful-bohr-gf9yck, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/8 | 2026-10-03 |
-| WP-0.9 | Phase 0 review | AUDIT-PASS | claude/great-heisenberg-h85gm9, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/10 | 2026-10-08 |
+| WP-0.9 | Phase 0 review | MERGED | claude/great-heisenberg-h85gm9, PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/10 | 2026-10-08 |
