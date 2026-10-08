@@ -118,6 +118,7 @@ def test_FR_0_9_01_no_open_debt_row_targets_phase_0():
     assert debt_problems(read(DEBT)) == []
 
 
+NEW_DEBT_ID = f"DEBT-{max(int(row[0].split('-')[1]) for row in debt_rows(read(DEBT))) + 1:03d}"
 DEBT_BREAKS = {
     "left-open": (lambda t: _status(t, "DEBT-001", "OPEN"), "DEBT-001: targets WP-0.9 (phase 0) but is OPEN"),
     "moved-without-approval": (lambda t: t.replace("`docs/approvals/WP-0.9.md`, question 8", "`docs/approvals/WP-0.8.md`")
@@ -131,9 +132,10 @@ DEBT_BREAKS = {
     "moved-citing-unrelated-lines": (lambda t: _target_and_status(t, "DEBT-016", "WP-4.5",
                                                                   "OPEN (`docs/approvals/WP-0.9.md`, question 5)"),
                                      "DEBT-016: no cited approval names DEBT-016 (or WP-0.6-F06) and WP-4.5 on one line"),
-    # WP-0.9-F11 (auditor break A15-4): a new row, not pinned, left OPEN at a phase 0 target is reported too.
-    "new-unpinned-row-open-at-phase-0": (lambda t: _new_row(t, "DEBT-033", "DEBT-034", "WP-0.9", "OPEN"),
-                                         "DEBT-034: targets WP-0.9 (phase 0) but is OPEN"),
+    # WP-0.9-F11 (auditor break A15-4): a new row, not pinned, left OPEN at a phase 0 target is reported too. The
+    # row takes the next unused ID, so a real row added later never collides with it (BLK-018).
+    "new-unpinned-row-open-at-phase-0": (lambda t: _new_row(t, "DEBT-033", NEW_DEBT_ID, "WP-0.9", "OPEN"),
+                                         f"{NEW_DEBT_ID}: targets WP-0.9 (phase 0) but is OPEN"),
 }
 
 

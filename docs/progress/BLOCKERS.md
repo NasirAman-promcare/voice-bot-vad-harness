@@ -613,7 +613,7 @@ WP: WP-0.9  ·  Raised: 2026-10-04  ·  Session: https://claude.ai/code/session_
 - (B) "Unit log: the logged 0.0434 units in docs/progress/WP-0.9/OC-0.9-01_units.csv is accepted; the Colab T4 smoke run (14:01Z, ~374 s) and OC-0.8-03 bootstrap are noted as unmetered sessions." The owner confirmed in the session chat (2026-10-04) that the committed CSV is the Drive file.
 
 ## BLK-018 — WP-0.9: recording F12 as DEBT-034 collides with a test case that uses DEBT-034 as its "new row" ID
-STATUS: OPEN
+STATUS: RESOLVED
 WP: WP-0.9  ·  Raised: 2026-10-08  ·  Session: https://claude.ai/code/session_01FYixR4QztgtCJqCD8TQGUi
 
 **What I need:** your choice of how to record WP-0.9-F12 without the collision below. You ruled out code and test changes, and the approval line on `main` (`136ffc7`) fixes the ID as DEBT-034.
@@ -629,4 +629,4 @@ WP: WP-0.9  ·  Raised: 2026-10-08  ·  Session: https://claude.ai/code/session_
 
 **Paused until answered:** recording F12 (the DEBT row and the memo line), the final fast suite, gate and CI run, and cancelling the check-ins. Nothing else is open in WP-0.9.
 
-**Owner answer:**
+**Owner answer:** Option 1 (`docs/approvals/WP-0.9.md` on `main`, `6d4b9f2`, merged into this branch at `aaea984`): "BLK-018: Option 1. Allow changing test_aqis_phase0_memo.py so the new unpinned row test uses a dynamic or higher unused ID instead of hardcoded DEBT-034." The approval also adds `ALLOW-EDIT: tests/aqis_lab/test_aqis_phase0_memo.py`. The case now uses the next unused ID; DEBT-034 is recorded for F12 (`docs/progress/WP-0.9/FIXES.md`, "BLK-018").
