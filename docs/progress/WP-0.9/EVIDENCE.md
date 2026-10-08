@@ -325,3 +325,34 @@ It does not read the "Owner-run checks" tables of the WP evidence files, so a pe
 | `test_FR_0_9_03_memo_links_phase_audit_report_and_its_verdict` | same name |
 
 Round 1 also added two tests the plan did not name: `test_FR_0_9_01_memo_passes_every_check` and `test_FR_0_9_03_phase_audit_check_follows_the_approved_order`. Round 2 adds seven more (see "Round 2" below). Three of them give the merged checks their own failing case: X8 for the unit log, X9 for the owner's quotes, and X1/X2 for the phase audit.
+
+## Round 2 (audit round 1 findings WP-0.9-F01 to F07)
+The owner approved the fixes in `docs/approvals/WP-0.9.md` on `main` (`604e9a4`); the branch merged `origin/main` at `7c1f147`. `FIXES.md` holds the change budget, the root causes, each fix with its test, and 15 break proofs, all caught.
+
+New tests, by requirement:
+- FR-0.9-01: `test_FR_0_9_01_audit_rounds_cover_only_the_reviewed_wps` (F02), `test_FR_0_9_01_pinned_phase0_debt_ids_are_the_phase0_rows_before_wp09` and `test_FR_0_9_01_debt_check_covers_every_pinned_row` (F01, 30 cases), and three new `test_FR_0_9_01_evidence_check_reports_each_broken_link` cases (F07: `folder-link`, `outside-repository`, `escaping-repository`).
+- FR-0.9-02: `test_FR_0_9_02_unit_log_check_reports_a_wrong_row` (X8, 3 cases) and `test_FR_0_9_02_owner_quotes_must_be_in_the_approval` (X9, 3 cases).
+- FR-0.9-03: `test_FR_0_9_03_memo_verdict_and_commit_must_be_the_reports` (X1) and `test_FR_0_9_03_audited_commit_must_be_an_ancestor_of_head` (X2).
+- DEBT-004 (gate, F04): `test_FR_0_0_09_index_applies_conftests_above_the_collected_folder` (2 cases).
+- DEBT-030 (baseline, F05): `test_FR_0_1_02_check_reports_uncited_numbers_in_every_section[sources-second-table-same-header]` and `[inventory-second-table-same-header]`.
+
+**F01, which IDs are pinned.** The owner's message listed 19 IDs: DEBT-001 to 007, 009, 010 and 012 to 021. `DEBT.md` at `254c1e3`, where WP-0.9 started, has 30 rows with a phase 0 target: DEBT-001 to 026 and 028 to 031. The list leaves out DEBT-022 to 026 and 028 to 031, among them DEBT-025, the only moved row. `PHASE0_DEBT_IDS` therefore pins all 30, a superset of the list. A test checks the set against `DEBT.md` at `254c1e3`. See `FIXES.md`.
+
+Runs at `35d214e` on a clean tree:
+
+```text
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.9
+aqis-audit-gate: base origin/main (merge-base 604e9a4df74f), head 35d214e29fe2, approvals origin/main 604e9a4df74f, wp WP-0.9
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.7 s)
+
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network" -k "FR_0_9"
+63 passed, 1962 deselected in 2.24s
+
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"
+1970 passed, 55 deselected in 253.54s (0:04:13)
+```
+
+**Incident: free disk.** The first full run at `35d214e` gave `5 failed, 1965 passed`. All five failures were `test_FR_0_5_02_*` doctor tests, whose disk check requires at least 10 GB free; this VM had 9,883,615,232 bytes. I deleted `/tmp/pytest-of-root` (1.7 GB of earlier pytest temporary folders), and the run above passed with nothing else changed.
