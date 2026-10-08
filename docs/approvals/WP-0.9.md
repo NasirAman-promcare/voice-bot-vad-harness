@@ -1,7 +1,7 @@
 STATUS: APPROVED
 WP: WP-0.9
 APPROVED-BY: owner
-DATE: 2026-10-04
+DATE: 2026-10-08
 PLAN: docs/progress/WP-0.9/PLAN.md
 ALLOW-EDIT: tests/aqis_lab/test_aqis_ci.py
 ALLOW-EDIT: tests/aqis_lab/test_aqis_recording_docs.py
@@ -20,3 +20,4 @@ CONDITIONS:
 - Q9: the committed Colab check is accepted as E2's Colab evidence.
 - Q10: remove aqis-kit-patch-2.zip and aqis-kit-patch-3/ from the repository in this WP.
 - Unit log: the logged 0.0434 units in docs/progress/WP-0.9/OC-0.9-01_units.csv is accepted; the Colab T4 smoke run (14:01Z, ~374 s) and OC-0.8-03 bootstrap are noted as unmetered sessions.
+- Round 2 Fixes: fix WP-0.9-F01, WP-0.9-F02, WP-0.9-F03, WP-0.9-F04, WP-0.9-F05, WP-0.9-F06, and WP-0.9-F07.
