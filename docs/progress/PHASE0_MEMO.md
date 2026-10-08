@@ -52,6 +52,7 @@ Recorded permanent limits, closed by the owner's ruling (`docs/approvals/WP-0.9.
 - DEBT-005 K11.5b permanent limit: the bootstrap's final Python check alone has no test.
 
 Other open points:
+- BLK-018 (`docs/progress/BLOCKERS.md`): recording audit finding WP-0.9-F12 as DEBT-034 waits on the owner's choice, because a test case uses DEBT-034 as the ID of a made-up new row.
 - Two Colab GPU sessions are not in the unit log: the T4 smoke run behind `data/runs/phase0-smoke/phase0-smoke-colab-20261002T140101Z.tar` and the `--gpu` bootstrap of `docs/progress/WP-0.8/OC-0.8-03_bootstrap_gpu.txt`. The owner recorded them as unmetered (`docs/approvals/WP-0.9.md`).
 - Some owner-run results are committed as one-line summaries, not full command output: `docs/progress/WP-0.7/OC-0.7-01_colab.txt`, `docs/progress/WP-0.7/OC-0.7-02_oracle.txt` and the three `docs/progress/WP-0.8/OC-0.8-0*` notes. The bundles themselves carry the WP-0.7 results.
 - The audit gate's test index reads pytest's default collection rules, but not custom collection hooks in a `conftest.py`, plugins or pytest ini options (`docs/tools/AUDIT_GATE.md`). The repository uses none of them.
