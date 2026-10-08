@@ -25,3 +25,4 @@ CONDITIONS:
 - Round 2 Fixes: fix WP-0.9-F01, WP-0.9-F02, WP-0.9-F03, WP-0.9-F04, WP-0.9-F05, WP-0.9-F06, and WP-0.9-F07.
 - Debt IDs: confirmed that pinning all 30 phase 0 rows is correct, overriding the 19 initially named.
 - Round 3 Fixes: fix WP-0.9-F08, WP-0.9-F09, WP-0.9-F10, WP-0.9-F11.
+- WP-0.9-F12 (MINOR): accepted as debt DEBT-034, target WP-1.0. No code or test change before merge.
