@@ -363,3 +363,32 @@ CI on `35d214e` (the round 2 code): [run 388](https://github.com/NasirAman-promc
 - `harness-regression`: step "Regression check against the provisioned baseline" success.
 
 `e520f76` adds only the Round 2 section above to this file, and the next commit adds only this paragraph and the STATUS change; their CI is in the pull request.
+
+## Round 3 (audit round 2 findings WP-0.9-F08 to F11)
+The owner approved the round 3 fixes, and confirmed that all 30 phase 0 debt rows are pinned, in `docs/approvals/WP-0.9.md` on `main` (`1d82748`). The branch merged `origin/main` at `464b201`. `FIXES.md`, "Round 3", holds the change budget, the tests written first and 6 break proofs, all caught.
+
+New tests, by requirement:
+- FR-0.9-01:
+  - `test_FR_0_9_01_move_approval_names_row_and_wp_on_one_line` (F08, 6 cases);
+  - `test_FR_0_9_01_debt_check_reports_open_or_unapproved_rows[moved-citing-unrelated-lines]` (F08, A15-1);
+  - `test_FR_0_9_01_debt_check_reports_open_or_unapproved_rows[new-unpinned-row-open-at-phase-0]` (F11, A15-4);
+  - `test_FR_0_9_01_lessons_cite_files_in_the_repository` (F10, A15-2, 3 cases).
+- FR-0.9-02: `test_FR_0_9_02_pack_v1_plan_cites_files_in_the_repository` (F10, A15-3, 3 cases).
+- DEBT-030 (baseline, F09): `test_FR_0_1_02_commented_out_table_does_not_hide_the_visible_one` (A15-5 and the same probe for Raw inventory and the Headline table, 3 cases).
+
+Runs at `49c57e4` on a clean tree:
+
+```text
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.9
+aqis-audit-gate: base origin/main (merge-base 1d8274850c43), head 49c57e4d7d90, approvals origin/main 1d8274850c43, wp WP-0.9
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.6 s)
+
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network" -k "FR_0_9"
+77 passed, 1965 deselected in 1.99s
+
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"
+1987 passed, 55 deselected in 265.50s (0:04:25)
+```
