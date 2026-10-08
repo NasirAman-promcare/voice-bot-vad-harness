@@ -9,6 +9,7 @@ ALLOW-EDIT: tests/aqis_lab/aqis_baseline_testutil.py
 ALLOW-EDIT: tests/aqis_lab/test_aqis_tier2_baseline.py
 ALLOW-EDIT: tests/aqis_lab/aqis_memo_testutil.py
 ALLOW-EDIT: tests/aqis_lab/test_aqis_debt_wp09.py
+ALLOW-EDIT: tests/aqis_lab/test_aqis_phase0_memo.py
 CONDITIONS:
 - Questions 1 to 10: as recommended in PLAN.md, except where stated below.
 - Q1: accepted. Order: build, then /phase-audit 0 on this branch, then the memo links its report, then /wp-audit WP-0.9, then merge. E6 covers WP-0.0 to WP-0.8 (deviation D1). The owner has updated .claude/skills/phase-audit/SKILL.md.
@@ -26,3 +27,4 @@ CONDITIONS:
 - Debt IDs: confirmed that pinning all 30 phase 0 rows is correct, overriding the 19 initially named.
 - Round 3 Fixes: fix WP-0.9-F08, WP-0.9-F09, WP-0.9-F10, WP-0.9-F11.
 - WP-0.9-F12 (MINOR): accepted as debt DEBT-034, target WP-1.0. No code or test change before merge.
+- BLK-018: Option 1. Allow changing test_aqis_phase0_memo.py so the new unpinned row test uses a dynamic or higher unused ID instead of hardcoded DEBT-034.
