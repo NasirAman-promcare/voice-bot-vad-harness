@@ -59,3 +59,42 @@ Each break was applied alone in a clone at `1a06c4a` (`/tmp/wp09-breaks`); the n
 The baseline modules after the change: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_phase0_memo.py tests/aqis_lab/test_aqis_debt_wp09.py tests/aqis_lab/test_aqis_tier2_baseline.py tests/aqis_lab/test_aqis_gate_registry.py tests/aqis_lab/test_aqis_gate_trace.py tests/aqis_lab/test_aqis_gate_parity.py tests/aqis_lab/test_aqis_gate_checks.py tests/aqis_lab/test_aqis_gate_v2.py -q -p no:cacheprovider` → `283 passed in 69.06s (0:01:09)` (before: `2 failed, 234 passed`; the 47 added are this round's new tests and cases).
 
 `git diff -U0 7c1f147 HEAD` touches only the files and functions in the change budget. Fast suite at `35d214e`: `1970 passed, 55 deselected`. Gate: 0 findings. CI runs 388 and 389 on `35d214e`: success, all three jobs. Details in `EVIDENCE.md`, "Round 2".
+
+## Round 3 (audit round 2 findings WP-0.9-F08 to F11)
+Owner approval: `docs/approvals/WP-0.9.md` on `main` (`1d82748`): "Round 3 Fixes: fix WP-0.9-F08, WP-0.9-F09, WP-0.9-F10, WP-0.9-F11", and "Debt IDs: confirmed that pinning all 30 phase 0 rows is correct". Instructions in the session chat (2026-10-08). Branch merged with `origin/main` at `464b201`.
+
+### Change budget
+| File | Functions or parts | Findings | Root cause | Capabilities at risk |
+| --- | --- | --- | --- | --- |
+| `tests/aqis_lab/aqis_memo_testutil.py` | `debt_problems` (the approval match and its docstring); new helper `names_id` | F08 | an approval counted when the whole file named the row and the new WP anywhere, as plain substrings | CAP-DOC-020 |
+| `tests/aqis_lab/test_aqis_phase0_memo.py` | `DEBT_BREAKS`: two cases; new helper `_new_row`; new tests `test_FR_0_9_01_move_approval_names_row_and_wp_on_one_line`, `test_FR_0_9_01_lessons_cite_files_in_the_repository`, `test_FR_0_9_02_pack_v1_plan_cites_files_in_the_repository` (WP-0.9's own test file) | F08, F10, F11 | F10, F11: checks without a case that fails when they are removed | CAP-DOC-019, CAP-DOC-020 |
+| `tests/aqis_lab/aqis_baseline_testutil.py` | `summary_sections` | F09 | the section reader kept HTML comments, while `body_text` removed them. So `sources_table`, `inventory_table` and `binding_problems` could read a commented-out table, while the visible one was exempt and never compared | CAP-BASE-002 |
+| `tests/aqis_lab/test_aqis_tier2_baseline.py` | new helpers `_set_cell`, `_first_inventory_sha`, `HIDDEN_TABLE_EDITS`; new test `test_FR_0_1_02_commented_out_table_does_not_hide_the_visible_one` | F09 | | CAP-BASE-002 |
+| `docs/progress/WP-0.9/EVIDENCE.md`, `docs/capabilities/REGISTRY.md` (Tests cells of CAP-DOC-019, CAP-DOC-020, CAP-BASE-002), `docs/progress/STATUS.md` | records | all | | — |
+
+**F09 fix location.** The owner asked for comments to be removed before `sources_table` and `inventory_table` parse. Both read their section through `summary_sections`, and so does `binding_problems` (the per-row tables). Removing comments in `summary_sections` therefore covers the two named readers and the third reader of the same kind with one change (skill step 6, "fix the category"). The committed summaries contain no HTML comment (`grep -c "<!--"`: 0), so their results do not change.
+
+**F08 whole-ID matching.** The auditor also noted that the finding-ID match was a plain substring match (`WP-0.1-F4` would match `WP-0.1-F40`). `names_id` matches the debt ID, the finding ID and the WP ID each as a whole ID. The Q8 line ("DEBT-025 moves to WP-4.5") still approves the one real move.
+
+### Baseline before the change
+At `464b201` (after the merge, before any round 3 change), in the clone `/tmp/wp09-breaks`: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_phase0_memo.py tests/aqis_lab/test_aqis_debt_wp09.py tests/aqis_lab/test_aqis_tier2_baseline.py tests/aqis_lab/test_aqis_gate_registry.py tests/aqis_lab/test_aqis_gate_trace.py tests/aqis_lab/test_aqis_gate_parity.py tests/aqis_lab/test_aqis_gate_checks.py tests/aqis_lab/test_aqis_gate_v2.py -q -p no:cacheprovider` → `283 passed in 69.72s`.
+
+### Tests first
+- F08: `test_FR_0_9_01_debt_check_reports_open_or_unapproved_rows[moved-citing-unrelated-lines]` (A15-1: DEBT-016 → WP-4.5, OPEN, citing `WP-0.9.md`, question 5). `test_FR_0_9_01_move_approval_names_row_and_wp_on_one_line` has six cases on a copy of the approvals folder holding one approval line: the debt and the WP; the finding and the WP; different lines; a longer finding ID; a longer debt ID; a longer WP ID. First run, before the fix: `5 failed, 72 passed` (A15-1 and the four "not approved" cases).
+- F09: `test_FR_0_1_02_commented_out_table_does_not_hide_the_visible_one`, with cases `[sources]` (A15-5: S6's Value set to forty `1`s), `[raw-inventory]` (one SHA-256 set to zeros) and `[headline-binding]` (two Headline rows swapped). Each runs a control without the hidden copy, then the same edit under an unedited commented-out copy. First run: `3 failed`. Each failure was the hidden case ("the edited visible table passed (hidden copy above it: True)"); every control was reported.
+- F10, F11: `test_FR_0_9_01_lessons_cite_files_in_the_repository` and `test_FR_0_9_02_pack_v1_plan_cites_files_in_the_repository` (cases folder, outside the repository, escaping through `..`), and `test_FR_0_9_01_debt_check_reports_open_or_unapproved_rows[new-unpinned-row-open-at-phase-0]` (a new DEBT-034, target WP-0.9, OPEN). These cover checks that already worked, so they passed at once; the break proofs below show each fails when its check is removed.
+
+### Break proofs
+Each break was applied alone in the clone at `9c1c317`, the named tests were run, and the file was restored. The clone was clean afterwards. Runner: `builder_breaks.py` in the session scratchpad; the earlier `breaks.py` there had been replaced by the auditor's own script.
+
+| Break | What it removes | Result |
+| --- | --- | --- |
+| F08-whole-file | back to "the cited files name both, anywhere" | CAUGHT: `[moved-citing-unrelated-lines]`, `[different-lines]`, `[longer-finding-id]`, `[longer-debt-id]`, `[longer-wp-id]` |
+| F08-substring | `names_id` back to a plain substring test | CAUGHT: `[longer-finding-id]`, `[longer-debt-id]`, `[longer-wp-id]` |
+| F09 | `summary_sections` keeps comments again | CAUGHT: `[sources]`, `[raw-inventory]`, `[headline-binding]` |
+| F10-lesson (A15-2) | lesson path check back to `.exists()` | CAUGHT: `test_FR_0_9_01_lessons_cite_files_in_the_repository`, all 3 cases |
+| F10-plan (A15-3) | Pack v1 plan path check back to `.exists()` | CAUGHT: `test_FR_0_9_02_pack_v1_plan_cites_files_in_the_repository`, all 3 cases |
+| F11 (A15-4) | "targets phase 0 but is OPEN" limited to pinned rows | CAUGHT: `[new-unpinned-row-open-at-phase-0]` |
+
+### Verification
+Baseline modules after the change, same command: `300 passed in 70.09s` (283 before; the 17 added are this round's new tests and cases). `git diff -U0 464b201` touches only the budgeted functions and records. Fast suite, gate and CI: `EVIDENCE.md`, "Round 3".
