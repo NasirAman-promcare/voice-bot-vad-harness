@@ -58,4 +58,4 @@ Each break was applied alone in a clone at `1a06c4a` (`/tmp/wp09-breaks`); the n
 ### Verification
 The baseline modules after the change: `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_phase0_memo.py tests/aqis_lab/test_aqis_debt_wp09.py tests/aqis_lab/test_aqis_tier2_baseline.py tests/aqis_lab/test_aqis_gate_registry.py tests/aqis_lab/test_aqis_gate_trace.py tests/aqis_lab/test_aqis_gate_parity.py tests/aqis_lab/test_aqis_gate_checks.py tests/aqis_lab/test_aqis_gate_v2.py -q -p no:cacheprovider` → `283 passed in 69.06s (0:01:09)` (before: `2 failed, 234 passed`; the 47 added are this round's new tests and cases).
 
-`git diff -U0 7c1f147 HEAD` touches only the files and functions in the change budget. Fast suite, gate and CI: see `EVIDENCE.md`, "Round 2".
+`git diff -U0 7c1f147 HEAD` touches only the files and functions in the change budget. Fast suite at `35d214e`: `1970 passed, 55 deselected`. Gate: 0 findings. CI runs 388 and 389 on `35d214e`: success, all three jobs. Details in `EVIDENCE.md`, "Round 2".

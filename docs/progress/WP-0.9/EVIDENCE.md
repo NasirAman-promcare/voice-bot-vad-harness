@@ -356,3 +356,10 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow 
 ```
 
 **Incident: free disk.** The first full run at `35d214e` gave `5 failed, 1965 passed`. All five failures were `test_FR_0_5_02_*` doctor tests, whose disk check requires at least 10 GB free; this VM had 9,883,615,232 bytes. I deleted `/tmp/pytest-of-root` (1.7 GB of earlier pytest temporary folders), and the run above passed with nothing else changed.
+
+CI on `35d214e` (the round 2 code): [run 388](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37775280499) (push) and [run 389](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37775286879) (pull request) both succeeded. In run 389 every job passed:
+- `lab`: steps "Fast lab test suite" and "Audit gate (pull request base with --wp, or origin/main on push)" success;
+- `lab-network`: step "Lab tests marked only network (WP-0.9 DEBT-019)" success;
+- `harness-regression`: step "Regression check against the provisioned baseline" success.
+
+`e520f76` adds only the Round 2 section above to this file, and the next commit adds only this paragraph and the STATUS change; their CI is in the pull request.
