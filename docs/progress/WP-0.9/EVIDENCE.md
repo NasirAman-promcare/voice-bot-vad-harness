@@ -234,6 +234,22 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow 
 
 Network-only suite (the new CI job's selection), run locally at `882ac4c`, whose code and tests are the same as `8365189`'s: `.venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "network and not slow and not gpu and not colab and not oracle"` → `12 passed, 1966 deselected in 82.18s`.
 
+After the phase audit, at `37b2b5a` (memo linked, findings handled) on a clean tree:
+
+```text
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-0.9
+aqis-audit-gate: base origin/main (merge-base 699acd501838), head 37b2b5a0b57e, approvals origin/main 699acd501838, wp WP-0.9
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (1.2 s)
+
+$ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"
+1923 passed, 55 deselected in 286.81s (0:04:46)
+```
+
+CI on `37b2b5a`: [run 382](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37763724325), all three jobs success: `lab` (Fast lab test suite and Audit gate success), `lab-network` (step "Lab tests marked only network (WP-0.9 DEBT-019)" success) and `harness-regression` (Regression check against the provisioned baseline success). The commit that adds this paragraph and sets STATUS to READY-FOR-AUDIT changes only this file and `docs/progress/STATUS.md`; its CI is in the pull request.
+
 ## Acceptance commands
 - AT-0.9-01 (`/phase-audit 0` returns PASS): PASS (`docs/progress/PHASE-0-AUDIT.md`, "## Verdict: PASS"). The spec has no other acceptance command.
 
