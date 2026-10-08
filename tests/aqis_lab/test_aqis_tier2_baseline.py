@@ -522,6 +522,13 @@ UNCITED_INSERTS.update({
     "inventory-second-table-same-columns": _insert_after_table("Raw inventory", "Item", [
         "| Extra | File | Bytes | SHA-256 | What it is |", "| --- | --- | --- | --- | --- |",
         "| x | `y.log` | 4000 | 1234 | z |"]),
+    # WP-0.9-F05: only the first table headed ID (Item), the one sources_table (inventory_table) reads, is exempt;
+    # a second table with the same first header is checked like the rest of the body.
+    "sources-second-table-same-header": _insert_after_table("Sources", "ID", [
+        "| ID | Note |", "| --- | --- |", "| X | 4321 |"]),
+    "inventory-second-table-same-header": _insert_after_table("Raw inventory", "Item", [
+        "| Item | File | Bytes | SHA-256 | What it is |", "| --- | --- | --- | --- | --- |",
+        "| x | `y.log` | 4000 | 1234 | z |"]),
 })
 
 

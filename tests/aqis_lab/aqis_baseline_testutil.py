@@ -21,6 +21,8 @@ CHANGE LOG:
              Conditions table's manifest column is bound to its own category; DEBT-030: body_text exempts only the
              Sources table headed ID and the Bytes and SHA-256 cells of the Raw inventory table headed Item;
              DEBT-031: binding_problems requires one Conditions row per category of the run.
+  2026-10-08 WP-0.9 round 2 F05: body_text exempts only the first Sources table headed ID and the first Raw
+             inventory table headed Item, the tables sources_table and inventory_table read.
 """
 import ast
 import hashlib
@@ -741,24 +743,30 @@ def body_text(text):
     """The SUMMARY.md text the citation check reads: everything except the exempt parts named above, and comments.
 
     The exemptions apply only to the table each one names, found by its header (WP-0.1-F8, DEBT-030): the rows of
-    the Sources table headed ID, and the Bytes and SHA-256 cells of the Raw inventory table headed Item. Any other
-    table in those sections is read like the rest of the body."""
+    the Sources table headed ID, and the Bytes and SHA-256 cells of the Raw inventory table headed Item. In each
+    section only the first such table, the one sources_table and inventory_table read, is exempt (WP-0.9-F05). Any
+    other table in those sections is read like the rest of the body."""
     statement = owner_statement()
+    first_headers = {SOURCES_SECTION: SOURCES_FIRST_HEADER, INVENTORY_SECTION: INVENTORY_FIRST_HEADER}
     out, section, table = [], None, None   # table: the header cells of the pipe table the line belongs to
+    exempt, exempted = False, set()        # exempt: the line's table is its section's exempt one
     for line in re.sub(r"<!--.*?-->", "", text, flags=re.S).splitlines():
         m = re.match(r"^## +(.+?) *$", line)
         if m:
-            section, table = m.group(1), None
+            section, table, exempt = m.group(1), None, False
             continue
         if not line.lstrip().startswith("|"):
-            table = None
+            table, exempt = None, False
         elif table is None:
             table = [c.strip() for c in line.split("|")]
+            exempt = section in first_headers and section not in exempted and table[1:2] == [first_headers[section]]
+            if exempt:
+                exempted.add(section)
         if section == OWNER_SECTION and line.startswith(">") and " ".join(line[1:].split()) == statement:
             continue
-        if section == SOURCES_SECTION and table is not None and table[1:2] == [SOURCES_FIRST_HEADER]:
+        if section == SOURCES_SECTION and exempt:
             continue
-        if section == INVENTORY_SECTION and table is not None and table[1:2] == [INVENTORY_FIRST_HEADER]:
+        if section == INVENTORY_SECTION and exempt:
             exempt_cols = [i for i, c in enumerate(table) if c in INVENTORY_EXEMPT_COLUMNS]
             line = "|".join("" if i in exempt_cols else c for i, c in enumerate(line.split("|")))
         out.append(line)

@@ -61,7 +61,7 @@ Other open points:
 ## Lessons for the process
 Observations from the records; changing the process is the owner's decision.
 
-1. Audits converge once they are bounded. WP-0.0 needed 9 rounds, most of them under protocol version 1; after version 2 bounded the breaks (`docs/process/AUDIT_PROTOCOL.md`), every later WP passed in 2 to 4 rounds (table below, read from each `AUDIT.md`).
+1. Audits converge once they are bounded. WP-0.0 needed 9 rounds, most of them under protocol version 1; after version 2 bounded the breaks (`docs/process/AUDIT_PROTOCOL.md`), every later WP passed in 2 to 4 rounds (table below, read from the `AUDIT.md` of each reviewed WP, WP-0.0 to WP-0.8; WP-0.9's own audit is not part of the record it reviews).
 2. Approval files are read by machines, so their exact form matters: an approval with a bulleted status line was ignored (BLK-001), and `ALLOW-EDIT` lines that named other files than the plan needed stopped a build (BLK-017) (`docs/progress/BLOCKERS.md`).
 3. A spec that cites outside documents needs them in the repository: WP-0.8 could not start until the blueprint and Build Plan were committed (BLK-013, `docs/specs/sources/AQIS_Test_Lab_Build_Plan.md`).
 4. A protection line takes effect only in the right section: the raw-baseline line was first placed under `[LAB-OWNED]`, where the hooks read it as editable. A test now asks both parsers (`docs/progress/WP-0.9/PLAN.md`, finding 5; `tests/aqis_lab/test_aqis_debt_wp09.py`).

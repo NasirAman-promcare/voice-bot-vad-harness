@@ -292,3 +292,36 @@ From `docs/progress/PHASE-0-AUDIT.md`, all MINOR; handled as the owner instructe
 - **PH0-F4** (accepted as debt): DEBT-033, target WP-1.0. One sentence in `docs/adapters/PARAKEET_UNIFIED.md` naming `requirements/aqis_lab/phase0-gpu.in`.
 
 The protocol lets the builder record MINOR findings in `DEBT.md` without an approval line, so the "Accepted in" cells of DEBT-032 and DEBT-033 cite the owner's chat instruction. The must-catch 2 check (`test_FR_0_9_01_no_open_debt_row_targets_phase_0`) stays clean: their target, WP-1.0, is not a phase 0 WP. The memo's Open issues names both rows, which `test_FR_0_9_01_open_issues_list_every_open_debt_and_blocker` requires.
+
+## Deviations from the plan
+Recorded for audit finding WP-0.9-F06 (round 2; the owner chose "record only" in the session chat, 2026-10-08).
+
+**(a) The open-issues test does not compare with pending owner-run checks.** The plan ("Memo layout", item 4) says the Open issues list holds every OPEN debt row, every pending owner-run check, finding 5 if not fixed, the kit-patch leftovers and any phase audit finding accepted as debt, and that "a test compares this list with `DEBT.md` and the WP evidence files". It names `test_FR_0_9_01_open_issues_list_every_open_debt_and_pending_check`. The built test is `test_FR_0_9_01_open_issues_list_every_open_debt_and_blocker`. Through `open_issue_problems`, it checks three things against `DEBT.md` and `docs/progress/BLOCKERS.md`:
+- every OPEN debt row is named;
+- no CLOSED row is listed as open;
+- every OPEN blocker is named.
+
+It does not read the "Owner-run checks" tables of the WP evidence files, so a pending owner-run check missing from the memo would not be reported. The memo's current list is right: the pending WP-0.8 items are carried by DEBT-032 (OPEN, so the test requires it), and the OC-0.5-01 gap is named (PH0-F2).
+
+**(b) The planned test names were merged into fewer tests.** The Requirements table of `PLAN.md` names 16 FR-0.9 tests (FR-0.9-01: 10, FR-0.9-02: 5, FR-0.9-03: 1). Round 1 built 13; the audit counted 15 planned. Each planned check is in a built test:
+
+| Planned test | Built test (round 1) |
+| --- | --- |
+| `test_FR_0_9_01_memo_has_every_section` | same name |
+| `test_FR_0_9_01_exit_criteria_are_the_overview_six_verbatim` | `test_FR_0_9_01_exit_criteria_link_evidence_that_exists` (`exit_criteria_problems` compares each criterion with the overview's words); break "a changed criterion" in `test_FR_0_9_01_evidence_check_reports_each_broken_link` |
+| `test_FR_0_9_01_every_evidence_link_exists` | `test_FR_0_9_01_exit_criteria_link_evidence_that_exists` |
+| `test_FR_0_9_01_evidence_check_reports_each_broken_link` | same name |
+| `test_FR_0_9_01_decisions_quote_their_approval_files` | same name |
+| `test_FR_0_9_01_open_issues_list_every_open_debt_and_pending_check` | `test_FR_0_9_01_open_issues_list_every_open_debt_and_blocker` (narrower, see (a)) |
+| `test_FR_0_9_01_audit_round_counts_equal_each_audit_report` | `test_FR_0_9_01_audit_round_counts_and_lessons_cite_records` |
+| `test_FR_0_9_01_lessons_cite_existing_records` | `test_FR_0_9_01_audit_round_counts_and_lessons_cite_records` |
+| `test_FR_0_9_01_no_open_debt_row_targets_phase_0` | same name |
+| `test_FR_0_9_01_debt_check_reports_open_or_unapproved_rows` | same name |
+| `test_FR_0_9_02_unit_log_copy_has_the_unitlog_header_and_valid_rows` | `test_FR_0_9_02_unit_log_copy_is_consistent` (`unit_log_problems` checks the header and every row) |
+| `test_FR_0_9_02_each_row_estimate_recomputed_from_start_end_and_rate` | `test_FR_0_9_02_unit_log_copy_is_consistent` |
+| `test_FR_0_9_02_compute_units_used_equal_unit_log_totals` | `test_FR_0_9_02_phase_1_prerequisites_come_from_their_sources` |
+| `test_FR_0_9_02_recruiting_status_quotes_the_owner` | `test_FR_0_9_02_phase_1_prerequisites_come_from_their_sources` |
+| `test_FR_0_9_02_pack_v1_plan_cites_sources_and_leaves_owner_blanks` | `test_FR_0_9_02_phase_1_prerequisites_come_from_their_sources` |
+| `test_FR_0_9_03_memo_links_phase_audit_report_and_its_verdict` | same name |
+
+Round 1 also added two tests the plan did not name: `test_FR_0_9_01_memo_passes_every_check` and `test_FR_0_9_03_phase_audit_check_follows_the_approved_order`. Round 2 adds seven more (see "Round 2" below). Three of them give the merged checks their own failing case: X8 for the unit log, X9 for the owner's quotes, and X1/X2 for the phase audit.

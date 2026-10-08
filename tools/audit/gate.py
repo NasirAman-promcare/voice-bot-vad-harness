@@ -8,7 +8,7 @@ CAPABILITIES:
   CAP-AUDIT-002: check (b) existing tests modified or deleted without ALLOW-EDIT [tests: test_FR_0_0_05_b_detects_modified_existing_test, test_FR_0_0_05_b_detects_deleted_existing_test, test_FR_0_0_05_b_passes_new_test_and_approved_edit, test_FR_0_0_05_b_detects_renamed_existing_lab_test, test_FR_0_0_05_b_allow_patterns_in_does_not_approve_test_edits]
   CAP-AUDIT-003: check (c) compromise patterns in added lab code lines and test-integrity patterns in added lab test lines [tests: test_FR_0_0_05_c_detects_each_code_pattern, test_FR_0_0_05_c_detects_each_test_pattern, test_FR_0_0_05_c_scans_only_added_lines, test_FR_0_0_05_c_includes_uncommitted_and_untracked_work, test_FR_0_0_06_scans_v2_file_types_and_dirs, test_FR_0_0_06_flags_pytestmark_and_param_skips, test_FR_0_0_06_decodes_non_utf8_with_replacement, test_FR_0_0_06_fails_closed_on_unreadable_changed_file, test_FR_0_0_06_fails_closed_on_git_error, test_FR_0_0_05_c_indented_allow_patterns_in_exempts_nothing, test_FR_0_0_06_fails_closed_when_branch_diff_fails, test_FR_0_0_06_fails_closed_when_git_status_fails, test_FR_0_0_06_fails_closed_on_changed_file_it_cannot_read]
   CAP-AUDIT-004: check (d) CAPABILITIES header in new aqis_lab/ modules [tests: test_FR_0_0_05_d_detects_new_module_without_header, test_FR_0_0_05_d_passes_module_with_header_or_short_file]
-  CAP-AUDIT-005: check (e) capability registry consistency [tests: test_FR_0_0_08_detects_row_with_missing_test, test_FR_0_0_08_detects_row_with_missing_module, test_FR_0_0_08_detects_row_removed_since_base, test_FR_0_0_08_detects_malformed_row, test_FR_0_0_08_detects_missing_registry, test_FR_0_0_08_passes_consistent_registry, test_FR_0_0_08_repository_registry_is_consistent, test_FR_0_0_08_detects_reordered_header_columns, test_FR_0_0_08_table_ends_at_first_non_table_line, test_FR_0_0_08_row_names_only_tests_pytest_collects, test_FR_0_0_08_row_naming_collected_tests_passes, test_FR_0_0_06_fails_closed_when_base_registry_unreadable, test_FR_0_0_08_registry_module_that_is_a_folder_is_a_finding, test_FR_0_0_08_registry_row_without_capability_id_is_malformed, test_FR_0_0_09_index_follows_pytest_collection_rules, test_FR_0_0_09_index_counts_every_collected_probe_test, test_FR_0_0_09_non_literal_collect_ignore_is_an_error, test_FR_0_0_06_fails_closed_on_unparsable_lab_test_file]
+  CAP-AUDIT-005: check (e) capability registry consistency [tests: test_FR_0_0_08_detects_row_with_missing_test, test_FR_0_0_08_detects_row_with_missing_module, test_FR_0_0_08_detects_row_removed_since_base, test_FR_0_0_08_detects_malformed_row, test_FR_0_0_08_detects_missing_registry, test_FR_0_0_08_passes_consistent_registry, test_FR_0_0_08_repository_registry_is_consistent, test_FR_0_0_08_detects_reordered_header_columns, test_FR_0_0_08_table_ends_at_first_non_table_line, test_FR_0_0_08_row_names_only_tests_pytest_collects, test_FR_0_0_08_row_naming_collected_tests_passes, test_FR_0_0_06_fails_closed_when_base_registry_unreadable, test_FR_0_0_08_registry_module_that_is_a_folder_is_a_finding, test_FR_0_0_08_registry_row_without_capability_id_is_malformed, test_FR_0_0_09_index_follows_pytest_collection_rules, test_FR_0_0_09_index_counts_every_collected_probe_test, test_FR_0_0_09_non_literal_collect_ignore_is_an_error, test_FR_0_0_09_index_applies_conftests_above_the_collected_folder, test_FR_0_0_06_fails_closed_on_unparsable_lab_test_file]
   CAP-AUDIT-006: check (f) requirement traceability for --wp [tests: test_FR_0_0_09_detects_id_missing_from_plan, test_FR_0_0_09_detects_id_missing_from_test_names, test_FR_0_0_09_detects_id_missing_from_evidence, test_FR_0_0_09_underscore_matching_respects_boundaries, test_FR_0_0_09_ignores_other_wp_ids_in_spec, test_FR_0_0_09_reports_unknown_wp, test_FR_0_0_09_passes_complete_traceability, test_FR_0_0_09_detects_nfr_id_missing_from_test_names, test_FR_0_0_09_detects_id_only_in_uncollected_test, test_FR_0_0_06_fails_closed_when_spec_unreadable, test_FR_0_0_09_two_specs_for_one_wp_is_a_finding, test_FR_0_0_09_only_lab_test_names_count, test_FR_0_0_09_traces_every_id_on_a_spec_line]
   CAP-AUDIT-007: lists every audit-allow line and every ALLOW-PATTERNS-IN exempted file [tests: test_FR_0_0_07_audit_allow_with_reason_exempts_and_is_listed, test_FR_0_0_07_audit_allow_without_reason_does_not_exempt, test_FR_0_0_07_audit_allow_exempts_only_its_line, test_FR_0_0_07_allow_patterns_in_exempts_file_and_is_listed, test_FR_0_0_07_exempted_files_list_only_scanned_files]
   CAP-AUDIT-009: command line, merge-base diffing, text and JSON reports, exit codes 0/1/2 [tests: test_FR_0_0_05_clean_branch_exits_zero, test_FR_0_0_05_uses_merge_base_not_ref_tip, test_FR_0_0_05_json_output_schema, test_FR_0_0_05_bad_base_ref_exits_2, test_NFR_0_0_01_gate_runtime_under_60s, test_NFR_0_0_02_every_message_names_file_line_and_rule, test_NFR_0_0_03_imports_are_stdlib_or_pinned]
@@ -39,6 +39,8 @@ CHANGE LOG:
   2026-10-04 WP-0.9 DEBT-004: test_functions follows pytest 9.1's collection rules for skipped folders, conftest
              collect_ignore(_glob), false or unreadable __test__ values, abstract classes and rebound names;
              DEBT-001 to DEBT-003 and DEBT-005: header lists the new tests.
+  2026-10-08 WP-0.9 round 2 F04: _ignores_for and _pytest_skips read conftests from the repository root down,
+             also those above the collected folder; header lists the new test.
 """
 import argparse
 import ast
@@ -638,9 +640,10 @@ def _conftest_ignores(path, rel):
     return found
 
 
-def _ignores_for(directory, base, root, cache):
-    """{name: [absolute paths or globs]} pytest applies to entries of `directory` when it collects `base`: for each
-    name, the entries of the nearest conftest.py between `directory` and `base` that defines it."""
+def _ignores_for(directory, root, cache):
+    """{name: [absolute paths or globs]} pytest applies to entries of `directory`: for each name, the entries of the
+    nearest conftest.py between `directory` and the repository root `root` (pytest's rootdir when run from the
+    repository root, as CI does) that defines it, including conftests above the folder being collected."""
     result = {}
     current = directory
     while True:
@@ -650,7 +653,7 @@ def _ignores_for(directory, base, root, cache):
                 cache[conftest] = _conftest_ignores(conftest, conftest.relative_to(root).as_posix())
             for name, entries in cache[conftest].items():
                 result.setdefault(name, [os.path.abspath(current / e.replace("/", os.sep)) for e in entries])
-        if current == base:
+        if current == root:
             return {name: result.get(name, []) for name in CONFTEST_IGNORE_NAMES}
         current = current.parent
 
@@ -661,15 +664,16 @@ def _in_virtualenv(directory):
 
 def _pytest_skips(path, base, root, cache):
     """True when pytest, collecting the folder `base`, never reaches the file `path`: a folder or file on the way
-    is __pycache__, is listed in the nearest conftest's collect_ignore or matches its collect_ignore_glob, or is a
-    folder pytest does not enter (default norecursedirs, a virtual environment)."""
+    is __pycache__, is listed in the nearest conftest's collect_ignore or matches its collect_ignore_glob (conftests
+    from `root` down, also above `base`), or is a folder pytest does not enter (default norecursedirs, a virtual
+    environment). `base` and the folders above it are never skipped: pytest does not ignore the path it is given."""
     current = base
     parts = path.relative_to(base).parts
     for i, part in enumerate(parts):
         parent, current = current, current / part
         if part == "__pycache__":
             return True
-        ignores = _ignores_for(parent, base, root, cache)
+        ignores = _ignores_for(parent, root, cache)
         absolute = os.path.abspath(current)
         if absolute in ignores["collect_ignore"]:
             return True
@@ -690,7 +694,8 @@ def test_functions(root, folder):
       _darcs, build, CVS, dist, node_modules, venv, {arch}) or a virtual environment (pyvenv.cfg or
       conda-meta/history);
     - not listed in the collect_ignore, or matched by the collect_ignore_glob, of the nearest conftest.py between
-      folder and the file that defines it; a conftest whose list is not a literal is a GateError;
+      the file and the repository root (pytest's rootdir in CI; conftests above `folder` apply too) that defines
+      it; a conftest whose list is not a literal is a GateError;
     - module-level functions whose name starts with 'test', and such methods of classes whose name starts with
       'Test' (nested ones too) that have no __init__ or __new__ of their own or from a base class and whose base
       classes are all defined in the same module (others cannot be read, so they do not count);

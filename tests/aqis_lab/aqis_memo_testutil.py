@@ -26,6 +26,13 @@ UNIT_LOG = "docs/progress/WP-0.9/OC-0.9-01_units.csv"
 RATES = "config/aqis_lab/colab_rates.yaml"
 BUILD_PLAN = "docs/specs/sources/AQIS_Test_Lab_Build_Plan.md"
 PHASE_AUDIT = "docs/progress/PHASE-0-AUDIT.md"
+# The WPs the memo reviews (deviation D1): WP-0.9's own audit is not part of the review (WP-0.9-F02).
+REVIEWED_WPS = tuple(f"WP-0.{n}" for n in range(9))
+# Must-catch 2 covers the rows that targeted a phase 0 WP before WP-0.9 started, pinned here so that no rewording of
+# a row's Target or Status can take it out of the check (WP-0.9-F01). They are the phase 0 rows of DEBT.md at
+# WP09_START, which test_FR_0_9_01_pinned_phase0_debt_ids_are_the_phase0_rows_before_wp09 confirms.
+WP09_START = "254c1e31cb9ba7bb3615109c1a2cf37aa72d5b5f"
+PHASE0_DEBT_IDS = tuple(f"DEBT-{n:03d}" for n in [*range(1, 27), *range(28, 32)])
 REPO_URL = "https://github.com/NasirAman-promcare/voice-bot-vad-harness"
 SECTIONS = ["Scope", "Exit criteria", "Decisions taken", "Open issues", "Lessons for the process",
             "Phase 1 prerequisites", "Phase audit"]
@@ -111,6 +118,16 @@ def _commit_exists(sha, root):
     return subprocess.run(["git", "cat-file", "-e", f"{sha}^{{commit}}"], cwd=root, capture_output=True).returncode == 0
 
 
+def repo_file(root, rel):
+    """True when rel names a regular file inside the repository at root: not a folder, not an absolute path, and not
+    a path that leaves the repository through '..' or a link (WP-0.9-F07)."""
+    base = Path(root).resolve()
+    if Path(rel).is_absolute():
+        return False
+    target = (base / rel).resolve()
+    return target.is_file() and base in target.parents
+
+
 def link_problems(cell, root, tests, where):
     """Problems with the evidence links of one cell: every code span is an existing repository path, a collected test
     name or a commit of this repository; every URL is a run or pull request of this repository; at least one link
@@ -127,6 +144,8 @@ def link_problems(cell, root, tests, where):
         elif "/" in span or "." in span:
             if not (Path(root) / span).exists():
                 problems.append(f"{where}: path {span} does not exist")
+            elif not repo_file(root, span):
+                problems.append(f"{where}: path {span} is not a file in this repository")
             kept += 1
         else:
             problems.append(f"{where}: `{span}` is not a path, a test name or a commit")
@@ -221,9 +240,10 @@ def open_issue_problems(text, root=ROOT):
 
 
 def audit_rounds(root=ROOT):
-    """{WP: final audit round} read from each WP's AUDIT.md header."""
+    """{WP: final audit round} read from the AUDIT.md header of each WP the memo reviews (REVIEWED_WPS; WP-0.9's own
+    audit report is not part of the review, WP-0.9-F02)."""
     rounds = {}
-    for path in sorted((Path(root) / "docs" / "progress").glob("WP-0.*/AUDIT.md")):
+    for path in (Path(root) / "docs" / "progress" / wp / "AUDIT.md" for wp in REVIEWED_WPS):
         head = "\n".join(path.read_text(encoding="utf-8").splitlines()[:3])
         m = re.search(r"round (\d+)", head, re.I)
         if m:
@@ -243,7 +263,7 @@ def lesson_problems(text, root=ROOT):
         if not paths:
             problems.append(f"lesson {lesson[:40]!r} cites no record")
         for p in paths:
-            if not (Path(root) / p).exists():
+            if not repo_file(root, p):
                 problems.append(f"lesson {lesson[:40]!r} cites {p}, which does not exist")
     try:
         _, rows = table(body, "WP")
@@ -256,26 +276,37 @@ def lesson_problems(text, root=ROOT):
 
 
 def debt_problems(debt_text, root=ROOT):
-    """Must-catch 2: every DEBT row targeting phase 0 is CLOSED; a row moved to a later WP names that WP first in its
-    Target cell and cites an approval on main that names both the row (or its finding) and that WP."""
+    """Must-catch 2: every pinned phase 0 row (PHASE0_DEBT_IDS) is still in the register and is CLOSED, or names a
+    later WP first in its Target cell and cites an approval on main that names both the row (or its finding) and that
+    WP. The pinned rows are found by ID, never by their current wording (WP-0.9-F01), so a row rewritten to a later WP
+    without the word "moved" still needs the approval. Any other row targeting phase 0 must be CLOSED, and every
+    approval a Status cites must exist."""
     problems = []
-    for row in debt_rows(debt_text):
-        debt, finding, target, status = row[0], row[1], row[5], row[6]
-        if re.match(r"WP-0\.\d+\b", target) and not status.startswith("CLOSED"):
-            problems.append(f"{debt}: targets {target.split()[0]} (phase 0) but is {status.split()[0]}")
+    rows = {row[0]: row for row in debt_rows(debt_text)}
+    for debt in PHASE0_DEBT_IDS:
+        if debt not in rows:
+            problems.append(f"{debt}: missing from {DEBT}; rows are closed, never deleted")
+    for debt, row in rows.items():
+        finding, target, status = row[1], row[5], row[6]
         for cited in set(re.findall(r"docs/approvals/[\w.-]+\.md", status)):
             if not (Path(root) / cited).is_file():
                 problems.append(f"{debt}: cites {cited}, which does not exist")
-        if "moved" in target.lower() or status.startswith("OPEN, moved"):
-            new = re.match(r"(WP-\d+\.\d+)\b", target)
-            approvals = set(re.findall(r"docs/approvals/[\w.-]+\.md", target + " " + status))
-            if not new:
-                problems.append(f"{debt}: moved, but the Target cell does not start with a WP ID")
-                continue
-            texts = [(Path(root) / a).read_text("utf-8") for a in approvals if (Path(root) / a).is_file()]
-            finding_id = finding.split()[0]
-            if not any((debt in t or finding_id in t) and new.group(1) in t for t in texts):
-                problems.append(f"{debt}: no cited approval names {debt} (or {finding_id}) and {new.group(1)}")
+        if status.startswith("CLOSED"):
+            continue
+        new = re.match(r"(WP-(\d+)\.\d+)\b", target)
+        if new and new.group(2) == "0":
+            problems.append(f"{debt}: targets {new.group(1)} (phase 0) but is {status.split()[0]}")
+            continue
+        if debt not in PHASE0_DEBT_IDS:
+            continue
+        if not new:
+            problems.append(f"{debt}: moved, but the Target cell does not start with a WP ID")
+            continue
+        approvals = set(re.findall(r"docs/approvals/[\w.-]+\.md", target + " " + status))
+        texts = [(Path(root) / a).read_text("utf-8") for a in approvals if (Path(root) / a).is_file()]
+        finding_id = finding.split()[0]
+        if not any((debt in t or finding_id in t) and new.group(1) in t for t in texts):
+            problems.append(f"{debt}: no cited approval names {debt} (or {finding_id}) and {new.group(1)}")
     return problems
 
 
@@ -367,7 +398,7 @@ def prerequisite_problems(text, root=ROOT):
             if c not in headings:
                 problems.append(f"Pack v1 plan cites Build Plan § {c}, which is not a heading of the Build Plan")
         for p in paths:
-            if not (Path(root) / p).exists():
+            if not repo_file(root, p):
                 problems.append(f"Pack v1 plan cites {p}, which does not exist")
         for quote in (re.findall(r'"([^"]+)"', b) if cites else []):
             if " ".join(quote.split()) not in plan_text:

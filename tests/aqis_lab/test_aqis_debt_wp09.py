@@ -393,6 +393,42 @@ def test_FR_0_0_09_non_literal_collect_ignore_is_an_error(tmp_path, conftest, li
     assert "is not a single literal list of strings" in proc.stderr
 
 
+# WP-0.9-F04: pytest applies every conftest.py from the rootdir (the repository root, where CI runs pytest) down
+# to a file, also those above the folder it was asked to collect.
+ROOT_PROBE_DIR = "tests/aqis_lab/probe10"
+ROOT_CONFTEST_PROBE = {
+    "conftest.py": (f'collect_ignore = ["{ROOT_PROBE_DIR}/test_root_ignored.py"]\n'
+                    'collect_ignore_glob = ["*_rootglob.py"]\n'),
+    f"{ROOT_PROBE_DIR}/test_below_root_conftest.py": "def test_in_file_below_root_conftest():\n    assert 2 + 2 == 4\n",
+    f"{ROOT_PROBE_DIR}/test_root_ignored.py": ("def test_in_file_the_root_conftest_ignores():\n"
+                                               "    assert 2 + 2 == 4\n"),
+    f"{ROOT_PROBE_DIR}/test_x_rootglob.py": ("def test_only_in_file_globbed_by_root_conftest():\n"
+                                             "    assert 2 + 2 == 4\n"),
+}
+
+
+@pytest.mark.parametrize("shadowed", [False, True], ids=["root-conftest-only", "nearer-conftest-shadows-ignore"])
+def test_FR_0_0_09_index_applies_conftests_above_the_collected_folder(tmp_path, shadowed):
+    repo = FixtureRepo(tmp_path)
+    repo.branch()
+    for rel, text in ROOT_CONFTEST_PROBE.items():
+        repo.write(rel, text)
+    if shadowed:
+        # A nearer conftest that defines collect_ignore replaces the root one's list; collect_ignore_glob still
+        # comes from the root conftest, the nearest that defines it.
+        repo.write("tests/aqis_lab/conftest.py", "collect_ignore = []\n")
+    names = ["test_in_file_below_root_conftest", "test_in_file_the_root_conftest_ignores",
+             "test_only_in_file_globbed_by_root_conftest"]
+    expected_missing = names[1:] if not shadowed else names[2:]
+    # Independent oracle: the pinned pytest, run from the repository root like CI, on the folder below the conftest.
+    collected = pytest_collected(repo.path, ROOT_PROBE_DIR)
+    assert collected == sorted(set(names) - set(expected_missing))
+    repo.append(REG, registry_row("CAP-FIX-002", "`aqis_lab/existing.py`", ", ".join(f"`{n}`" for n in names)))
+    found = findings_of(repo.gate_json(), "e")
+    assert [(r, n) for r, _, n, _ in found] == [("E3", 6)]
+    assert sorted(found[0][3].rsplit(": ", 1)[1].split(", ")) == sorted(expected_missing)
+
+
 # ---------------------------------------------------------------------------------------------
 # DEBT-006 (WP-0.2-F04): worker processes that cannot start give exit 2 and the rerun hint, never a traceback
 # ---------------------------------------------------------------------------------------------
