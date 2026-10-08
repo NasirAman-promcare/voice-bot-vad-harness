@@ -392,3 +392,10 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow 
 $ .venv/bin/python -m pytest tests/aqis_lab -q -p no:cacheprovider -m "not slow and not gpu and not colab and not oracle and not network"
 1987 passed, 55 deselected in 265.50s (0:04:25)
 ```
+
+CI on `49c57e4` (the round 3 code): in [run 398](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37789746382) (pull request), every job passed:
+- `lab`: steps "Fast lab test suite" and "Audit gate (pull request base with --wp, or origin/main on push)" success;
+- `lab-network`: step "Lab tests marked only network (WP-0.9 DEBT-019)" success;
+- `harness-regression`: step "Regression check against the provisioned baseline" success.
+
+On `bfa2f9a`, which adds only the Round 3 section of this file, [run 399](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37789752831) (push) and [run 400](https://github.com/NasirAman-promcare/voice-bot-vad-harness/actions/runs/37789760791) (pull request) succeeded. The commit that adds this paragraph changes only this file, `FIXES.md` and `docs/progress/STATUS.md` (READY-FOR-AUDIT); its CI is in the pull request.

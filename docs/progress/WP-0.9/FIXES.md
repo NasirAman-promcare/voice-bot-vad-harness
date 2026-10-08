@@ -97,4 +97,4 @@ Each break was applied alone in the clone at `9c1c317`, the named tests were run
 | F11 (A15-4) | "targets phase 0 but is OPEN" limited to pinned rows | CAUGHT: `[new-unpinned-row-open-at-phase-0]` |
 
 ### Verification
-Baseline modules after the change, same command: `300 passed in 70.09s` (283 before; the 17 added are this round's new tests and cases). `git diff -U0 464b201` touches only the budgeted functions and records. Fast suite, gate and CI: `EVIDENCE.md`, "Round 3".
+Baseline modules after the change, same command: `300 passed in 70.09s` (283 before; the 17 added are this round's new tests and cases). `git diff -U0 464b201` touches only the budgeted functions and records. Fast suite at `49c57e4`: `1987 passed, 55 deselected`. Gate: 0 findings. CI run 398 on `49c57e4`: success, all three jobs. Details: `EVIDENCE.md`, "Round 3".
