@@ -28,7 +28,7 @@ The Build Plan's phase 4 filler pack has 500 rated turns [Build Plan § Phases].
 | Option | Value | What it gives | What it costs | Source |
 | --- | --- | --- | --- | --- |
 | HR-A | below 1 % | The fewest misfires reach callers; Level 2 and Level 3 fillers play only when the selector is very sure. | Hardest to show: it allows at most 1 of 500 rated turns to be wrong. More turns fall back to Level 0 or Level 1 fillers, so the bot sounds less warm. | Blueprint § Quantitative Targets; Build Plan § Phases |
-| HR-B | below 2 % | A balance between warmth and misfires: more Level 2 and Level 3 fillers can play than under HR-A. | It allows at most 4 of 500 rated turns to be wrong. About 1 caller turn in 50 may still get a wrong filler. | Blueprint § Quantitative Targets; the blueprint's example value; Build Plan § Phases |
+| HR-B | below 2 % | A balance between warmth and misfires: more Level 2 and Level 3 fillers can play than under the 1 % option. | It allows at most 4 of 500 rated turns to be wrong. About 1 caller turn in 50 may still get a wrong filler. | Blueprint § Quantitative Targets; the blueprint's example value; Build Plan § Phases |
 | HR-C | below 5 % | Easiest to show: it allows at most 16 of 500 rated turns to be wrong. More Level 2 and Level 3 fillers can play. | Up to 1 caller turn in 20 may get a wrong filler, such as a cheerful phrase to an upset caller. | Blueprint § Quantitative Targets; Build Plan § Phases |
 
 **Decision:** [OWNER DECIDES: harm-rate option]
@@ -67,7 +67,7 @@ The gate decides, in under 50 ms, whether a turn goes to heavy transcription; th
 | Option | Value | What it gives | What it costs | Source |
 | --- | --- | --- | --- | --- |
 | GE-A | 10 % of turns escalated | The least heavy-transcription work and the fewest turns that depend on the heavy turnaround fitting within the filler. | More transcription errors pass without the heavy check. | Blueprint § Quantitative Targets; Blueprint § Timing Budget |
-| GE-B | 20 % of turns escalated | A middle point between correction and cost. | Twice the heavy work of GE-A, and more turns depend on the heavy turnaround. | Blueprint § Quantitative Targets; Blueprint § Timing Budget |
-| GE-C | 30 % of turns escalated | The most turns get the heavy check, so the most errors can be fixed. | Three times the heavy work of GE-A; the timing budget is hardest to meet on escalated turns. | Blueprint § Quantitative Targets; Blueprint § Timing Budget |
+| GE-B | 20 % of turns escalated | A middle point between correction and cost. | Twice the heavy work of the 10 % option, and more turns depend on the heavy turnaround. | Blueprint § Quantitative Targets; Blueprint § Timing Budget |
+| GE-C | 30 % of turns escalated | The most turns get the heavy check, so the most errors can be fixed. | Three times the heavy work of the 10 % option; the timing budget is hardest to meet on escalated turns. | Blueprint § Quantitative Targets; Blueprint § Timing Budget |
 
 **Decision:** [OWNER DECIDES: gate-escalation option]

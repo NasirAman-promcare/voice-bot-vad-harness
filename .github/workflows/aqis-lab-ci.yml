@@ -6,6 +6,8 @@
 #        first, because the WP-0.6 sync tests run the real rclone (owner decision, WP-0.6 question 5).
 #   harness-regression: provisions the existing harness (aqis_lab/deploy/harness_provision.sh), runs its tests
 #        and fails when a test that passed in docs/baselines/harness_tests_baseline.md no longer passes.
+#   lab-network: builds .venv the same way and runs the lab tests marked only `network` (Vosk model download,
+#        PyPI wheel listings), which the fast suite excludes (WP-0.9, DEBT-019).
 name: aqis-lab-ci
 
 on:
@@ -72,6 +74,26 @@ jobs:
           else
             .venv/bin/python -m tools.audit.gate --base "origin/main"
           fi
+
+  lab-network:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out (full history, as job lab)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv 0.8.17
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.17"
+
+      - name: Bootstrap .venv (Colab-matching Python, hash-checked lock)
+        run: bash aqis_lab/deploy/dev_bootstrap.sh
+
+      - name: Lab tests marked only network (WP-0.9 DEBT-019)
+        run: .venv/bin/python -m pytest tests/aqis_lab -q -m "network and not slow and not gpu and not colab and not oracle"
 
   harness-regression:
     runs-on: ubuntu-24.04

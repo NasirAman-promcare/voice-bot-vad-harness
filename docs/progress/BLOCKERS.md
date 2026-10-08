@@ -566,3 +566,67 @@ WP: WP-0.1  ·  Raised: 2026-10-03  ·  Session: https://claude.ai/code/session_
 - (a) NETWORK.md on `main` (`a3420c3`) now states the Jitsi version, "No TURN relay" and start and end times (UTC). Merged into this branch (`c9932e3`).
 - (b) Confirmed: the root `run.log` change was only the console capture from `tee`, so R3 allows it.
 - (c) Accepted: R8 is met when the Jingle logs cover every clip evaluation record (08:00:04 to 11:34:52).
+
+## BLK-017 — WP-0.9: the approval's ALLOW-EDIT lines name other files than the approved debt rows need; the unit-log copy misses the Colab GPU sessions
+STATUS: RESOLVED
+WP: WP-0.9  ·  Raised: 2026-10-04  ·  Session: https://claude.ai/code/session_01FYixR4QztgtCJqCD8TQGUi
+
+**What I need:** (A) the four `ALLOW-EDIT` lines the approved debt table needs; (B) a complete copy of the Colab unit log, or your ruling on the missing sessions.
+
+**Why:**
+- (A) `docs/approvals/WP-0.9.md` (`0ce38e1`) accepts the per-row debt table (Q2), but its `ALLOW-EDIT` lines are:
+  - `tests/aqis_lab/test_aqis_gate_v2.py` and `tests/aqis_lab/test_aqis_scoring_cli.py`, which exist but no planned row edits;
+  - `tests/aqis_lab/test_aqis_gate.py` and `tests/aqis_lab/test_aqis_contracts.py`, which do not exist.
+
+  The plan (question 2) needs these instead:
+
+  | File | Rows |
+  | --- | --- |
+  | `tests/aqis_lab/test_aqis_ci.py` | DEBT-019 (job set at line 38) |
+  | `tests/aqis_lab/test_aqis_recording_docs.py` | DEBT-026 (`OWNER_FACT_BREAKS`) |
+  | `tests/aqis_lab/aqis_baseline_testutil.py` | DEBT-029, DEBT-030, DEBT-031 |
+  | `tests/aqis_lab/test_aqis_tier2_baseline.py` | DEBT-029, DEBT-030, DEBT-031 |
+
+  Without them those five rows cannot be closed as approved, and must-catch 2 cannot be met. I will not use the four granted lines, because they are outside the plan's change budget.
+- (B) FR-0.9-02 reports the Colab units used so far "from the unit log". `docs/progress/WP-0.9/OC-0.9-01_units.csv` has two sessions:
+  - `colab-2026-09-28-531d3d09acdc` (CPU, 0.0002 units);
+  - `colab-2026-10-02-1e6bd941ec9e` (Tesla T4, 14:12:11Z to 14:14:22Z, 0.0432 units).
+
+  The second matches the doctor report `docs/environment/doctor_colab_20261002T141212Z.json` (created 14:12:12Z). Committed evidence shows Colab GPU work that no row covers:
+  - the T4 smoke run behind `data/runs/phase0-smoke/phase0-smoke-colab-20261002T140101Z.tar` (`BUNDLE.json`: created 2026-10-02T14:01:01Z, `elapsed_s` 374.45, GPU Tesla T4; its runner logs start at 14:01:04Z);
+  - the `--gpu` bootstrap of OC-0.8-03.
+
+  The memo would therefore report 0.0434 units, which looks understated. I will not estimate the missing sessions.
+
+**What I tried:** compared each `ALLOW-EDIT` path with `tests/aqis_lab/` (`ls`); recomputed both unit-log rows from start, end and rate (both correct: 0.03629 h × 1.19 = 0.0432); read the Colab bundle's `BUNDLE.json` and runner logs.
+
+**Options:**
+1. (A) Replace the four `ALLOW-EDIT` lines in `docs/approvals/WP-0.9.md` on `main` with the four above. **Recommended.** It takes a minute and keeps the approved table.
+2. (A) Move DEBT-019, 026, 029, 030 and 031 to a later WP you name. This needs no test edits, but carries the gaps into phase 1.
+3. (B) Commit the full `MyDrive/AQIS_LAB/logs/units.csv` if it has more rows than the copy. **Recommended** if it does.
+4. (B) If those sessions were run without `unitlog start`/`end`, say so in the approval. The memo then reports the logged 0.0434 units, lists the unlogged sessions by name as unmetered, and records your statement. Nothing is estimated.
+
+**Paused until answered:** all WP-0.9 build work. The plan does not mark any part as independent of this answer.
+
+**Owner answer:** Options 1 and 4 (`docs/approvals/WP-0.9.md` on `main`, `699acd5`, merged into this branch):
+- (A) The four `ALLOW-EDIT` lines now name `tests/aqis_lab/test_aqis_ci.py`, `tests/aqis_lab/test_aqis_recording_docs.py`, `tests/aqis_lab/aqis_baseline_testutil.py` and `tests/aqis_lab/test_aqis_tier2_baseline.py`.
+- (B) "Unit log: the logged 0.0434 units in docs/progress/WP-0.9/OC-0.9-01_units.csv is accepted; the Colab T4 smoke run (14:01Z, ~374 s) and OC-0.8-03 bootstrap are noted as unmetered sessions." The owner confirmed in the session chat (2026-10-04) that the committed CSV is the Drive file.
+
+## BLK-018 — WP-0.9: recording F12 as DEBT-034 collides with a test case that uses DEBT-034 as its "new row" ID
+STATUS: RESOLVED
+WP: WP-0.9  ·  Raised: 2026-10-08  ·  Session: https://claude.ai/code/session_01FYixR4QztgtCJqCD8TQGUi
+
+**What I need:** your choice of how to record WP-0.9-F12 without the collision below. You ruled out code and test changes, and the approval line on `main` (`136ffc7`) fixes the ID as DEBT-034.
+
+**Why:** the round 3 test case `test_FR_0_9_01_debt_check_reports_open_or_unapproved_rows[new-unpinned-row-open-at-phase-0]` (F11, in `tests/aqis_lab/test_aqis_phase0_memo.py`) inserts a made-up row with the hard-coded ID DEBT-034 (target WP-0.9, OPEN) and expects `DEBT-034: targets WP-0.9 (phase 0) but is OPEN`. Once a real DEBT-034 row exists, the register holds two rows with that ID. `debt_problems` keys rows by ID, so the real row (later in the file) replaces the made-up one, and the test fails. The fault is the test's choice of a literal ID that a future row could take; the checker is right.
+
+**What I tried:** merged `origin/main` (`f68aad7`). Added the DEBT-034 row and the memo's Open issues line exactly as instructed. `.venv/bin/python -m pytest tests/aqis_lab/test_aqis_phase0_memo.py -q -p no:cacheprovider` gave `1 failed, 76 passed`, the failure being that case (`AssertionError: []`, no problem reported). I then removed both edits again. Nothing about DEBT-034 is committed; this commit holds only the merge of `main` and this entry.
+
+**Options:**
+1. Allow one test change: the F11 case picks the next unused ID (one above the highest in `DEBT.md`) instead of the literal DEBT-034, and expects that ID. Then record DEBT-034 as you instructed. **Recommended.** It is a change to WP-0.9's own new test file, made after the audit. I would prove the case still fails when the F11 check is removed, and record it in `FIXES.md`. You may want the auditor to look at that one change.
+2. Record F12 under another ID, such as DEBT-035, with no test change. This needs your approval line on `main` changed to the new ID. It leaves a gap at DEBT-034, and the test still uses a literal ID that a later row will hit.
+3. Fix F12 instead (one test case, `"- X{debt} moves to {wp}."`), with no debt row. This needs a new approval line and probably a short re-audit.
+
+**Paused until answered:** recording F12 (the DEBT row and the memo line), the final fast suite, gate and CI run, and cancelling the check-ins. Nothing else is open in WP-0.9.
+
+**Owner answer:** Option 1 (`docs/approvals/WP-0.9.md` on `main`, `6d4b9f2`, merged into this branch at `aaea984`): "BLK-018: Option 1. Allow changing test_aqis_phase0_memo.py so the new unpinned row test uses a dynamic or higher unused ID instead of hardcoded DEBT-034." The approval also adds `ALLOW-EDIT: tests/aqis_lab/test_aqis_phase0_memo.py`. The case now uses the next unused ID; DEBT-034 is recorded for F12 (`docs/progress/WP-0.9/FIXES.md`, "BLK-018").

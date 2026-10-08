@@ -17,6 +17,14 @@ CHANGE LOG:
              through 'expr' rows), part of summary_problems; F2 body_text checks every section, exempting only the
              quoted owner statement, the Raw inventory Bytes and SHA-256 cells and the Sources table cells; F7
              raw_problems reports a missing speaker or listener log as "R8 missing".
+  2026-10-04 WP-0.9 DEBT-029: derived Sources rows can count the run log's clip lines (run_log_clips), and the
+             Conditions table's manifest column is bound to its own category; DEBT-030: body_text exempts only the
+             Sources table headed ID and the Bytes and SHA-256 cells of the Raw inventory table headed Item;
+             DEBT-031: binding_problems requires one Conditions row per category of the run.
+  2026-10-08 WP-0.9 round 2 F05: body_text exempts only the first Sources table headed ID and the first Raw
+             inventory table headed Item, the tables sources_table and inventory_table read.
+  2026-10-08 WP-0.9 round 3 F09: summary_sections removes HTML comments, so sources_table, inventory_table and
+             binding_problems read the visible tables, as body_text does.
 """
 import ast
 import hashlib
@@ -72,6 +80,8 @@ OWNER_SECTION = "Owner's statement"
 INVENTORY_SECTION = "Raw inventory"
 INVENTORY_EXEMPT_COLUMNS = ("Bytes", "SHA-256")
 SOURCES_SECTION = "Sources"
+SOURCES_FIRST_HEADER = "ID"           # the one Sources table exempt from the citation check
+INVENTORY_FIRST_HEADER = "Item"       # the one Raw inventory table whose Bytes and SHA-256 cells are exempt
 SOURCES_COLUMNS = ("ID", "Value", "File", "Kind", "Locator", "Formula and inputs", "Rounding")
 INVENTORY_COLUMNS = ("Item", "File", "Bytes", "SHA-256", "What it is")
 CITE_RE = re.compile(r"\[(S\d+)\]")
@@ -181,9 +191,11 @@ def split_row(line):
 
 # ---------------------------------------------------------------------------------------------- SUMMARY.md reading
 def summary_sections(text):
-    """{heading: body} for the '## ' headings of SUMMARY.md."""
+    """{heading: body} for the '## ' headings of SUMMARY.md, HTML comments removed: the readers built on it
+    (sources_table, inventory_table, binding_problems) read the same text as body_text, so a commented-out table
+    cannot stand in for the visible one (WP-0.9-F09)."""
     out, current = {}, None
-    for line in text.splitlines():
+    for line in re.sub(r"<!--.*?-->", "", text, flags=re.S).splitlines():
         m = re.match(r"^## +(.+?) *$", line)
         if m:
             current = m.group(1)
@@ -503,6 +515,30 @@ def _text_value(lines, loc, value):
     return value
 
 
+# One line per clip and operating point in the harness run log, for example
+# "Tier 2 [ten_vad] clip [1/229] 'clean_speech_dev_short_000.wav' (Category: 'clean speech', Warmup: True)".
+CLIP_LINE_RE = re.compile(r"Tier 2 \[(?P<point>[\w-]+)\] clip \[\d+/\d+\] '(?P<clip>[^']+)' "
+                          r"\(Category: '(?P<category>[^']+)', Warmup: (?P<warmup>True|False)\)")
+
+
+def run_log_clips(lines):
+    """One record per (operating point, clip) the run log lists: operating_point, clip, category and warmup (a clip
+    listed twice counts once). Derived Sources rows over the run log count these records (WP-0.9, DEBT-029)."""
+    records = {}
+    for line in lines:
+        m = CLIP_LINE_RE.search(line)
+        if not m:
+            continue
+        record = {"operating_point": m["point"], "clip": m["clip"], "category": m["category"],
+                  "warmup": m["warmup"] == "True"}
+        seen = records.setdefault((m["point"], m["clip"]), record)
+        if seen != record:
+            raise SourceError(f"the run log lists clip {m['clip']!r} of {m['point']} twice with different details")
+    if not records:
+        raise SourceError("the run log has no Tier 2 clip lines")
+    return list(records.values())
+
+
 def _derived(records, loc):
     where = loc["where"]
     selected = [r for r in records if matches(r, where)]
@@ -627,9 +663,13 @@ def resolve_sources(folder, sources=None):
                             continue
                         computed = _expr(loc["expr"], values)
                     else:
-                        if not row["File"].endswith(".jsonl"):
-                            raise SourceError("a derived row without 'expr' must read a .jsonl file")
-                        computed = _derived(load(row["File"], "jsonl"), loc)
+                        if row["File"].endswith(".jsonl"):
+                            records = load(row["File"], "jsonl")
+                        elif row["File"].endswith(".log"):
+                            records = run_log_clips(load(row["File"], "lines"))
+                        else:
+                            raise SourceError("a derived row without 'expr' must read a .jsonl file or the run log")
+                        computed = _derived(records, loc)
                     text = shown(computed, row["Rounding"])
                     if text != row["Value"]:
                         raise SourceError(f"{row['Formula and inputs']} gives {computed!r}, shown under "
@@ -704,23 +744,35 @@ def owner_statement():
 
 
 def body_text(text):
-    """The SUMMARY.md text the citation check reads: everything except the exempt parts named above, and comments."""
+    """The SUMMARY.md text the citation check reads: everything except the exempt parts named above, and comments.
+
+    The exemptions apply only to the table each one names, found by its header (WP-0.1-F8, DEBT-030): the rows of
+    the Sources table headed ID, and the Bytes and SHA-256 cells of the Raw inventory table headed Item. In each
+    section only the first such table, the one sources_table and inventory_table read, is exempt (WP-0.9-F05). Any
+    other table in those sections is read like the rest of the body."""
     statement = owner_statement()
-    out, section, exempt_cols = [], None, None
+    first_headers = {SOURCES_SECTION: SOURCES_FIRST_HEADER, INVENTORY_SECTION: INVENTORY_FIRST_HEADER}
+    out, section, table = [], None, None   # table: the header cells of the pipe table the line belongs to
+    exempt, exempted = False, set()        # exempt: the line's table is its section's exempt one
     for line in re.sub(r"<!--.*?-->", "", text, flags=re.S).splitlines():
         m = re.match(r"^## +(.+?) *$", line)
         if m:
-            section, exempt_cols = m.group(1), None
+            section, table, exempt = m.group(1), None, False
             continue
+        if not line.lstrip().startswith("|"):
+            table, exempt = None, False
+        elif table is None:
+            table = [c.strip() for c in line.split("|")]
+            exempt = section in first_headers and section not in exempted and table[1:2] == [first_headers[section]]
+            if exempt:
+                exempted.add(section)
         if section == OWNER_SECTION and line.startswith(">") and " ".join(line[1:].split()) == statement:
             continue
-        if section == SOURCES_SECTION and line.lstrip().startswith("|"):
+        if section == SOURCES_SECTION and exempt:
             continue
-        if section == INVENTORY_SECTION and line.lstrip().startswith("|"):
-            cells = line.split("|")
-            if exempt_cols is None:
-                exempt_cols = [i for i, c in enumerate(cells) if c.strip() in INVENTORY_EXEMPT_COLUMNS]
-            line = "|".join("" if i in exempt_cols else c for i, c in enumerate(cells))
+        if section == INVENTORY_SECTION and exempt:
+            exempt_cols = [i for i, c in enumerate(table) if c in INVENTORY_EXEMPT_COLUMNS]
+            line = "|".join("" if i in exempt_cols else c for i, c in enumerate(line.split("|")))
         out.append(line)
     return "\n".join(out)
 
@@ -876,6 +928,7 @@ CELL_SPECS = {
     },
 }
 CATEGORY_TABLE = ("Conditions", "Category", "Scored clips per operating point")
+MANIFEST_COLUMN = "Clips in the manifest (warm-up included)"   # WP-0.1-F5, DEBT-029
 
 
 def _cell_problems(ctx, where, key, cited, specs):
@@ -927,8 +980,19 @@ def binding_problems(folder):
     section, first, col = CATEGORY_TABLE
     try:
         header, rows = pipe_table(sections.get(section, ""), first)
-    except ValueError as exc:
+        clips = run_log_clips(ctx["log"])
+    except (ValueError, SourceError) as exc:
         return problems + [f"{section}: {exc}"]
+    # One row per category of the run: every category of the scored records and of the run log's clip lines
+    # (WP-0.1-F9, DEBT-031).
+    categories = sorted({get_path(r, "payload.category") for r in records if r.get("record_type") == SCORING}
+                        | {c["category"] for c in clips})
+    keys = sorted(r[first] for r in rows)
+    if keys != categories:
+        problems.append(f"{section} table {first!r}: rows {keys}, expected one per category {categories}")
+    if MANIFEST_COLUMN not in header:
+        problems.append(f"{section} table {first!r}: no column {MANIFEST_COLUMN!r}")
+    clip_points = sorted({c["operating_point"] for c in clips})
     for r in rows:
         key = r[first]
         specs = [(f"count of {SCORING} for {p} in this category",
@@ -937,6 +1001,14 @@ def binding_problems(folder):
                  for p in points]
         problems += _cell_problems(ctx, f"{section} table {first!r} row {key!r}, column {col!r}", key,
                                    CITE_RE.findall(r.get(col, "")), specs)
+        # The manifest count: the clips the run log lists in this category for one operating point (each operating
+        # point streams the whole manifest, warm-up clips included).
+        manifest = [(f"count of run-log clips in this category",
+                     lambda ctx, k, row, loc: row["Kind"] == "derived" and row["File"] == ctx["R7"]
+                     and loc.get("op") == "count" and set(loc) == {"op", "where"}
+                     and loc["where"] in [{"operating_point": p, "category": k} for p in clip_points])]
+        problems += _cell_problems(ctx, f"{section} table {first!r} row {key!r}, column {MANIFEST_COLUMN!r}", key,
+                                   CITE_RE.findall(r.get(MANIFEST_COLUMN, "")), manifest)
     return problems
 
 

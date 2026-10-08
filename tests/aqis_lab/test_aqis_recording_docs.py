@@ -234,6 +234,12 @@ OWNER_FACT_BREAKS = {
     "X3-appended-sentence": ("raters/evaluators can see or hear your recordings.",
                              "raters/evaluators can see or hear your recordings.\n\nOur technology partners may also "
                              "hear them."),
+    # WP-0.8-F12 (DEBT-026, closed in WP-0.9): a pre-ticked expected box, and a promise added to a fill-in line.
+    "Y1-pre-ticked-expected-box": ("- [ ] I agree to be recorded for the purpose above.",
+                                   "- [x] I agree to be recorded for the purpose above."),
+    "Y4-signature-line-addition": ("Signature: ______________________________",
+                                   "Signature: ______________________________ (by signing you also agree that our "
+                                   "technology partners may hear your recordings)"),
 }
 
 

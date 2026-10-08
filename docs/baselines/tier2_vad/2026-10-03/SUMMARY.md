@@ -39,19 +39,20 @@ Library versions are those the harness report prints for each operating point. W
 - Corpus manifest version `8fa135caac7e0511` [S36], 229 [S37] clips, with no category filter (`corpus_category_filter: []` in the run configuration). Each operating point streamed every clip; the first 5 [S38] clips are warm-up clips and are not scored.
 - Network conditions: impairment `None on network route (packet loss tested on benchmark packet-loss corpus category).` [S14]
 - Scored clips per category: each cell cites one count per operating point, in the order of the VADs table, so one value with six citations means all six operating points scored the same clips.
+- Clips in the manifest per category: the clips the run log lists in that category for `ten_vad`, warm-up clips included. Every operating point streamed the same clips, and the column adds up to the manifest's clip count above.
 
-| Category | Scored clips per operating point |
-| --- | --- |
-| clean speech | 29 [S39] [S40] [S41] [S42] [S43] [S44] |
-| speech + stationary noise | 48 [S45] [S46] [S47] [S48] [S49] [S50] |
-| speech + transient noise | 24 [S51] [S52] [S53] [S54] [S55] [S56] |
-| speech + babble/cross-talk | 36 [S57] [S58] [S59] [S60] [S61] [S62] |
-| quiet/whispered speech | 24 [S63] [S64] [S65] [S66] [S67] [S68] |
-| loud/clipped speech | 18 [S69] [S70] [S71] [S72] [S73] [S74] |
-| silence-only | 12 [S75] [S76] [S77] [S78] [S79] [S80] |
-| music/singing | 13 [S81] [S82] [S83] [S84] [S85] [S86] |
-| band-limited/telephony | 10 [S87] [S88] [S89] [S90] [S91] [S92] |
-| packet-loss/jitter | 10 [S93] [S94] [S95] [S96] [S97] [S98] |
+| Category | Scored clips per operating point | Clips in the manifest (warm-up included) |
+| --- | --- | --- |
+| clean speech | 29 [S39] [S40] [S41] [S42] [S43] [S44] | 34 [S360] |
+| speech + stationary noise | 48 [S45] [S46] [S47] [S48] [S49] [S50] | 48 [S361] |
+| speech + transient noise | 24 [S51] [S52] [S53] [S54] [S55] [S56] | 24 [S362] |
+| speech + babble/cross-talk | 36 [S57] [S58] [S59] [S60] [S61] [S62] | 36 [S363] |
+| quiet/whispered speech | 24 [S63] [S64] [S65] [S66] [S67] [S68] | 24 [S364] |
+| loud/clipped speech | 18 [S69] [S70] [S71] [S72] [S73] [S74] | 18 [S365] |
+| silence-only | 12 [S75] [S76] [S77] [S78] [S79] [S80] | 12 [S366] |
+| music/singing | 13 [S81] [S82] [S83] [S84] [S85] [S86] | 13 [S367] |
+| band-limited/telephony | 10 [S87] [S88] [S89] [S90] [S91] [S92] | 10 [S368] |
+| packet-loss/jitter | 10 [S93] [S94] [S95] [S96] [S97] [S98] | 10 [S369] |
 
 ## Headline metrics per VAD
 
@@ -119,7 +120,7 @@ Fixing the calculation is recorded as accepted debt in `docs/progress/DEBT.md`, 
 
 ## Sources
 
-Kind `direct`: the value appears in the file exactly as shown, at the locator (`line`, with `after` the label it follows; `key` in YAML; `where` plus `field` for the single matching JSONL record; `cell`, `output` and either `line` or a table `row` and `col` in a notebook). Kind `derived`: computed from the records the locator selects (`where`), or from other source IDs (`expr`, using their unrounded values), then rounded with Python `round(x, n)` to the stated decimals.
+Kind `direct`: the value appears in the file exactly as shown, at the locator (`line`, with `after` the label it follows; `key` in YAML; `where` plus `field` for the single matching JSONL record; `cell`, `output` and either `line` or a table `row` and `col` in a notebook). Kind `derived`: computed from the records the locator selects (`where`), or from other source IDs (`expr`, using their unrounded values); in the run log the records are its clip lines, one per operating point and clip (`operating_point`, `clip`, `category`, `warmup`). The result is then rounded with Python `round(x, n)` to the stated decimals.
 
 | ID | Value | File | Kind | Locator | Formula and inputs | Rounding |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -482,3 +483,13 @@ Kind `direct`: the value appears in the file exactly as shown, at the locator (`
 | S357 | `vad_eval_run_20260913_001_20261003_075907` | `03_report.ipynb` | direct | `{"cell": 2, "output": 0, "line": 2}` | — | as shown |
 | S358 | `vad_eval_run_20260913_001_20261003_074053` | `02_tier2_live_pipeline.ipynb` | direct | `{"cell": 2, "output": 0, "line": 2}` | — | as shown |
 | S359 | `libc++.so.1` | `02_tier2_live_pipeline.ipynb` | direct | `{"cell": 2, "output": 6, "line": 13}` | — | as shown |
+| S360 | `34` | `run.log` | derived | `{"where": {"operating_point": "ten_vad", "category": "clean speech"}, "op": "count"}` | count() of records where operating_point = ten_vad, category = clean speech (the run log's clip lines, one record per clip, warm-up clips included) | exact |
+| S361 | `48` | `run.log` | derived | `{"where": {"operating_point": "ten_vad", "category": "speech + stationary noise"}, "op": "count"}` | count() of records where operating_point = ten_vad, category = speech + stationary noise (the run log's clip lines, one record per clip, warm-up clips included) | exact |
+| S362 | `24` | `run.log` | derived | `{"where": {"operating_point": "ten_vad", "category": "speech + transient noise"}, "op": "count"}` | count() of records where operating_point = ten_vad, category = speech + transient noise (the run log's clip lines, one record per clip, warm-up clips included) | exact |
+| S363 | `36` | `run.log` | derived | `{"where": {"operating_point": "ten_vad", "category": "speech + babble/cross-talk"}, "op": "count"}` | count() of records where operating_point = ten_vad, category = speech + babble/cross-talk (the run log's clip lines, one record per clip, warm-up clips included) | exact |
+| S364 | `24` | `run.log` | derived | `{"where": {"operating_point": "ten_vad", "category": "quiet/whispered speech"}, "op": "count"}` | count() of records where operating_point = ten_vad, category = quiet/whispered speech (the run log's clip lines, one record per clip, warm-up clips included) | exact |
+| S365 | `18` | `run.log` | derived | `{"where": {"operating_point": "ten_vad", "category": "loud/clipped speech"}, "op": "count"}` | count() of records where operating_point = ten_vad, category = loud/clipped speech (the run log's clip lines, one record per clip, warm-up clips included) | exact |
+| S366 | `12` | `run.log` | derived | `{"where": {"operating_point": "ten_vad", "category": "silence-only"}, "op": "count"}` | count() of records where operating_point = ten_vad, category = silence-only (the run log's clip lines, one record per clip, warm-up clips included) | exact |
+| S367 | `13` | `run.log` | derived | `{"where": {"operating_point": "ten_vad", "category": "music/singing"}, "op": "count"}` | count() of records where operating_point = ten_vad, category = music/singing (the run log's clip lines, one record per clip, warm-up clips included) | exact |
+| S368 | `10` | `run.log` | derived | `{"where": {"operating_point": "ten_vad", "category": "band-limited/telephony"}, "op": "count"}` | count() of records where operating_point = ten_vad, category = band-limited/telephony (the run log's clip lines, one record per clip, warm-up clips included) | exact |
+| S369 | `10` | `run.log` | derived | `{"where": {"operating_point": "ten_vad", "category": "packet-loss/jitter"}, "op": "count"}` | count() of records where operating_point = ten_vad, category = packet-loss/jitter (the run log's clip lines, one record per clip, warm-up clips included) | exact |
