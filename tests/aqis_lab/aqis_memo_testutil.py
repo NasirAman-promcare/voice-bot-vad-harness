@@ -277,8 +277,8 @@ def lesson_problems(text, root=ROOT):
 
 def debt_problems(debt_text, root=ROOT):
     """Must-catch 2: every pinned phase 0 row (PHASE0_DEBT_IDS) is still in the register and is CLOSED, or names a
-    later WP first in its Target cell and cites an approval on main that names both the row (or its finding) and that
-    WP. The pinned rows are found by ID, never by their current wording (WP-0.9-F01), so a row rewritten to a later WP
+    later WP first in its Target cell and cites an approval on main with a line that names both the row (or its
+    finding) and that WP (WP-0.9-F08). The pinned rows are found by ID, never by their current wording (WP-0.9-F01), so a row rewritten to a later WP
     without the word "moved" still needs the approval. Any other row targeting phase 0 must be CLOSED, and every
     approval a Status cites must exist."""
     problems = []
@@ -303,11 +303,21 @@ def debt_problems(debt_text, root=ROOT):
             problems.append(f"{debt}: moved, but the Target cell does not start with a WP ID")
             continue
         approvals = set(re.findall(r"docs/approvals/[\w.-]+\.md", target + " " + status))
-        texts = [(Path(root) / a).read_text("utf-8") for a in approvals if (Path(root) / a).is_file()]
+        lines = [line for a in sorted(approvals) if (Path(root) / a).is_file()
+                 for line in (Path(root) / a).read_text("utf-8").splitlines()]
         finding_id = finding.split()[0]
-        if not any((debt in t or finding_id in t) and new.group(1) in t for t in texts):
-            problems.append(f"{debt}: no cited approval names {debt} (or {finding_id}) and {new.group(1)}")
+        # WP-0.9-F08: the row (its debt ID or its finding ID) and the new WP must be named on the same line of the
+        # approval, each as a whole ID, so a line about another row or another decision approves nothing.
+        if not any((names_id(line, debt) or names_id(line, finding_id)) and names_id(line, new.group(1))
+                   for line in lines):
+            problems.append(f"{debt}: no cited approval names {debt} (or {finding_id}) and {new.group(1)} on one line")
     return problems
+
+
+def names_id(line, identifier):
+    """True when line names identifier as a whole ID: not as part of a longer one such as DEBT-0160, WP-0.1-F40
+    or WP-4.50."""
+    return re.search(rf"(?<![\w.-]){re.escape(identifier)}(?![\w-]|\.\d)", line) is not None
 
 
 def unit_rows(root=ROOT):

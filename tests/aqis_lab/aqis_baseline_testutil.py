@@ -23,6 +23,8 @@ CHANGE LOG:
              DEBT-031: binding_problems requires one Conditions row per category of the run.
   2026-10-08 WP-0.9 round 2 F05: body_text exempts only the first Sources table headed ID and the first Raw
              inventory table headed Item, the tables sources_table and inventory_table read.
+  2026-10-08 WP-0.9 round 3 F09: summary_sections removes HTML comments, so sources_table, inventory_table and
+             binding_problems read the visible tables, as body_text does.
 """
 import ast
 import hashlib
@@ -189,9 +191,11 @@ def split_row(line):
 
 # ---------------------------------------------------------------------------------------------- SUMMARY.md reading
 def summary_sections(text):
-    """{heading: body} for the '## ' headings of SUMMARY.md."""
+    """{heading: body} for the '## ' headings of SUMMARY.md, HTML comments removed: the readers built on it
+    (sources_table, inventory_table, binding_problems) read the same text as body_text, so a commented-out table
+    cannot stand in for the visible one (WP-0.9-F09)."""
     out, current = {}, None
-    for line in text.splitlines():
+    for line in re.sub(r"<!--.*?-->", "", text, flags=re.S).splitlines():
         m = re.match(r"^## +(.+?) *$", line)
         if m:
             current = m.group(1)

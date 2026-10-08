@@ -476,6 +476,53 @@ def test_FR_0_1_02_check_reports_cells_in_the_wrong_row_or_column(tmp_path, swap
         assert any("cites" in p and ("row" in p or "column" in p) for p in problems), problems[:5]
 
 
+def _set_cell(section, first_header, row, col, value):
+    """Replace one cell of the visible table."""
+    def edit(lines):
+        i, j = _citations_of(lines, section, first_header, row, col)
+        cells = _cells(lines[i])
+        cells[j] = f" {value} "
+        lines[i] = "|".join(cells)
+    return edit
+
+
+def _first_inventory_sha(lines):
+    i = _table_lines(lines, "Raw inventory", "Item")[0]
+    header = [c.strip() for c in _cells(lines[_header_index(lines, "Raw inventory", "Item")])]
+    cells = _cells(lines[i])
+    cells[header.index("SHA-256")] = f" `{'0' * 64}` "
+    lines[i] = "|".join(cells)
+
+
+# WP-0.9-F09 (auditor probe A15-5): an edit to a visible table, each reported on its own (the control), must still
+# be reported when an unedited copy of that table sits above it inside an HTML comment.
+HIDDEN_TABLE_EDITS = {
+    "sources": ("Sources", "ID", _set_cell("Sources", "ID", "S6", "Value", f"`{'1' * 40}`")),
+    "raw-inventory": ("Raw inventory", "Item", _first_inventory_sha),
+    "headline-binding": (HEADLINE, "Operating point", CELL_SWAPS["headline-rows"]),
+}
+
+
+@pytest.mark.parametrize("case", list(HIDDEN_TABLE_EDITS), ids=list(HIDDEN_TABLE_EDITS))
+def test_FR_0_1_02_commented_out_table_does_not_hide_the_visible_one(tmp_path, case):
+    section, first_header, edit = HIDDEN_TABLE_EDITS[case]
+    for folder in folders():
+        original = read_text(folder / "SUMMARY.md").split("\n")
+        header = _header_index(original, section, first_header)
+        end = _table_lines(original, section, first_header)[-1] + 1
+        for hidden in (False, True):
+            copy = tmp_path / f"{folder.name}-{hidden}"
+            shutil.copytree(folder, copy)
+            lines = list(original)
+            edit(lines)
+            assert lines != original
+            if hidden:
+                lines[header:header] = ["<!--", *original[header:end], "-->", ""]
+            (copy / "SUMMARY.md").write_text("\n".join(lines), encoding="utf-8")
+            problems = summary_problems(copy, identifiers(folder)) + inventory_hash_problems(copy)
+            assert problems, f"{case}: the edited visible table passed (hidden copy above it: {hidden})"
+
+
 def _insert_after(heading_or_line, text):
     def edit(lines):
         i = next(i for i, line in enumerate(lines) if line.startswith(heading_or_line))

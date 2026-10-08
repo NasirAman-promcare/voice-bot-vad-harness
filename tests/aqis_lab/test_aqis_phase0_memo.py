@@ -126,7 +126,24 @@ DEBT_BREAKS = {
                                "DEBT-025: no cited approval names"),
     "moved-to-unnamed-wp": (lambda t: t.replace("| WP-4.5 (moved from WP-0.9", "| a later phase (moved from WP-0.9"),
                             "DEBT-025: moved, but the Target cell does not start with a WP ID"),
+    # WP-0.9-F08 (auditor break A15-1): WP-0.9.md names DEBT-016 (question 5, closed) and WP-4.5 (question 8, for
+    # DEBT-025), but on different lines, so it does not approve moving DEBT-016 to WP-4.5.
+    "moved-citing-unrelated-lines": (lambda t: _target_and_status(t, "DEBT-016", "WP-4.5",
+                                                                  "OPEN (`docs/approvals/WP-0.9.md`, question 5)"),
+                                     "DEBT-016: no cited approval names DEBT-016 (or WP-0.6-F06) and WP-4.5 on one line"),
+    # WP-0.9-F11 (auditor break A15-4): a new row, not pinned, left OPEN at a phase 0 target is reported too.
+    "new-unpinned-row-open-at-phase-0": (lambda t: _new_row(t, "DEBT-033", "DEBT-034", "WP-0.9", "OPEN"),
+                                         "DEBT-034: targets WP-0.9 (phase 0) but is OPEN"),
 }
+
+
+def _new_row(text, model, debt, target, status):
+    lines = text.split("\n")
+    i = next(i for i, l in enumerate(lines) if l.startswith(f"| {model} |"))
+    cells = lines[i].split(" | ")
+    cells[0], cells[5], cells[6] = f"| {debt}", target, status + " |"
+    lines.insert(i + 1, " | ".join(cells))
+    return "\n".join(lines)
 
 
 def _status(text, debt, status):
@@ -179,6 +196,28 @@ def test_FR_0_9_01_debt_check_reports_open_or_unapproved_rows(brk):
     assert any(expected in p for p in problems), problems
 
 
+@pytest.mark.parametrize("line, approved", [
+    ("- {debt} moves to {wp}.", True),
+    ("- {finding} (the row's finding) moves to {wp}.", True),
+    ("- {debt} is closed.\n- DEBT-099 moves to {wp}.", False),
+    ("- {finding}0 moves to {wp}.", False),
+    ("- {debt}0 moves to {wp}.", False),
+    ("- {debt} moves to {wp}0.", False),
+], ids=["debt-and-wp", "finding-and-wp", "different-lines", "longer-finding-id", "longer-debt-id", "longer-wp-id"])
+def test_FR_0_9_01_move_approval_names_row_and_wp_on_one_line(tmp_path, line, approved):
+    # WP-0.9-F08: an approval allows a move only on a line that names the row (its debt ID or its finding ID) and the
+    # new WP, each as a whole ID. Checked against a copy of the approvals folder holding only this approval line.
+    debt, wp = "DEBT-016", "WP-4.5"
+    finding = next(row[1] for row in debt_rows(read(DEBT)) if row[0] == debt).split()[0]
+    approval = tmp_path / "docs/approvals/WP-9.9.md"
+    approval.parent.mkdir(parents=True)
+    approval.write_text("STATUS: APPROVED\n" + line.format(debt=debt, finding=finding, wp=wp) + "\n", encoding="utf-8")
+    moved = _target_and_status(read(DEBT), debt, wp, "OPEN (`docs/approvals/WP-9.9.md`)")
+    problems = [p for p in debt_problems(moved, tmp_path) if p.startswith(f"{debt}:")]
+    assert problems == ([] if approved else
+                        [f"{debt}: no cited approval names {debt} (or {finding}) and {wp} on one line"])
+
+
 def test_FR_0_9_01_memo_passes_every_check(memo, tests):
     assert memo_problems(memo, tests) == []
 
@@ -214,6 +253,35 @@ def test_FR_0_9_02_owner_quotes_must_be_in_the_approval(memo, old, new):
     assert memo.count(old) == 1
     problems = prerequisite_problems(memo.replace(old, new))
     assert any("is not in docs/approvals/WP-0.9.md" in p for p in problems), problems
+
+
+BAD_PATHS = {
+    "folder": "docs/recording",
+    "outside-repository": "/etc/hostname",
+    "escaping-repository": "docs/" + "../" * len(ROOT.resolve().parts) + "etc/hostname",
+}
+
+
+@pytest.mark.parametrize("kind", list(BAD_PATHS), ids=list(BAD_PATHS))
+def test_FR_0_9_01_lessons_cite_files_in_the_repository(memo, kind):
+    # WP-0.9-F10 (auditor break A15-2): a lesson's record must be a file in this repository, as for evidence links.
+    bad = BAD_PATHS[kind]
+    assert os.path.exists(bad) or os.path.exists(ROOT / bad)
+    body = sections(memo)["Lessons for the process"]
+    edited = memo.replace(body, body.replace("`docs/process/AUDIT_PROTOCOL.md`", f"`{bad}`", 1))
+    assert edited != memo
+    assert any(p.endswith(f"cites {bad}, which does not exist") for p in lesson_problems(edited)), bad
+
+
+@pytest.mark.parametrize("kind", list(BAD_PATHS), ids=list(BAD_PATHS))
+def test_FR_0_9_02_pack_v1_plan_cites_files_in_the_repository(memo, kind):
+    # WP-0.9-F10 (auditor break A15-3): a Pack v1 plan bullet's path must be a file in this repository.
+    bad = BAD_PATHS[kind]
+    assert os.path.exists(bad) or os.path.exists(ROOT / bad)
+    plan = sections(sections(memo)["Phase 1 prerequisites"], 3)["Pack v1 plan"]
+    edited = memo.replace(plan, plan.replace("`docs/recording/RECORDING_GUIDE.md`", f"`{bad}`", 1))
+    assert edited != memo
+    assert f"Pack v1 plan cites {bad}, which does not exist" in prerequisite_problems(edited), bad
 
 
 def test_FR_0_9_02_phase_1_prerequisites_come_from_their_sources(memo):
