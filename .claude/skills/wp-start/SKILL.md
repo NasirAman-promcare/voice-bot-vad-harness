@@ -1,20 +1,23 @@
 ---
 name: wp-start
-description: Start an AQIS lab work package by writing a complete plan for owner approval, without changing any code. Use when the owner types /wp-start followed by a WP ID.
-disable-model-invocation: true
-effort: xhigh
-argument-hint: "[WP-ID, for example WP-0.2]"
+description: Plan an AQIS lab work package against its spec and self-approve the plan when it conforms, raising DECISION blockers only for real deviations. Use at the start of a WP, normally from wp-run.
+effort: high
+argument-hint: "[WP-ID]"
 ---
 
-Plan work package $ARGUMENTS. Do not create or change any code, tests, locks or configuration in this skill.
+Plan work package $ARGUMENTS. Change no code, tests, locks or configuration in this skill.
 
-1. Read `CLAUDE.md`, every file in `.claude/rules/`, `docs/specs/phase-0/00-PHASE-0-OVERVIEW.md`, and the spec file for $ARGUMENTS under `docs/specs/`. Read every file the spec lists under "Read first".
-2. Check dependencies: every WP under "Depends on" must be MERGED in `docs/progress/STATUS.md`. If not, use the ask-owner skill.
-3. Inspect the parts of the repository the spec touches, read-only. Note anything that contradicts the spec or the environment probes in `docs/environment/`.
-4. Write `docs/progress/$ARGUMENTS/PLAN.md` from `docs/process/templates/WP_PLAN.md`:
-   - Every requirement ID in the spec, each with: approach, files to create, existing files and functions to change (the change budget), tests to write (named by requirement ID), and the acceptance commands that prove it.
-   - "Owner needs": everything required from the owner (data, access, network hosts, decisions, Colab or Oracle runs), and when it is needed.
-   - Risks and open questions. Mark any requirement you believe cannot be met as written.
-   - Deviations: write "None", or list each proposed deviation with its reason for the owner to accept or reject. Never deviate silently.
-5. Set $ARGUMENTS to `PLANNED` in `docs/progress/STATUS.md`. Commit and push both files.
-6. End with `🛑 OWNER ACTION NEEDED: review docs/progress/$ARGUMENTS/PLAN.md; if you agree, commit docs/approvals/$ARGUMENTS.md to main (template: docs/process/templates/APPROVAL.md)`, followed by your numbered questions.
+1. Read the spec for $ARGUMENTS, the phase overview, every file the spec lists under "Read first", and the relevant lines of `docs/index/MAP.md`. Inspect only the code the spec's "Touches" names.
+2. Write `docs/progress/$ARGUMENTS/PLAN.md` from `docs/process/templates/WP_PLAN.md`:
+   - every requirement ID with approach, files, change budget, tests and acceptance command;
+   - the must-catch list mapped to acceptance tests and break recipes;
+   - the build split: what you write, what goes to work orders (rule of thumb in `.claude/rules/50-tokens-and-context.md`);
+   - owner needs, each with its capability class and when it is needed;
+   - deviations from the spec: "None", or each one with its reason.
+3. Run the `plan-checker` agent on the spec and the plan. Fix every coverage gap it reports.
+4. Decide:
+   - No deviations, no guarded edits beyond the spec's list, no new dependency the spec does not allow: write `PLAN-STATUS: SELF-APPROVED (<date>, plan-checker clean)` at the top of the plan.
+   - Otherwise: one DECISION blocker per deviation, with options and a recommendation. Mark the parts that do not depend on them; those proceed.
+5. Set the status fragment to PLANNED (or IN-BUILD if self-approved), commit and push.
+
+Never ask the owner to approve a conforming plan, and never deviate silently.

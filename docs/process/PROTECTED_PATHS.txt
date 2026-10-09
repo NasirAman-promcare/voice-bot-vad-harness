@@ -3,17 +3,18 @@
 # Order of checks: NEVER, then LAB-OWNED exceptions, then GUARDED.
 
 [NEVER]
-docs/baselines/tier2_vad/*/raw/**
-# Claude can never change these. Approvals cannot unlock them. The owner edits them directly.
+# Claude can never change these. Approvals and spec allowances cannot unlock them. The owner edits them directly.
 CLAUDE.md
 .claude/**
 docs/specs/**
 docs/process/**
 docs/approvals/**
+docs/baselines/tier2_vad/*/raw/**
 
 [GUARDED]
-# Existing VAD harness and repository-wide files. Claude may change a path only when an
-# approved file in docs/approvals/ contains the line:  ALLOW-EDIT: <path or pattern>
+# Existing VAD harness and repository-wide files. Claude may change a path only when the WP spec on
+# origin/main lists it under "## Allowed guarded edits" (from WP-1.0) or an approved file in
+# docs/approvals/ contains the line:  ALLOW-EDIT: <path or pattern>
 bots/**
 config/**
 corpus/**
@@ -40,10 +41,9 @@ README.md
 
 [LAB-OWNED]
 # Lab areas inside guarded folders. Claude may create and edit files here
-# (existing lab tests still need approval to be modified or deleted; see the stop gate).
+# (modifying existing tests still follows the test-change policy in CHANGE_CONTROL.md section 5).
 config/aqis_lab/**
 notebooks/aqis_lab/**
 requirements/aqis_lab/**
 tests/aqis_lab/**
 .github/workflows/aqis-lab-*.yml
-

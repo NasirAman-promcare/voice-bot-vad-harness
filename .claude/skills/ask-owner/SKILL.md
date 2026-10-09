@@ -1,12 +1,11 @@
 ---
 name: ask-owner
-description: Stop and ask the project owner for help. Use immediately whenever you are blocked or missing access, data, credentials, a network host or a decision; when a spec is unclear, contradictory or impossible; when a test seems wrong; or whenever you feel tempted to simplify, mock, skip, approximate or work around anything.
+description: Ask the project owner for something only they can provide (ACCESS, COMPUTE, EXTERNAL-AI, DECISION, PHYSICAL or KIT). Use only after checking that the rules do not let you do it yourself and, for anything but a capability, that the escalation ladder is exhausted.
 ---
 
-Follow `.claude/rules/10-stop-and-ask.md` exactly:
+1. Name the capability class. If none fits, do not ask: climb the ladder or decide with a decision record.
+2. Write `docs/progress/blockers.d/BLK-<WP>-<nn>.md` from `docs/process/templates/BLOCKER.md`: what you need, why, what you tried (commands and results), options with trade-offs and your recommendation, at most 7 exact steps the owner can copy, the time it takes, and what you do meanwhile.
+3. Commit and push it.
+4. Continue all work that does not depend on the answer. End your turn or report with `🛑 OWNER ACTION NEEDED (<class>): BLK-<WP>-<nn>` followed by the steps.
 
-1. Append a BLOCKER entry to `docs/progress/BLOCKERS.md` using `docs/process/templates/BLOCKER.md`.
-2. Commit and push it.
-3. End your turn with a message that starts with `🛑 OWNER ACTION NEEDED`, then numbered, plain-language steps for the owner, then what stays paused.
-
-Do not continue any work that depends on the answer.
+Batch requests: if several needs will arise in this WP, raise them together, ordered by what they unblock.
