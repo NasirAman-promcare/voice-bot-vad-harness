@@ -1,0 +1,18 @@
+# MC: WO-1.0-10 #8
+# behaviour: no key appears in any request of either client
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_10.py::test_FR_1_0_14_mc08_no_key_in_any_request[gemini]
+diff --git a/tools/outsourcing/gemini_client.py b/tools/outsourcing/gemini_client.py
+index af2f461..248257d 100644
+--- a/tools/outsourcing/gemini_client.py
++++ b/tools/outsourcing/gemini_client.py
+@@ -251,7 +251,9 @@ class GeminiClient:
+ 
+         while True:
+             total_waited += self.governor.wait_for_slot(self.spec.name, input_tokens)
+-            req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
++            req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json",
++                                                                  "x-goog-api-key": __import__("os").environ.get("GEMINI_API_KEY", "")},
++                                         method="POST")
+ 
+             try:
+                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:

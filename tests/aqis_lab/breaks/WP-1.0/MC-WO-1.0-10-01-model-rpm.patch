@@ -1,0 +1,17 @@
+# MC: WO-1.0-10 #1
+# behaviour: requests in any 60-second window never exceed the effective RPM of the model (window count and spacing both come from the model's rpm)
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_10.py::test_FR_1_0_14_mc01_model_rpm_never_exceeded_in_any_window
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_10.py::test_FR_1_0_14_mc01_effective_rpm_from_the_real_pool_file
+diff --git a/tools/outsourcing/limits.py b/tools/outsourcing/limits.py
+index 606a60a..5a4f837 100644
+--- a/tools/outsourcing/limits.py
++++ b/tools/outsourcing/limits.py
+@@ -220,7 +220,7 @@ def effective(
+             return None
+         return max(1, math.floor(val * safety * adaptive_factor / share))
+ 
+-    eff_rpm = calc_eff(model.rpm, "rpm")
++    eff_rpm = None
+     eff_tpm = calc_eff(model.tpm_input, "tpm_input")
+     rps_sp = share / (model.provider.rps * safety) if model.provider.rps and model.provider.rps > 0 else 0.0
+     model_sp = 60.0 / eff_rpm if eff_rpm and eff_rpm > 0 else 0.0

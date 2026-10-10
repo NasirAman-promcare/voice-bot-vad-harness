@@ -1,0 +1,16 @@
+# MC: WO-1.0-10 #4
+# behaviour: a per-minute rejection lowers the model's adaptive factor
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_10.py::test_FR_1_0_14_mc04_minute_rejection_waits_retry_delay_and_slows_down
+diff --git a/tools/outsourcing/governor.py b/tools/outsourcing/governor.py
+index acff850..0592dfc 100644
+--- a/tools/outsourcing/governor.py
++++ b/tools/outsourcing/governor.py
+@@ -270,7 +270,7 @@ class Governor:
+ 
+         if verdict.kind in ("MINUTE_TOKENS", "MINUTE_REQUESTS"):
+             ms.consecutive_successes = 0
+-            ms.adaptive_factor = max(0.25, ms.adaptive_factor * 0.75)
++            ms.adaptive_factor = max(0.25, ms.adaptive_factor)
+             m_starts = [t for t, _ in ms.starts if now - t < 60.0]
+             ms.cooldown_until = now + max(verdict.retry_delay or 30.0, (m_starts[0] + 60.0 - now) if m_starts else 0.0) + self.rng.uniform(1.0, 5.0)
+         elif verdict.kind in ("DAILY", "MONTHLY"):

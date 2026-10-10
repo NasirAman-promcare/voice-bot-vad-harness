@@ -1,0 +1,16 @@
+# MC: WO-1.0-10 #3
+# behaviour: a daily rejection marks the model (or the provider's models) exhausted until the reset
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_10.py::test_FR_1_0_14_mc03_gemini_daily_rejection_stops_at_once_with_resets
+diff --git a/tools/outsourcing/governor.py b/tools/outsourcing/governor.py
+index acff850..353e0a7 100644
+--- a/tools/outsourcing/governor.py
++++ b/tools/outsourcing/governor.py
+@@ -276,7 +276,7 @@ class Governor:
+         elif verdict.kind in ("DAILY", "MONTHLY"):
+             reset_ts = self._calc_reset_ts(verdict, now, verdict.kind == "MONTHLY", m_spec.provider)
+             if verdict.kind == "DAILY" and verdict.scope != "provider":
+-                ms.exhausted_until = reset_ts
++                ms.cooldown_until = reset_ts
+             else:
+                 for m in self.pool.models().values():
+                     if m.provider.name == m_spec.provider.name:

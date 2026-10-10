@@ -1,0 +1,16 @@
+# MC: WO-1.0-10 #5
+# behaviour: overload backs off exponentially (base 5, factor 3, cap 120) with full jitter
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_10.py::test_FR_1_0_14_mc05_overload_backs_off_exponentially_then_service_busy[gemini]
+diff --git a/tools/outsourcing/gemini_client.py b/tools/outsourcing/gemini_client.py
+index af2f461..6844ff7 100644
+--- a/tools/outsourcing/gemini_client.py
++++ b/tools/outsourcing/gemini_client.py
+@@ -130,7 +130,7 @@ def _handle_gemini_retry(
+         retries["overload"] += 1
+         if retries["overload"] > 5:
+             raise ServiceBusy("Service overloaded after retries")
+-        governor.sleeper(governor.rng.uniform(0.0, min(120.0, 5.0 * (3.0 ** (retries["overload"] - 1)))))
++        governor.sleeper(governor.rng.uniform(0.0, min(120.0, 5.0 * (2.0 ** (retries["overload"] - 1)))))
+     elif verdict.kind == "SERVER_ERROR":
+         retries["server"] += 1
+         if retries["server"] > 2:

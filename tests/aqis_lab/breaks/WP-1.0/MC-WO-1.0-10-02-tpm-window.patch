@@ -1,0 +1,16 @@
+# MC: WO-1.0-10 #2
+# behaviour: input tokens in any 60-second window never exceed the model's effective TPM
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_10.py::test_FR_1_0_14_mc02_input_tokens_within_tpm_in_any_window
+diff --git a/tools/outsourcing/governor.py b/tools/outsourcing/governor.py
+index acff850..0e1cd96 100644
+--- a/tools/outsourcing/governor.py
++++ b/tools/outsourcing/governor.py
+@@ -129,7 +129,7 @@ class Governor:
+             delays.append(ms.starts[-1][0] + eff.model_spacing - now)
+         if eff.tpm_input is not None:
+             mrt = sum(tok for t, tok in ms.starts if now - t < 60.0)
+-            if ms.starts and (mrt + input_tokens > eff.tpm_input):
++            if ms.starts and (mrt > eff.tpm_input):
+                 accum = mrt + input_tokens
+                 for t, tok in ms.starts:
+                     accum -= tok

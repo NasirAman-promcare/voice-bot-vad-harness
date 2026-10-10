@@ -1,0 +1,16 @@
+# MC: WO-1.0-10 #6
+# behaviour: a request over a whole per-minute token allowance raises StepTooLarge without being sent
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_10.py::test_FR_1_0_14_mc06_over_whole_minute_allowance_is_not_sent
+diff --git a/tools/outsourcing/gemini_client.py b/tools/outsourcing/gemini_client.py
+index af2f461..75a34e0 100644
+--- a/tools/outsourcing/gemini_client.py
++++ b/tools/outsourcing/gemini_client.py
+@@ -240,7 +240,7 @@ class GeminiClient:
+         ms = self.governor.model_stats[self.spec.name]
+         eff = effective(self.governor.pool, self.spec, ms.adaptive_factor, ms.learned_limits)
+ 
+-        if input_tokens > self.spec.max_input_tokens or input_tokens > eff.input_token_ceiling:
++        if input_tokens > self.spec.max_input_tokens:
+             raise StepTooLarge(f"Input tokens ({input_tokens}) exceeds max input limit ({self.spec.max_input_tokens}) or TPM limit ({eff.input_token_ceiling})")
+ 
+         url = f"{self.base_url}/v1beta/models/{self.spec.name}:generateContent"
