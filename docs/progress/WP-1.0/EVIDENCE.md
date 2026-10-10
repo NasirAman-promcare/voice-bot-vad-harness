@@ -37,8 +37,8 @@ gemini-2.5-flash: present
 gemini-3.5-flash-lite: present
 gemini-3.1-flash-lite: present
 codestral-2508: present
-ministral-14b-2512: present
 mistral-large-2512: missing
+ministral-14b-2512: present
 exit 2
 ```
 Both providers' credentials work, since both listings succeeded. Two pool names need the owner (BLK-1.0-04). The other acceptance commands wait for the remaining work orders.
