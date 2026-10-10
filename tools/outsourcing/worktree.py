@@ -11,6 +11,7 @@ NOT IN SCOPE:
   - Direct file editing or generation.
 CHANGE LOG:
   2026-10-10 WO-1.0-11 created.
+  2026-10-10 WO-1.0-11 FIX 1: split open_worktree to follow shape rules; no-op commit when clean.
 """
 from __future__ import annotations
 
@@ -41,7 +42,7 @@ class WorktreeError(Exception):
     def __init__(self, message: str, paths: tuple[str, ...] = ()) -> None:
         super().__init__(message)
         self.message = message
-        self.paths = paths
+        self.paths = tuple(paths)
 
 
 @dataclass(frozen=True)
@@ -132,13 +133,8 @@ def _check_diverged_or_ahead(root_path: Path, local_branch: str, remote_ref: str
     return True, True, True
 
 
-def open_worktree(root: str | Path, wo_id: str, wp_branch: str) -> Worktree:
-    root_path = Path(root)
-    wo_branch = f"wo/{wo_id}"
-    wt_dir = root_path / ".relay" / "wt" / wo_id
-
+def _prepare_branch(root_path: Path, wo_branch: str, wp_branch: str) -> None:
     _git_cmd(root_path, "fetch", "origin", check=False)
-
     remote_wo_ref = f"origin/{wo_branch}"
     has_local, has_remote, is_diverged = _check_diverged_or_ahead(root_path, wo_branch, remote_wo_ref)
 
@@ -150,12 +146,12 @@ def open_worktree(root: str | Path, wo_id: str, wp_branch: str) -> Worktree:
         _git_cmd(root_path, "branch", wo_branch, wp_head)
     elif has_remote and not has_local:
         _git_cmd(root_path, "branch", wo_branch, remote_wo_ref)
-    elif has_remote and has_local and has_remote:
+    elif has_remote and has_local:
         remote_sha = _git_cmd(root_path, "rev-parse", remote_wo_ref).strip()
         _git_cmd(root_path, "update-ref", f"refs/heads/{wo_branch}", remote_sha)
 
-    base_commit = _git_cmd(root_path, "rev-parse", wp_branch).strip()
 
+def _ensure_worktree_dir(root_path: Path, wt_dir: Path, wo_branch: str) -> None:
     if wt_dir.exists():
         wt_branch = _git_cmd(wt_dir, "rev-parse", "--abbrev-ref", "HEAD", check=False).strip()
         if wt_branch != wo_branch:
@@ -165,6 +161,8 @@ def open_worktree(root: str | Path, wo_id: str, wp_branch: str) -> Worktree:
         wt_dir.parent.mkdir(parents=True, exist_ok=True)
         _git_cmd(root_path, "worktree", "add", str(wt_dir), wo_branch)
 
+
+def _merge_wp_branch_if_needed(wt_dir: Path, wo_branch: str, wp_branch: str) -> None:
     wp_head_sha = _git_cmd(wt_dir, "rev-parse", wp_branch).strip()
     wo_head_sha = _git_cmd(wt_dir, "rev-parse", "HEAD").strip()
     mb = _git_cmd(wt_dir, "merge-base", wo_head_sha, wp_head_sha).strip()
@@ -181,6 +179,18 @@ def open_worktree(root: str | Path, wo_id: str, wp_branch: str) -> Worktree:
             conflicts = tuple(line[3:].strip() for line in status_out.splitlines() if line)
             _git_cmd(wt_dir, "merge", "--abort", check=False)
             raise WorktreeError(f"Merge conflict merging {wp_branch} into {wo_branch}", paths=conflicts)
+
+
+def open_worktree(root: str | Path, wo_id: str, wp_branch: str) -> Worktree:
+    root_path = Path(root)
+    wo_branch = f"wo/{wo_id}"
+    wt_dir = root_path / ".relay" / "wt" / wo_id
+
+    _prepare_branch(root_path, wo_branch, wp_branch)
+    base_commit = _git_cmd(root_path, "rev-parse", wp_branch).strip()
+
+    _ensure_worktree_dir(root_path, wt_dir, wo_branch)
+    _merge_wp_branch_if_needed(wt_dir, wo_branch, wp_branch)
 
     status_out = _git_cmd(wt_dir, "status", "--porcelain", check=False)
     if status_out.strip():
@@ -202,7 +212,15 @@ def commit(worktree: Worktree, paths: tuple[str, ...], message: str) -> None:
     if not paths:
         return
     for p in paths:
-        _git_cmd(worktree.path, "add", p)
+        _git_cmd(worktree.path, "add", "-f", p)
+
+    diff_proc = subprocess.run(
+        ["git", "diff", "--cached", "--quiet"],
+        cwd=worktree.path,
+    )
+    if diff_proc.returncode == 0:
+        return
+
     _git_cmd(worktree.path, "commit", "-m", message)
 
 
