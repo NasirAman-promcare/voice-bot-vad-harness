@@ -11,6 +11,7 @@ NOT IN SCOPE:
   - Interacting with network or models.
 CHANGE LOG:
   2026-10-10 WO-1.0-02 created.
+  2026-10-10 WP-1.0 FR-1.0-02 (Claude, DEC-1.0-05): bundle errors and refused imports get their own fix reason.
 """
 from __future__ import annotations
 
@@ -65,6 +66,11 @@ def build_fix_order(
 def _format_stop_reason(stop_reason: str, lines: list[str]) -> None:
     if stop_reason == "MAX_TOKENS":
         msg = "Your answer was cut off before the end. Return the same files again, complete; keep comments and docstrings short."
+    elif stop_reason.startswith(("Bundle error:", "Import refused:")):
+        msg = (f"Your answer could not be imported ({stop_reason}). Answer in RETURN_FORMAT form only: start with the "
+               "line `=== MANIFEST ===` and write nothing before, between or after the blocks, not even a code fence "
+               "around the whole answer; a code fence is allowed only inside a FILE block, right after its marker. "
+               "Return the files again, complete.")
     else:
         msg = f"Your answer was blocked or empty ({stop_reason}). Return the files again, complete, in RETURN_FORMAT form."
     lines.append(f"## Reason for fix\n{msg}\n")

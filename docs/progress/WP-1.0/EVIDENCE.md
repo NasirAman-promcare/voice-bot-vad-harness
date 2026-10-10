@@ -62,3 +62,19 @@ The commands, one per file: `.venv/bin/python -m pytest tests/aqis_lab/<file> -q
 Each failure names the missing module or file that its work order creates. The first WO-1.0-09 run had 3 kit-parity cases passing vacuously: a missing module also exits 1. Those cases now also require the differing file's name in the output, and all 40 fail.
 
 The stop gate's fast suite (`-x`) stops at the first of these until the relay delivers the orders. The audit gate is clean: `.venv/bin/python -m tools.audit.gate --base origin/main` printed `0 findings: OK (0.6 s)`. Three scratch strings in the WO-1.0-07 test hold the skip and xfail markers that the stop gate must block. They carry `# audit-allow: scratch weakening the stop gate must block`.
+
+## WO-1.0-04 relay run 2 (2026-10-10, `--timeout 1200`) and the fix-reason correction (DEC-1.0-05)
+Command: `.venv/bin/python -m tools.outsourcing.relay --wo docs/outsourcing/orders/WO-1.0-04.md --timeout 1200`. Report, verbatim:
+```
+EXHAUSTED
+Parts: 0/6
+Requests: codestral-2508: 3, gemini-3.5-flash: 5, gemini-3.6-flash: 1, gemini-3.7-flash: 6, gemini-3.8-flash: 6 | Retries: OVERLOADED: 16, DAILY: 2 | Minutes waited: 9.3
+Tokens: in 276075, out 6357
+Checks:
+  none run
+Reason: Bundle error: Non-blank text outside block: '```text'
+EXIT 8
+```
+- **Gemini.** Every Gemini model answered "overloaded" (16 retries) or "daily quota" (2).
+- **Codestral.** codestral-2508 answered three times. Each reply began with ```` ```text ````, which `parse_bundle` refuses (WO-1.0-01 B5). The fix turns wrongly called the answer "blocked or empty".
+- **Fix.** `fixorder._format_stop_reason` now gives bundle errors and refused imports their own reason, which restates RETURN_FORMAT. The test was written first: `.venv/bin/python -m pytest tests/aqis_lab/outsourcing/test_relay_run_fixes_wo_1_0_02.py -q` gave `2 failed, 4 passed` before the fix. After it, `.venv/bin/python -m pytest tests/aqis_lab/outsourcing -q -m "not slow and not gpu and not colab and not oracle and not network"` gave `347 passed in 68.22s`.
