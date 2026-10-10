@@ -12,7 +12,8 @@ CHANGE LOG:
   2026-10-10 WO-1.0-02 created.
   2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): the read-only-tests check compares each read-only test with
     its base-commit version (it reported a pass without comparing); a changed read-only test is an integrity
-    failure in scope or that check; kit-staging/ code is scanned with the gate's code patterns.
+    failure in scope or that check; kit-staging/ code is scanned with the gate's code patterns; check commands run
+    with PYTHONDONTWRITEBYTECODE=1 so a stale bytecode cache can never stand in for a changed file.
 """
 from __future__ import annotations
 
@@ -166,6 +167,9 @@ def _run_command(
 
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)
+    # No bytecode caches: a fix that keeps a file's size within the same second would otherwise run the cached old code,
+    # and cache files would show up as changes in the next scope check.
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     if env_override:
         env.update(env_override)
 

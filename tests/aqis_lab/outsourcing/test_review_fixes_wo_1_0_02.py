@@ -63,3 +63,24 @@ def test_FR_1_0_02_kit_staging_code_is_pattern_scanned(repo, tmp_path, suffix, p
     results = mod("checks").quick_checks(order, part("1", (hook,)), repo, tmp_path / "logs", base, sys.executable, 120)
     by_name = {r.name: r for r in results.results}
     assert by_name["patterns"].passed is passes
+
+
+def test_FR_1_0_02_checks_never_run_a_stale_compiled_test(repo, tmp_path):
+    # B7 item 6 and WO-1.0-11 E8: a fix turn may change one character of a test. With the same size and the same
+    # modification second, a bytecode cache written by the previous run would look current and run the old test.
+    import os
+
+    base = head(repo)
+    write(repo, STEPS[0][0], module_text("alpha"))
+    broken = scratch_test_source("alpha").replace("assert VALUE == 3", "assert VALUE == 4")
+    write(repo, STEPS[0][1], broken)
+    order, _ = load(repo)
+    first = mod("checks").quick_checks(order, part("1", STEPS[0]), repo, tmp_path / "a", base, sys.executable, 120)
+    assert first.passed is False and first.results[-1].name == "tests"
+    test_path = repo / STEPS[0][1]
+    stamp = test_path.stat()
+    write(repo, STEPS[0][1], scratch_test_source("alpha"))
+    os.utime(test_path, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+    assert test_path.stat().st_size == stamp.st_size and test_path.stat().st_mtime_ns == stamp.st_mtime_ns
+    second = mod("checks").quick_checks(order, part("1", STEPS[0]), repo, tmp_path / "b", base, sys.executable, 120)
+    assert second.passed is True, [(r.name, r.summary) for r in second.results]
