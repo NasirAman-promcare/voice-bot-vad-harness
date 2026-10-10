@@ -78,3 +78,9 @@ EXIT 8
 - **Gemini.** Every Gemini model answered "overloaded" (16 retries) or "daily quota" (2).
 - **Codestral.** codestral-2508 answered three times. Each reply began with ```` ```text ````, which `parse_bundle` refuses (WO-1.0-01 B5). The fix turns wrongly called the answer "blocked or empty".
 - **Fix.** `fixorder._format_stop_reason` now gives bundle errors and refused imports their own reason, which restates RETURN_FORMAT. The test was written first: `.venv/bin/python -m pytest tests/aqis_lab/outsourcing/test_relay_run_fixes_wo_1_0_02.py -q` gave `2 failed, 4 passed` before the fix. After it, `.venv/bin/python -m pytest tests/aqis_lab/outsourcing -q -m "not slow and not gpu and not colab and not oracle and not network"` gave `347 passed in 68.22s`.
+
+## Relay runs 3 and 4 (2026-10-10) → BLK-1.0-06 (ACCESS) and BLK-1.0-07 (DECISION)
+- **WO-1.0-04, run 3** (default model, new fix wording). Report: `EXHAUSTED`, `Requests: codestral-2508: 3, gemini-3.8-flash: 1 | Retries: DAILY: 1`, `Reason: Bundle error: Non-blank text outside block: '```text'`, `EXIT 8`. The fix turn in `attempt-3/request.json` held the DEC-1.0-05 wording. Codestral's attempts 2 and 3 still began with `'```text\n=== MANIFEST ==='`.
+- **`relay --status`.** gemini-3.8, 3.6 and 3.5-flash show `Exhausted until: 2026-10-10T23:59:59…`, each with `Count today: 0/20`. `.relay/governor.json` shows `exhausted_until` for all four T1 flash models, empty `daily_counts` for them, and `codestral-2508` `{'2026-10-10': 9}`.
+- **WO-1.0-04, run 4** (order pinned to `mistral-large-2512`). Report: `ACCESS: add or fix the mistral credential on the aqis-lab environment`, `CREDENTIAL`, `Requests: mistral-large-2512: 1 | Retries: CREDENTIAL: 1`, `EXIT 7`.
+- **`.venv/bin/python -m tools.outsourcing.relay --models`** (AT-1.0-09). Every Gemini pool model and `codestral-2508` print `present`; `ministral-14b-2512: present`; `mistral-large-2512: missing`; exit 0.

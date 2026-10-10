@@ -2,7 +2,7 @@
 id: WO-1.0-04
 wp: WP-1.0
 title: Progress fragments, generated tables, owner queue, lint and migration
-model: mistral-large-2512
+model: default
 channel: api
 attempt_budget: 3
 risk_tier: T1
