@@ -12,6 +12,6 @@
   - A read-only test changed before the checks now gives an integrity failure (relay exit 9), whether scope or that check sees it first. Before, scope reported it as an ordinary violation, which would have produced a fix turn.
   - `kit-staging/` code, which the audit gate does not scan, now gets the gate's code patterns. WO-1.0-07 B7 relies on the relay to scan staged hooks.
 - **Open, for the audit (not blocking WO-1.0-11):**
-  - `checks.py` is 380 lines, above the 300 the order sets but within the 400-line hard limit.
+  - `checks.py` is 385 lines, above the 300 the order sets but within the 400-line hard limit.
   - A few broad `except Exception` handlers turn errors into failed checks. None hides an error as a pass.
   - Unit tests are thin: 11 in all.
