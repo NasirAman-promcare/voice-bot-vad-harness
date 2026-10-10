@@ -96,6 +96,25 @@ Six modules, each usable and tested on its own: the shared records and exit code
 - **B12** The step log is a Markdown file with one table per kind: runs (UTC time, the order's SHA-256, WP branch, model), accepted parts (label, files with SHA-256, attempts, model, provider, model version, prompt and output tokens, seconds waited), model switches (UTC time, part label, from model, to model, reason) and stops (UTC time, reason such as `PAUSED-DAILY`, `PAUSED-BUSY` or `QUESTIONS`, reset time or empty). `render(parse(text)) == text` for every log `render` produced. Unknown or malformed lines raise `StepLogError`; a log is never treated as empty because it failed to parse. An absent file means an empty log.
 - **B13** `next_part(plan)`: the accepted files are those of every accepted part. The next part is the first plan step that has a file not accepted; if some of its files are already accepted (an interrupted split), the part holds only the remaining files, labelled `<k>.<n>` with the next free sub-number. Matching is by path, so an amended plan keeps accepted files. `None` means every output is accepted. `wp_branch` is the WP branch of the first run.
 
+- **B14** Interface details the acceptance tests rely on (added by Claude with the acceptance test, 2026-10-10):
+  - **`Request`** has fields `chat` (the `chat.ChatRequest`), `sent_paths`, `missing_paths` and `characters`. `characters` is the length of the system text plus every turn's text. `StepPart(label, paths)` takes a string label (`"2"`, `"2.1"`) and a tuple of paths.
+  - **Check records.** `CheckResult` has fields `name`, `passed`, `summary`, `log_path`, `output_paths` and `integrity`. `CheckResults(results)` holds a tuple of them in run order, with properties `passed` (every result passed) and `integrity_failed`.
+  - **Check names.** In B7 order, the checks are named `scope`, `headers`, `patterns`, `read-only-tests`, `compile` and `tests`. The verify commands are `verify-1`, `verify-2`, and so on. A check that does not run has no result.
+  - **Headers (B7 item 2).** Every `.py` file with a non-blank line, test files included, needs all six section labels of `CHANGE_CONTROL.md` section 1 in its module docstring.
+  - **Patterns (B7 item 3).** Choose the table with `tools.audit.gate.scan_table(path)`. Apply it, with `tools.audit.patterns.ALLOW_RE`, exactly as `gate.check_patterns_and_headers` applies them to added lines, but to every line. This is the gate's importable function, so no QUESTIONS are needed for it.
+  - **Interpreter.** A leading `.venv/bin/python` in a verify command is replaced by the interpreter passed as `python`.
+  - **Fix orders.** `build_fix_order` reads each failed result's log from its `log_path`. `stop_reason` is `None` when the fix order is about failed checks. When the 120-line cap binds, checks keep their full trim in run order until the cap is reached. The rest are shortened, or left out with a one-line note.
+  - **Step log.**
+    - `steplog.parse("")` is the empty log.
+    - The recording functions are methods of `StepLog` that return a new log:
+      - `record_run_start(time_utc, order_sha256, wp_branch, model)`;
+      - `record_accepted(step_record)`;
+      - `record_switch(time_utc, label, from_model, to_model, reason)`;
+      - `record_stop(time_utc, reason, reset_utc_or_None)`.
+    - Times are timezone-aware datetimes.
+    - `StepRecord` has fields `label`, `files` (a tuple of `(path, sha256)` pairs), `attempts`, `model`, `provider`, `model_version`, `prompt_tokens`, `output_tokens` and `seconds_waited`.
+  - **`Result.<member>.display_name`** is the hyphenated display name.
+
 ## 5. Edge cases you must handle
 - **E1** An interface file that does not parse → returned whole with the marker line (B2).
 - **E2** A log or command output with bytes that are not UTF-8 → decoded with replacement, never a crash.
@@ -123,7 +142,7 @@ Return QUESTIONS if `tools/audit/gate.py` offers no importable scan or header ch
 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists with its public API and the module header standard.
-- **D2** B1 to B13 and E1 to E5 are implemented; point at each.
+- **D2** B1 to B14 and E1 to E5 are implemented; point at each.
 - **D3** Tests run offline, in scratch directories and scratch git repositories.
 - **D4** `tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_02.py` passes unmodified.
 - **D5** No placeholder, swallowed error or key handling anywhere.
