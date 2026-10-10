@@ -205,7 +205,9 @@ def test_FR_0_9_01_debt_check_reports_open_or_unapproved_rows(brk):
     ("- {finding}0 moves to {wp}.", False),
     ("- {debt}0 moves to {wp}.", False),
     ("- {debt} moves to {wp}0.", False),
-], ids=["debt-and-wp", "finding-and-wp", "different-lines", "longer-finding-id", "longer-debt-id", "longer-wp-id"])
+    ("- X{debt} moves to {wp}.", False),
+], ids=["debt-and-wp", "finding-and-wp", "different-lines", "longer-finding-id", "longer-debt-id", "longer-wp-id",
+        "longer-debt-id-on-the-left"])
 def test_FR_0_9_01_move_approval_names_row_and_wp_on_one_line(tmp_path, line, approved):
     # WP-0.9-F08: an approval allows a move only on a line that names the row (its debt ID or its finding ID) and the
     # new WP, each as a whole ID. Checked against a copy of the approvals folder holding only this approval line.
