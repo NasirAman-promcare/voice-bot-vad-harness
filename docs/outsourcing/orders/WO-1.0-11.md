@@ -120,6 +120,16 @@ WO-1.0-10 built the model clients for both API shapes, the pool loader and the g
 - **B22** `--pack-step K --out PATH`: write `prompt.step_pack` for step K, with earlier outputs from the main checkout, to PATH. Send nothing. The reply is imported with `python -m tools.outsourcing import --wo <path> --bundle <file> --step K`.
 - **B23** Concurrency: several relay processes for different orders may run at once in one checkout. Each has its own worktree, log folder and lock; they share the governor's state file in the main checkout's `.relay/`, so their requests are paced together, and the router's preference for a model that can serve without waiting spreads them across the pool.
 
+- **B24** Interface details the acceptance tests rely on (added by Claude with the acceptance test, 2026-10-10):
+  - **Repository and paths.** The relay finds the main checkout with `git rev-parse --show-toplevel` from the current directory. `--wo` and `--pool` accept absolute paths or paths relative to the current directory. The tests run it as `python -m tools.outsourcing.relay` with `PYTHONPATH` set to this repository and the current directory set to a scratch checkout.
+  - **Router.** `Router.choose` returns the `limits.ModelSpec` (its `.name` is the model's API name). `exclude` is a set of model names. `model_stats` takes a part's first-pass result from its accepted record's `attempts == 1`. A model is moved behind the others when the best qualifying rate minus its own is 25 percentage points or more, so exactly 25 counts.
+  - **Ledger and summary.**
+    - The ledger fragment's `Model:` line lists every model used as `<model> (<provider>)`, separated by commas.
+    - `Prompt tokens` and `Output tokens` are the sums of the usage figures of every reply received with HTTP 200, cut-off answers included.
+    - The summary names each part's model and provider.
+  - **Printed lines.** POOL and ACCESS lines start with `POOL:` and `ACCESS:` and name the model or provider. `--models` prints the word `missing` on the line of each model the provider does not list. `--status` and the pause message write the zones as `UTC`, the provider's zone name and `Asia/Karachi`. The pause message includes the resume command, `.venv/bin/python -m tools.outsourcing.relay --wo <path>`. The invalid-branch message (B5) names both branches.
+  - **Dry run.** `--dry-run` creates no branch and no worktree.
+
 ## 5. Edge cases you must handle
 - **E1** A reply with several text parts → joined in order by the client; an empty text is a failed attempt (B13).
 - **E2** A reply with no choices or candidates, or a block reason → a failed attempt with the reason recorded.
@@ -158,7 +168,7 @@ Return QUESTIONS if the WO-1.0-02 or WO-1.0-10 interfaces lack something B1 to B
 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists with its public API and the module header standard.
-- **D2** B1 to B23 and E1 to E9 are implemented; point at each.
+- **D2** B1 to B24 and E1 to E9 are implemented; point at each.
 - **D3** Tests use only the local stub server, scratch repositories with a local bare `origin`, and a simulated clock; none reaches the internet or waits in real time.
 - **D4** `tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py` passes unmodified, and so does every other test in `tests/aqis_lab/outsourcing`.
 - **D5** No placeholder, swallowed error or key handling anywhere.
