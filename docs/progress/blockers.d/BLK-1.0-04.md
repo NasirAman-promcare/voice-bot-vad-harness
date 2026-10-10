@@ -1,5 +1,5 @@
 # BLK-1.0-04 — Two model names in the pool are not listed by their providers
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: KIT
 Raised: 2026-10-10
@@ -29,4 +29,4 @@ Exact steps:
 
 Meanwhile: everything else. The relay works without these two models.
 
-Owner answer:
+Owner answer: 2026-10-10. The owner renamed `gemini-3-flash` to `gemini-3-flash-preview` on `main` (`0e396b0`). They kept `mistral-large-2512`: their Mistral Admin > Limits page lists it (250,000 tokens a minute, 1.00 requests a second; screenshots attached in the session). If the API's model listing omits it, the router leaves it out for the run (`POOL:` line) and uses Codestral 25.08.

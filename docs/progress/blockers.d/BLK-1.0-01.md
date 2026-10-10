@@ -1,5 +1,5 @@
 # BLK-1.0-01 — Start Jules for the bootstrap orders (waves 1 to 3 merged; now FIX-1 of WO-1.0-11)
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: EXTERNAL-AI
 Raised: 2026-10-10
@@ -35,4 +35,4 @@ Exact steps:
 
 Meanwhile: I write the acceptance tests for WO-1.0-02 and WO-1.0-11 (waves 2 and 3) and WO-1.0-03 to WO-1.0-09. I also do the pre-send amendments of WO-1.0-03, -04, -07 and -09, fix DEBT-033 and DEBT-034, and add the requirement tests. When the pull requests are open, I check their scope, merge them into the WP branch and write the break recipes.
 
-Owner answer:
+Owner answer: 2026-10-10. The owner started every Jules task: PRs #11 to #16, covering WO-1.0-01, -10, -02, -11 and the fixes. All are merged into the WP branch, the last as PR #16. The relay exists; WO-1.0-03 to WO-1.0-09 go through it.

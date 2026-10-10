@@ -21,3 +21,13 @@
   - the ledger counts only accepted parts;
   - swallowed or catch-all exceptions;
   - functions over 40 lines, and `stepper.py` at 497 lines.
+
+## FIX-1 (PR #16, branch `wo/WO-1.0-11-fix-1-8105093573879212493`)
+- **Checks.** The scope check is clean (`Scope check passed: no violations.`). `tests/aqis_lab/outsourcing` gave `337 passed`, including the 14 FIX-1 tests. The audit gate reported `0 findings: OK`.
+- **Shape.** Every module of the order is now within 400 lines; `stepper.py` is 293 lines, with `stepper_final.py` and `report.py` new.
+- **Spot checks.**
+  - The step log takes the SHA-256 of the order file.
+  - Each exception maps to its own exit code.
+  - A failed push sets `push_ok` instead of being swallowed.
+  - Final-fix rounds commit only after `full_checks` passes.
+- **Result: ACCEPTED.**
