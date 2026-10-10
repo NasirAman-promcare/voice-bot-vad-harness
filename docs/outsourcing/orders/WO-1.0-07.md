@@ -20,6 +20,8 @@ context:
   - .claude/hooks/.gitignore
   - tools/index/__main__.py
   - tools/progress/__main__.py
+  - tools/progress/render.py
+  - docs/process/templates/FRAGMENTS.md
   - tests/aqis_lab/fixture_repo.py
   - tests/aqis_lab/test_aqis_gate_parity.py
   - tests/aqis_lab/test_aqis_gate_v2.py
@@ -80,6 +82,25 @@ Produce version 4 of the stop gate and updated guard, protected-path and session
 - **B9** Keep every version 3 behaviour not changed here: NEVER and GUARDED change detection since the merge base, the memory of known problem sets in `.git/aqis-stop-gate.json`, silence while an open blocker covers a known set, the fail-closed main-ref lookup, and the pattern tables' names and message formats that the parity tests read.
 - **B10** Session context prints at most 15 lines: branch; current WP and its status; open blockers for the WP and in total (fragments plus legacy `BLOCKERS.md` entries); the owner-queue item count if `OWNER_QUEUE.md` exists; whether the probe files exist; and `Navigate: docs/index/MAP.md first.` It never fails the session: on any error it prints one line and exits 0.
 
+- **B11** Pins (amended by Claude with the acceptance tests; each is checked there):
+  1. **Spec allowance lines.** Lines of `## Allowed guarded edits` up to the next `## ` heading that start with `- `. Each value is stripped of surrounding backticks. A value of `None` (any case) gives nothing. `spec_allowances` returns the values as glob strings, in file order. Only one matching spec file counts (E2). The guard's message for E2 names every matching path.
+  2. **Ref.** `spec_allowances(root, "origin/main", wp)` fetches `origin/main` once when it is missing. It never falls back to a local `main`; only approvals keep version 3's `main_ref` fallback.
+  3. **The stop gate honours spec allowances too.** A GUARDED change since the merge base passes when an approval or the current WP's spec allowance on `origin/main` matches it, exactly as the guard decides. NEVER paths are never unlocked.
+  4. **TEST_CHANGES rows.** A row names a file when its first cell, stripped of backticks and spaces, equals the file's repository path. `conftest.py` and other test-folder `.py` files without test functions pass with a row, as long as no test function was lost. The rows are read from the working tree, at `docs/progress/<current WP>/TEST_CHANGES.md`.
+  5. **Assertion count (B5).** Per test function (`test*` functions, including methods of `Test*` classes): `assert` statements, plus `with` items calling `pytest.raises` or `pytest.warns`. Skips are decorators or marks with `skip`, `skipif` or `xfail`; calls `pytest.skip(` or `pytest.xfail(`; or a module-level `pytestmark` naming any of them. A gained skip is a skip that the `origin/main` version lacked. Every blocking message names the file path (the new path for E3) and the function.
+  6. **Test selection (B4).** The stop gate runs `<python> -m tools.index impact --base origin/main` from the project root. It passes the printed lines as pytest arguments, with version 3's `-q -x -p no:cacheprovider -m "<fast markers>"`. It runs the full fast suite when the first line is `all`, the command exits non-zero, or `tools/index/__main__.py` is missing. An empty selection runs no tests. A status fragment `docs/progress/status.d/<current WP>.md` in the working tree with `Status: READY-FOR-AUDIT` forces the full fast suite. The cached result's fingerprint also covers the selection.
+  7. **Blocker lint (B6).** It runs `<python> -m tools.progress lint --changed-from origin/main` when `tools/progress/__main__.py` exists. Any non-zero exit blocks, showing the lint's output lines.
+  8. **Open blockers (B9, B10).** The open blocker IDs are the union of the fragments in `docs/progress/blockers.d/` with a `Status: OPEN` line and the legacy `BLOCKERS.md` entries `## BLK-…` with `STATUS: OPEN`. An ID found in both counts once. The stop gate's quiet rule uses this union.
+  9. **Report (B8).** The text Claude sees (`reason` or `systemMessage`) is at most 40 lines, the explanation lines included. Each stop writes the full, untruncated list of problems to `.git/aqis-stop-gate.log`, replacing the previous report.
+  10. **Session context lines (B10).** The context includes these lines, exactly:
+      - `- Branch: <branch>`;
+      - `- WP: <WP> (<status>)` when there is a current WP;
+      - `- Open blockers: <n> for <WP> (<ids, comma-separated, or none>), <m> in total` (without a current WP: `- Open blockers: <m> in total`);
+      - `- Owner queue: <k> items`, only when `docs/progress/OWNER_QUEUE.md` exists, where `<k>` counts the items as `tools.progress` renders them (open blockers, decisions and checks);
+      - one line per probe file, saying `present` or `MISSING`;
+      - `Navigate: docs/index/MAP.md first.`.
+      The current WP's status fragment is read directly. If it exists but cannot be read (for example, it is a folder), the hook prints a single line saying so, and still exits 0.
+
 ## 5. Edge cases you must handle
 - **E1** A shallow clone without `origin/main` → spec allowances are empty after one fetch attempt (fail closed); the stop gate's existing behaviour for a missing main ref stays.
 - **E2** Two spec files match the WP → no allowances, and the guard's message names both files.
@@ -108,7 +129,7 @@ Return QUESTIONS if the current hook code contradicts this order, if the attache
 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists, starts from the current code, and carries the module header standard.
-- **D2** B1 to B10 and E1 to E4 are implemented; point at each, and list every version 3 behaviour you kept.
+- **D2** B1 to B11 and E1 to E4 are implemented; point at each, and list every version 3 behaviour you kept.
 - **D3** Tests run the hooks as subprocesses with JSON on stdin, in scratch repositories with an `origin` remote.
 - **D4** `tests/aqis_lab/kit/test_acceptance_wo_1_0_07.py` and the WP-0.0 parity tests pass unmodified.
 - **D5** No placeholder or swallowed error; enforcement fails closed.
