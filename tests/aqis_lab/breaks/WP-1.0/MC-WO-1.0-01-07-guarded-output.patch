@@ -1,0 +1,19 @@
+# MC: WO-1.0-01 #7
+# behaviour: a work order with an output under a NEVER or GUARDED path is invalid
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc07_output_under_never_or_guarded_path_is_invalid[bots/new_bot.py]
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc07_output_under_never_or_guarded_path_is_invalid[.gitignore]
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc07_output_under_never_or_guarded_path_is_invalid[.github/workflows/ci.yml]
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc07_output_under_never_or_guarded_path_is_invalid[tests/regression/test_new.py]
+diff --git a/tools/outsourcing/workorder.py b/tools/outsourcing/workorder.py
+index 14dcc71..2a42745 100644
+--- a/tools/outsourcing/workorder.py
++++ b/tools/outsourcing/workorder.py
+@@ -205,7 +205,7 @@ def load_work_order(path: str | Path, repo_root: str | Path) -> WorkOrder:
+ 
+     for out_p in outputs:
+         classification = classify(out_p, root)
+-        if classification in ("NEVER", "GUARDED"):
++        if classification == "NEVER":
+             raise WorkOrderError(f"Output path {out_p!r} is protected ({classification})")
+         if out_p.startswith("tests/aqis_lab/breaks/"):
+             raise WorkOrderError(f"Output path {out_p!r} is under tests/aqis_lab/breaks/")

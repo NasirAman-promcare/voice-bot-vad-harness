@@ -1,0 +1,16 @@
+# MC: WO-1.0-01 #8
+# behaviour: a missing base ref is never reported as no changes
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc08_missing_base_ref_is_never_no_changes
+diff --git a/tools/outsourcing/scope.py b/tools/outsourcing/scope.py
+index 356519f..8fbadb7 100644
+--- a/tools/outsourcing/scope.py
++++ b/tools/outsourcing/scope.py
+@@ -89,7 +89,7 @@ def check_scope(
+         try:
+             merge_base = _run_git(root, "merge-base", base_ref, head_ref).strip()
+         except ScopeError as exc:
+-            raise ScopeError(f"Base ref {base_ref!r} cannot be found after {fetch_note}: {exc}") from exc
++            merge_base = _run_git(root, "rev-parse", head_ref).strip()
+ 
+     if not merge_base:
+         raise ScopeError(f"Base ref {base_ref!r} has no merge-base with {head_ref!r}")

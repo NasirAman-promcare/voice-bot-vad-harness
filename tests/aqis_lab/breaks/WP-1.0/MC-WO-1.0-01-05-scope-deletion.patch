@@ -1,0 +1,16 @@
+# MC: WO-1.0-01 #5
+# behaviour: scope reports an extra changed file and a deletion as violations
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc05_scope_reports_extra_file_and_deletion
+diff --git a/tools/outsourcing/scope.py b/tools/outsourcing/scope.py
+index 356519f..765786f 100644
+--- a/tools/outsourcing/scope.py
++++ b/tools/outsourcing/scope.py
+@@ -110,7 +110,7 @@ def check_scope(
+ 
+         st_code = status[:1]
+         if st_code == "D":
+-            violations_set.add(norm_p)
++            changed_set.add(norm_p)
+         else:
+             changed_set.add(norm_p)
+             if not _is_allowed(norm_p, order):
