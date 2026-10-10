@@ -25,7 +25,23 @@ Imports sit inside the tests, so the rest of the suite still runs while these wa
 - Status: PARTIAL. DEBT-032 waits on BLK-1.0-03, and the debt fragments come with the WO-1.0-04 migration.
 
 ## Acceptance commands
-Not run yet: the tools do not exist until the work orders land.
+### AT-1.0-09 (first run, 2026-10-10, relay from `8d8d5b4`)
+Command: `.venv/bin/python -m tools.outsourcing.relay --models`. Output:
+```text
+gemini-3.8-flash: present
+gemini-3.7-flash: present
+gemini-3.6-flash: present
+gemini-3.5-flash: present
+gemini-3-flash: missing
+gemini-2.5-flash: present
+gemini-3.5-flash-lite: present
+gemini-3.1-flash-lite: present
+codestral-2508: present
+ministral-14b-2512: present
+mistral-large-2512: missing
+exit 2
+```
+Both providers' credentials work, since both listings succeeded. Two pool names need the owner (BLK-1.0-04). The other acceptance commands wait for the remaining work orders.
 
 ## audit-allow lines
 - `tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_02.py`, the `ALLOWED_LINE = …` line. It is a test-data string that must carry `# audit-allow:` because WO-1.0-02 must-catch 5 checks that the relay's compromise check honours it. The string is not an exemption for real code.
