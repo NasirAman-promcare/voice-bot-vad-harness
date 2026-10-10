@@ -1,0 +1,17 @@
+# MC: WO-1.0-11 #2
+# behaviour: a T1 order never goes to a model whose risk_tiers lack T1
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py::test_FR_1_0_02_mc02_t1_order_never_goes_to_a_model_without_t1
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py::test_FR_1_0_02_mc02_router_skips_models_without_the_tier
+diff --git a/tools/outsourcing/router.py b/tools/outsourcing/router.py
+index 1ad721f..cc2f32d 100644
+--- a/tools/outsourcing/router.py
++++ b/tools/outsourcing/router.py
+@@ -156,7 +156,7 @@ class Router:
+         return spec
+ 
+     def _choose_default(self, order: WorkOrder, input_estimate: int, exclude: set[str]) -> ModelSpec:
+-        all_candidates = self.pool.candidates(order.risk_tier)
++        all_candidates = sorted((m for m in self.pool.models().values() if m.provider.enabled), key=lambda m: m.rank)
+         if not all_candidates:
+             raise NoEligibleModel(f"No enabled model in pool supports risk tier '{order.risk_tier}'")
+ 

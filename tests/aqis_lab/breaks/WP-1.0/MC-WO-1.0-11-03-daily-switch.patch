@@ -1,0 +1,16 @@
+# MC: WO-1.0-11 #3
+# behaviour: a daily-quota rejection switches the part to the next eligible model without using an attempt
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py::test_FR_1_0_02_mc03_daily_quota_switches_without_using_an_attempt
+diff --git a/tools/outsourcing/stepper.py b/tools/outsourcing/stepper.py
+index e04e2ea..acb26af 100644
+--- a/tools/outsourcing/stepper.py
++++ b/tools/outsourcing/stepper.py
+@@ -166,7 +166,7 @@ def _generate_or_switch(ctx: RunContext, part: StepPart, model_spec: Any, client
+         ctx.record_reply(reply, model_spec.name, model_spec.provider.name)
+         return None, reply
+     except DailyQuotaExhausted:
+-        return _switch_model_or_stop(ctx, part, model_spec, req_obj, "DAILY_QUOTA", Result.PAUSED_DAILY, "Daily quota exhausted"), None
++        return StepOutcome(result=Result.PAUSED_DAILY, stop_reason="Daily quota exhausted"), None
+     except ServiceBusy:
+         return _handle_service_busy(ctx, part, model_spec, client, req_obj)
+     except ModelError as exc:

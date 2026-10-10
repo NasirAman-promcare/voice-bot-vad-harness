@@ -1,0 +1,16 @@
+# MC: WO-1.0-11 #10
+# behaviour: a step log naming another WP branch gives exit 2 before any merge or record
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py::test_FR_1_0_02_mc10_step_log_of_another_wp_branch_exits_2_before_any_merge
+diff --git a/tools/outsourcing/relay.py b/tools/outsourcing/relay.py
+index 0edecd8..0180f0d 100644
+--- a/tools/outsourcing/relay.py
++++ b/tools/outsourcing/relay.py
+@@ -343,7 +343,7 @@ def _init_run_context(options: RelayOptions, main_root: Path, wo_path: Path) ->
+ 
+     try:
+         existing_log = read_step_log(main_root, order.id)
+-        if existing_log and parse(existing_log).wp_branch and parse(existing_log).wp_branch != curr_branch:
++        if existing_log and parse(existing_log).wp_branch and not parse(existing_log).wp_branch.startswith("claude/wp-"):
+             msg = f"Step log records WP branch {parse(existing_log).wp_branch!r}, but main checkout is on {curr_branch!r}"
+             print(msg)
+             lock.release()

@@ -1,0 +1,16 @@
+# MC: WO-1.0-11 #7
+# behaviour: a read-only test changed during a test run gives exit 9 and nothing is committed
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py::test_FR_1_0_02_mc07_read_only_test_changed_exits_9_and_commits_nothing
+diff --git a/tools/outsourcing/stepper.py b/tools/outsourcing/stepper.py
+index e04e2ea..2c7c854 100644
+--- a/tools/outsourcing/stepper.py
++++ b/tools/outsourcing/stepper.py
+@@ -224,8 +224,6 @@ def _handle_import_and_checks(
+     )
+     ctx.last_checks = chk_res
+     _save_raw_records(attempt_dir, current_req, model_spec.name, reply.raw_json or reply.text, chk_res)
+-    if chk_res.integrity_failed:
+-        return StepOutcome(result=Result.INTEGRITY, stop_reason="Quick checks integrity failed"), current_req, allowed_paths
+     if chk_res.passed:
+         hashes = tuple((p, _hash_file(ctx.worktree.path / p)) for p in part.paths)
+         rec = StepRecord(

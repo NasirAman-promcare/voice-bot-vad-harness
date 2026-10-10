@@ -1,0 +1,16 @@
+# MC: WO-1.0-11 #4
+# behaviour: a model with at least 8 parts and a first-pass rate 25 points below the best is chosen after all others
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py::test_FR_1_0_02_mc04_low_first_pass_model_is_chosen_after_all_others[exactly-25-points-below]
+diff --git a/tools/outsourcing/router.py b/tools/outsourcing/router.py
+index 1ad721f..85b90e3 100644
+--- a/tools/outsourcing/router.py
++++ b/tools/outsourcing/router.py
+@@ -236,7 +236,7 @@ class Router:
+ 
+         for m in candidates:
+             st = self.stats.models.get(m.name)
+-            if st and st.parts >= 8 and (best_rate - st.first_pass_rate) >= 0.25:
++            if st and st.parts >= 8 and (best_rate - st.first_pass_rate) > 0.25:
+                 demoted.append(m)
+             else:
+                 normal.append(m)

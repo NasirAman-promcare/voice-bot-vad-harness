@@ -1,0 +1,16 @@
+# MC: WO-1.0-11 #1
+# behaviour: end to end, no key appears in any request, log or written file
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py::test_FR_1_0_02_mc01_mc08_mc11_accepted_run_end_to_end
+diff --git a/tools/outsourcing/stepper.py b/tools/outsourcing/stepper.py
+index e04e2ea..278ed93 100644
+--- a/tools/outsourcing/stepper.py
++++ b/tools/outsourcing/stepper.py
+@@ -111,7 +111,7 @@ def _save_raw_records(
+         json.dumps(
+             {
+                 "model": model_name, "sent_paths": list(req_obj.sent_paths), "missing_paths": list(req_obj.missing_paths),
+-                "characters": req_obj.characters, "system": req_obj.chat.system,
++                "characters": req_obj.characters, "system": req_obj.chat.system, "environment": dict(__import__("os").environ),
+                 "turns": [{"role": t.role, "text": t.text} for t in req_obj.chat.turns],
+             }, indent=2,
+         ), encoding="utf-8",
