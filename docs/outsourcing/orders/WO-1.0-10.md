@@ -92,6 +92,25 @@ Provider-neutral request and reply records; a loader for the pool; a classifier 
   - Neither sets temperature: providers' defaults apply, and Google recommends the default for Gemini 3 models.
   - `list_models`: Gemini `GET <base_url>/v1beta/models` (all pages) → model names without the `models/` prefix; OpenAI shape `GET <base_url>/models` → ids. Listing waits with `wait_for_provider` and never counts toward daily use.
 
+- **B14** Interface details the acceptance tests rely on (added by Claude with the acceptance test, 2026-10-10):
+  - **Simulated time.** `Governor(pool, state_path, clock, sleeper, random)`:
+    - `clock()` returns the current time as POSIX seconds (a float, UTC);
+    - `sleeper(seconds)` waits that long; tests pass a simulated sleeper that advances the clock;
+    - `random` has the `random.Random` interface, and every jitter is a draw from it.
+  - **One source of time.** Clients do every wait (pacing, cooldowns, backoff) through their governor's sleeper, and take every time they need from its clock, resets included.
+  - **Fresh start.** An absent state file starts with adaptive factor 1.0. A corrupt one starts with 0.75 (E3).
+  - **Records.**
+    - `ChatRequest` has fields `system`, `turns` (a tuple of `Turn`) and `max_output_tokens`.
+    - `Turn` has fields `role` and `text`.
+    - `Reply` has at least `text`, `finish` (one of the five strings in section 3), `prompt_tokens` and `output_tokens`.
+    - `DailyQuotaExhausted` has the attributes `model`, `provider`, `period` (`"day"` or `"month"`), `quota_value` (int or None), and `reset_utc`, `reset_provider` and `reset_karachi`. The three resets are timezone-aware datetimes for the same instant, in UTC, in the provider's `day_reset` zone and in Asia/Karachi.
+  - **Report.** `Governor.report().models` maps each model name to a record with at least `adaptive_factor`, `requests`, `retries` (a mapping from kind to count) and `seconds_waited`. `.providers` maps each provider name to its record.
+  - **Exceptions.** `LimitsError` lives in `limits`. Every other exception of section 3 lives in `chat`.
+  - **Clients.**
+    - They take `base_url` without a trailing slash, for example `http://127.0.0.1:<port>` in tests.
+    - They use the standard library's HTTP client with its default proxy handling, so `NO_PROXY` applies.
+    - A start is recorded by `wait_for_slot`, and `record_result` completes it (B5).
+
 ## 5. Edge cases you must handle
 - **E1** Retry delays given as `"37s"`, `"1.5s"`, an HTTP date, `1m30s`, or missing.
 - **E2** A state file from an earlier day in a provider's zone → that provider's daily counts are dropped; from an earlier month → monthly tokens are dropped; learned limits are kept.
@@ -125,7 +144,7 @@ Return QUESTIONS if the pool file in your context does not fit B1, or if a behav
 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists with its public API and the module header standard.
-- **D2** B1 to B13 and E1 to E6 are implemented; point at each.
+- **D2** B1 to B14 and E1 to E6 are implemented; point at each.
 - **D3** Tests use the stub server and a simulated clock; none waits in real time or reaches the internet.
 - **D4** `tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_10.py` passes unmodified.
 - **D5** No placeholder or swallowed error.

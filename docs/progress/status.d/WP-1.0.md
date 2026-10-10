@@ -7,4 +7,4 @@ Branch: claude/wp-1-0-operating-model-v2
 PR: none yet
 Thread model: Opus high
 Updated: 2026-10-10
-Note: plan self-approved; wave 1 acceptance tests (WO-1.0-01, WO-1.0-10) before Jules
+Note: wave 1 acceptance tests committed; waiting on BLK-1.0-01 (Jules), BLK-1.0-02 (KIT), BLK-1.0-03 (COMPUTE)

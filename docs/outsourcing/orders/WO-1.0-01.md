@@ -85,6 +85,22 @@ Provide a package `tools.outsourcing` with a command-line entry point (`python -
 - **B10** `secret_reasons` flags paths named `.env`, `*.pem`, `*.key`, `id_rsa*`, `*.p12`, and content containing a private-key header (a line starting `-----BEGIN` and ending `PRIVATE KEY-----`), or tokens shaped like Hugging Face (`hf_` plus at least 30 letters and digits), GitHub (`ghp_` plus 36 letters and digits, or `github_pat_` plus at least 22 letters, digits and underscores), Google API keys (`AIza` plus 35 letters, digits, `-` or `_`) or Anthropic keys (`sk-ant-` plus at least 20 letters, digits, `-` or `_`). A bare prefix is not a token, so the detector's own source is clean.
 - **B11** The CLI prints at most 25 lines and uses exit codes: 0 success; 1 scope violation (or `ScopeError`); 2 invalid work order; 3 invalid bundle or refused import; 4 questions returned; 5 truncation detected (`TruncatedBundle`); 6 secret detected (`SecretRefused`). `pack --out <path>` writes the pack to a file; `import --wo <path> --bundle <path> [--mode first|fix] [--step K] [--dry-run]`, where `--step K` sets `expected` to step K's paths; `scope --wo <path> [--base origin/main] [--head HEAD]`; `validate --wo <path>` also prints the step plan, one line per step.
 
+- **B12** Interface details the acceptance tests rely on (added by Claude with the acceptance test, 2026-10-10):
+  - `WorkOrder` attributes are named exactly as the front-matter keys. List values are tuples of strings, and absent optional lists are empty tuples. `attempt_budget` and `max_output_tokens` are `int`. There are also `body` (the text after the front matter) and `path`.
+  - `Step.paths` is a tuple of normalised paths.
+  - `classify` reads `<repo_root>/docs/process/PROTECTED_PATHS.txt`.
+  - `build_pack` reads FOUNDATION and RETURN_FORMAT from `<repo_root>/docs/process/outsourcing/`. `Pack` has `text`, `characters` and `estimated_tokens`.
+  - Exceptions live in the module that raises them:
+    - `WorkOrderError` in `workorder`;
+    - `BundleError` and `TruncatedBundle` in `bundle`;
+    - `QuestionsReturned` and `ImportRefused` in `importer`;
+    - `ScopeError` in `scope`;
+    - `SecretRefused` and `PackTooLarge` in `pack`.
+  - An answer holding only a QUESTIONS block parses, with or without an empty MANIFEST and DOD. `Bundle.questions` is a tuple of the numbered questions' texts, and empty without a QUESTIONS block.
+  - Truncation lines (B5) are matched with leading and trailing whitespace ignored.
+  - The command line takes the repository root from `git rev-parse --show-toplevel` run in the current directory. `--wo`, `--bundle` and `--out` accept absolute paths or paths relative to the current directory. `scope` prints each violating path on a line of its own. `pack --out` writes nothing when it refuses.
+  - The acceptance test runs `python -m tools.outsourcing` from inside scratch repositories with `PYTHONPATH` set to this repository.
+
 ## 5. Edge cases you must handle
 - **E1** A bundle whose FILE marker uses `./tools/...` or trailing spaces → normalised; a backslash path → rejected.
 - **E2** Content that itself contains a line `=== END FILE ===` inside a fenced block → still ends the file (markers win); the rest of that content then lies outside any block and the real END marker has no open block, so `parse_bundle` raises `BundleError`. Document this in the module header.
@@ -116,7 +132,7 @@ Return QUESTIONS if `tools/audit` already has a protected-path classifier whose 
 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists with its public API and the module header standard.
-- **D2** B1 to B11 and E1 to E6 are implemented; point at each.
+- **D2** B1 to B12 and E1 to E6 are implemented; point at each.
 - **D3** Unit tests cover every behaviour and edge case and pass.
 - **D4** `tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py` passes unmodified.
 - **D5** No placeholder, swallowed error or network use beyond B8.
