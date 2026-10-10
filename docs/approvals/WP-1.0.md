@@ -1,0 +1,6 @@
+STATUS: APPROVED
+WP: WP-1.0
+APPROVED-BY: owner
+DATE: 2026-10-10
+PLAN: docs/progress/WP-1.0/PLAN.md
+ALLOW-EDIT: .gitignore
