@@ -32,17 +32,21 @@ outputs:
   - tools/outsourcing/worktree.py
   - tools/outsourcing/ledger.py
   - tools/outsourcing/stepper.py
+  - tools/outsourcing/stepper_final.py
+  - tools/outsourcing/report.py
   - tools/outsourcing/relay.py
   - tests/aqis_lab/outsourcing/test_router.py
   - tests/aqis_lab/outsourcing/test_worktree.py
   - tests/aqis_lab/outsourcing/test_ledger.py
   - tests/aqis_lab/outsourcing/test_stepper.py
+  - tests/aqis_lab/outsourcing/test_report.py
   - tests/aqis_lab/outsourcing/test_relay.py
 steps:
   - tools/outsourcing/router.py, tests/aqis_lab/outsourcing/test_router.py
   - tools/outsourcing/worktree.py, tests/aqis_lab/outsourcing/test_worktree.py
   - tools/outsourcing/ledger.py, tests/aqis_lab/outsourcing/test_ledger.py
-  - tools/outsourcing/stepper.py, tests/aqis_lab/outsourcing/test_stepper.py
+  - tools/outsourcing/stepper.py, tools/outsourcing/stepper_final.py, tests/aqis_lab/outsourcing/test_stepper.py
+  - tools/outsourcing/report.py, tests/aqis_lab/outsourcing/test_report.py
   - tools/outsourcing/relay.py, tests/aqis_lab/outsourcing/test_relay.py
 read_only_tests:
   - tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py
@@ -67,6 +71,8 @@ WO-1.0-10 built the model clients for both API shapes, the pool loader and the g
 | `tools/outsourcing/worktree.py` | The order's worktree and branch | `read_step_log(root, wo_id) -> text or None` (from `wo/<WO>` without checking it out); `open_worktree(root, wo_id, wp_branch) -> Worktree` (path, branch, base commit); `discard_attempt(worktree, paths)`; `commit(worktree, paths, message)`; `push(worktree)`; `remove(worktree)`; raises `WorktreeError` carrying git's message | 250 |
 | `tools/outsourcing/ledger.py` | The summary and the ledger fragment | `write_summary(path, outcome)`, `write_ledger_fragment(path, outcome)` (B17) | 200 |
 | `tools/outsourcing/stepper.py` | Run one step part, or the final verification, with its fix rounds and model switches | `RunContext` (order, plan, worktree, router, governor, step log, options, clock, sleeper, log root); `run_part(ctx, part) -> StepOutcome`; `run_final(ctx) -> StepOutcome` | 300 |
+| `tools/outsourcing/stepper_final.py` | The final verification and its fix rounds (B16), split from `stepper.py` in FIX-1 | `run_final(ctx) -> StepOutcome`, re-exported by `stepper` | 250 |
+| `tools/outsourcing/report.py` | The printed report (B18), at most 25 lines, for every result | `render_report(outcome, ctx_facts) -> list[str]` | 200 |
 | `tools/outsourcing/relay.py` | Command line, the run loop, the printed report, and the status, models, dry-run and pack modes | `run(options) -> RelayOutcome`; `main(argv) -> int` | 300 |
 | `tests/aqis_lab/outsourcing/test_*.py` | Unit and end-to-end tests with the stub server, scratch git repositories with a local bare `origin`, and a simulated clock | | 300 each |
 
