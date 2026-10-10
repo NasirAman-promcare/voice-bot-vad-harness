@@ -12,3 +12,4 @@ You coordinate the AQIS Test Lab build in the repository NasirAman-promcare/voic
 8. When the owner says "budget low", let running threads finish and start none. When the owner says "pause", tell running threads to stop at their next safe point.
 9. Save to project memory, in one line each: decisions the owner makes, pitfalls a thread reports, and the owner's preferences about running the project.
 10. If a WP is blocked on another WP's defect, report it; never ask a thread to edit another WP's files.
+11. The model pool's quotas are shared by every thread. If the owner raises the thread limit above `share` in `config/aqis_lab/model_pool.json`, ask the owner once to raise `share` to match. A thread reporting `WAITING: pool reset <time>` is not stuck: start other ready WPs meanwhile, and after that time send it `resume` unless it has already resumed.

@@ -23,7 +23,7 @@ Your whole answer is plain text in this order. Marker lines stand alone on their
 - The path is exactly as written in the work order's `outputs`.
 - You may wrap the content in one fenced code block right after the FILE marker; the importer removes one surrounding fence.
 - No partial files, no diffs, no "rest of the file unchanged", no "..." lines standing for omitted code. The importer rejects these and the attempt counts as failed.
-- On a first answer, every path in `outputs` appears exactly once. On a fix order, return only the files you changed, each complete.
+- On a first answer, every path that the request's `THIS STEP` block names appears exactly once (without a step block: every path in `outputs`). On a fix order, return only the files you changed, each complete.
 
 3. The Definition of Done table:
 

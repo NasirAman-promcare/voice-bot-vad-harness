@@ -16,6 +16,7 @@ Claude runs this after the relay reports success, before READY-FOR-AUDIT; the au
 | 10 | Duplication | Nothing re-implements an existing module the work order named (reuse ladder) |
 | 11 | Secrets and data | No keys, tokens, personal data or absolute paths; no network calls the order did not ask for |
 | 12 | Break suite | The WP's break recipes still apply and are caught with the new code |
-| 13 | Ledger | `docs/outsourcing/returns/<WO>/summary.md` and the ledger fragment exist |
+| 13 | Records | `docs/outsourcing/returns/<WO>/summary.md`, the step log `steps.md` (relay orders) and the ledger fragment exist |
+| 14 | Models | The summary names the model and provider of every step; every model that wrote a T1 order is listed for T1 in the pool file; files from a model with a low first-pass rate in `relay --status` are listed in the audit request so the auditor reads them in full |
 
 Outcome: ACCEPT (continue), FIX ORDER (send through the relay), CLARIFY (amend the work order and resend), or TAKE OVER (Claude fixes a gap under about 30 lines itself, with a test first).

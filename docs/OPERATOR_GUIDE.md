@@ -31,13 +31,24 @@ Expected: steps 3 to 5 are blocked with `BLOCKED:`; step 6 works; step 1 lists t
 ### 1.4 Cloud environment `aqis-lab` (claude.ai/code → environment selector → settings icon)
 1. **API credentials → Add credential**:
    - Gemini: Name `Gemini API`; Allowed websites `generativelanguage.googleapis.com`; Custom header Name `x-goog-api-key`, clear the Prefix, paste the key as Value → Connect.
+   - Mistral (1.5 step 3): Name `Mistral`; Allowed websites `api.mistral.ai`; header `Authorization`, Prefix `Bearer`, paste the key → Connect.
    - Hugging Face: Name `Hugging Face`; Allowed websites `huggingface.co`; header `Authorization`, Prefix `Bearer`, paste the token → Connect.
    Claude never sees these keys; the proxy attaches them. Never put keys in environment variables.
 2. Keep network access **Custom** with the default package list ticked, plus the domains already there.
 3. Optional, only if you add the `pyright-lsp` plugin to the Project: append `npm install -g pyright` to the setup script.
 
-### 1.5 Gemini key (paid tier, about 10 minutes)
-In Google AI Studio create an API key in a Google Cloud project with billing enabled, and set a budget alert of $10 a month in Google Cloud Billing. Check Google's current Gemini API terms: paid-tier prompts should not be used to improve Google's products. Do not use a free-tier key for company code.
+### 1.5 Model pool: Gemini and Mistral keys (about 20 minutes)
+The relay spreads work over a pool of models, each with its own quota, listed in `config/aqis_lab/model_pool.json`. Its figures are copied from your own pages: Gemini from AI Studio (9 October 2026: six Flash models at 20 requests a day each, two Flash-Lite at 500) and Mistral from Admin → Limits (10 October 2026: Codestral 25.08, Mistral Large 25.12 and Ministral 14B, no daily cap). Only you can edit that file.
+1. **Gemini**: in Google AI Studio create **one** API key in your project and add it as the Gemini credential (1.4 step 1). Use no other Google account or project for the lab: extra keys in one project share its limits, and spreading work over several accounts or projects to get more free quota breaks Google's API terms and risks suspension of the whole Google account.
+2. **Mistral** (done: organization `promcaresolution` exists): in **Admin → Privacy**, make sure **Anonymous improvement data** is switched off, so your code is not used for training. In **API Keys**, create a key.
+3. In the `aqis-lab` environment: **API credentials → Add credential**, Name `Mistral`, Allowed websites `api.mistral.ai`, header `Authorization`, Prefix `Bearer`, paste the key → Connect. If network access is Custom, add `api.mistral.ai` to the allowed domains.
+4. Mistral is already enabled in the pool file with your limits. Edit the file only if Admin → Limits changes; never add a model with fewer than about 60,000 tokens a minute (Mistral Medium, Large 4 and Small have 20,000, below one request). Keep `share` equal to the Project's thread limit (2 by default).
+5. After WP-1.0, Claude runs the relay with `--models`, which checks every model name against Gemini's and Mistral's own lists; it raises an item only if a name needs changing.
+6. Know the trade-off: on Gemini's free tier Google may use what the relay sends (lab tooling, specs and tests, never secrets, personal data or client data) to improve its products, and human reviewers may read it. If that is not acceptable for this code, enable billing on the same Google project and change `tier` to `paid` with the paid limits.
+
+Optional providers, already in the pool file but switched off: NVIDIA's API catalog (build.nvidia.com; large free volume, but its trial terms allow testing and evaluation only and let NVIDIA use what you send) and OpenRouter (50 free requests a day, 1,000 after a one-time $10 top-up; its free models are weaker). Each is turned on the same way as Mistral: a key, a credential for its host, `"enabled": true`.
+
+Daily quotas reset at midnight Pacific time for Gemini (12:00 in Pakistan until 1 November 2026, 13:00 after) and at midnight UTC (05:00 in Pakistan) for the others. When one model runs out, the relay moves to the next; it pauses only when every eligible model is used up, and Claude resumes it after the reset.
 
 ### 1.6 GitHub
 1. Confirm the Claude GitHub App is installed on the repository (github.com/apps/claude → Configure). Projects and routines need it.
@@ -59,8 +70,8 @@ GitHub → repository Settings → Actions → Runners → **New self-hosted run
 ## 2. Running WP-1.0 (the first v2 work package)
 1. Tell the Project coordinator: `Run WP-1.0`. In manual mode, start a session on `main` with `/wp-run WP-1.0`.
 2. Expect these requests, each as a blocker with exact steps:
-   - **EXTERNAL-AI**: start Jules for WO-1.0-01, later WO-1.0-02. At jules.google, connect GitHub, choose the repository and the branch the blocker names, and paste: `Implement docs/outsourcing/orders/WO-1.0-01.md exactly as written. Read docs/process/outsourcing/FOUNDATION.md first. Write only the files it lists, run its verify command until it passes, and open a pull request on branch wo/WO-1.0-01.` (Paste channel instead: the blocker gives the AI Studio steps.)
-   - **ACCESS**: the Gemini credential, if 1.4 is not done.
+   - **EXTERNAL-AI**: start two Jules tasks at once, for WO-1.0-01 and WO-1.0-10; later one for WO-1.0-02, then one for WO-1.0-11. At jules.google, connect GitHub, choose the repository and the branch the blocker names, and paste (with the order's number): `Implement docs/outsourcing/orders/WO-1.0-01.md exactly as written, one step at a time in the order of its steps list. Read docs/process/outsourcing/FOUNDATION.md first. Write only the files it lists, run its verify command until it passes, and open a pull request on branch wo/WO-1.0-01.` (Paste channel instead: the blocker gives the AI Studio steps.)
+   - **ACCESS**: the Gemini credential, if 1.4 is not done; Mistral, if 1.5 is not done (the relay also works on Gemini alone).
    - **KIT (interim merge)**: merge the WP-1.0 pull request when Claude marks it MERGE-READY. This is the last manual merge.
    - **KIT (install)**: copy every file under `kit-staging/.claude/` on `main` into `.claude/` (same relative paths) with **Add file → Upload files**, commit to `main`, then run the self-test again (1.3). Claude then confirms parity and closes the blocker.
 
@@ -83,6 +94,10 @@ Open the Project's Overview, or `docs/progress/OWNER_QUEUE.md` on `main`. Work t
 | --- | --- |
 | A blocker names a blocked host | Add exactly that host to the environment's allowed domains; sessions follow within about a minute |
 | The relay exits 7 (credential) | Check the Gemini credential's host and header (1.4); the environment list should not mark it "Not sent" |
+| A thread is `WAITING: pool reset` | Nothing: it resumes after the reset. If it happens most days, start whole orders in Jules, or consider the paid tier (1.5 step 6) |
+| The relay prints `POOL: remove or rename <model>` | That model is not offered on your tier or its name changed: remove its entry from `config/aqis_lab/model_pool.json`, or correct the name from the `--models` output |
+| The relay prints `ACCESS: add or fix the <provider> credential` | Check that provider's credential host and header (1.4); the relay carries on with the other providers meanwhile |
+| Claude reports a provider is unverified | Check its limits in that provider's console and set `verified_on` in the pool file (1.5 step 4) |
 | An agent fails on `claude-haiku-5-5` | Edit that file under `.claude/agents/` and change the model to `haiku` |
 | The merge gate exits 4 with ACCESS | Reconnect GitHub for Claude Code, or check the Claude GitHub App's repository access |
 | A thread reports a loop-guard block | It must cite the loop ID in a blocker; answer the blocker, or tell the thread to change strategy |

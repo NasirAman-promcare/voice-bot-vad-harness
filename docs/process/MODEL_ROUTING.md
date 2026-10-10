@@ -13,7 +13,7 @@ Judgement stays on Opus; building runs on Sonnet with an Opus advisor; mechanica
 | Checker T3 | Sonnet | medium | `doc-checker` |
 | Explore, test runner, log digest | Haiku 5.5 | low | agent files (`Explore` overrides the built-in) |
 | Second opinion | Opus | high | `second-opinion` |
-| Bulk code | Gemini 3.7 Flash; a Gemini Pro model for hard modules | n/a | work order `model:` |
+| Bulk code | The relay's router: the best model in `config/aqis_lab/model_pool.json` for the order's risk tier with quota left (Gemini 3.5 to 3.8 Flash, Codestral 25.08 and Mistral Large 25.12 for T1), ranked and demoted by measured first-pass rate | n/a | pool file; a work order may pin `model:` |
 
 Rules:
 - Consult the advisor only when finalising a plan, at ladder step 3, and before READY-FOR-AUDIT. Auditors and helper agents never consult it.

@@ -2,7 +2,7 @@
 id: WO-1.0-07
 wp: WP-1.0
 title: Hook updates (spec allowances, stop gate v4, session context v2), staged
-model: gemini-3.7-flash
+model: default
 channel: api
 attempt_budget: 3
 risk_tier: T1
@@ -31,17 +31,22 @@ outputs:
   - tests/aqis_lab/kit/test_guard_v4.py
   - tests/aqis_lab/kit/test_stop_gate_v4.py
   - tests/aqis_lab/kit/test_session_context_v2.py
+steps:
+  - kit-staging/.claude/hooks/_protected.py, tests/aqis_lab/kit/__init__.py, tests/aqis_lab/kit/test_protected_v4.py
+  - kit-staging/.claude/hooks/guard_protected.py, tests/aqis_lab/kit/test_guard_v4.py
+  - kit-staging/.claude/hooks/stop_gate.py, tests/aqis_lab/kit/test_stop_gate_v4.py
+  - kit-staging/.claude/hooks/session_context.py, kit-staging/.claude/hooks/.gitignore, tests/aqis_lab/kit/test_session_context_v2.py
 read_only_tests:
   - tests/aqis_lab/kit/test_acceptance_wo_1_0_07.py
 allowed_dependencies:
   - stdlib
 verify:
-  - .venv/bin/python -m pytest tests/aqis_lab/kit -q --tb=short
+  - .venv/bin/python -m pytest tests/aqis_lab/kit/test_protected_v4.py tests/aqis_lab/kit/test_guard_v4.py tests/aqis_lab/kit/test_stop_gate_v4.py tests/aqis_lab/kit/test_session_context_v2.py tests/aqis_lab/kit/test_acceptance_wo_1_0_07.py -q --tb=short
 ---
 
 # WO-1.0-07 — Hook updates (spec allowances, stop gate v4, session context v2), staged
 
-**Before sending (Claude):** save the current Claude Code hooks reference sections for PreToolUse, PostToolUse, Stop and SessionStart input and output to `docs/outsourcing/refs/claude-code-hooks.md`, and add to `context` every test file found by `rg -l "stop_gate|_protected" tests/aqis_lab` (the WP-0.0 parity tests import the hook's tables and parse its messages).
+**Before sending (Claude):** save the current Claude Code hooks reference sections for PreToolUse, PostToolUse, Stop and SessionStart input and output to `docs/outsourcing/refs/claude-code-hooks.md`, and add to `context` every test file found by `rg -l "stop_gate|_protected" tests/aqis_lab` (the WP-0.0 parity tests import the hook's tables and parse its messages). Add the same test files to the `verify` command; WO-1.0-08 shares `tests/aqis_lab/kit`, so `verify` names files, never the folder.
 
 ## 1. Context
 The four hooks in your context enforce the lab's rules today (stop gate version 3). Under the new operating model, guarded-path allowances may also come from the WP spec, allowed kinds of test change are permitted with a record, blocker fragments are linted, and the stop gate runs only the tests a change affects. You write the new versions into `kit-staging/.claude/hooks/`; after audit the owner copies them into `.claude/`. Hooks follow the attached reference exactly.
@@ -57,7 +62,7 @@ Produce version 4 of the stop gate and updated guard, protected-path and session
 | `kit-staging/.claude/hooks/stop_gate.py` | Stop hook version 4 | unchanged entry point; `HOOK_VERSION = "4"` | 400 per file; split helpers into `_stopgate_*.py` siblings if needed (add them to outputs via QUESTIONS first) |
 | `kit-staging/.claude/hooks/session_context.py` | SessionStart context, at most 15 lines | unchanged entry point | 150 |
 | `kit-staging/.claude/hooks/.gitignore` | Same content as today | | 10 |
-| `tests/aqis_lab/kit/test_*.py` | Tests that run each hook as a subprocess with real JSON input in temporary git repositories | | 300 each |
+| `tests/aqis_lab/kit/test_*.py` | Tests that run each hook as a subprocess with real JSON input in scratch git repositories | | 300 each |
 
 ## 4. Required behaviour
 - **B1** `current_wp`: from a branch named `claude/wp-<x>-<y>-<slug>` → `WP-<x>.<y>`; otherwise from the status fragment in `docs/progress/status.d/` whose `Branch:` equals the current branch; otherwise none.
@@ -66,7 +71,7 @@ Produce version 4 of the stop gate and updated guard, protected-path and session
 - **B4** Stop gate test selection: when `tools/index` exists, run `python -m tools.index impact --base origin/main`; run the listed tests, or the full fast suite when it prints `all`, fails, or the tool is missing. When the WP's status fragment in the working tree says READY-FOR-AUDIT, always run the full fast suite. Keep version 3's caching by lab fingerprint.
 - **B5** Existing-test changes: a modified existing test file passes only if `docs/progress/<WP>/TEST_CHANGES.md` has a row naming it, and, for every test function in it: the function still exists; its count of `assert` statements plus `pytest.raises` and `pytest.warns` blocks did not fall; it gained no skip or xfail (decorators, `pytest.skip(`, `pytest.xfail(`, `pytestmark`). Compare with the `origin/main` version using `ast`. A deleted test file, a deleted test function, a fallen assertion count or a new skip blocks even with a record. Without a record, behave as version 3 (an approval is needed).
 - **B6** Blocker lint: when `tools/progress` exists, run `python -m tools.progress lint --changed-from origin/main`; any issue blocks with the lint's own messages.
-- **B7** Keep the scanned directories and every pattern table exactly as version 3 has them. The audit gate's parity tests compare these tables with `tools/audit/patterns.py`, so any change would break `main` until both sides change together. Code in `kit-staging/` is scanned by the relay's checks instead, and audited at T1.
+- **B7** Keep the scanned directories and every pattern table exactly as version 3 has them. The audit gate's parity tests compare these tables with `tools/audit/patterns.py`, so any change would break `main` until both sides change together. Code in `kit-staging/` is scanned by the relay's checks instead, and audited at T1. Lines that must hold a flagged pattern (the copied pattern tables, and the documented fail-closed and fail-safe handlers of B3 and B10) end with `# audit-allow: <reason>`; a trailing comment leaves a table's values unchanged. If the parity tests compare source lines rather than values, return QUESTIONS.
 - **B8** What Claude sees is at most 40 lines; the full report goes to `.git/aqis-stop-gate.log`.
 - **B9** Keep every version 3 behaviour not changed here: NEVER and GUARDED change detection since the merge base, the memory of known problem sets in `.git/aqis-stop-gate.json`, silence while an open blocker covers a known set, the fail-closed main-ref lookup, and the pattern tables' names and message formats that the parity tests read.
 - **B10** Session context prints at most 15 lines: branch; current WP and its status; open blockers for the WP and in total (fragments plus legacy `BLOCKERS.md` entries); the owner-queue item count if `OWNER_QUEUE.md` exists; whether the probe files exist; and `Navigate: docs/index/MAP.md first.` It never fails the session: on any error it prints one line and exits 0.
@@ -100,6 +105,6 @@ Return QUESTIONS if the current hook code contradicts this order, if the attache
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists, starts from the current code, and carries the module header standard.
 - **D2** B1 to B10 and E1 to E4 are implemented; point at each, and list every version 3 behaviour you kept.
-- **D3** Tests run the hooks as subprocesses with JSON on stdin, in temporary repositories with an `origin` remote.
+- **D3** Tests run the hooks as subprocesses with JSON on stdin, in scratch repositories with an `origin` remote.
 - **D4** `tests/aqis_lab/kit/test_acceptance_wo_1_0_07.py` and the WP-0.0 parity tests pass unmodified.
 - **D5** No placeholder or swallowed error; enforcement fails closed.

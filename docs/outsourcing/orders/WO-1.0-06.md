@@ -2,7 +2,7 @@
 id: WO-1.0-06
 wp: WP-1.0
 title: Break suite runner and mutation report
-model: gemini-3.7-flash
+model: default
 channel: api
 attempt_budget: 3
 risk_tier: T1
@@ -10,6 +10,7 @@ max_output_tokens: 60000
 context:
   - docs/process/AUDIT_PROTOCOL.md
   - docs/process/templates/BREAK_RECIPE.md
+interfaces:
   - tools/index/impact.py
 outputs:
   - tools/audit/breaks.py
@@ -19,6 +20,10 @@ outputs:
   - tests/aqis_lab/audit_breaks/test_breaks.py
   - tests/aqis_lab/audit_breaks/test_mutate.py
   - tests/aqis_lab/audit_breaks/test_mutation_report.py
+steps:
+  - tools/audit/breaks.py, tests/aqis_lab/audit_breaks/__init__.py, tests/aqis_lab/audit_breaks/test_breaks.py
+  - tools/audit/mutate.py, tests/aqis_lab/audit_breaks/test_mutate.py
+  - tools/audit/mutation_report.py, tests/aqis_lab/audit_breaks/test_mutation_report.py
 read_only_tests:
   - tests/aqis_lab/audit_breaks/test_acceptance_wo_1_0_06.py
 allowed_dependencies:
@@ -45,12 +50,12 @@ Must-catch proofs used to be manual breaks repeated every audit round. Now each 
 
 ## 4. Required behaviour
 - **B1** Recipes live at `tests/aqis_lab/breaks/<WP>/MC-<nn>-<slug>.patch`; header lines `# MC:`, `# behaviour:` and at least one `# expect-fail:` with a pytest node ID; a missing header or node ID makes the recipe `broken`.
-- **B2** For each recipe: create a detached worktree of `HEAD` in a temporary directory; `git apply --check`, then apply; run only the `expect-fail` node IDs with the project's Python from the worktree, with the worktree as working directory; parse the results (use pytest's `-rA` summary or `--junitxml` to a temporary file).
+- **B2** For each recipe: create a detached worktree of `HEAD` in a scratch directory; `git apply --check`, then apply; run only the `expect-fail` node IDs with the project's Python from the worktree, with the worktree as working directory; parse the results (use pytest's `-rA` summary or `--junitxml` to a scratch file).
 - **B3** `caught` only when every `expect-fail` node failed or errored. `survived` when any of them passed. `broken` when the patch does not apply, a node ID does not exist, or pytest could not run.
 - **B4** The worktree is removed in every case, including crashes and timeouts (default 600 seconds per recipe).
 - **B5** Breaks report: a table (recipe, behaviour, result, details), at most 30 lines. Exit 0 when all are caught; 1 when any survived; 2 when any is broken and none survived.
 - **B6** Mutation operators: comparison swap (`<` with `>=`, `>` with `<=`, `==` with `!=`), boolean operator swap (`and` with `or`), condition negation in `if` and `while`, integer constant plus or minus one, a `return <expr>` replaced by `return None`, and a `raise` replaced by `pass`. One mutation per mutant; mutants that do not compile are discarded. Selection is deterministic for a given seed and limit.
-- **B7** The mutation report mutates only the modules changed since the merge base with `--base`, runs each mutant in a temporary worktree against the module's affected tests (from `tools.index.impact`), and writes a markdown report: per module, mutants run, killed and survived, then each survivor with `path:line`, operator and description. It never modifies the real working tree. Exit 0 unless the tool itself failed (exit 2).
+- **B7** The mutation report mutates only the modules changed since the merge base with `--base`, runs each mutant in a scratch worktree against the module's affected tests (from `tools.index.impact`), and writes a markdown report: per module, mutants run, killed and survived, then each survivor with `path:line`, operator and description. It never modifies the real working tree. Exit 0 unless the tool itself failed (exit 2).
 
 ## 5. Edge cases you must handle
 - **E1** No recipes for the WP → exit 2 with "no recipes", never 0.
@@ -77,6 +82,6 @@ Return QUESTIONS if `tools.index.impact` does not expose what B7 needs.
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists with its public API and the module header standard.
 - **D2** B1 to B7 and E1 to E4 are implemented; point at each.
-- **D3** Unit tests build small temporary repositories with their own recipes and tests.
+- **D3** Unit tests build small scratch repositories with their own recipes and tests.
 - **D4** `tests/aqis_lab/audit_breaks/test_acceptance_wo_1_0_06.py` passes unmodified.
 - **D5** No placeholder or swallowed error.

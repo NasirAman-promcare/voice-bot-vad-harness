@@ -2,7 +2,7 @@
 id: WO-1.0-03
 wp: WP-1.0
 title: Lab Map index generator, generated registry and test-impact selection
-model: gemini-3.7-flash
+model: default
 channel: api
 attempt_budget: 3
 risk_tier: T1
@@ -27,6 +27,13 @@ outputs:
   - tests/aqis_lab/index/test_render.py
   - tests/aqis_lab/index/test_registry.py
   - tests/aqis_lab/index/test_impact.py
+steps:
+  - tools/index/__init__.py, tests/aqis_lab/index/__init__.py, tools/index/headers.py, tests/aqis_lab/index/test_headers.py
+  - tools/index/scan.py, tests/aqis_lab/index/test_scan.py
+  - tools/index/registry.py, tests/aqis_lab/index/test_registry.py
+  - tools/index/render.py, tests/aqis_lab/index/test_render.py
+  - tools/index/impact.py, tests/aqis_lab/index/test_impact.py
+  - tools/index/__main__.py
 read_only_tests:
   - tests/aqis_lab/index/test_acceptance_wo_1_0_03.py
 allowed_dependencies:
@@ -64,7 +71,7 @@ Claude Code wastes most of its tokens searching the repository. The lab replaces
 - **B7** `--adopt-registry` (one-time migration): parse the hand-written registry; rows whose status already says retired become retirement records; rows absent from headers and not retired are listed in an error, and nothing is written.
 - **B8** Output is byte-identical across runs and independent of filesystem order, locale and time.
 - **B9** A file that fails to parse is reported as `path:line: message`; the other files are still indexed; the command exits non-zero.
-- **B10** `check` builds into a temporary folder and exits 1 if any generated file differs from the committed one, naming the files; exit 0 otherwise.
+- **B10** `check` builds into a scratch folder and exits 1 if any generated file differs from the committed one, naming the files; exit 0 otherwise.
 - **B11** `impact --base REF`: changed files since the merge base → affected modules (the changed modules plus their importers, transitively, inside the repository) → tests: test files that import any affected module, plus tests named for capability tests listed in the affected modules' headers. Print one pytest argument per line. Print `all` with a reason when the change touches `conftest.py`, `requirements/`, `pyproject.toml`, `pytest.ini`, any file under `tests/aqis_lab/` helpers without a test prefix, or more than 25 modules, or when the base ref is missing after one fetch.
 
 ## 5. Edge cases you must handle
@@ -93,6 +100,6 @@ Return QUESTIONS if the existing headers use a format different from `CHANGE_CON
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists with its public API and the module header standard.
 - **D2** B1 to B11 and E1 to E5 are implemented; point at each.
-- **D3** Unit tests build small temporary repositories (with `git init`) as fixtures; no test depends on the real repository's contents.
+- **D3** Unit tests build small scratch repositories (with `git init`) as fixtures; no test depends on the real repository's contents.
 - **D4** `tests/aqis_lab/index/test_acceptance_wo_1_0_03.py` passes unmodified.
 - **D5** No placeholder or swallowed error.

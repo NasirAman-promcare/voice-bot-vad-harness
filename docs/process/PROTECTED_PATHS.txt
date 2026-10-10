@@ -10,6 +10,8 @@ docs/specs/**
 docs/process/**
 docs/approvals/**
 docs/baselines/tier2_vad/*/raw/**
+# The relay's model pool and API limits, maintained by the owner; the relay only reads it.
+config/aqis_lab/model_pool.json
 
 [GUARDED]
 # Existing VAD harness and repository-wide files. Claude may change a path only when the WP spec on

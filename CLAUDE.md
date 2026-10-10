@@ -41,6 +41,6 @@ Owner's latest instruction > this file and `.claude/rules/` > the WP spec > `doc
 - Tests affected by your change*: `.venv/bin/python -m tools.index impact --base origin/main`
 - Audit gate: `.venv/bin/python -m tools.audit.gate --base origin/main --wp <WP>`
 - Break suite*: `.venv/bin/python -m tools.audit.breaks --wp <WP>`
-- Gemini relay*: `.venv/bin/python -m tools.outsourcing.relay --wo docs/outsourcing/orders/<WO>.md`
+- Gemini relay* (run it in the background; `--status` shows today's quota): `.venv/bin/python -m tools.outsourcing.relay --wo docs/outsourcing/orders/<WO>.md`
 - Progress lint and next ID*: `.venv/bin/python -m tools.progress lint` · `.venv/bin/python -m tools.progress new-id --kind BLK --wp <WP>`
 - Merge gate*: `.venv/bin/python -m tools.autonomy.merge_gate --wp <WP>`

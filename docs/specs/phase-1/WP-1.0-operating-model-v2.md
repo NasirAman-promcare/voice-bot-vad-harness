@@ -7,13 +7,13 @@
 - **Runs on**: cloud VM and CI
 - **Touches**: `tools/outsourcing/**`, `tools/index/**`, `tools/progress/**`, `tools/autonomy/**`, `tools/audit/breaks.py`, `tools/audit/mutate.py`, `tools/audit/mutation_report.py`, `tools/ci/**`, `kit-staging/**`, `tests/aqis_lab/{outsourcing,index,progress,autonomy,audit_breaks,kit,ci}/**`, `tests/aqis_lab/breaks/WP-1.0/**`, `.github/workflows/aqis-lab-*.yml`, `docs/outsourcing/**`, `docs/progress/**`, `docs/capabilities/retired.d/**`, `.gitignore`, and the files named by DEBT-032, DEBT-033 and DEBT-034
 - **Produces / Consumes**: produces the outsourcing relay, the Lab Map, progress fragments and generated tables, the merge gate, the break suite, staged kit v4 hooks and settings, and the CI workflows; consumes the existing audit gate and pattern tables
-- **Read first**: `docs/process/AUTONOMY.md`, `ESCALATION.md`, `CHANGE_CONTROL.md`, `AUDIT_PROTOCOL.md`, `PARALLEL.md`, `docs/process/outsourcing/` (README, FOUNDATION, templates), the nine work orders `docs/outsourcing/orders/WO-1.0-01.md` to `WO-1.0-09.md`, and the DEBT-032 to DEBT-034 rows of `docs/progress/DEBT.md`
+- **Read first**: `docs/process/AUTONOMY.md`, `ESCALATION.md`, `CHANGE_CONTROL.md`, `AUDIT_PROTOCOL.md`, `PARALLEL.md`, `docs/process/outsourcing/` (README, FOUNDATION, templates), the eleven work orders `docs/outsourcing/orders/WO-1.0-01.md` to `WO-1.0-11.md`, `config/aqis_lab/model_pool.json`, and the DEBT-032 to DEBT-034 rows of `docs/progress/DEBT.md`
 
 ## Goal
 Build, audit and hand over the tooling that lets work packages run with the owner only as a capability provider: Gemini writes the code through work orders, Claude navigates by a generated map, records are parallel-safe fragments, audits rest on break recipes, merges go through a deterministic gate, and hooks stop loops and raw merges. WP-1.0 is itself the first WP built mostly through work orders.
 
 ## Deliverables
-- The tools and tests specified by WO-1.0-01 to WO-1.0-09.
+- The tools and tests specified by WO-1.0-01 to WO-1.0-11.
 - Break recipes for this WP's must-catch list in `tests/aqis_lab/breaks/WP-1.0/`.
 - Legacy `STATUS.md`, `BLOCKERS.md` and `DEBT.md` migrated to fragments; the hand-written registry adopted.
 - Staged kit v4 in `kit-staging/.claude/` and its installation handed to the owner.
@@ -21,7 +21,7 @@ Build, audit and hand over the tooling that lets work packages run with the owne
 
 ## Functional requirements
 - **FR-1.0-01** Work-order tools exactly as WO-1.0-01 specifies.
-- **FR-1.0-02** The Gemini relay exactly as WO-1.0-02 specifies.
+- **FR-1.0-02** The step-wise Gemini relay exactly as WO-1.0-02 (building blocks) and WO-1.0-11 (orchestration) specify.
 - **FR-1.0-03** The Lab Map, generated registry and impact selection exactly as WO-1.0-03 specifies; the registry is adopted with `--adopt-registry`, every legacy row accounted for.
 - **FR-1.0-04** Progress fragments, generated tables, owner queue, lint and migration exactly as WO-1.0-04 specifies; the migration is run in this WP and every legacy ID and its text appear in fragments.
 - **FR-1.0-05** The merge gate exactly as WO-1.0-05 specifies.
@@ -32,7 +32,8 @@ Build, audit and hand over the tooling that lets work packages run with the owne
 - **FR-1.0-10** `.gitignore` ignores `.relay/`.
 - **FR-1.0-11** DEBT-032, DEBT-033 and DEBT-034 are closed as their rows describe, each with a test, and their debt fragments set to CLOSED.
 - **FR-1.0-12** Kit handover: a KIT blocker gives the exact steps to copy every file under `kit-staging/.claude/` into `.claude/` on `main`. After the owner installs, the kit parity check passes, the self-test in `docs/OPERATOR_GUIDE.md` passes, and Claude resolves the blocker.
-- **FR-1.0-13** Outsourcing evidence: every work order has its summary and ledger fragment; WO-1.0-01 and WO-1.0-02 go through Jules or the paste channel, WO-1.0-03 to WO-1.0-09 through the relay.
+- **FR-1.0-13** Outsourcing evidence: every work order has its summary and ledger fragment, and every relay order its step log; WO-1.0-01 and WO-1.0-10 (in parallel), then WO-1.0-02, then WO-1.0-11, go through Jules or the paste channel, and WO-1.0-03 to WO-1.0-09 through the relay.
+- **FR-1.0-14** The model clients, rate governor and quota classification exactly as WO-1.0-10 specifies, and the model router as WO-1.0-11 specifies, using `config/aqis_lab/model_pool.json`.
 
 ## Non-functional requirements
 - **NFR-1.0-01** Standard library only, for every tool and hook.
@@ -47,6 +48,8 @@ Build, audit and hand over the tooling that lets work packages run with the owne
 - **AT-1.0-05** `.venv/bin/python -m tools.autonomy.merge_gate --wp WP-1.0 --dry-run` prints all seven criteria with reasons.
 - **AT-1.0-06** `.venv/bin/python -m tools.outsourcing.relay --wo docs/outsourcing/orders/WO-1.0-09.md --dry-run` measures the request and sends nothing.
 - **AT-1.0-07** The audit gate passes with `--wp WP-1.0`.
+- **AT-1.0-08** `.venv/bin/python -m tools.outsourcing.relay --status` prints today's request counts per model and the next resets in UTC, provider time and Asia/Karachi, and sends nothing.
+- **AT-1.0-09** `.venv/bin/python -m tools.outsourcing.relay --models` confirms every enabled pool model's name with its provider (owner-run once the credentials exist).
 
 ## Allowed guarded edits
 - `.gitignore`
@@ -54,8 +57,8 @@ Build, audit and hand over the tooling that lets work packages run with the owne
 ## Owner needs
 | Capability class | What | When |
 | --- | --- | --- |
-| EXTERNAL-AI | Start Jules (or use the paste channel) for WO-1.0-01, then WO-1.0-02 | After their acceptance tests are committed |
-| ACCESS | Gemini API credential on the `aqis-lab` environment (header `x-goog-api-key`, host `generativelanguage.googleapis.com`) | Before WO-1.0-03 |
+| EXTERNAL-AI | Start Jules (or use the paste channel) for WO-1.0-01 and WO-1.0-10 together, then WO-1.0-02, then WO-1.0-11 | After their acceptance tests are committed |
+| ACCESS | Gemini API credential on the `aqis-lab` environment (header `x-goog-api-key`, host `generativelanguage.googleapis.com`); recommended: Mistral credential (`Authorization: Bearer`, host `api.mistral.ai`) with Mistral enabled in `config/aqis_lab/model_pool.json` (operator guide 1.5) | Before WO-1.0-03 |
 | KIT | Interim merge of WP-1.0; then install `kit-staging/.claude/` into `.claude/` | After the audit passes |
 | ACCESS (optional) | Register the Oracle VM as a self-hosted runner and set the repository variable `AQIS_HEAVY_RUNNER` | Any time |
 
@@ -66,16 +69,16 @@ Build, audit and hand over the tooling that lets work packages run with the owne
 | OC-1.0-02 First generation on `main` | post-merge | GitHub Actions | the `aqis-lab-generate` run after the merge | a `chore(bot):` commit with `docs/index/` and the generated tables |
 
 ## Outsourcing candidates
-- WO-1.0-01 to WO-1.0-09, all of the tooling. Claude writes the acceptance tests, the break recipes, the debt fixes and the migration run.
+- WO-1.0-01 to WO-1.0-11, all of the tooling. Claude writes the acceptance tests, the break recipes, the debt fixes and the migration run.
 
 ## Stop and ask if (DECISION triggers)
 - A work order needs a dependency beyond the standard library.
 - The current Claude Code hooks reference contradicts how the existing hooks read input.
 - Migration finds legacy content that no fragment format can hold verbatim.
-- (ACCESS, not DECISION) GitHub's REST merge or check-run endpoints, or the Gemini API, are unreachable from the session.
+- (ACCESS, not DECISION) GitHub's REST merge or check-run endpoints, or every enabled model provider's API, are unreachable from the session.
 
 ## Must-catch behaviours
-Every must-catch item in section 8 of WO-1.0-01 to WO-1.0-09, each with an acceptance test and a break recipe, and in particular:
+Every must-catch item in section 8 of WO-1.0-01 to WO-1.0-11, each with an acceptance test and a break recipe, and in particular:
 1. A bundle path outside a work order's outputs writes nothing.
 2. The relay sends only listed files and never handles a key.
 3. A stale map fails `tools.index check`; a capability cannot vanish without a retirement record.
@@ -88,3 +91,4 @@ Every must-catch item in section 8 of WO-1.0-01 to WO-1.0-09, each with an accep
 10. The bash guard blocks raw merges and pushes to `main` and allows the merge gate.
 11. Regeneration on `main` cannot trigger itself; pull-request jobs are read-only; the main guard flags an unexpected commit; kit parity fails on drift.
 12. Nothing that exists today breaks: the WP-0.0 pattern-parity tests and the WP-0.9 memo checks pass unmodified on the branch, after the merge, and after the owner installs the staged kit.
+13. The relay paces every model and provider under the pool file's limits, moves a step to the next eligible model when one is used up, pauses only when the whole eligible pool is, resumes at the next unaccepted step from the pushed `wo/<WO>` branch, and never sends a T1 order to a model not listed for T1.

@@ -55,5 +55,6 @@ The lab's results are only worth anything if they are **true, comparable and tra
 ## How to answer
 - Follow `RETURN_FORMAT.md` exactly: a manifest, then each output file **in full** between the markers, then the Definition of Done table with `file:line` for every item. Never return partial files, diffs, or "rest unchanged" notes.
 - Return only paths listed in the work order's `outputs`.
+- **Steps**: most requests ask for one step of the order. Return exactly the files the `THIS STEP` block names. Files from earlier steps and `interfaces` appear as interface views (header, signatures, docstrings) or in full: call them exactly as shown, and never re-implement or return them. Later steps' files do not exist yet.
 - **When the work order is wrong, contradictory or missing something you need**, return a QUESTIONS block and no files. Never guess an interface, a file, a value or a dataset.
 - Before answering, walk through the Definition of Done item by item and point at where each is met. If you cannot point at it, it is not done.

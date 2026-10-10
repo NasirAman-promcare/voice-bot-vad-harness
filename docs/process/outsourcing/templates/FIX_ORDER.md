@@ -15,7 +15,7 @@ Your previous answer did not pass these checks. Fix the root cause; do not speci
 - <finding ID> <severity>: <finding, with file:line and the required behaviour>
 
 ## Files you may change
-- <subset of the work order's outputs>
+- <the step's files, plus earlier outputs the failing output names (their current text follows as CURRENT blocks); all outputs in a final fix>
 
 ## Rules
 - Return only the files you change, each complete, in RETURN_FORMAT.md form, followed by the DOD table for the items affected.

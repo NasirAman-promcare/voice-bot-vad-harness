@@ -2,7 +2,7 @@
 id: WO-1.0-05
 wp: WP-1.0
 title: Merge gate
-model: gemini-3.7-flash
+model: default
 channel: api
 attempt_budget: 3
 risk_tier: T1
@@ -14,6 +14,7 @@ context:
   - docs/process/templates/FRAGMENTS.md
   - docs/process/templates/WP_SPEC.md
   - docs/process/PROTECTED_PATHS.txt
+interfaces:
   - tools/outsourcing/paths.py
   - tools/progress/fragments.py
 outputs:
@@ -28,6 +29,12 @@ outputs:
   - tests/aqis_lab/autonomy/test_facts.py
   - tests/aqis_lab/autonomy/test_github.py
   - tests/aqis_lab/autonomy/test_merge_gate.py
+steps:
+  - tools/autonomy/__init__.py, tests/aqis_lab/autonomy/__init__.py, tests/aqis_lab/autonomy/stand_in_gh.py
+  - tools/autonomy/github.py, tests/aqis_lab/autonomy/test_github.py
+  - tools/autonomy/facts.py, tests/aqis_lab/autonomy/test_facts.py
+  - tools/autonomy/criteria.py, tests/aqis_lab/autonomy/test_criteria.py
+  - tools/autonomy/merge_gate.py, tests/aqis_lab/autonomy/test_merge_gate.py
 read_only_tests:
   - tests/aqis_lab/autonomy/test_acceptance_wo_1_0_05.py
 allowed_dependencies:
@@ -90,6 +97,6 @@ Return QUESTIONS if the audit report or fragment formats in your context do not 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists with its public API and the module header standard.
 - **D2** B1 to B6 and E1 to E5 are implemented; point at each.
-- **D3** Tests use temporary git repositories and the stand-in `gh`; none reaches GitHub.
+- **D3** Tests use scratch git repositories and the stand-in `gh`; none reaches GitHub.
 - **D4** `tests/aqis_lab/autonomy/test_acceptance_wo_1_0_05.py` passes unmodified.
 - **D5** No placeholder or swallowed error.

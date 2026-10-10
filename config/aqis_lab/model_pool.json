@@ -1,0 +1,59 @@
+{
+  "notes": "Owner-maintained; Claude only reads it. The router sends each step to the best enabled model that may do the order's risk tier, fits the request within the model's tokens-per-minute limit, and still has quota today. Gemini values were copied from Google AI Studio's rate-limit page (project 'My First Project', free tier) on 2026-10-09. Mistral values were copied from Admin > Limits (Region Global) on 2026-10-10; Mistral sets limits per model (requests per second, shown here as rpm = rps x 60, rounded down) and shows no daily or monthly cap. Never add a model whose tpm_input is below about 60,000: one work-order request is 20,000 to 40,000 input tokens (mistral-medium-latest, mistral-large-4 and mistral-small-2603 allow only 20,000). Model keys are API model names: run the relay with --models to confirm them.",
+  "share": 2,
+  "safety": 0.8,
+  "providers": {
+    "gemini": {
+      "api": "gemini",
+      "base_url": "https://generativelanguage.googleapis.com",
+      "enabled": true,
+      "tier": "free",
+      "verified_on": "2026-10-09",
+      "day_reset": "America/Los_Angeles",
+      "data_use": "Free tier: Google may use prompts and responses to improve its products, and human reviewers may read them."
+    },
+    "mistral": {
+      "api": "openai",
+      "base_url": "https://api.mistral.ai/v1",
+      "enabled": true,
+      "tier": "free",
+      "verified_on": "2026-10-10",
+      "day_reset": "UTC",
+      "data_use": "Free (Experiment) plan: may be used for training unless 'Anonymous improvement data' is switched off in Admin > Privacy."
+    },
+    "nvidia": {
+      "api": "openai",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "enabled": false,
+      "tier": "free",
+      "verified_on": "",
+      "day_reset": "UTC",
+      "rpm": 40,
+      "data_use": "API trial terms: for testing and evaluation, not production; NVIDIA may use content to improve its products and models."
+    },
+    "openrouter": {
+      "api": "openai",
+      "base_url": "https://openrouter.ai/api/v1",
+      "enabled": false,
+      "tier": "free",
+      "verified_on": "",
+      "day_reset": "UTC",
+      "rpm": 20,
+      "rpd": 50,
+      "data_use": "Free models: some upstream hosts log prompts or train on them."
+    }
+  },
+  "models": {
+    "gemini-3.8-flash": {"provider": "gemini", "rank": 1, "risk_tiers": ["T1", "T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
+    "gemini-3.7-flash": {"provider": "gemini", "rank": 2, "risk_tiers": ["T1", "T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
+    "gemini-3.6-flash": {"provider": "gemini", "rank": 3, "risk_tiers": ["T1", "T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
+    "gemini-3.5-flash": {"provider": "gemini", "rank": 4, "risk_tiers": ["T1", "T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
+    "codestral-2508": {"provider": "mistral", "rank": 5, "risk_tiers": ["T1", "T2", "T3"], "rpm": 124, "tpm_input": 625000, "max_input_tokens": 128000, "max_output_tokens": 32768},
+    "mistral-large-2512": {"provider": "mistral", "rank": 6, "risk_tiers": ["T1", "T2", "T3"], "rpm": 60, "tpm_input": 250000, "max_input_tokens": 128000, "max_output_tokens": 32768},
+    "gemini-3-flash": {"provider": "gemini", "rank": 7, "risk_tiers": ["T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
+    "gemini-2.5-flash": {"provider": "gemini", "rank": 8, "risk_tiers": ["T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
+    "gemini-3.5-flash-lite": {"provider": "gemini", "rank": 9, "risk_tiers": ["T3"], "rpm": 15, "tpm_input": 250000, "rpd": 500, "max_input_tokens": 1048576, "max_output_tokens": 65536},
+    "gemini-3.1-flash-lite": {"provider": "gemini", "rank": 10, "risk_tiers": ["T3"], "rpm": 15, "tpm_input": 250000, "rpd": 500, "max_input_tokens": 1048576, "max_output_tokens": 65536},
+    "ministral-14b-2512": {"provider": "mistral", "rank": 11, "risk_tiers": ["T3"], "rpm": 30, "tpm_input": 937500, "max_input_tokens": 128000, "max_output_tokens": 32768}
+  }
+}

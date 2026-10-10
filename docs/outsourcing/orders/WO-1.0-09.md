@@ -2,7 +2,7 @@
 id: WO-1.0-09
 wp: WP-1.0
 title: CI workflows for generation, break suite, scope, main guard, mutation and kit parity
-model: gemini-3.7-flash
+model: default
 channel: api
 attempt_budget: 3
 risk_tier: T1
@@ -33,6 +33,13 @@ outputs:
   - tests/aqis_lab/ci/test_main_guard.py
   - tests/aqis_lab/ci/test_kit_parity.py
   - tests/aqis_lab/ci/test_workflows.py
+steps:
+  - tools/ci/__init__.py, tests/aqis_lab/ci/__init__.py, tools/ci/refs.py, tests/aqis_lab/ci/test_refs.py
+  - tools/ci/main_guard.py, tests/aqis_lab/ci/test_main_guard.py
+  - tools/ci/kit_parity.py, tests/aqis_lab/ci/test_kit_parity.py
+  - .github/workflows/aqis-lab-generate.yml, .github/workflows/aqis-lab-breaks.yml, .github/workflows/aqis-lab-scope.yml
+  - .github/workflows/aqis-lab-main-guard.yml, .github/workflows/aqis-lab-mutation.yml, .github/workflows/aqis-lab-kit-parity.yml
+  - tests/aqis_lab/ci/test_workflows.py
 read_only_tests:
   - tests/aqis_lab/ci/test_acceptance_wo_1_0_09.py
 allowed_dependencies:
@@ -43,7 +50,7 @@ verify:
 
 # WO-1.0-09 — CI workflows for generation, break suite, scope, main guard, mutation and kit parity
 
-**Before sending (Claude):** add the existing `.github/workflows/aqis-lab-*.yml` files to `context`, and state in section 1 which Python setup and bootstrap steps they use, so the new workflows install the environment the same way.
+**Before sending (Claude):** add the existing `.github/workflows/aqis-lab-*.yml` files to `context`, and state in section 1 which Python setup and bootstrap steps they use, so the new workflows install the environment the same way. If `requirements/aqis_lab` pins a YAML package, add it to `allowed_dependencies`.
 
 ## 1. Context
 The lab's tables and map are generated on `main` only, break recipes must run on every pull request and nightly, outsourced branches need a scope check, `main` needs a guard that flags commits that did not come through the merge gate, mutation reports are advisory, and installed hooks must match the audited staged copies. Workflow files matching `.github/workflows/aqis-lab-*.yml` are lab-owned. Logic lives in small Python modules under `tools/ci/` so it can be unit-tested; the workflows only call them.
@@ -72,7 +79,7 @@ Six workflows and three helper modules, with tests.
 - **B4** Every job installs Python and the lab environment the same way the existing lab workflows do, and pins third-party actions to full commit SHAs with the version in a comment.
 - **B5** The main guard classifies a commit as `gated-merge` when it is a merge commit whose pull request (from `gh api repos/<repo>/commits/<sha>/pulls`) has a head commit with an `AUDIT.md` verdict PASS for that WP and a title ending `(gate PASS)`; `bot-regeneration` when authored by the Actions bot with a `chore(bot):` message touching only generated paths; `owner-never-edit` when committed through the GitHub web interface and touching only NEVER paths; otherwise `unexpected`, which opens one issue titled `main-guard: unexpected commit <short sha>` with the facts.
 - **B6** The mutation job never fails the pull request: mark the job advisory with `continue-on-error: true` and a comment `# audit-allow: advisory report`.
-- **B7** `test_workflows.py` parses each workflow (use the YAML loader already in the lab lock; if none exists, return QUESTIONS rather than adding one) and asserts the triggers, permissions, runner expressions, SHA-pinned actions and the bot-skip condition.
+- **B7** `test_workflows.py` reads each workflow (with the YAML loader listed in `allowed_dependencies` if there is one, otherwise as text, line by line) and asserts the triggers, permissions, runner expressions, SHA-pinned actions and the bot-skip condition.
 
 ## 5. Edge cases you must handle
 - **E1** A pull request from a branch with no derivable WP → the breaks job prints a notice and succeeds without running.
@@ -99,6 +106,6 @@ Return QUESTIONS if the existing lab workflows install the environment in a way 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists; Python modules carry the header standard.
 - **D2** B1 to B7 and E1 to E4 are implemented; point at each.
-- **D3** Helper tests use temporary repositories and a stand-in `gh` on `PATH`.
+- **D3** Helper tests use scratch repositories and a stand-in `gh` on `PATH`.
 - **D4** `tests/aqis_lab/ci/test_acceptance_wo_1_0_09.py` passes unmodified.
 - **D5** No placeholder or swallowed error.
