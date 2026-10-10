@@ -6,6 +6,7 @@
 | 2026-10-10T16:49:01.375633+00:00 | 7ff19ad1a94f234729e6ef7485766e6af7637c235f8f36ce66d85a988a6dd6cf | claude/wp-1-0-operating-model-v2 | default |
 | 2026-10-10T17:25:59.219352+00:00 | 7ff19ad1a94f234729e6ef7485766e6af7637c235f8f36ce66d85a988a6dd6cf | claude/wp-1-0-operating-model-v2 | default |
 | 2026-10-10T17:52:00.959977+00:00 | 7ff19ad1a94f234729e6ef7485766e6af7637c235f8f36ce66d85a988a6dd6cf | claude/wp-1-0-operating-model-v2 | default |
+| 2026-10-10T17:55:03.263986+00:00 | 64963b065312bbb284b6a2ccacf43f74bf2a68cf3ac2ca4516feb9713092e747 | claude/wp-1-0-operating-model-v2 | mistral-large-2512 |
 
 ## Accepted Parts
 | label | files | attempts | model | provider | model_version | prompt_tokens | output_tokens | seconds_waited |
