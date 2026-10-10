@@ -62,6 +62,16 @@ Write the loop guard (PostToolUse and PreToolUse on Bash), the bash guard (PreTo
 - **B7** The bash guard blocks, with a message naming the merge gate as the only route: `gh pr merge` in any form; `gh api` calls whose path contains `/merge` or that use method `PUT` on a pull request; `git push` whose refspec targets `main` or `master` (including `HEAD:main`, `+main`, `:main`, `refs/heads/main`); `git update-ref refs/heads/main`; and shell writes into NEVER paths (`>`, `>>`, `tee`, `sed -i`, `cp`, `mv`, `rm` with a NEVER path argument). It allows commands that start with `.venv/bin/python -m tools.autonomy.merge_gate` or `python3 -m tools.autonomy.merge_gate`. If it cannot parse a command that contains `merge`, `push` or a NEVER path, it blocks with an explanation (fail closed). Every other command passes.
 - **B8** Settings version 4: everything in the current `.claude/settings.json`, plus a PreToolUse entry for matcher `Bash` running `bash_guard.py` and then `loop_guard.py pre`, a PostToolUse entry for matcher `Bash` running `loop_guard.py post`, and the deny rule `Bash(gh pr merge *)`. Keep `advisorModel`. Commands use `python3 "$CLAUDE_PROJECT_DIR"/.claude/hooks/...` like the existing entries.
 
+- **B9** Amendment for the current hooks reference (DEC-1.0-03, 2026-10-10). It replaces the event names in B1, B3 and B8.
+  - **Events.** A Bash command that exits non-zero reaches hooks as **PostToolUseFailure**: the input has `tool_name`, `tool_input.command` and `error`, whose first line is `Exit code N`, followed by the output. A Bash command that exits 0 reaches hooks as **PostToolUse**, with `tool_response`.
+  - **Post mode.** `loop_guard.py post` handles both:
+    - A Bash PostToolUseFailure is a failure. Its signature is the normalised command plus the failing pytest node IDs, or the last matching error line, taken from `error`. If `error` has no recognisable line, the signature is the command and the exit status (E3).
+    - A Bash PostToolUse is a success and resets the signature (B3), unless its output reports pytest failures or errors.
+    - A relay run whose `error` begins `Exit code 11` or `Exit code 12` is a pause: never counted, never matched (B1, E5).
+  - **Output.** Messages go in `{"hookSpecificOutput": {"hookEventName": "<the event that fired>", "additionalContext": "<message>"}}` on stdout, with exit code 0.
+  - **Settings.** Settings v4 (B8) register `loop_guard.py post` under both `PostToolUse` and `PostToolUseFailure`, each with matcher `Bash`.
+  - **Tests.** The acceptance tests send exactly these JSON shapes.
+
 ## 5. Edge cases you must handle
 - **E1** Commands chained with `&&`, `;` or `|` → each part is checked by the bash guard.
 - **E2** `git push origin claude/wp-1-3-x` → allowed.
@@ -90,7 +100,7 @@ Return QUESTIONS if the attached hooks reference does not give the PostToolUse f
 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists with the module header standard.
-- **D2** B1 to B8 and E1 to E5 are implemented; point at each.
+- **D2** B1 to B9 and E1 to E5 are implemented; point at each.
 - **D3** Tests run the hooks as subprocesses with JSON on stdin in scratch repositories.
 - **D4** `tests/aqis_lab/kit/test_acceptance_wo_1_0_08.py` passes unmodified.
 - **D5** No placeholder or swallowed error, except the loop guard's documented fail-open path.
