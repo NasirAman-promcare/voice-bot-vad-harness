@@ -71,3 +71,6 @@ pretrained_models/
 *.onnx
 __pycache__/
 *.pyc
+
+.venv/
+.relay/
