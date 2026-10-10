@@ -11,6 +11,7 @@ NOT IN SCOPE:
   - Direct HTTP calls (delegated to clients).
 CHANGE LOG:
   2026-10-10 WO-1.0-11 created.
+  2026-10-10 WO-1.0-11 FIX 1: split _choose_default to follow shape rules.
 """
 from __future__ import annotations
 
@@ -20,7 +21,7 @@ from pathlib import Path
 
 from tools.outsourcing.gemini_client import GeminiClient
 from tools.outsourcing.governor import Governor
-from tools.outsourcing.limits import ModelSpec, Pool, effective
+from tools.outsourcing.limits import LimitsError, ModelSpec, Pool, effective
 from tools.outsourcing.openai_client import OpenAIClient
 from tools.outsourcing.steplog import StepLogError, parse
 from tools.outsourcing.workorder import WorkOrder
@@ -107,7 +108,12 @@ class Router:
         self.governor = governor
         self.stats = stats
 
-    def choose(self, order: WorkOrder, input_estimate: int, exclude: set[str] | tuple[str, ...] | list[str] | None = None) -> ModelSpec:
+    def choose(
+        self,
+        order: WorkOrder,
+        input_estimate: int,
+        exclude: set[str] | tuple[str, ...] | list[str] | None = None,
+    ) -> ModelSpec:
         excl = set(exclude or ())
 
         if order.model != "default":
@@ -118,7 +124,7 @@ class Router:
     def _choose_pinned(self, order: WorkOrder, input_estimate: int, exclude: set[str]) -> ModelSpec:
         try:
             spec = self.pool.model(order.model)
-        except Exception as exc:
+        except LimitsError as exc:
             raise NoEligibleModel(f"Pinned model '{order.model}' not available in pool: {exc}") from exc
 
         if not spec.provider.enabled:
@@ -136,7 +142,10 @@ class Router:
         eff = effective(self.pool, spec, adaptive, learned)
 
         if spec.max_input_tokens < input_estimate or eff.input_token_ceiling < input_estimate:
-            raise NoEligibleModel(f"Pinned model '{order.model}' cannot fit size {input_estimate} (max {spec.max_input_tokens}, ceiling {eff.input_token_ceiling})")
+            raise NoEligibleModel(
+                f"Pinned model '{order.model}' cannot fit size {input_estimate} "
+                f"(max {spec.max_input_tokens}, ceiling {eff.input_token_ceiling})"
+            )
 
         reset_dt = self.governor.exhausted_until(spec.name)
         if reset_dt is not None:
@@ -149,10 +158,31 @@ class Router:
         if not all_candidates:
             raise NoEligibleModel(f"No enabled model in pool supports risk tier '{order.risk_tier}'")
 
+        qualifying, size_ruled_out = self._filter_qualifying(all_candidates, input_estimate, exclude)
+
+        if not qualifying:
+            if size_ruled_out:
+                raise NoEligibleModel(
+                    f"Size alone ({input_estimate} tokens) ruled out all candidate models for risk tier '{order.risk_tier}'"
+                )
+            raise NoEligibleModel(f"No eligible model available for risk tier '{order.risk_tier}'")
+
+        unexhausted = self._filter_unexhausted(qualifying)
+        ordered = self._rank_candidates(unexhausted, order.risk_tier)
+
+        for m in ordered:
+            if self.governor.delay_for(m.name, input_estimate) == 0.0:
+                return m
+
+        return ordered[0]
+
+    def _filter_qualifying(
+        self, candidates: list[ModelSpec], input_estimate: int, exclude: set[str]
+    ) -> tuple[list[ModelSpec], bool]:
         qualifying: list[ModelSpec] = []
         size_ruled_out = True
 
-        for m in all_candidates:
+        for m in candidates:
             if m.name in exclude:
                 continue
             ms = self.governor.model_stats.get(m.name)
@@ -164,11 +194,9 @@ class Router:
                 qualifying.append(m)
                 size_ruled_out = False
 
-        if not qualifying:
-            if size_ruled_out:
-                raise NoEligibleModel(f"Size alone ({input_estimate} tokens) ruled out all candidate models for risk tier '{order.risk_tier}'")
-            raise NoEligibleModel(f"No eligible model available for risk tier '{order.risk_tier}'")
+        return qualifying, size_ruled_out
 
+    def _filter_unexhausted(self, qualifying: list[ModelSpec]) -> list[ModelSpec]:
         unexhausted: list[ModelSpec] = []
         resets: list[datetime] = []
 
@@ -183,13 +211,7 @@ class Router:
             earliest = min(resets) if resets else None
             raise PoolExhausted(earliest_reset=earliest)
 
-        ordered = self._rank_candidates(unexhausted, order.risk_tier)
-
-        for m in ordered:
-            if self.governor.delay_for(m.name, input_estimate) == 0.0:
-                return m
-
-        return ordered[0]
+        return unexhausted
 
     def _rank_candidates(self, candidates: list[ModelSpec], risk_tier: str) -> list[ModelSpec]:
         best_rate = -1.0
