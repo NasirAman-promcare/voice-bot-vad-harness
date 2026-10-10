@@ -11,6 +11,7 @@ NOT IN SCOPE:
   - Reverting unallowed changes.
 CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
+  2026-10-10 WP-1.0 FR-1.0-01 review fix (Claude): the fetch result is kept in the missing-base error.
 """
 from __future__ import annotations
 
@@ -79,15 +80,16 @@ def check_scope(
     try:
         merge_base = _run_git(root, "merge-base", base_ref, head_ref).strip()
     except ScopeError:
-        # Fetch once and retry B8 / E4
+        # Fetch once and retry B8 / E4; a failed fetch is kept in the final error, never dropped.
         try:
             _run_git(root, "fetch", "--quiet", "origin")
-        except ScopeError:
-            pass
+            fetch_note = "fetched origin once"
+        except ScopeError as fetch_exc:
+            fetch_note = f"the fetch of origin failed too ({fetch_exc})"
         try:
             merge_base = _run_git(root, "merge-base", base_ref, head_ref).strip()
         except ScopeError as exc:
-            raise ScopeError(f"Base ref {base_ref!r} cannot be found: {exc}") from exc
+            raise ScopeError(f"Base ref {base_ref!r} cannot be found after {fetch_note}: {exc}") from exc
 
     if not merge_base:
         raise ScopeError(f"Base ref {base_ref!r} has no merge-base with {head_ref!r}")

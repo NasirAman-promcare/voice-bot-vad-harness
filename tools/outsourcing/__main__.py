@@ -11,6 +11,8 @@ NOT IN SCOPE:
   - Interactive prompts.
 CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
+  2026-10-10 WP-1.0 FR-1.0-01 review fix (Claude): a git failure is reported (RepositoryError, exit 2) instead of
+    falling back to the current directory; an unreadable bundle exits 3; PackTooLarge and read errors exit 2.
 """
 from __future__ import annotations
 
@@ -21,21 +23,32 @@ from pathlib import Path
 
 from tools.outsourcing.bundle import BundleError, TruncatedBundle, parse_bundle
 from tools.outsourcing.importer import ImportRefused, QuestionsReturned, import_bundle
-from tools.outsourcing.pack import SecretRefused, build_pack
+from tools.outsourcing.pack import PackTooLarge, SecretRefused, build_pack
 from tools.outsourcing.scope import ScopeError, check_scope
 from tools.outsourcing.workorder import WorkOrderError, load_work_order, plan_steps
 
 __all__ = ["main"]
 
 
+class RepositoryError(Exception):
+    """Raised when the current directory is not inside a git checkout (exit code 2)."""
+
+
 def _get_repo_root() -> Path:
     try:
         proc = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, timeout=30)
-        if proc.returncode == 0 and proc.stdout.strip():
-            return Path(proc.stdout.strip()).resolve()
-    except Exception:
-        pass
-    return Path.cwd().resolve()
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise RepositoryError(f"git rev-parse --show-toplevel could not run: {exc}") from exc
+    if proc.returncode != 0 or not proc.stdout.strip():
+        raise RepositoryError(f"not inside a git repository ({proc.stderr.strip()}); run from the repository checkout")
+    return Path(proc.stdout.strip()).resolve()
+
+
+def _read_bundle(path: str) -> str:
+    try:
+        return Path(path).read_text(encoding="utf-8")
+    except OSError as exc:
+        raise BundleError(f"cannot read bundle {path}: {exc}") from exc
 
 
 def _truncate_output(text: str, max_lines: int = 25) -> str:
@@ -71,10 +84,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    root = _get_repo_root()
     out: list[str] = []
 
     try:
+        root = _get_repo_root()
         if args.subcommand == "validate":
             order = load_work_order(args.wo, root)
             steps = plan_steps(order)
@@ -90,7 +103,7 @@ def main(argv: list[str] | None = None) -> int:
                     raise WorkOrderError(f"Step {args.step} out of bounds")
                 exp = set(steps[args.step - 1].paths)
 
-            b_text = Path(args.bundle).read_text(encoding="utf-8")
+            b_text = _read_bundle(args.bundle)
             bundle = parse_bundle(b_text)
             report = import_bundle(bundle, order, root, mode=args.mode, dry_run=args.dry_run, expected=exp)
             out.append(f"Imported {len(report.files)} file(s) successfully.")
@@ -113,7 +126,7 @@ def main(argv: list[str] | None = None) -> int:
                 p.write_text(pack.text, encoding="utf-8")
             out.append(f"Pack built: {pack.characters} characters, est. {pack.estimated_tokens} tokens.")
 
-    except WorkOrderError as exc:
+    except (WorkOrderError, RepositoryError, PackTooLarge, OSError) as exc:
         print(f"Error [2]: {exc}", file=sys.stderr)
         return 2
     except QuestionsReturned as exc:

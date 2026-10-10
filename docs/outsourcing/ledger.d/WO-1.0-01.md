@@ -1,9 +1,10 @@
 WO: WO-1.0-01
 Date: 2026-10-10
-Model: jules
-Model version: default
+Model: jules (google-labs-jules[bot], Jules channel; not a pool model)
+Model version: not reported by the Jules channel
 Attempts: 1
-Prompt tokens: 0
-Output tokens: 0
+Prompt tokens: not reported by the Jules channel
+Output tokens: not reported by the Jules channel
 Result: ACCEPTED
-Seconds: 1
+Seconds: not reported by the Jules channel
+Note: corrected by Claude on review; the branch's fragment gave 0 tokens and 1 second, which Jules does not report (no invented figures)

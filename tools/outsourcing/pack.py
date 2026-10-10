@@ -11,6 +11,7 @@ NOT IN SCOPE:
   - Sending text over API channels.
 CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
+  2026-10-10 WP-1.0 FR-1.0-01 review fix (Claude): read failures raise OSError, never SecretRefused.
 """
 from __future__ import annotations
 
@@ -43,10 +44,7 @@ class Pack:
 def _read_and_check_secret(path: str | Path, root: Path) -> tuple[str, str]:
     rel_path = str(path)
     abs_path = root / rel_path
-    try:
-        content = abs_path.read_text(encoding="utf-8")
-    except OSError as exc:
-        raise SecretRefused(f"Cannot read context file {rel_path}: {exc}") from exc
+    content = abs_path.read_text(encoding="utf-8")  # an OSError propagates: an unreadable file is not a secret
 
     reasons = secret_reasons(rel_path, content)
     if reasons:
@@ -61,13 +59,13 @@ def build_pack(order: WorkOrder, repo_root: str | Path) -> Pack:
     # Locate FOUNDATION and RETURN_FORMAT
     foundation_path = root / "docs/process/outsourcing/FOUNDATION.md"
     if not foundation_path.is_file():
-        raise SecretRefused(f"FOUNDATION.md not found at {foundation_path}")
+        raise FileNotFoundError(f"FOUNDATION.md not found at {foundation_path}")
 
     return_fmt_path = root / "docs/process/outsourcing/RETURN_FORMAT.md"
     if not return_fmt_path.is_file():
         return_fmt_path = root / "docs/process/outsourcing/templates/RETURN_FORMAT.md"
     if not return_fmt_path.is_file():
-        raise SecretRefused(f"RETURN_FORMAT.md not found at {return_fmt_path}")
+        raise FileNotFoundError(f"RETURN_FORMAT.md not found at {return_fmt_path}")
 
     _, foundation_text = _read_and_check_secret("docs/process/outsourcing/FOUNDATION.md", root)
     _, return_fmt_text = _read_and_check_secret(return_fmt_path.relative_to(root), root)

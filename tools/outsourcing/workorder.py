@@ -11,6 +11,7 @@ NOT IN SCOPE:
   - Executing verification commands.
 CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
+  2026-10-10 WP-1.0 FR-1.0-01 review fix (Claude): an invalid path raises WorkOrderError naming its place.
 """
 from __future__ import annotations
 
@@ -62,6 +63,14 @@ class WorkOrder:
 class Step:
     number: int
     paths: tuple[str, ...]
+
+
+def _normalise(path: str, where: str) -> str:
+    """Normalise a path from the order, turning a path error into a WorkOrderError that names its place."""
+    try:
+        return normalise(path)
+    except ValueError as exc:
+        raise WorkOrderError(f"{where}: {exc}") from exc
 
 
 def _parse_front_matter(text: str) -> tuple[dict[str, str | list[str]], str]:
@@ -181,12 +190,12 @@ def load_work_order(path: str | Path, repo_root: str | Path) -> WorkOrder:
     except (ValueError, TypeError):
         raise WorkOrderError(f"max_output_tokens must be positive int: {raw_data['max_output_tokens']!r}")
 
-    context = tuple(normalise(x) for x in _get_list("context"))
-    outputs = tuple(normalise(x) for x in _get_list("outputs"))
-    read_only_tests = tuple(normalise(x) for x in _get_list("read_only_tests"))
+    context = tuple(_normalise(x, "context") for x in _get_list("context"))
+    outputs = tuple(_normalise(x, "outputs") for x in _get_list("outputs"))
+    read_only_tests = tuple(_normalise(x, "read_only_tests") for x in _get_list("read_only_tests"))
     verify = tuple(_get_list("verify"))
     allowed_deps = tuple(_get_list("allowed_dependencies"))
-    interfaces = tuple(normalise(x) for x in _get_list("interfaces"))
+    interfaces = tuple(_normalise(x, "interfaces") for x in _get_list("interfaces"))
     steps = tuple(_get_list("steps"))
 
     if not outputs:
@@ -244,7 +253,7 @@ def plan_steps(order: WorkOrder) -> tuple[Step, ...]:
             if any(p == "" for p in parts):
                 raise WorkOrderError(f"Step {idx} contains empty element or trailing comma: {s_raw!r}")
 
-            norm_parts = tuple(normalise(p) for p in parts)
+            norm_parts = tuple(_normalise(p, f"step {idx}") for p in parts)
             non_init = [p for p in norm_parts if not _is_init(p)]
             if len(non_init) > 3:
                 raise WorkOrderError(f"Step {idx} has more than 3 non-init paths: {non_init}")

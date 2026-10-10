@@ -11,6 +11,8 @@ NOT IN SCOPE:
   - File system writes.
 CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
+  2026-10-10 WP-1.0 FR-1.0-01 review fix (Claude): path errors raise BundleError; manifest paths normalised;
+    QUESTIONS split per numbered question.
 """
 from __future__ import annotations
 
@@ -71,6 +73,27 @@ def _parse_table_rows(lines: list[str]) -> tuple[tuple[str, str, str], ...]:
     return tuple(rows)
 
 
+def _manifest_path(cell: str) -> str:
+    """Normalise a manifest path the same way as a FILE marker's path."""
+    try:
+        return normalise(cell)
+    except ValueError as exc:
+        raise BundleError(f"Invalid MANIFEST path {cell!r}: {exc}") from exc
+
+
+def _split_questions(lines: list[str]) -> tuple[str, ...]:
+    """One entry per numbered question ("1. ..."), continuation lines joined to it; unnumbered text is one entry."""
+    questions: list[list[str]] = []
+    for line in lines:
+        numbered = re.match(r"^\s*\d+[.)]\s+(.*)$", line)
+        if numbered or not questions:
+            questions.append([(numbered.group(1) if numbered else line).strip()])
+        else:
+            questions[-1].append(line.strip())
+    texts = ("\n".join(part for part in q if part).strip() for q in questions)
+    return tuple(text for text in texts if text)
+
+
 def parse_bundle(text: str) -> Bundle:
     if text.startswith("\ufeff"):
         text = text[1:]
@@ -108,7 +131,10 @@ def parse_bundle(text: str) -> Bundle:
             path_part = s[10:-4].strip()
             if "\\" in path_part:
                 raise BundleError(f"Backslash in file path: {path_part!r}")
-            norm_p = normalise(path_part)
+            try:
+                norm_p = normalise(path_part)
+            except ValueError as exc:
+                raise BundleError(f"Invalid FILE path {path_part!r}: {exc}") from exc
             current_block = "FILE"
             current_file_path = norm_p
             file_content_lines = []
@@ -182,15 +208,11 @@ def parse_bundle(text: str) -> Bundle:
         parsed_files.append((path, content_str))
 
     # Questions parsing
-    questions: list[str] = []
-    if question_lines:
-        q_text = "\n".join(question_lines).strip()
-        if q_text:
-            questions.append(q_text)
+    questions = _split_questions(question_lines)
 
     # Manifest vs File cross checks (when no questions)
     if not questions:
-        manifest_paths = {r[0] for r in manifest_rows}
+        manifest_paths = {_manifest_path(r[0]) for r in manifest_rows}
         file_paths = set(seen_paths)
 
         missing_in_manifest = file_paths - manifest_paths
