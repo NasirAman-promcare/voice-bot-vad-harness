@@ -11,106 +11,26 @@ NOT IN SCOPE:
   - Network transport execution.
 CHANGE LOG:
   2026-10-10 WO-1.0-10 created.
+  2026-10-10 WP-1.0 FR-1.0-14 FIX-2 (Claude): records, state file and lock moved to governor_state.py (400-line
+    limit); wait_for_provider sleeps outside the lock.
 """
 from __future__ import annotations
 
-import fcntl
-import json
 import math
 import random
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
 from tools.outsourcing.limits import (
-    EffectiveLimits, LimitsError, ModelSpec, Pool, ProviderSpec, _la_offset, _resolve_tz, effective, monthly_reset, next_reset,
+    EffectiveLimits, ModelSpec, Pool, ProviderSpec, _la_offset, _resolve_tz, effective, monthly_reset, next_reset,
+)
+from tools.outsourcing.governor_state import (
+    FileLock, GovernorReport, ModelReport, ModelStats, ProviderReport, ProviderStats, load_stats, save_stats,
 )
 from tools.outsourcing.quota import QuotaVerdict
 
-
-class _FileLock:
-
-    def __init__(self, lock_file: Path) -> None:
-        self.lock_file = lock_file
-        self._fd = None
-
-    def __enter__(self) -> _FileLock:
-        self._fd = open(self.lock_file, "a+")
-        fcntl.flock(self._fd, fcntl.LOCK_EX)
-        return self
-
-    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
-        if self._fd is not None:
-            fcntl.flock(self._fd, fcntl.LOCK_UN)
-            self._fd.close()
-            self._fd = None
-
-
-@dataclass
-class ModelStats:
-    adaptive_factor: float = 1.0
-    consecutive_successes: int = 0
-    requests: int = 0
-    retries: dict[str, int] = field(default_factory=dict)
-    seconds_waited: float = 0.0
-    prompt_tokens: int = 0
-    output_tokens: int = 0
-    cooldown_until: float = 0.0
-    exhausted_until: float | None = None
-    learned_limits: dict[str, int] = field(default_factory=dict)
-    starts: list[tuple[float, int]] = field(default_factory=list)
-    daily_counts: dict[str, int] = field(default_factory=dict)
-
-
-@dataclass
-class ProviderStats:
-    requests: int = 0
-    retries: dict[str, int] = field(default_factory=dict)
-    seconds_waited: float = 0.0
-    prompt_tokens: int = 0
-    output_tokens: int = 0
-    cooldown_until: float = 0.0
-    exhausted_until: float | None = None
-    learned_limits: dict[str, int] = field(default_factory=dict)
-    starts: list[tuple[float, int]] = field(default_factory=list)
-    daily_counts: dict[str, int] = field(default_factory=dict)
-    monthly_tokens: dict[str, int] = field(default_factory=dict)
-
-
-@dataclass
-class ModelReport:
-    adaptive_factor: float
-    requests: int
-    retries: dict[str, int]
-    seconds_waited: float
-    prompt_tokens: int
-    output_tokens: int
-    effective_limits: dict
-    learned_limits: dict
-    count_today: int
-    daily_limit: int | None
-    cooldown_end: float | None
-    exhausted_until: datetime | None
-
-
-@dataclass
-class ProviderReport:
-    requests: int
-    retries: dict[str, int]
-    seconds_waited: float
-    prompt_tokens: int
-    output_tokens: int
-    monthly_tokens: int
-    unverified: bool
-
-
-@dataclass
-class GovernorReport:
-    models: dict[str, ModelReport]
-    providers: dict[str, ProviderReport]
-    unverified_providers: list[str]
-    corrupt_state: bool = False
+__all__ = ["Governor", "GovernorReport", "ModelReport", "ProviderReport", "ModelStats", "ProviderStats"]
 
 
 class Governor:
@@ -134,81 +54,20 @@ class Governor:
         with self._lock():
             self._load_state_unlocked()
 
-    def _lock(self) -> _FileLock:
+    def _lock(self) -> FileLock:
         self.state_path.parent.mkdir(parents=True, exist_ok=True)
-        return _FileLock(self.state_path.parent / f"{self.state_path.name}.lock")
-
-    def _load_models_data(self, models_data: dict, now: float) -> None:
-        for m, md in models_data.items():
-            if m in self.model_stats:
-                ms = self.model_stats[m]
-                ms.adaptive_factor = 0.75 if self.corrupt_state else md.get("adaptive_factor", 1.0)
-                ms.consecutive_successes = md.get("consecutive_successes", 0)
-                ms.cooldown_until = md.get("cooldown_until", 0.0)
-                ms.exhausted_until = md.get("exhausted_until")
-                ms.learned_limits = md.get("learned_limits", {})
-                ms.starts = [(t, tok) for t, tok in md.get("starts", []) if now - t < 60.0]
-                ms.daily_counts = md.get("daily_counts", {})
-
-    def _load_providers_data(self, providers_data: dict, now: float) -> None:
-        for p, pd in providers_data.items():
-            if p in self.provider_stats:
-                ps = self.provider_stats[p]
-                ps.cooldown_until = pd.get("cooldown_until", 0.0)
-                ps.exhausted_until = pd.get("exhausted_until")
-                ps.learned_limits = pd.get("learned_limits", {})
-                ps.starts = [(t, tok) for t, tok in pd.get("starts", []) if now - t < 60.0]
-                ps.daily_counts = pd.get("daily_counts", {})
-                ps.monthly_tokens = pd.get("monthly_tokens", {})
+        return FileLock(self.state_path.parent / f"{self.state_path.name}.lock")
 
     def _load_state_unlocked(self) -> None:
-        if not self.state_path.exists():
+        if load_stats(self.state_path, self.model_stats, self.provider_stats, self.clock()):
+            self._clean_old_counts()
             return
-        try:
-            text = self.state_path.read_text(encoding="utf-8")
-            if not text.strip():
-                return
-            data = json.loads(text)
-        except (OSError, ValueError):
-            self.corrupt_state = True
-            for ms in self.model_stats.values():
-                ms.adaptive_factor = 0.75
-            return
-
-        now = self.clock()
-        self._load_models_data(data.get("models", {}), now)
-        self._load_providers_data(data.get("providers", {}), now)
-        self._clean_old_counts()
+        self.corrupt_state = True  # E3: start fresh at 0.75, noted in the report
+        for ms in self.model_stats.values():
+            ms.adaptive_factor = 0.75
 
     def _save_state_unlocked(self) -> None:
-        data = {
-            "models": {
-                m: {
-                    "adaptive_factor": ms.adaptive_factor,
-                    "consecutive_successes": ms.consecutive_successes,
-                    "cooldown_until": ms.cooldown_until,
-                    "exhausted_until": ms.exhausted_until,
-                    "learned_limits": ms.learned_limits,
-                    "starts": ms.starts,
-                    "daily_counts": ms.daily_counts,
-                }
-                for m, ms in self.model_stats.items()
-            },
-            "providers": {
-                p: {
-                    "cooldown_until": ps.cooldown_until,
-                    "exhausted_until": ps.exhausted_until,
-                    "learned_limits": ps.learned_limits,
-                    "starts": ps.starts,
-                    "daily_counts": ps.daily_counts,
-                    "monthly_tokens": ps.monthly_tokens,
-                }
-                for p, ps in self.provider_stats.items()
-            },
-        }
-        temp_file = self.state_path.parent / f"{self.state_path.name}.tmp"
-        temp_file.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        temp_file.replace(self.state_path)
+        save_stats(self.state_path, self.model_stats, self.provider_stats)
 
     def _get_local_now(self, provider: ProviderSpec) -> datetime:
         now_dt = datetime.fromtimestamp(self.clock(), tz=timezone.utc)
@@ -343,21 +202,21 @@ class Governor:
             waited += delay
 
     def wait_for_provider(self, provider_name: str) -> float:
-        with self._lock():
-            self._load_state_unlocked()
-            now = self.clock()
-            p_spec = self.pool.providers()[provider_name]
-            ps = self.provider_stats[provider_name]
-            rps_sp = self.pool.share / (p_spec.rps * self.pool.safety) if p_spec.rps and p_spec.rps > 0 else 0.0
-            waited = 0.0
-            if rps_sp > 0 and ps.starts:
-                delay = max(0.0, ps.starts[-1][0] + rps_sp - now)
-                if delay > 0:
-                    self.sleeper(delay)
-                    waited = delay
-            ps.starts.append((self.clock(), 0))
-            self._save_state_unlocked()
-            return waited
+        """Space listing calls by the provider's rps; decide under the lock, sleep outside it, then decide again."""
+        p_spec = self.pool.providers()[provider_name]
+        spacing = self.pool.share / (p_spec.rps * self.pool.safety) if p_spec.rps and p_spec.rps > 0 else 0.0
+        waited = 0.0
+        while True:
+            with self._lock():
+                self._load_state_unlocked()
+                ps = self.provider_stats[provider_name]
+                delay = max(0.0, ps.starts[-1][0] + spacing - self.clock()) if spacing > 0 and ps.starts else 0.0
+                if delay <= 1e-9:
+                    ps.starts.append((self.clock(), 0))
+                    self._save_state_unlocked()
+                    return waited
+            self.sleeper(delay)
+            waited += delay
 
     def record_result(self, model_name: str, prompt_tokens: int, output_tokens: int) -> None:
         with self._lock():

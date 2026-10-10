@@ -16,6 +16,7 @@ outputs:
   - tools/outsourcing/limits.py
   - tools/outsourcing/quota.py
   - tools/outsourcing/governor.py
+  - tools/outsourcing/governor_state.py
   - tools/outsourcing/gemini_client.py
   - tools/outsourcing/openai_client.py
   - tests/aqis_lab/outsourcing/stub_model_server.py
@@ -27,7 +28,7 @@ outputs:
 steps:
   - tools/outsourcing/chat.py, tools/outsourcing/limits.py, tests/aqis_lab/outsourcing/test_limits.py
   - tools/outsourcing/quota.py, tests/aqis_lab/outsourcing/test_quota.py
-  - tools/outsourcing/governor.py, tests/aqis_lab/outsourcing/test_governor.py
+  - tools/outsourcing/governor.py, tools/outsourcing/governor_state.py, tests/aqis_lab/outsourcing/test_governor.py
   - tests/aqis_lab/outsourcing/stub_model_server.py
   - tools/outsourcing/gemini_client.py, tests/aqis_lab/outsourcing/test_gemini_client.py
   - tools/outsourcing/openai_client.py, tests/aqis_lab/outsourcing/test_openai_client.py
@@ -54,6 +55,7 @@ Provider-neutral request and reply records; a loader for the pool; a classifier 
 | `tools/outsourcing/limits.py` | Load and validate the pool; effective limits; day resets | `load_pool(path) -> Pool`; frozen `ProviderSpec` (name and every provider key of B1) and `ModelSpec` (name, its `ProviderSpec`, and every model key of B1); `Pool.providers()`, `Pool.models()`; `Pool.model(name) -> ModelSpec` (raises for unknown names or disabled providers); `Pool.candidates(risk_tier) -> list[ModelSpec]` (enabled providers, tier allowed, by rank); `effective(pool, model, adaptive_factor, server_limits) -> EffectiveLimits` (including the input-token ceiling of B3); `next_reset(pool, provider, now_utc) -> ResetTimes`; raises `LimitsError` | 250 |
 | `tools/outsourcing/quota.py` | Classify an HTTP error response of either API shape | `classify(api, status, headers, body_text) -> QuotaVerdict` (kind, retry delay seconds or none, quota scope `model` or `provider`, server limit value or none, reset time or none, message) | 250 |
 | `tools/outsourcing/governor.py` | Sliding-window pacing per model and per provider, persisted state, adaptive slowdown, learned limits, daily and monthly accounting | `Governor(pool, state_path, clock, sleeper, random)`; `delay_for(model, input_tokens) -> seconds` (no sleep); `wait_for_slot(model, input_tokens) -> seconds waited`; `wait_for_provider(provider) -> seconds waited` (spacing only, for listings); `record_result(model, prompt_tokens, output_tokens)`; `record_rejection(model, verdict)`; `remaining_today(model) -> int or None`; `exhausted_until(model) -> UTC time or None`; `report() -> GovernorReport` | 300 |
+| `tools/outsourcing/governor_state.py` | The governor's records, state file and lock (split from `governor.py` in FIX-2 to keep it within 400 lines) | `FileLock`, the stats and report records, `load_stats`, `save_stats` | 200 |
 | `tools/outsourcing/gemini_client.py` | Gemini `generateContent`, `countTokens` and model listing over HTTPS with the standard library, paced by the governor | `GeminiClient(spec, governor, timeout, base_url=None)` (`spec` a `ModelSpec`; `base_url` overrides the provider's); `count_tokens(request) -> TokenCount`; `generate(request) -> Reply`; `list_models() -> list[str]` | 300 |
 | `tools/outsourcing/openai_client.py` | OpenAI-compatible `chat/completions` and model listing, paced by the governor | `OpenAIClient(spec, governor, timeout, base_url=None)`; `count_tokens(request) -> TokenCount`; `generate(request) -> Reply`; `list_models() -> list[str]` | 300 |
 | `tests/aqis_lab/outsourcing/stub_model_server.py` | Local stand-in for both API shapes: replays a script of responses (successes, 429s with QuotaFailure/RetryInfo or with `Retry-After` and `x-ratelimit-*` headers, 400 `API_KEY_INVALID`, 402, 404, 500, 503, length or MAX_TOKENS finishes, non-JSON bodies, model lists) and records each request (path, headers, body) | a context manager yielding its base URL and the recorded requests; the script format documented in its module header | 250 |
