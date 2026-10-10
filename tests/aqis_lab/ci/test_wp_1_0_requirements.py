@@ -42,9 +42,11 @@ def fields(path: Path) -> dict[str, str]:
 
 
 def test_FR_1_0_10_gitignore_ignores_relay():
-    proc = subprocess.run(["git", "check-ignore", "--no-index", "-q", ".relay/governor.json", ".relay/wt/WO-1.0-03"],
-                          cwd=ROOT, capture_output=True, text=True, timeout=60)
-    assert proc.returncode == 0, "`.relay/` is not ignored by .gitignore"
+    paths = [".relay/governor.json", ".relay/wt/WO-1.0-03"]
+    proc = subprocess.run(["git", "check-ignore", "--no-index", *paths], cwd=ROOT, capture_output=True, text=True,
+                          timeout=60)
+    assert proc.returncode in (0, 1), proc.stderr  # 0: some path ignored, 1: none ignored, else git failed
+    assert proc.stdout.splitlines() == paths, "`.relay/` is not ignored by .gitignore"
 
 
 def test_FR_1_0_11_debt032_full_gpu_bootstrap_output_committed():

@@ -28,4 +28,7 @@ Imports sit inside the tests, so the rest of the suite still runs while these wa
 Not run yet: the tools do not exist until the work orders land.
 
 ## audit-allow lines
-None so far.
+- `tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_02.py`, the `ALLOWED_LINE = …` line. It is a test-data string that must carry `# audit-allow:` because WO-1.0-02 must-catch 5 checks that the relay's compromise check honours it. The string is not an exemption for real code.
+
+## Test fixes
+- `test_FR_1_0_10_gitignore_ignores_relay` originally called `git check-ignore -q` with two paths. git rejects that (`fatal: --quiet is only valid with a single pathname`, exit 128), so the test failed for the wrong reason; the stop gate caught it. The test now checks that git lists both paths as ignored, and it fails for the right reason: `` `.relay/` is not ignored by .gitignore `` (BLK-1.0-02).
