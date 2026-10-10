@@ -111,15 +111,13 @@ def load_pool(path_or_dict: str | Path | dict) -> Pool:
     if not isinstance(models_raw, dict): raise LimitsError("Key 'models' must be dictionary")
 
     models: dict[str, ModelSpec] = {}
-    seen_ranks: set[int] = set()
 
     for mname, mdata in models_raw.items():
         if not isinstance(mdata, dict): raise LimitsError(f"Model '{mname}' must be object")
         pname = mdata.get("provider")
         if pname not in providers: raise LimitsError(f"Model '{mname}' references unknown provider '{pname}'")
         rank = mdata.get("rank")
-        if not isinstance(rank, int) or rank <= 0 or rank in seen_ranks: raise LimitsError(f"Model '{mname}' rank invalid or duplicate")
-        seen_ranks.add(rank)
+        if not isinstance(rank, int) or rank <= 0: raise LimitsError(f"Model '{mname}' rank invalid")
 
         risk_tiers_raw = mdata.get("risk_tiers")
         if not isinstance(risk_tiers_raw, list) or not risk_tiers_raw or not set(risk_tiers_raw).issubset(VALID_RISK_TIERS):
