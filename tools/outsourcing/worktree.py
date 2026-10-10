@@ -56,6 +56,10 @@ def _git_cmd(repo_path: Path, *args: str, check: bool = True) -> str:
     for k in list(env.keys()):
         if k.startswith("GIT_") and k not in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
             env.pop(k, None)
+    env.setdefault("GIT_AUTHOR_NAME", "AQIS Relay")
+    env.setdefault("GIT_AUTHOR_EMAIL", "relay@example.invalid")
+    env.setdefault("GIT_COMMITTER_NAME", "AQIS Relay")
+    env.setdefault("GIT_COMMITTER_EMAIL", "relay@example.invalid")
 
     retries = 0
     last_err = ""
