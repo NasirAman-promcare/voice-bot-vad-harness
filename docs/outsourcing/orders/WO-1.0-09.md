@@ -17,6 +17,9 @@ context:
   - tools/audit/breaks.py
   - tools/audit/mutation_report.py
   - tools/outsourcing/__main__.py
+  - .github/workflows/aqis-lab-ci.yml
+  - docs/process/PROTECTED_PATHS.txt
+  - docs/process/templates/FRAGMENTS.md
 outputs:
   - .github/workflows/aqis-lab-generate.yml
   - .github/workflows/aqis-lab-breaks.yml
@@ -44,16 +47,17 @@ read_only_tests:
   - tests/aqis_lab/ci/test_acceptance_wo_1_0_09.py
 allowed_dependencies:
   - stdlib
+  - pyyaml
 verify:
   - .venv/bin/python -m pytest tests/aqis_lab/ci -q --tb=short
 ---
 
 # WO-1.0-09 — CI workflows for generation, break suite, scope, main guard, mutation and kit parity
 
-**Before sending (Claude):** add the existing `.github/workflows/aqis-lab-*.yml` files to `context`, and state in section 1 which Python setup and bootstrap steps they use, so the new workflows install the environment the same way. If `requirements/aqis_lab` pins a YAML package, add it to `allowed_dependencies`.
+**Before sending (Claude):** add the existing `.github/workflows/aqis-lab-*.yml` files to `context`, and state in section 1 which Python setup and bootstrap steps they use, so the new workflows install the environment the same way. If `requirements/aqis_lab` pins a YAML package, add it to `allowed_dependencies`. *(Done 2026-10-10. The only existing lab workflow is `aqis-lab-ci.yml`, now in `context`. `pyyaml==6.0.3` is pinned in `requirements/aqis_lab/phase0.txt` and listed in `allowed_dependencies`, for `test_workflows.py` only.)*
 
 ## 1. Context
-The lab's tables and map are generated on `main` only, break recipes must run on every pull request and nightly, outsourced branches need a scope check, `main` needs a guard that flags commits that did not come through the merge gate, mutation reports are advisory, and installed hooks must match the audited staged copies. Workflow files matching `.github/workflows/aqis-lab-*.yml` are lab-owned. Logic lives in small Python modules under `tools/ci/` so it can be unit-tested; the workflows only call them.
+The lab's tables and map are generated on `main` only, break recipes must run on every pull request and nightly, outsourced branches need a scope check, `main` needs a guard that flags commits that did not come through the merge gate, mutation reports are advisory, and installed hooks must match the audited staged copies. Workflow files matching `.github/workflows/aqis-lab-*.yml` are lab-owned. Logic lives in small Python modules under `tools/ci/` so it can be unit-tested; the workflows only call them. The existing `aqis-lab-ci.yml` installs the environment in three steps: `actions/checkout` with `fetch-depth: 0`, `astral-sh/setup-uv` with `version: "0.8.17"`, then `run: bash aqis_lab/deploy/dev_bootstrap.sh`, which builds `.venv` on the Colab Python from `docs/environment/colab_probe.txt` with the hash-checked lock. Every new job repeats these three steps, with the actions pinned as B8 says, and calls the tools as `.venv/bin/python -m …`.
 
 ## 2. Your job
 Six workflows and three helper modules, with tests.
@@ -81,6 +85,47 @@ Six workflows and three helper modules, with tests.
 - **B6** The mutation job never fails the pull request: mark the job advisory with `continue-on-error: true` and a comment `# audit-allow: advisory report`.
 - **B7** `test_workflows.py` reads each workflow (with the YAML loader listed in `allowed_dependencies` if there is one, otherwise as text, line by line) and asserts the triggers, permissions, runner expressions, SHA-pinned actions and the bot-skip condition.
 
+- **B8** Pins (amended by Claude with the acceptance tests; each is checked there):
+  1. **Action pins.** Use exactly these, each followed by its version comment:
+     - `actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0`
+     - `astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0`
+     - `actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2`
+     Claude read these with `git ls-remote --tags` on 2026-10-10; all three are lightweight tags, so they are commit SHAs. No other action is used.
+  2. **Permissions.** Every workflow sets workflow-level `permissions: {contents: read}`. Write scopes appear only at job level, on jobs whose `if:` contains `github.event_name == 'push'`. The main guard job has exactly `contents: read`, `issues: write` and `pull-requests: read`.
+  3. **Generate.** It runs on `pull_request` and on `push` to `branches: [main]`, with two jobs.
+     - The pull-request job (`if: github.event_name == 'pull_request'`) runs:
+       - `tools.index build --out <scratch>`;
+       - `tools.progress build --on-main --out <scratch>`;
+       - `tools.progress lint`.
+       It never commits.
+     - The regeneration job (`if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'chore(bot):')`) does this:
+       - It runs `tools.index build` and `tools.progress build --on-main`.
+       - It sets the identity `github-actions[bot]` / `41898282+github-actions[bot]@users.noreply.github.com`.
+       - It checks `git status --porcelain` on the generated paths. When they changed, it runs `git add` naming only those paths, then commits with the message `chore(bot): regenerate index and progress` and pushes.
+     The generated paths are `docs/index/`, `docs/capabilities/REGISTRY.md`, `docs/progress/{STATUS,BLOCKERS,DEBT,DECISIONS,OWNER_QUEUE}.md` and `docs/outsourcing/LEDGER.md`.
+  4. **Breaks.** One job, triggered by `pull_request` and `schedule: [{cron: "17 2 * * *"}]`. On a pull request it runs `.venv/bin/python -m tools.ci.refs wp "$GITHUB_HEAD_REF"`. An empty answer prints `::notice::` and ends successfully. Otherwise it runs `.venv/bin/python -m tools.audit.breaks --wp "$WP"`. On the schedule it runs `--all`. There is no `continue-on-error`.
+  5. **Scope.** One job, `if: startsWith(github.head_ref, 'wo/')`. The work order comes from `tools.ci.refs wo`. The job runs `tools.outsourcing scope --wo docs/outsourcing/orders/<WO>.md --base origin/<base>`.
+  6. **Mutation.** One job with the line `continue-on-error: true  # audit-allow: advisory report` at job level. It runs `tools.audit.mutation_report --base origin/<base> --out <file>`, appends the report to `$GITHUB_STEP_SUMMARY` and uploads the report.
+  7. **Runners.** Breaks and mutation use exactly `${{ vars.AQIS_HEAVY_RUNNER || 'ubuntu-latest' }}`; every other job uses `ubuntu-latest`.
+  8. **refs command line.** `python -m tools.ci.refs (wp|wo) <branch>` prints the derived ID, or nothing, and exits 0. `wp_from_branch` accepts `claude/wp-<n>-<m>(-<slug>)?` with numeric `<n>` and `<m>` only. `wo_from_branch` accepts `wo/WO-<n>.<m>-<k>`.
+  9. **Main guard command line.** `python -m tools.ci.main_guard --repo OWNER/REPO --before SHA --after SHA`, run in a full clone.
+     - **Commits.** They come from `git rev-list --first-parent --reverse <before>..<after>`; an all-zero `before` means `<after>` alone.
+     - **Output.** One line per commit: `<short sha> <classification> <subject>`.
+     - **Facts.** They come from git: parents, subject, author and committer names and emails, and the files changed against the first parent. The pull requests come from `gh api repos/<repo>/commits/<sha>/pulls`.
+     - **`gated-merge`** needs all of these:
+       - two parents;
+       - a subject `Merge <WP>: … (gate PASS)` (the title the merge gate WO-1.0-05 sets);
+       - a pull request whose `head.sha` is the second parent and whose `head.ref` gives the same WP through `wp_from_branch`;
+       - `git show <head.sha>:docs/progress/<WP>/AUDIT.md` with a line `## Verdict: PASS`.
+     - **`bot-regeneration`** needs the author `github-actions[bot]`, a subject starting `chore(bot):`, and every changed file under the generated paths of pin 3.
+     - **`owner-never-edit`** needs the committer `GitHub` / `noreply@github.com` and every changed file NEVER under `docs/process/PROTECTED_PATHS.txt`, as committed in that commit, plus the hooks' built-in NEVER list.
+     - **`unexpected`.** Each one gets `gh api --method POST repos/<repo>/issues -f title=main-guard: unexpected commit <short sha> -f body=<facts>`.
+     - **Exit codes.** 1 when any commit is unexpected; 2 when git or `gh` fails; 0 otherwise.
+  10. **Kit parity command line.** `python -m tools.ci.kit_parity` compares every file under `kit-staging/.claude/` with the same path under `.claude/`; installed files that were never staged are ignored.
+      - It prints each differing or missing file's path relative to `.claude/` (for example `hooks/stop_gate.py`).
+      - It exits 1 when there is any difference, unless a blocker fragment in `docs/progress/blockers.d/` has `Status: OPEN`, `Owner capability: KIT` and the words "install staged kit" (any case). In that case it prints `::notice::` and exits 0.
+      - Without `kit-staging/` it prints `::notice::` and exits 0.
+
 ## 5. Edge cases you must handle
 - **E1** A pull request from a branch with no derivable WP → the breaks job prints a notice and succeeds without running.
 - **E2** A push to `main` with several commits → every commit is classified.
@@ -105,7 +150,7 @@ Return QUESTIONS if the existing lab workflows install the environment in a way 
 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists; Python modules carry the header standard.
-- **D2** B1 to B7 and E1 to E4 are implemented; point at each.
+- **D2** B1 to B8 and E1 to E4 are implemented; point at each.
 - **D3** Helper tests use scratch repositories and a stand-in `gh` on `PATH`.
 - **D4** `tests/aqis_lab/ci/test_acceptance_wo_1_0_09.py` passes unmodified.
 - **D5** No placeholder or swallowed error.
