@@ -59,66 +59,13 @@ def step_request(order: WorkOrder, plan: tuple[Step, ...], part: StepPart, root:
     user_parts: list[str] = [order_text]
 
     # Context files & read-only tests
-    context_files = tuple(order.context) + tuple(order.read_only_tests)
-    for c_path in context_files:
-        c_text = _read_file_check_secret(repo_root, c_path)
-        sent_paths.append(c_path)
-        user_parts.append(f"=== CONTEXT: {c_path} ===\n{c_text}\n=== END CONTEXT ===")
-
-    # Interface files
-    for i_path in order.interfaces:
-        i_text = _read_file_check_secret(repo_root, i_path)
-        i_view = interface_view(i_path, i_text)
-        sent_paths.append(i_path)
-        user_parts.append(f"=== INTERFACE: {i_path} ===\n{i_view}\n=== END INTERFACE ===")
+    _add_context_and_interfaces(order, repo_root, sent_paths, user_parts)
 
     # Earlier step outputs in the tree
-    current_part_paths = set(part.paths)
-    all_plan_paths = [p for step in plan for p in step.paths]
-
-    # Find outputs of earlier steps
-    part_step_num = None
-    for s in plan:
-        if any(p in current_part_paths for p in s.paths):
-            part_step_num = s.number
-            break
-
-    earlier_outputs: list[str] = []
-    later_outputs: list[str] = []
-    for s in plan:
-        if part_step_num is not None and s.number < part_step_num:
-            earlier_outputs.extend(s.paths)
-        elif part_step_num is not None and s.number > part_step_num:
-            later_outputs.extend(s.paths)
-
-    for out_p in earlier_outputs:
-        full_p = repo_root / out_p
-        if full_p.exists():
-            text = _read_file_check_secret(repo_root, out_p)
-            sent_paths.append(out_p)
-            if out_p.endswith(".py") and not out_p.startswith("tests/"):
-                iview = interface_view(out_p, text)
-                user_parts.append(f"=== ACCEPTED INTERFACE: {out_p} ===\n{iview}\n=== END ACCEPTED INTERFACE ===")
-            else:
-                user_parts.append(f"=== ACCEPTED: {out_p} ===\n{text}\n=== END ACCEPTED ===")
-        else:
-            missing_paths.append(out_p)
+    _add_earlier_outputs(plan, part, repo_root, sent_paths, missing_paths, user_parts)
 
     # Step block
-    total_steps = len(plan)
-    label_str = part.label
-    curr_paths_str = ", ".join(part.paths)
-    later_paths_str = ", ".join(later_outputs) if later_outputs else "none"
-
-    step_block = (
-        f"=== THIS STEP ===\n"
-        f"Step {label_str} of {total_steps}. Return exactly these files, each complete: {curr_paths_str}. "
-        f"Files from earlier steps are shown above; call them as shown and do not return them. "
-        f"Later steps will add: {later_paths_str}. "
-        f"The tests you return must pass with only the files above and the files you return now.\n"
-        f"=== END THIS STEP ==="
-    )
-    user_parts.append(step_block)
+    _add_step_block(plan, part, user_parts)
 
     # Return format
     user_parts.append(return_format_text)
@@ -139,6 +86,72 @@ def step_request(order: WorkOrder, plan: tuple[Step, ...], part: StepPart, root:
         missing_paths=tuple(missing_paths),
         characters=chars,
     )
+
+
+def _add_context_and_interfaces(order: WorkOrder, repo_root: Path, sent_paths: list[str], user_parts: list[str]) -> None:
+    context_files = tuple(order.context) + tuple(order.read_only_tests)
+    for c_path in context_files:
+        c_text = _read_file_check_secret(repo_root, c_path)
+        sent_paths.append(c_path)
+        user_parts.append(f"=== CONTEXT: {c_path} ===\n{c_text}\n=== END CONTEXT ===")
+
+    for i_path in order.interfaces:
+        i_text = _read_file_check_secret(repo_root, i_path)
+        i_view = interface_view(i_path, i_text)
+        sent_paths.append(i_path)
+        user_parts.append(f"=== INTERFACE: {i_path} ===\n{i_view}\n=== END INTERFACE ===")
+
+
+def _get_plan_partitions(plan: tuple[Step, ...], part: StepPart) -> tuple[list[str], list[str]]:
+    current_part_paths = set(part.paths)
+    part_step_num = None
+    for s in plan:
+        if any(p in current_part_paths for p in s.paths):
+            part_step_num = s.number
+            break
+
+    earlier_outputs: list[str] = []
+    later_outputs: list[str] = []
+    for s in plan:
+        if part_step_num is not None and s.number < part_step_num:
+            earlier_outputs.extend(s.paths)
+        elif part_step_num is not None and s.number > part_step_num:
+            later_outputs.extend(s.paths)
+    return earlier_outputs, later_outputs
+
+
+def _add_earlier_outputs(plan: tuple[Step, ...], part: StepPart, repo_root: Path, sent_paths: list[str], missing_paths: list[str], user_parts: list[str]) -> None:
+    earlier_outputs, _ = _get_plan_partitions(plan, part)
+    for out_p in earlier_outputs:
+        full_p = repo_root / out_p
+        if full_p.exists():
+            text = _read_file_check_secret(repo_root, out_p)
+            sent_paths.append(out_p)
+            if out_p.endswith(".py") and not out_p.startswith("tests/"):
+                iview = interface_view(out_p, text)
+                user_parts.append(f"=== ACCEPTED INTERFACE: {out_p} ===\n{iview}\n=== END ACCEPTED INTERFACE ===")
+            else:
+                user_parts.append(f"=== ACCEPTED: {out_p} ===\n{text}\n=== END ACCEPTED ===")
+        else:
+            missing_paths.append(out_p)
+
+
+def _add_step_block(plan: tuple[Step, ...], part: StepPart, user_parts: list[str]) -> None:
+    _, later_outputs = _get_plan_partitions(plan, part)
+    total_steps = len(plan)
+    label_str = part.label
+    curr_paths_str = ", ".join(part.paths)
+    later_paths_str = ", ".join(later_outputs) if later_outputs else "none"
+
+    step_block = (
+        f"=== THIS STEP ===\n"
+        f"Step {label_str} of {total_steps}. Return exactly these files, each complete: {curr_paths_str}. "
+        f"Files from earlier steps are shown above; call them as shown and do not return them. "
+        f"Later steps will add: {later_paths_str}. "
+        f"The tests you return must pass with only the files above and the files you return now.\n"
+        f"=== END THIS STEP ==="
+    )
+    user_parts.append(step_block)
 
 
 def with_fix_turn(
@@ -196,21 +209,10 @@ def final_fix_request(
 
     user_parts: list[str] = [order_text]
 
-    # 1. Context and read-only tests
-    context_files = tuple(order.context) + tuple(order.read_only_tests)
-    for c_path in context_files:
-        c_text = _read_file_check_secret(repo_root, c_path)
-        sent_paths.append(c_path)
-        user_parts.append(f"=== CONTEXT: {c_path} ===\n{c_text}\n=== END CONTEXT ===")
+    # Context and interfaces
+    _add_context_and_interfaces(order, repo_root, sent_paths, user_parts)
 
-    # 2. Interfaces
-    for i_path in order.interfaces:
-        i_text = _read_file_check_secret(repo_root, i_path)
-        i_view = interface_view(i_path, i_text)
-        sent_paths.append(i_path)
-        user_parts.append(f"=== INTERFACE: {i_path} ===\n{i_view}\n=== END INTERFACE ===")
-
-    # 3. Focus paths in full as CURRENT blocks, other outputs as in B3 item 4
+    # Focus paths in full as CURRENT blocks, other outputs as in B3 item 4
     focus_set = set(focus_paths)
     for out_p in order.outputs:
         full_p = repo_root / out_p

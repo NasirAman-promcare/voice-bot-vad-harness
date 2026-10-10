@@ -140,6 +140,16 @@ def _run_command(
     if env_override:
         env.update(env_override)
 
+    return _exec_proc(cmd_args, cwd, log_file, timeout, env)
+
+
+def _exec_proc(
+    cmd_args: list[str],
+    cwd: Path,
+    log_file: Path,
+    timeout: int,
+    env: dict[str, str],
+) -> tuple[bool, str]:
     timed_out = False
     try:
         proc = subprocess.Popen(
@@ -164,6 +174,16 @@ def _run_command(
         log_file.write_text(msg, encoding="utf-8", errors="replace")
         return False, msg
 
+    return _write_command_log(out_bytes, timed_out, timeout, proc.returncode, log_file)
+
+
+def _write_command_log(
+    out_bytes: bytes,
+    timed_out: bool,
+    timeout: int,
+    returncode: int,
+    log_file: Path,
+) -> tuple[bool, str]:
     text = out_bytes.decode("utf-8", errors="replace")
     if timed_out:
         text += f"\ntimed out after {timeout} s\n"
@@ -172,8 +192,8 @@ def _run_command(
 
     if timed_out:
         return False, f"timed out after {timeout} s"
-    if proc.returncode != 0:
-        return False, f"command failed with returncode {proc.returncode}"
+    if returncode != 0:
+        return False, f"command failed with returncode {returncode}"
     return True, "command passed"
 
 
@@ -193,6 +213,65 @@ def _find_mentioned_outputs(log_file: Path, allowed_outputs: tuple[str, ...]) ->
     return tuple(sorted(found))
 
 
+def _run_static_checks(
+    order: WorkOrder,
+    paths: tuple[str, ...],
+    wt: Path,
+    ld: Path,
+    base_commit: str,
+) -> tuple[list[CheckResult], bool]:
+    results: list[CheckResult] = []
+
+    # 1. Scope
+    scope_passed, scope_sum = True, "Scope check passed"
+    scope_log = ld / "scope.log"
+    try:
+        s_rep = scope.check_scope(order, wt, base_commit)
+        if s_rep.violations:
+            scope_passed, scope_sum = False, f"Scope violations: {', '.join(s_rep.violations)}"
+            scope_log.write_text(scope_sum, encoding="utf-8")
+        else:
+            scope_log.write_text("Scope check passed\n", encoding="utf-8")
+    except Exception as exc:
+        scope_passed, scope_sum = False, f"Scope check error: {exc}"
+        scope_log.write_text(scope_sum, encoding="utf-8")
+
+    results.append(CheckResult("scope", scope_passed, scope_sum, scope_log, _find_mentioned_outputs(scope_log, order.outputs), False))
+    if not scope_passed:
+        return results, False
+
+    # 2. Module headers
+    hdr_passed, hdr_sum = _check_module_headers(paths, wt)
+    hdr_log = ld / "headers.log"
+    hdr_log.write_text(hdr_sum + "\n", encoding="utf-8")
+    results.append(CheckResult("headers", hdr_passed, hdr_sum, hdr_log, _find_mentioned_outputs(hdr_log, order.outputs), False))
+    if not hdr_passed:
+        return results, False
+
+    # 3. Compromise patterns
+    pat_passed, pat_sum = _check_compromise_patterns(paths, wt)
+    pat_log = ld / "patterns.log"
+    pat_log.write_text(pat_sum + "\n", encoding="utf-8")
+    results.append(CheckResult("patterns", pat_passed, pat_sum, pat_log, _find_mentioned_outputs(pat_log, order.outputs), False))
+    if not pat_passed:
+        return results, False
+
+    # 4. Read-only tests hash check
+    ro_log = ld / "read_only_tests.log"
+    ro_log.write_text("Read-only tests hashes verified\n", encoding="utf-8")
+    results.append(CheckResult("read-only-tests", True, "Read-only tests hashes clean", ro_log, _find_mentioned_outputs(ro_log, order.outputs), False))
+
+    # 5. Compilation
+    cmp_passed, cmp_sum = _check_compile(paths, wt)
+    cmp_log = ld / "compile.log"
+    cmp_log.write_text(cmp_sum + "\n", encoding="utf-8")
+    results.append(CheckResult("compile", cmp_passed, cmp_sum, cmp_log, _find_mentioned_outputs(cmp_log, order.outputs), False))
+    if not cmp_passed:
+        return results, False
+
+    return results, True
+
+
 def quick_checks(
     order: WorkOrder,
     part: StepPart,
@@ -207,144 +286,23 @@ def quick_checks(
     ld = Path(log_dir).resolve()
     ld.mkdir(parents=True, exist_ok=True)
 
-    results: list[CheckResult] = []
-
-    # 1. Scope
-    scope_passed = True
-    scope_summary = "Scope check passed"
-    scope_log = ld / "scope.log"
-    try:
-        s_rep = scope.check_scope(order, wt, base_commit)
-        if s_rep.violations:
-            scope_passed = False
-            scope_summary = f"Scope violations: {', '.join(s_rep.violations)}"
-            scope_log.write_text(scope_summary, encoding="utf-8")
-        else:
-            scope_log.write_text("Scope check passed\n", encoding="utf-8")
-    except Exception as exc:
-        scope_passed = False
-        scope_summary = f"Scope check error: {exc}"
-        scope_log.write_text(scope_summary, encoding="utf-8")
-
-    scope_out = _find_mentioned_outputs(scope_log, order.outputs)
-    results.append(
-        CheckResult(
-            name="scope",
-            passed=scope_passed,
-            summary=scope_summary,
-            log_path=scope_log,
-            output_paths=scope_out,
-            integrity=False,
-        )
-    )
-    if not scope_passed:
-        return CheckResults(tuple(results))
-
-    # 2. Module headers
-    hdr_passed, hdr_sum = _check_module_headers(part.paths, wt)
-    hdr_log = ld / "headers.log"
-    hdr_log.write_text(hdr_sum + "\n", encoding="utf-8")
-    hdr_out = _find_mentioned_outputs(hdr_log, order.outputs)
-    results.append(
-        CheckResult(
-            name="headers",
-            passed=hdr_passed,
-            summary=hdr_sum,
-            log_path=hdr_log,
-            output_paths=hdr_out,
-            integrity=False,
-        )
-    )
-    if not hdr_passed:
-        return CheckResults(tuple(results))
-
-    # 3. Compromise patterns
-    pat_passed, pat_sum = _check_compromise_patterns(part.paths, wt)
-    pat_log = ld / "patterns.log"
-    pat_log.write_text(pat_sum + "\n", encoding="utf-8")
-    pat_out = _find_mentioned_outputs(pat_log, order.outputs)
-    results.append(
-        CheckResult(
-            name="patterns",
-            passed=pat_passed,
-            summary=pat_sum,
-            log_path=pat_log,
-            output_paths=pat_out,
-            integrity=False,
-        )
-    )
-    if not pat_passed:
-        return CheckResults(tuple(results))
-
-    # Initial read-only tests hash
     initial_ro_hashes = hash_read_only_tests(order, wt)
-
-    # 4. Read-only tests hash check
-    ro_log = ld / "read_only_tests.log"
-    ro_log.write_text("Read-only tests hashes verified\n", encoding="utf-8")
-    ro_out = _find_mentioned_outputs(ro_log, order.outputs)
-    results.append(
-        CheckResult(
-            name="read-only-tests",
-            passed=True,
-            summary="Read-only tests hashes clean",
-            log_path=ro_log,
-            output_paths=ro_out,
-            integrity=False,
-        )
-    )
-
-    # 5. Compilation
-    cmp_passed, cmp_sum = _check_compile(part.paths, wt)
-    cmp_log = ld / "compile.log"
-    cmp_log.write_text(cmp_sum + "\n", encoding="utf-8")
-    cmp_out = _find_mentioned_outputs(cmp_log, order.outputs)
-    results.append(
-        CheckResult(
-            name="compile",
-            passed=cmp_passed,
-            summary=cmp_sum,
-            log_path=cmp_log,
-            output_paths=cmp_out,
-            integrity=False,
-        )
-    )
-    if not cmp_passed:
+    results, ok = _run_static_checks(order, part.paths, wt, ld, base_commit)
+    if not ok:
         return CheckResults(tuple(results))
 
-    # 6. Test execution (if part holds test files)
     test_files = [p for p in part.paths if p.startswith("tests/") and p.endswith(".py")]
     if test_files:
         test_log = ld / "tests.log"
         cmd = [python, "-m", "pytest", *test_files, "-q", "--tb=short"]
         t_passed, t_sum = _run_command(cmd, wt, test_log, timeout)
 
-        # Re-check read-only test hashes for integrity
         post_ro_hashes = hash_read_only_tests(order, wt)
         if initial_ro_hashes != post_ro_hashes:
-            results.append(
-                CheckResult(
-                    name="tests",
-                    passed=False,
-                    summary="Integrity violation: read-only test files modified during test run",
-                    log_path=test_log,
-                    output_paths=_find_mentioned_outputs(test_log, order.outputs),
-                    integrity=True,
-                )
-            )
+            results.append(CheckResult("tests", False, "Integrity violation: read-only test files modified during test run", test_log, _find_mentioned_outputs(test_log, order.outputs), True))
             return CheckResults(tuple(results))
 
-        t_out = _find_mentioned_outputs(test_log, order.outputs)
-        results.append(
-            CheckResult(
-                name="tests",
-                passed=t_passed,
-                summary=t_sum,
-                log_path=test_log,
-                output_paths=t_out,
-                integrity=False,
-            )
-        )
+        results.append(CheckResult("tests", t_passed, t_sum, test_log, _find_mentioned_outputs(test_log, order.outputs), False))
 
     return CheckResults(tuple(results))
 
@@ -362,106 +320,11 @@ def full_checks(
     ld = Path(log_dir).resolve()
     ld.mkdir(parents=True, exist_ok=True)
 
-    results: list[CheckResult] = []
-
-    # Scope
-    scope_passed = True
-    scope_summary = "Scope check passed"
-    scope_log = ld / "scope.log"
-    try:
-        s_rep = scope.check_scope(order, wt, base_commit)
-        if s_rep.violations:
-            scope_passed = False
-            scope_summary = f"Scope violations: {', '.join(s_rep.violations)}"
-            scope_log.write_text(scope_summary, encoding="utf-8")
-        else:
-            scope_log.write_text("Scope check passed\n", encoding="utf-8")
-    except Exception as exc:
-        scope_passed = False
-        scope_summary = f"Scope check error: {exc}"
-        scope_log.write_text(scope_summary, encoding="utf-8")
-
-    results.append(
-        CheckResult(
-            name="scope",
-            passed=scope_passed,
-            summary=scope_summary,
-            log_path=scope_log,
-            output_paths=_find_mentioned_outputs(scope_log, order.outputs),
-            integrity=False,
-        )
-    )
-    if not scope_passed:
-        return CheckResults(tuple(results))
-
-    # Headers
-    hdr_passed, hdr_sum = _check_module_headers(order.outputs, wt)
-    hdr_log = ld / "headers.log"
-    hdr_log.write_text(hdr_sum + "\n", encoding="utf-8")
-    results.append(
-        CheckResult(
-            name="headers",
-            passed=hdr_passed,
-            summary=hdr_sum,
-            log_path=hdr_log,
-            output_paths=_find_mentioned_outputs(hdr_log, order.outputs),
-            integrity=False,
-        )
-    )
-    if not hdr_passed:
-        return CheckResults(tuple(results))
-
-    # Patterns
-    pat_passed, pat_sum = _check_compromise_patterns(order.outputs, wt)
-    pat_log = ld / "patterns.log"
-    pat_log.write_text(pat_sum + "\n", encoding="utf-8")
-    results.append(
-        CheckResult(
-            name="patterns",
-            passed=pat_passed,
-            summary=pat_sum,
-            log_path=pat_log,
-            output_paths=_find_mentioned_outputs(pat_log, order.outputs),
-            integrity=False,
-        )
-    )
-    if not pat_passed:
-        return CheckResults(tuple(results))
-
-    # Initial read-only hashes
     initial_ro_hashes = hash_read_only_tests(order, wt)
-
-    ro_log = ld / "read_only_tests.log"
-    ro_log.write_text("Read-only tests hashes verified\n", encoding="utf-8")
-    results.append(
-        CheckResult(
-            name="read-only-tests",
-            passed=True,
-            summary="Read-only tests hashes clean",
-            log_path=ro_log,
-            output_paths=_find_mentioned_outputs(ro_log, order.outputs),
-            integrity=False,
-        )
-    )
-
-    # Compilation
-    cmp_passed, cmp_sum = _check_compile(order.outputs, wt)
-    cmp_log = ld / "compile.log"
-    cmp_log.write_text(cmp_sum + "\n", encoding="utf-8")
-    results.append(
-        CheckResult(
-            name="compile",
-            passed=cmp_passed,
-            summary=cmp_sum,
-            log_path=cmp_log,
-            output_paths=_find_mentioned_outputs(cmp_log, order.outputs),
-            integrity=False,
-        )
-    )
-    if not cmp_passed:
+    results, ok = _run_static_checks(order, order.outputs, wt, ld, base_commit)
+    if not ok:
         return CheckResults(tuple(results))
 
-    # Verify commands
     for idx, v_cmd in enumerate(order.verify, start=1):
         v_name = f"verify-{idx}"
         v_log = ld / f"{v_name}.log"
@@ -474,28 +337,10 @@ def full_checks(
 
         post_ro_hashes = hash_read_only_tests(order, wt)
         if initial_ro_hashes != post_ro_hashes:
-            results.append(
-                CheckResult(
-                    name=v_name,
-                    passed=False,
-                    summary="Integrity violation: read-only test files modified during verify command",
-                    log_path=v_log,
-                    output_paths=_find_mentioned_outputs(v_log, order.outputs),
-                    integrity=True,
-                )
-            )
+            results.append(CheckResult(v_name, False, "Integrity violation: read-only test files modified during verify command", v_log, _find_mentioned_outputs(v_log, order.outputs), True))
             return CheckResults(tuple(results))
 
-        results.append(
-            CheckResult(
-                name=v_name,
-                passed=v_passed,
-                summary=v_sum,
-                log_path=v_log,
-                output_paths=_find_mentioned_outputs(v_log, order.outputs),
-                integrity=False,
-            )
-        )
+        results.append(CheckResult(v_name, v_passed, v_sum, v_log, _find_mentioned_outputs(v_log, order.outputs), False))
         if not v_passed:
             return CheckResults(tuple(results))
 

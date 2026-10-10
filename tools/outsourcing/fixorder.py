@@ -46,46 +46,9 @@ def build_fix_order(
     lines: list[str] = [f"# FIX {fix_number} for {order.id}\n"]
 
     if stop_reason is not None:
-        if stop_reason == "MAX_TOKENS":
-            msg = "Your answer was cut off before the end. Return the same files again, complete; keep comments and docstrings short."
-        else:
-            msg = f"Your answer was blocked or empty ({stop_reason}). Return the files again, complete, in RETURN_FORMAT form."
-        lines.append(f"## Reason for fix\n{msg}\n")
+        _format_stop_reason(stop_reason, lines)
     else:
-        lines.append("Your previous answer did not pass these checks. Fix the root cause; do not special-case test inputs.\n")
-        lines.append("## Failed checks")
-
-        failed_results = [r for r in results.results if not r.passed]
-        total_budget = 120
-        used_budget = 0
-
-        for idx, r in enumerate(failed_results, start=1):
-            if used_budget >= total_budget:
-                lines.append(f"{idx}. {r.name}: {r.summary}\n   [… log omitted due to line budget …]")
-                continue
-
-            log_text = ""
-            if r.log_path and r.log_path.is_file():
-                try:
-                    log_text = r.log_path.read_bytes().decode("utf-8", errors="replace")
-                except Exception:
-                    log_text = ""
-
-            trimmed = trim_log(log_text) if log_text else ""
-            t_lines = trimmed.splitlines()
-
-            remaining = total_budget - used_budget
-            if len(t_lines) <= remaining:
-                chunk = trimmed
-                used_budget += len(t_lines)
-            else:
-                chunk = "\n".join(t_lines[:remaining])
-                used_budget += remaining
-
-            indented_log = "\n".join(f"   {l}" for l in chunk.splitlines())
-            lines.append(f"{idx}. {r.name}: {r.summary}\n{indented_log}")
-
-        lines.append("")
+        _format_failed_checks(results, lines)
 
     lines.append("## Files you may change")
     for path in allowed_paths:
@@ -97,3 +60,51 @@ def build_fix_order(
     lines.append("- If the failure shows the work order itself is wrong, return a QUESTIONS block instead.")
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _format_stop_reason(stop_reason: str, lines: list[str]) -> None:
+    if stop_reason == "MAX_TOKENS":
+        msg = "Your answer was cut off before the end. Return the same files again, complete; keep comments and docstrings short."
+    else:
+        msg = f"Your answer was blocked or empty ({stop_reason}). Return the files again, complete, in RETURN_FORMAT form."
+    lines.append(f"## Reason for fix\n{msg}\n")
+
+
+def _format_failed_checks(results: CheckResults, lines: list[str]) -> None:
+    lines.append("Your previous answer did not pass these checks. Fix the root cause; do not special-case test inputs.\n")
+    lines.append("## Failed checks")
+
+    failed_results = [r for r in results.results if not r.passed]
+    total_budget = 120
+    used_budget = 0
+
+    for idx, r in enumerate(failed_results, start=1):
+        if used_budget >= total_budget:
+            lines.append(f"{idx}. {r.name}: {r.summary}\n   [… log omitted due to line budget …]")
+            continue
+        used_budget += _format_single_check(r, idx, lines, total_budget - used_budget)
+
+    lines.append("")
+
+
+def _format_single_check(r: object, idx: int, lines: list[str], remaining_budget: int) -> int:
+    log_text = ""
+    if getattr(r, "log_path", None) and getattr(r, "log_path").is_file():
+        try:
+            log_text = getattr(r, "log_path").read_bytes().decode("utf-8", errors="replace")
+        except Exception:
+            log_text = ""
+
+    trimmed = trim_log(log_text) if log_text else ""
+    t_lines = trimmed.splitlines()
+
+    if len(t_lines) <= remaining_budget:
+        chunk = trimmed
+        used = len(t_lines)
+    else:
+        chunk = "\n".join(t_lines[:remaining_budget])
+        used = remaining_budget
+
+    indented_log = "\n".join(f"   {l}" for l in chunk.splitlines())
+    lines.append(f"{idx}. {getattr(r, 'name')}: {getattr(r, 'summary')}\n{indented_log}")
+    return used

@@ -27,80 +27,90 @@ def interface_view(path: str, text: str) -> str:
         return f"# File {path} could not be parsed as Python; raw text follows:\n" + text
 
     lines: list[str] = []
-
-    # 1. Module docstring
     doc = ast.get_docstring(tree)
     if doc:
         lines.append(f'"""{doc}"""\n')
 
     for node in tree.body:
-        # 2. __all__ or Top-level constants whose literal value is under 80 characters
-        if isinstance(node, ast.Assign):
-            is_all = any(isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets)
-            if is_all:
-                lines.append(ast.unparse(node) + "\n")
-            elif len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-                name = node.targets[0].id
-                if name.isupper() and not name.startswith("_"):
-                    if isinstance(node.value, ast.Constant):
-                        val_str = repr(node.value.value)
-                        if len(val_str) < 80:
-                            lines.append(ast.unparse(node) + "\n")
-        elif isinstance(node, ast.AnnAssign):
-            if isinstance(node.target, ast.Name):
-                name = node.target.id
-                if name.isupper() and not name.startswith("_") and node.value is not None:
-                    if isinstance(node.value, ast.Constant):
-                        val_str = repr(node.value.value)
-                        if len(val_str) < 80:
-                            lines.append(ast.unparse(node) + "\n")
-
-        # 3. Public functions
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if not node.name.startswith("_"):
-                sig = _format_func_sig(node)
-                doc = ast.get_docstring(node)
-                if doc:
-                    lines.append(f'{sig}\n    """{doc}"""\n    ...\n')
-                else:
-                    lines.append(f"{sig}\n    ...\n")
-
-        # 4. Public classes
-        elif isinstance(node, ast.ClassDef):
-            if not node.name.startswith("_"):
-                bases = [ast.unparse(b) for b in node.bases]
-                base_str = f"({', '.join(bases)})" if bases else ""
-                lines.append(f"class {node.name}{base_str}:")
-                class_doc = ast.get_docstring(node)
-                if class_doc:
-                    lines.append(f'    """{class_doc}"""')
-
-                has_body = False
-                for item in node.body:
-                    if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
-                        if not item.target.id.startswith("_"):
-                            lines.append(f"    {ast.unparse(item)}")
-                            has_body = True
-                    elif isinstance(item, ast.Assign):
-                        for t in item.targets:
-                            if isinstance(t, ast.Name) and not t.id.startswith("_"):
-                                lines.append(f"    {ast.unparse(item)}")
-                                has_body = True
-                                break
-                    elif isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                        if not item.name.startswith("_"):
-                            has_body = True
-                            msig = _format_func_sig(item, indent="    ")
-                            mdoc = ast.get_docstring(item)
-                            if mdoc:
-                                lines.append(f'{msig}\n        """{mdoc}"""\n        ...')
-                            else:
-                                lines.append(f"{msig}\n        ...")
-                if not has_body and not class_doc:
-                    lines.append("    ...")
-                lines.append("\n")
+        _process_top_level_node(node, lines)
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _process_top_level_node(node: ast.AST, lines: list[str]) -> None:
+    if isinstance(node, ast.Assign):
+        _handle_assign(node, lines)
+    elif isinstance(node, ast.AnnAssign):
+        _handle_ann_assign(node, lines)
+    elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+        if not node.name.startswith("_"):
+            _handle_func_def(node, lines)
+    elif isinstance(node, ast.ClassDef):
+        if not node.name.startswith("_"):
+            _handle_class_def(node, lines)
+
+
+def _handle_assign(node: ast.Assign, lines: list[str]) -> None:
+    is_all = any(isinstance(t, ast.Name) and t.id == "__all__" for t in node.targets)
+    if is_all:
+        lines.append(ast.unparse(node) + "\n")
+    elif len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+        name = node.targets[0].id
+        if name.isupper() and not name.startswith("_") and isinstance(node.value, ast.Constant):
+            if len(repr(node.value.value)) < 80:
+                lines.append(ast.unparse(node) + "\n")
+
+
+def _handle_ann_assign(node: ast.AnnAssign, lines: list[str]) -> None:
+    if isinstance(node.target, ast.Name):
+        name = node.target.id
+        if name.isupper() and not name.startswith("_") and node.value is not None:
+            if isinstance(node.value, ast.Constant) and len(repr(node.value.value)) < 80:
+                lines.append(ast.unparse(node) + "\n")
+
+
+def _handle_func_def(node: ast.FunctionDef | ast.AsyncFunctionDef, lines: list[str], indent: str = "") -> None:
+    sig = _format_func_sig(node, indent=indent)
+    doc = ast.get_docstring(node)
+    ind = indent or ""
+    if doc:
+        lines.append(f'{sig}\n{ind}    """{doc}"""\n{ind}    ...\n')
+    else:
+        lines.append(f"{sig}\n{ind}    ...\n")
+
+
+def _handle_class_def(node: ast.ClassDef, lines: list[str]) -> None:
+    bases = [ast.unparse(b) for b in node.bases]
+    base_str = f"({', '.join(bases)})" if bases else ""
+    lines.append(f"class {node.name}{base_str}:")
+    class_doc = ast.get_docstring(node)
+    if class_doc:
+        lines.append(f'    """{class_doc}"""')
+
+    has_body = _format_class_body(node, lines)
+    if not has_body and not class_doc:
+        lines.append("    ...")
+    lines.append("\n")
+
+
+def _format_class_body(node: ast.ClassDef, lines: list[str]) -> bool:
+    has_body = False
+    for item in node.body:
+        if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+            if not item.target.id.startswith("_"):
+                lines.append(f"    {ast.unparse(item)}")
+                has_body = True
+        elif isinstance(item, ast.Assign):
+            for t in item.targets:
+                if isinstance(t, ast.Name) and not t.id.startswith("_"):
+                    lines.append(f"    {ast.unparse(item)}")
+                    has_body = True
+                    break
+        elif isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if not item.name.startswith("_"):
+                has_body = True
+                _handle_func_def(item, lines, indent="    ")
+    return has_body
 
 
 def _format_func_sig(node: ast.FunctionDef | ast.AsyncFunctionDef, indent: str = "") -> str:
