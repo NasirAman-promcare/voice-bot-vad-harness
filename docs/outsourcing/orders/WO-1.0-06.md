@@ -12,6 +12,7 @@ context:
   - docs/process/templates/BREAK_RECIPE.md
 interfaces:
   - tools/index/impact.py
+  - tools/index/scan.py
 outputs:
   - tools/audit/breaks.py
   - tools/audit/mutate.py
@@ -57,6 +58,16 @@ Must-catch proofs used to be manual breaks repeated every audit round. Now each 
 - **B6** Mutation operators: comparison swap (`<` with `>=`, `>` with `<=`, `==` with `!=`), boolean operator swap (`and` with `or`), condition negation in `if` and `while`, integer constant plus or minus one, a `return <expr>` replaced by `return None`, and a `raise` replaced by `pass`. One mutation per mutant; mutants that do not compile are discarded. Selection is deterministic for a given seed and limit.
 - **B7** The mutation report mutates only the modules changed since the merge base with `--base`, runs each mutant in a scratch worktree against the module's affected tests (from `tools.index.impact`), and writes a markdown report: per module, mutants run, killed and survived, then each survivor with `path:line`, operator and description. It never modifies the real working tree. Exit 0 unless the tool itself failed (exit 2).
 
+- **B8** Pins (amended by Claude with the acceptance tests; each is checked there):
+  1. **Recipe files.** `load_recipes` finds every `tests/aqis_lab/breaks/<WP>/MC-*.patch`, sorted by WP and then file name. `<nn>-<slug>` is the usual form, but any name starting `MC-` counts; WP-1.0's own recipes are named `MC-WO-1.0-01-01-<slug>.patch`. The `# MC:` value is free text. `Recipe` has at least `path`, `wp`, `mc`, `behaviour` and `expect_fail`.
+  2. **Results.** `RecipeResult` has `recipe`, `status` (`caught`, `survived` or `broken`) and `details`. A named node with no reported outcome (for example, the test process ended abruptly) is `broken`, never `caught`.
+  3. **E2.** A recipe that changes any path under `tests/`, or any `conftest.py` or `test_*.py`, is `broken`.
+  4. **Running.** The worktree's tests run with `sys.executable -m pytest <nodes> -p no:cacheprovider` in the worktree, with `PYTHONDONTWRITEBYTECODE=1` added to the inherited environment.
+  5. **Scratch folders.** Every scratch folder comes from `tempfile.mkdtemp()`, so `TMPDIR` is honoured. After each recipe or mutant run, in every case: `git worktree remove --force`, then the folder is deleted, then `git worktree prune`. Nothing is left in `TMPDIR`, and `git worktree list` shows only the main tree.
+  6. **Command lines.** Both run as `python -P -m tools.audit.<name>`, with `PYTHONPATH` set to the lab checkout, on the git top-level of the current directory. `--all` prints a line naming each WP before that WP's recipe rows, or carries the WP in each row; WPs come in sorted order.
+  7. **Mutants.** `Mutant` has `operator`, `line`, `description` and `source`. Operator names are `comparison`, `boolean`, `negate-condition` (`if X` → `if not (X)`, also `while`), `constant` (each integer literal, not `bool`, gives two mutants: plus one and minus one), `return-none` (only a `return` with a value) and `raise-pass`. The mutant's source differs from the original only on the line `line`; every other line stays byte for byte. Mutants are distinct, and no result depends on hash or set iteration order, so a different `PYTHONHASHSEED` gives the same list. With `limit` at or above the number of candidates, every candidate is returned.
+  8. **Mutation report.** The report's tests for each changed module are the test files that import it, directly or transitively, computed with `tools.index.scan` the same way `impact` does. `--max-mutants` caps the mutants per module. Per module, the report gives a line holding the module path and the counts (`killed N`, `survived N`), or `no tests selected`. Each survivor follows on its own line: `` - `<path>:<line>` <operator>: <description> ``.
+
 ## 5. Edge cases you must handle
 - **E1** No recipes for the WP → exit 2 with "no recipes", never 0.
 - **E2** A recipe that changes a test file instead of code → `broken` (recipes break code, not tests).
@@ -81,7 +92,7 @@ Return QUESTIONS if `tools.index.impact` does not expose what B7 needs.
 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists with its public API and the module header standard.
-- **D2** B1 to B7 and E1 to E4 are implemented; point at each.
+- **D2** B1 to B8 and E1 to E4 are implemented; point at each.
 - **D3** Unit tests build small scratch repositories with their own recipes and tests.
 - **D4** `tests/aqis_lab/audit_breaks/test_acceptance_wo_1_0_06.py` passes unmodified.
 - **D5** No placeholder or swallowed error.
