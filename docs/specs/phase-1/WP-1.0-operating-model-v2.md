@@ -5,7 +5,7 @@
 - **Size**: L
 - **Thread model**: Opus, high
 - **Runs on**: cloud VM and CI
-- **Touches**: `tools/outsourcing/**`, `tools/index/**`, `tools/progress/**`, `tools/autonomy/**`, `tools/audit/breaks.py`, `tools/audit/mutate.py`, `tools/audit/mutation_report.py`, `tools/ci/**`, `kit-staging/**`, `tests/aqis_lab/{outsourcing,index,progress,autonomy,audit_breaks,kit,ci}/**`, `tests/aqis_lab/breaks/WP-1.0/**`, `.github/workflows/aqis-lab-*.yml`, `docs/outsourcing/**`, `docs/progress/**`, `docs/capabilities/retired.d/**`, `.gitignore`, and the files named by DEBT-032, DEBT-033 and DEBT-034
+- **Touches**: `tools/outsourcing/**`, `tools/index/**`, `tools/progress/**`, `tools/autonomy/**`, `tools/audit/breaks.py`, `tools/audit/mutate.py`, `tools/audit/mutation_report.py`, `tools/ci/**`, `kit-staging/**`, `tests/aqis_lab/{outsourcing,index,progress,autonomy,audit_breaks,kit,ci}/**`, `tests/aqis_lab/breaks/WP-1.0/**`, `.github/workflows/aqis-lab-*.yml`, `docs/outsourcing/**`, `docs/progress/**`, `docs/capabilities/retired.d/**, docs/capabilities/records.d/**`, `.gitignore`, and the files named by DEBT-032, DEBT-033 and DEBT-034
 - **Produces / Consumes**: produces the outsourcing relay, the Lab Map, progress fragments and generated tables, the merge gate, the break suite, staged kit v4 hooks and settings, and the CI workflows; consumes the existing audit gate and pattern tables
 - **Read first**: `docs/process/AUTONOMY.md`, `ESCALATION.md`, `CHANGE_CONTROL.md`, `AUDIT_PROTOCOL.md`, `PARALLEL.md`, `docs/process/outsourcing/` (README, FOUNDATION, templates), the eleven work orders `docs/outsourcing/orders/WO-1.0-01.md` to `WO-1.0-11.md`, `config/aqis_lab/model_pool.json`, and the DEBT-032 to DEBT-034 rows of `docs/progress/DEBT.md`
 
