@@ -1,0 +1,16 @@
+# MC: WO-1.0-10 #9
+# behaviour: a server-stated limit lowers the configured one but never raises it
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_10.py::test_FR_1_0_14_mc09_server_limit_lowers_but_never_raises[higher]
+diff --git a/tools/outsourcing/governor.py b/tools/outsourcing/governor.py
+index acff850..8aebf72 100644
+--- a/tools/outsourcing/governor.py
++++ b/tools/outsourcing/governor.py
+@@ -108,7 +108,7 @@ class Governor:
+         is_prov_scope = scope == "provider" or (getattr(m_spec, key, None) is None and getattr(m_spec.provider, key, None) is not None)
+         target = ps if is_prov_scope else ms
+         cfg = getattr(m_spec.provider, key, None) if is_prov_scope else getattr(m_spec, key, None)
+-        if cfg is None or value < cfg:
++        if True:
+             target.learned_limits[key] = min(target.learned_limits.get(key, value), value)
+ 
+     def record_learned_limit(self, model_name: str, key: str, value: int, scope: str = "model") -> None:

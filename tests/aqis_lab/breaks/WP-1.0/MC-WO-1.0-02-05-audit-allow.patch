@@ -1,0 +1,16 @@
+# MC: WO-1.0-02 #5
+# behaviour: the compromise check passes a flagged line with # audit-allow and fails it without, as the gate does
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_02.py::test_FR_1_0_02_mc05_compromise_check_honours_audit_allow[with-audit-allow]
+diff --git a/tools/outsourcing/checks.py b/tools/outsourcing/checks.py
+index 17cc16d..df44798 100644
+--- a/tools/outsourcing/checks.py
++++ b/tools/outsourcing/checks.py
+@@ -123,8 +123,6 @@ def _check_compromise_patterns(paths: tuple[str, ...], wt: Path) -> tuple[bool,
+ 
+         text = full_p.read_bytes().decode("utf-8", errors="replace")
+         for idx, line in enumerate(text.splitlines(), start=1):
+-            if patterns.ALLOW_RE.search(line):
+-                continue
+             for label, rx in table:
+                 if rx.search(line):
+                     flagged.append(f"{rel_p}:{idx} [{label}]")

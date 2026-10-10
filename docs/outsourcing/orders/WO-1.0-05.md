@@ -69,6 +69,23 @@ Claude now merges its own work packages, but only through this deterministic gat
 - **B5** Exit codes: 0 merged (or would merge, in a dry run); 2 branch behind `main`; 3 a criterion failed; 4 GitHub error (print `ACCESS:` before the message when the status is 401 or 403); 5 no open pull request for the branch.
 - **B6** The gate writes nothing to the repository and makes no commit.
 
+- **B7** Interface details the acceptance tests rely on (added by Claude with the acceptance test, 2026-10-10):
+  - **Repository and slug.** The gate runs in the current directory's git top-level. The slug comes from `git config --get remote.origin.url` in HTTPS, SSH or proxy form. Fetches use `origin` as configured; tests point it at a local bare repository with `url.<bare>.insteadOf`, which `git remote get-url` would expand.
+  - **GitHub calls.** Only `gh api <endpoint>`, REST:
+    - the pull request: `repos/<slug>/pulls?head=<owner>:<branch>&state=open`;
+    - check runs: `repos/<slug>/commits/<sha>/check-runs`, paged with `per_page=100&page=N` until a short page;
+    - the combined status: `repos/<slug>/commits/<sha>/status`;
+    - the merge: `gh api --method PUT repos/<slug>/pulls/<n>/merge -f merge_method=merge -f sha=<head SHA> -f commit_title=<title>`.
+    - A non-zero exit of `gh` is a `GitHubError`; its message holds `gh`'s error text.
+  - **`--json` output.** An object with `wp`, `head` and `criteria`, a list of `{"id": "C1", "passed": true, "reason": "…"}` for C1 to C7 in order. The table and the JSON both list all seven criteria every time, even after a failure.
+  - **Facts.**
+    - **Audit.** `AUDIT.md`'s verdict is the `## Verdict:` heading. The audited commit is the backticked SHA after `Commit audited:`; an abbreviated SHA is resolved with git.
+    - **Record-only commits (C1).** A later commit counts as record-only when it touches only `docs/progress/<WP>/**`, `docs/progress/{status,blockers,debt,decisions}.d/**` and `docs/outsourcing/ledger.d/**`.
+    - **Open blockers (C4).** A blocker fragment with `WP: <WP>` and `Status: OPEN`.
+    - **Spec (C5, C6).** Read from `origin/main` with `git show`, as `docs/specs/**/<WP>-*.md`.
+    - **Blocking checks (C6).** The rows of the spec's `## Owner-run checks` table whose second cell is `blocking`; the check ID is the first word of the first cell. A blocking check passes only when a file committed on the branch, named `docs/progress/<WP>/<check ID>*`, has a line `Result: PASS`.
+  - **Exit codes.** A dry run whose criteria all pass exits 0.
+
 ## 5. Edge cases you must handle
 - **E1** No `AUDIT.md` → C1 fails with a clear reason.
 - **E2** The audited SHA is not an ancestor of head → C1 fails.
@@ -96,7 +113,7 @@ Return QUESTIONS if the audit report or fragment formats in your context do not 
 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists with its public API and the module header standard.
-- **D2** B1 to B6 and E1 to E5 are implemented; point at each.
+- **D2** B1 to B7 and E1 to E5 are implemented; point at each.
 - **D3** Tests use scratch git repositories and the stand-in `gh`; none reaches GitHub.
 - **D4** `tests/aqis_lab/autonomy/test_acceptance_wo_1_0_05.py` passes unmodified.
 - **D5** No placeholder or swallowed error.

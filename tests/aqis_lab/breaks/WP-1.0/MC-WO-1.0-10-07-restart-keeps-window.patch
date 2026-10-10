@@ -1,0 +1,16 @@
+# MC: WO-1.0-10 #7
+# behaviour: after a restart, starts from the last 60 seconds still apply
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_10.py::test_FR_1_0_14_mc07_restart_keeps_window_and_counts
+diff --git a/tools/outsourcing/governor_state.py b/tools/outsourcing/governor_state.py
+index b47feca..e031eea 100644
+--- a/tools/outsourcing/governor_state.py
++++ b/tools/outsourcing/governor_state.py
+@@ -131,7 +131,7 @@ def _apply_models(models_data: dict, model_stats: dict[str, ModelStats], now: fl
+         ms.cooldown_until = md.get("cooldown_until", 0.0)
+         ms.exhausted_until = md.get("exhausted_until")
+         ms.learned_limits = md.get("learned_limits", {})
+-        ms.starts = _recent(md.get("starts", []), now)
++        ms.starts = []
+         ms.daily_counts = md.get("daily_counts", {})
+ 
+ 

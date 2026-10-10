@@ -1,0 +1,15 @@
+# MC: WO-1.0-11 #8
+# behaviour: the relay's commits stay on wo/<WO>: never merged into or pushed to the WP branch
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py::test_FR_1_0_02_mc01_mc08_mc11_accepted_run_end_to_end
+diff --git a/tools/outsourcing/relay.py b/tools/outsourcing/relay.py
+index 0edecd8..ca64bdd 100644
+--- a/tools/outsourcing/relay.py
++++ b/tools/outsourcing/relay.py
+@@ -285,6 +285,7 @@ def _execute_run_loop(run_ctx: RunContext, accepted_records: list[records.StepRe
+     ret_outcome = _finalize_and_report(run_ctx, final_outcome, accepted_records)
+     if ret_outcome.result == Result.ACCEPTED:
+         remove(run_ctx.worktree)
++        __import__("subprocess").run(["git", "merge", "--no-ff", "--no-edit", run_ctx.worktree.branch], cwd=run_ctx.main_root)
+     return ret_outcome
+ 
+ 

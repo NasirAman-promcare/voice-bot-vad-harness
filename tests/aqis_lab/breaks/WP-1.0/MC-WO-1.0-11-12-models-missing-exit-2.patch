@@ -1,0 +1,16 @@
+# MC: WO-1.0-11 #12
+# behaviour: --models reports a pool model the provider does not list and exits 2
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py::test_FR_1_0_14_mc12_models_reports_a_missing_model_and_exits_2
+diff --git a/tools/outsourcing/relay.py b/tools/outsourcing/relay.py
+index 0edecd8..cbfeb57 100644
+--- a/tools/outsourcing/relay.py
++++ b/tools/outsourcing/relay.py
+@@ -157,7 +157,7 @@ def _handle_models_mode(pool_path: Path, main_root: Path, api_base: str) -> Rela
+         for m_name in missing:
+             print(f"{m_name}: missing")
+             all_missing.append(m_name)
+-    return RelayOutcome(result=Result.INVALID if all_missing else Result.ACCEPTED)
++    return RelayOutcome(result=Result.ACCEPTED)
+ 
+ 
+ def _handle_dry_run_mode(opts: RelayOptions, main_root: Path) -> RelayOutcome:

@@ -1,5 +1,5 @@
 # BLK-1.0-05 — The generated registry cannot hold the 40 capabilities that no Python header lists
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: DECISION
 Raised: 2026-10-10
@@ -39,4 +39,4 @@ Exact steps:
 
 Meanwhile: WO-1.0-04 runs through the relay. I write the acceptance tests for WO-1.0-03 (Map, symbols, callers, test map, impact and the registry, the registry part written for option 1 and adjusted if you choose otherwise), and for WO-1.0-05 and WO-1.0-08. WO-1.0-03 is sent once you answer.
 
-Owner answer:
+Owner answer: 2026-10-10, "option 1". The owner added `docs/capabilities/records.d/**` to the WP-1.0 spec's Touches on `main` (`cd51680`). WO-1.0-03 is amended to match (B12).

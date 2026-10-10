@@ -1,0 +1,16 @@
+# MC: WO-1.0-02 #7
+# behaviour: next_part reduces a partly accepted step to its remaining files with the next free sub-number
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_02.py::test_FR_1_0_02_mc07_next_part_resumes_and_reduces_a_partial_step
+diff --git a/tools/outsourcing/steplog.py b/tools/outsourcing/steplog.py
+index 78acd48..ee31f29 100644
+--- a/tools/outsourcing/steplog.py
++++ b/tools/outsourcing/steplog.py
+@@ -112,7 +112,7 @@ def _calc_part_label(step: Step, remaining: list[str], accepted: tuple[StepRecor
+                 existing_subs.append(int(acc.label.split(".", 1)[1]))
+             except ValueError:
+                 pass
+-    next_sub = max(existing_subs, default=0) + 1
++    next_sub = len(existing_subs)
+     return f"{step.number}.{next_sub}"
+ 
+ 

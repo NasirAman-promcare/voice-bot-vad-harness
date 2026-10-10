@@ -1,0 +1,16 @@
+# MC: WO-1.0-11 #11
+# behaviour: the ledger fragment holds the token counts of every reply and the model and provider of every part
+# expect-fail: tests/aqis_lab/outsourcing/test_fix_wo_1_0_11_01.py::test_FR_1_0_02_fix01_ledger_counts_every_replys_tokens
+diff --git a/tools/outsourcing/relay.py b/tools/outsourcing/relay.py
+index 0edecd8..177ddf8 100644
+--- a/tools/outsourcing/relay.py
++++ b/tools/outsourcing/relay.py
+@@ -207,7 +207,7 @@ def _write_records(
+     models_used = tuple(run_ctx.all_models_used) or tuple((a.model, a.provider) for a in accepted_records)
+     ledger.write_ledger_fragment(
+         led_path, run_ctx.order.id, outcome, run_ctx.total_requests,
+-        run_ctx.total_prompt_tokens, run_ctx.total_output_tokens, models_used
++        sum(a.prompt_tokens for a in accepted_records), sum(a.output_tokens for a in accepted_records), models_used
+     )
+ 
+     push_ok = True

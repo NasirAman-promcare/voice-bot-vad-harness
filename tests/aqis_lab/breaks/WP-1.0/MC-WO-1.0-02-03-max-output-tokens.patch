@@ -1,0 +1,16 @@
+# MC: WO-1.0-02 #3
+# behaviour: a request carries the order's max_output_tokens
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_02.py::test_FR_1_0_02_mc03_request_carries_only_max_output_tokens_beyond_text
+diff --git a/tools/outsourcing/prompt.py b/tools/outsourcing/prompt.py
+index 169e662..cd6738b 100644
+--- a/tools/outsourcing/prompt.py
++++ b/tools/outsourcing/prompt.py
+@@ -73,7 +73,7 @@ def step_request(order: WorkOrder, plan: tuple[Step, ...], part: StepPart, root:
+     chat_req = chat.ChatRequest(
+         system=foundation_text,
+         turns=(chat.Turn(role="user", text=user_text),),
+-        max_output_tokens=order.max_output_tokens,
++        max_output_tokens=65536,
+     )
+ 
+     return Request(

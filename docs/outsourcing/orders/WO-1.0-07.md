@@ -20,6 +20,10 @@ context:
   - .claude/hooks/.gitignore
   - tools/index/__main__.py
   - tools/progress/__main__.py
+  - tests/aqis_lab/fixture_repo.py
+  - tests/aqis_lab/test_aqis_gate_parity.py
+  - tests/aqis_lab/test_aqis_gate_v2.py
+  - tests/aqis_lab/test_aqis_debt_wp09.py
 outputs:
   - kit-staging/.claude/hooks/_protected.py
   - kit-staging/.claude/hooks/guard_protected.py
@@ -41,12 +45,12 @@ read_only_tests:
 allowed_dependencies:
   - stdlib
 verify:
-  - .venv/bin/python -m pytest tests/aqis_lab/kit/test_protected_v4.py tests/aqis_lab/kit/test_guard_v4.py tests/aqis_lab/kit/test_stop_gate_v4.py tests/aqis_lab/kit/test_session_context_v2.py tests/aqis_lab/kit/test_acceptance_wo_1_0_07.py -q --tb=short
+  - .venv/bin/python -m pytest tests/aqis_lab/kit/test_protected_v4.py tests/aqis_lab/kit/test_guard_v4.py tests/aqis_lab/kit/test_stop_gate_v4.py tests/aqis_lab/kit/test_session_context_v2.py tests/aqis_lab/kit/test_acceptance_wo_1_0_07.py tests/aqis_lab/test_aqis_gate_parity.py tests/aqis_lab/test_aqis_gate_v2.py tests/aqis_lab/test_aqis_debt_wp09.py -q --tb=short
 ---
 
 # WO-1.0-07 — Hook updates (spec allowances, stop gate v4, session context v2), staged
 
-**Before sending (Claude):** save the current Claude Code hooks reference sections for PreToolUse, PostToolUse, Stop and SessionStart input and output to `docs/outsourcing/refs/claude-code-hooks.md`, and add to `context` every test file found by `rg -l "stop_gate|_protected" tests/aqis_lab` (the WP-0.0 parity tests import the hook's tables and parse its messages). Add the same test files to the `verify` command; WO-1.0-08 shares `tests/aqis_lab/kit`, so `verify` names files, never the folder.
+**Before sending (Claude):** save the current Claude Code hooks reference sections for PreToolUse, PostToolUse, Stop and SessionStart input and output to `docs/outsourcing/refs/claude-code-hooks.md`, and add to `context` every test file found by `rg -l "stop_gate|_protected" tests/aqis_lab` (the WP-0.0 parity tests import the hook's tables and parse its messages). Add the same test files to the `verify` command; WO-1.0-08 shares `tests/aqis_lab/kit`, so `verify` names files, never the folder. *(Done 2026-10-10. The reference is `docs/outsourcing/refs/claude-code-hooks.md`. The search finds seven files: four are about the hooks and are added; three match only by chance and are left out: `tests/aqis_lab/ci/test_wp_1_0_requirements.py`, `outsourcing/test_acceptance_wo_1_0_01.py` and `outsourcing/test_workorder.py`.)*
 
 ## 1. Context
 The four hooks in your context enforce the lab's rules today (stop gate version 3). Under the new operating model, guarded-path allowances may also come from the WP spec, allowed kinds of test change are permitted with a record, blocker fragments are linted, and the stop gate runs only the tests a change affects. You write the new versions into `kit-staging/.claude/hooks/`; after audit the owner copies them into `.claude/`. Hooks follow the attached reference exactly.

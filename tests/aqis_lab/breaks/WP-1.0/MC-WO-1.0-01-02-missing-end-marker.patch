@@ -1,0 +1,18 @@
+# MC: WO-1.0-01 #2
+# behaviour: a FILE block without its END marker fails the import
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc02_missing_end_marker_fails_import
+diff --git a/tools/outsourcing/bundle.py b/tools/outsourcing/bundle.py
+index 1db0ec4..f8f37a9 100644
+--- a/tools/outsourcing/bundle.py
++++ b/tools/outsourcing/bundle.py
+@@ -147,7 +147,9 @@ def parse_bundle(text: str) -> Bundle:
+             current_file_path = None
+             continue
+         elif s == "=== DOD ===":
+-            if current_block is not None:
++            if current_block == "FILE":
++                file_blocks.append((current_file_path, file_content_lines))
++            elif current_block is not None:
+                 raise BundleError(f"Nested block marker === DOD === inside {current_block}")
+             current_block = "DOD"
+             continue

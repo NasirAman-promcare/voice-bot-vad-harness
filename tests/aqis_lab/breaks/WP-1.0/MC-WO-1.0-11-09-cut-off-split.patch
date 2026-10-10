@@ -1,0 +1,16 @@
+# MC: WO-1.0-11 #9
+# behaviour: a cut-off two-file part is split into one request per file
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_11.py::test_FR_1_0_02_mc09_cut_off_two_file_part_is_split_per_file
+diff --git a/tools/outsourcing/stepper.py b/tools/outsourcing/stepper.py
+index e04e2ea..470ec58 100644
+--- a/tools/outsourcing/stepper.py
++++ b/tools/outsourcing/stepper.py
+@@ -246,7 +246,7 @@ def _handle_import_and_checks(
+ def _handle_cutoff_reply(
+     ctx: RunContext, part: StepPart, reply: Any, attempts_used: int, max_attempts: int, current_req: Request
+ ) -> tuple[StepOutcome | None, Request]:
+-    if len(part.paths) >= 2:
++    if len(part.paths) >= 3:
+         for sp in [StepPart(label=f"{part.label}.{idx}", paths=(p,)) for idx, p in enumerate(part.paths, start=1)]:
+             sub_out = run_part(ctx, sp)
+             if sub_out.result != Result.ACCEPTED:

@@ -1,0 +1,23 @@
+# MC: WO-1.0-01 #1
+# behaviour: a bundle path outside the order's outputs, or outside expected, fails the import and writes nothing
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc01_path_outside_outputs_fails_import_and_writes_nothing
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc01_read_only_test_in_bundle_is_refused_and_unchanged
+diff --git a/tools/outsourcing/importer.py b/tools/outsourcing/importer.py
+index ac8ff24..b52fdb0 100644
+--- a/tools/outsourcing/importer.py
++++ b/tools/outsourcing/importer.py
+@@ -70,13 +70,9 @@ def import_bundle(
+     bundle_paths = set(bundle_files_dict.keys())
+ 
+     # Check that all bundle paths are within order.outputs
+-    outside_order = bundle_paths - order_outputs_set
+-    if outside_order:
+-        raise ImportRefused(f"Bundle files outside order outputs: {sorted(outside_order)}")
+-
+     # Check mode requirements
+     if mode == "first":
+-        if bundle_paths != expected_set:
++        if not expected_set <= bundle_paths:
+             diff_missing = expected_set - bundle_paths
+             diff_extra = bundle_paths - expected_set
+             raise ImportRefused(f"First mode requires exact match for expected. Missing: {sorted(diff_missing)}, Extra: {sorted(diff_extra)}")

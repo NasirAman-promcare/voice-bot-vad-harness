@@ -1,0 +1,17 @@
+# MC: WO-1.0-01 #9
+# behaviour: a step plan that misses an output is invalid
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc09_bad_step_plan_is_invalid[misses-an-output]
+diff --git a/tools/outsourcing/workorder.py b/tools/outsourcing/workorder.py
+index 14dcc71..90f9a64 100644
+--- a/tools/outsourcing/workorder.py
++++ b/tools/outsourcing/workorder.py
+@@ -267,9 +267,6 @@ def plan_steps(order: WorkOrder) -> tuple[Step, ...]:
+ 
+             step_objects.append(Step(number=idx, paths=norm_parts))
+ 
+-        missing = set(order.outputs) - set(all_step_paths)
+-        if missing:
+-            raise WorkOrderError(f"Step plan misses output paths: {sorted(missing)}")
+ 
+         return tuple(step_objects)
+ 

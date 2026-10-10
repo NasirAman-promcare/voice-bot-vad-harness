@@ -1,0 +1,16 @@
+# MC: WO-1.0-01 #3
+# behaviour: each truncation sign of B5 fails the import
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc03_truncation_sign_fails_import
+diff --git a/tools/outsourcing/bundle.py b/tools/outsourcing/bundle.py
+index 1db0ec4..88d0867 100644
+--- a/tools/outsourcing/bundle.py
++++ b/tools/outsourcing/bundle.py
+@@ -99,8 +99,6 @@ def parse_bundle(text: str) -> Bundle:
+         text = text[1:]
+ 
+     all_lines = text.splitlines()
+-    for line in all_lines:
+-        _check_truncation(line)
+ 
+     manifest_lines: list[str] = []
+     dod_lines: list[str] = []

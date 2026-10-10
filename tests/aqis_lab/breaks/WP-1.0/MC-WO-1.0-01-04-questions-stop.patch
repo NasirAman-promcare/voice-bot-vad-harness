@@ -1,0 +1,16 @@
+# MC: WO-1.0-01 #4
+# behaviour: a QUESTIONS block stops the import with exit code 4
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_01.py::test_FR_1_0_01_mc04_questions_block_stops_import_with_exit_4
+diff --git a/tools/outsourcing/importer.py b/tools/outsourcing/importer.py
+index ac8ff24..3e08ce5 100644
+--- a/tools/outsourcing/importer.py
++++ b/tools/outsourcing/importer.py
+@@ -57,7 +57,7 @@ def import_bundle(
+ ) -> ImportReport:
+     root = Path(repo_root).resolve()
+ 
+-    if bundle.questions:
++    if bundle.questions and bundle.files:
+         raise QuestionsReturned("Bundle contains questions; import stopped")
+ 
+     if mode not in ("first", "fix"):
