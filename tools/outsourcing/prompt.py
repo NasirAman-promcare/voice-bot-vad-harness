@@ -55,21 +55,13 @@ def step_request(order: WorkOrder, plan: tuple[Step, ...], part: StepPart, root:
 
     sent_paths: list[str] = [order.path]
     missing_paths: list[str] = []
-
     user_parts: list[str] = [order_text]
 
-    # Context files & read-only tests
     _add_context_and_interfaces(order, repo_root, sent_paths, user_parts)
-
-    # Earlier step outputs in the tree
     _add_earlier_outputs(plan, part, repo_root, sent_paths, missing_paths, user_parts)
-
-    # Step block
     _add_step_block(plan, part, user_parts)
 
-    # Return format
     user_parts.append(return_format_text)
-
     user_text = "\n\n".join(user_parts)
 
     chat_req = chat.ChatRequest(
@@ -78,13 +70,11 @@ def step_request(order: WorkOrder, plan: tuple[Step, ...], part: StepPart, root:
         max_output_tokens=order.max_output_tokens,
     )
 
-    chars = len(foundation_text) + len(user_text)
-
     return Request(
         chat=chat_req,
         sent_paths=tuple(sent_paths),
         missing_paths=tuple(missing_paths),
-        characters=chars,
+        characters=len(foundation_text) + len(user_text),
     )
 
 
@@ -206,13 +196,37 @@ def final_fix_request(
 
     sent_paths: list[str] = [order.path]
     missing_paths: list[str] = []
-
     user_parts: list[str] = [order_text]
 
-    # Context and interfaces
     _add_context_and_interfaces(order, repo_root, sent_paths, user_parts)
+    _add_final_fix_outputs(order, focus_paths, repo_root, sent_paths, missing_paths, user_parts)
 
-    # Focus paths in full as CURRENT blocks, other outputs as in B3 item 4
+    user_parts.append(fix_text)
+    user_parts.append(return_format_text)
+
+    user_text = "\n\n".join(user_parts)
+    chat_req = chat.ChatRequest(
+        system=foundation_text,
+        turns=(chat.Turn(role="user", text=user_text),),
+        max_output_tokens=order.max_output_tokens,
+    )
+
+    return Request(
+        chat=chat_req,
+        sent_paths=tuple(sent_paths),
+        missing_paths=tuple(missing_paths),
+        characters=len(foundation_text) + len(user_text),
+    )
+
+
+def _add_final_fix_outputs(
+    order: WorkOrder,
+    focus_paths: tuple[str, ...],
+    repo_root: Path,
+    sent_paths: list[str],
+    missing_paths: list[str],
+    user_parts: list[str],
+) -> None:
     focus_set = set(focus_paths)
     for out_p in order.outputs:
         full_p = repo_root / out_p
@@ -229,26 +243,6 @@ def final_fix_request(
                     user_parts.append(f"=== ACCEPTED: {out_p} ===\n{text}\n=== END ACCEPTED ===")
         else:
             missing_paths.append(out_p)
-
-    user_parts.append(fix_text)
-    user_parts.append(return_format_text)
-
-    user_text = "\n\n".join(user_parts)
-
-    chat_req = chat.ChatRequest(
-        system=foundation_text,
-        turns=(chat.Turn(role="user", text=user_text),),
-        max_output_tokens=order.max_output_tokens,
-    )
-
-    chars = len(foundation_text) + len(user_text)
-
-    return Request(
-        chat=chat_req,
-        sent_paths=tuple(sent_paths),
-        missing_paths=tuple(missing_paths),
-        characters=chars,
-    )
 
 
 def step_pack(order: WorkOrder, plan: tuple[Step, ...], part: StepPart, root: str | Path) -> str:

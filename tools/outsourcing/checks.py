@@ -213,16 +213,7 @@ def _find_mentioned_outputs(log_file: Path, allowed_outputs: tuple[str, ...]) ->
     return tuple(sorted(found))
 
 
-def _run_static_checks(
-    order: WorkOrder,
-    paths: tuple[str, ...],
-    wt: Path,
-    ld: Path,
-    base_commit: str,
-) -> tuple[list[CheckResult], bool]:
-    results: list[CheckResult] = []
-
-    # 1. Scope
+def _check_scope_and_headers(order: WorkOrder, paths: tuple[str, ...], wt: Path, ld: Path, base_commit: str, results: list[CheckResult]) -> bool:
     scope_passed, scope_sum = True, "Scope check passed"
     scope_log = ld / "scope.log"
     try:
@@ -238,35 +229,46 @@ def _run_static_checks(
 
     results.append(CheckResult("scope", scope_passed, scope_sum, scope_log, _find_mentioned_outputs(scope_log, order.outputs), False))
     if not scope_passed:
-        return results, False
+        return False
 
-    # 2. Module headers
     hdr_passed, hdr_sum = _check_module_headers(paths, wt)
     hdr_log = ld / "headers.log"
     hdr_log.write_text(hdr_sum + "\n", encoding="utf-8")
     results.append(CheckResult("headers", hdr_passed, hdr_sum, hdr_log, _find_mentioned_outputs(hdr_log, order.outputs), False))
-    if not hdr_passed:
-        return results, False
+    return hdr_passed
 
-    # 3. Compromise patterns
+
+def _check_patterns_readonly_and_compile(order: WorkOrder, paths: tuple[str, ...], wt: Path, ld: Path, results: list[CheckResult]) -> bool:
     pat_passed, pat_sum = _check_compromise_patterns(paths, wt)
     pat_log = ld / "patterns.log"
     pat_log.write_text(pat_sum + "\n", encoding="utf-8")
     results.append(CheckResult("patterns", pat_passed, pat_sum, pat_log, _find_mentioned_outputs(pat_log, order.outputs), False))
     if not pat_passed:
-        return results, False
+        return False
 
-    # 4. Read-only tests hash check
     ro_log = ld / "read_only_tests.log"
     ro_log.write_text("Read-only tests hashes verified\n", encoding="utf-8")
     results.append(CheckResult("read-only-tests", True, "Read-only tests hashes clean", ro_log, _find_mentioned_outputs(ro_log, order.outputs), False))
 
-    # 5. Compilation
     cmp_passed, cmp_sum = _check_compile(paths, wt)
     cmp_log = ld / "compile.log"
     cmp_log.write_text(cmp_sum + "\n", encoding="utf-8")
     results.append(CheckResult("compile", cmp_passed, cmp_sum, cmp_log, _find_mentioned_outputs(cmp_log, order.outputs), False))
-    if not cmp_passed:
+    return cmp_passed
+
+
+def _run_static_checks(
+    order: WorkOrder,
+    paths: tuple[str, ...],
+    wt: Path,
+    ld: Path,
+    base_commit: str,
+) -> tuple[list[CheckResult], bool]:
+    results: list[CheckResult] = []
+    if not _check_scope_and_headers(order, paths, wt, ld, base_commit, results):
+        return results, False
+
+    if not _check_patterns_readonly_and_compile(order, paths, wt, ld, results):
         return results, False
 
     return results, True
