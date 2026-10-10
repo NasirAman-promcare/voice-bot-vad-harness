@@ -41,8 +41,10 @@ WO_BRANCH = f"wo/{WO}"
 ORDER_REL = f"docs/outsourcing/orders/{WO}.md"
 CONTEXT = "docs/notes/context.md"
 READ_ONLY = "tests/aqis_lab/demo/test_acceptance_demo.py"
-STEPS = (("tools/demo/alpha.py", "tests/aqis_lab/demo/test_alpha.py"),
-         ("tools/demo/beta.py", "tests/aqis_lab/demo/test_beta.py"))
+# The scratch package is lab_demo, not tools/demo: `python -m tools.outsourcing.relay` puts the scratch checkout first
+# on sys.path, and a scratch `tools` package would shadow the repository's own `tools` package.
+STEPS = (("lab_demo/alpha.py", "tests/aqis_lab/demo/test_alpha.py"),
+         ("lab_demo/beta.py", "tests/aqis_lab/demo/test_beta.py"))
 OUTPUTS = tuple(p for s in STEPS for p in s)
 RECORDS = (f"docs/outsourcing/returns/{WO}/", f"docs/outsourcing/ledger.d/{WO}.md")
 OWNER_FILES = ("docs/process/PROTECTED_PATHS.txt", "docs/process/outsourcing/FOUNDATION.md",
@@ -86,10 +88,10 @@ def header(name: str) -> str:
 
 def good_content(path: str) -> str:
     name = Path(path).stem
-    if path.startswith("tools/"):
+    if path.startswith("lab_demo/"):
         return header(name) + f'from __future__ import annotations\n\n__all__ = ["VALUE"]\n\nVALUE = {len(name)}\n'
     target = name.removeprefix("test_")
-    return (header(name) + f"from tools.demo.{target} import VALUE\n\n\n"
+    return (header(name) + f"from lab_demo.{target} import VALUE\n\n\n"
             f"def test_{target}():\n    assert VALUE == {len(target)}\n")
 
 
@@ -138,7 +140,7 @@ class Scratch:
             (self.root / rel).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / rel, self.root / rel)
         files = {CONTEXT: "Context for the scratch order.\n", "docs/other.md": "OTHER-MARKER never sent.\n",
-                 "tools/__init__.py": "", "tools/demo/__init__.py": "", ".gitignore": ".relay/\n__pycache__/\n",
+                 "lab_demo/__init__.py": "", ".gitignore": ".relay/\n__pycache__/\n",
                  READ_ONLY: "def test_demo():\n    assert 1 + 1 == 2\n", ORDER_REL: order or order_text()}
         for rel, text in files.items():
             self.write(rel, text)
