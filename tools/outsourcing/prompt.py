@@ -10,6 +10,7 @@ NOT IN SCOPE:
   - Sending requests over the network.
 CHANGE LOG:
   2026-10-10 WO-1.0-02 created.
+  2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): estimated_input_tokens, the router's input estimate in tokens.
 """
 from __future__ import annotations
 
@@ -20,7 +21,7 @@ from tools.outsourcing.records import Request, StepPart
 from tools.outsourcing.secrets import secret_reasons
 from tools.outsourcing.workorder import Step, WorkOrder
 
-__all__ = ["SecretInRequest", "step_request", "with_fix_turn", "final_fix_request", "step_pack"]
+__all__ = ["SecretInRequest", "step_request", "with_fix_turn", "final_fix_request", "step_pack", "estimated_input_tokens"]
 
 
 class SecretInRequest(Exception):
@@ -31,6 +32,11 @@ class SecretInRequest(Exception):
         self.path = path
         self.reasons = reasons
 
+
+
+def estimated_input_tokens(request: Request) -> int:
+    """The offline token estimate of a request, ceil(characters / 3.5), as the router's `input_estimate` expects."""
+    return -(-request.characters * 2 // 7)
 
 def _read_file_check_secret(root: Path, rel_path: str) -> str:
     full_path = root / rel_path

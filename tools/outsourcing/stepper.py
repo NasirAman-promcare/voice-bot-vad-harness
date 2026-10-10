@@ -12,6 +12,8 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-11 created.
   2026-10-10 WO-1.0-11 FIX 1: split functions, re-export run_final from stepper_final, and track reply token totals.
+  2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): the router gets a token estimate, not the character count;
+    RunContext keeps the last check results for the report.
 """
 from __future__ import annotations
 
@@ -57,6 +59,7 @@ class RunContext:
     total_prompt_tokens: int = 0
     total_output_tokens: int = 0
     all_models_used: list[tuple[str, str]] = field(default_factory=list)
+    last_checks: records.CheckResults | None = None  # the checks that last ran, for the printed report (B18)
 
     def record_reply(self, reply: Any, model_name: str, provider_name: str) -> None:
         self.total_requests += 1
@@ -127,7 +130,7 @@ def _switch_model_or_stop(ctx: RunContext, part: StepPart, model_spec: Any, req_
     ctx.run_exclusions.add(model_spec.name)
     now_dt = datetime.fromtimestamp(ctx.clock(), tz=timezone.utc)
     try:
-        next_spec = ctx.router.choose(ctx.order, req_obj.characters, exclude=ctx.run_exclusions)
+        next_spec = ctx.router.choose(ctx.order, prompt.estimated_input_tokens(req_obj), exclude=ctx.run_exclusions)
         ctx.step_log = ctx.step_log.record_switch(now_dt, part.label, model_spec.name, next_spec.name, reason_code)
         return None
     except (PoolExhausted, NoEligibleModel) as exc:
@@ -189,7 +192,7 @@ def run_part(ctx: RunContext, part: StepPart) -> StepOutcome:
         except prompt.SecretInRequest:
             return StepOutcome(result=Result.SECRET, stop_reason="Secret found in request")
         try:
-            model_spec = ctx.router.choose(ctx.order, req_obj.characters, exclude=ctx.run_exclusions)
+            model_spec = ctx.router.choose(ctx.order, prompt.estimated_input_tokens(req_obj), exclude=ctx.run_exclusions)
         except PoolExhausted as exc:
             now_dt = datetime.fromtimestamp(ctx.clock(), tz=timezone.utc)
             ctx.step_log = ctx.step_log.record_stop(now_dt, "PAUSED_DAILY", exc.earliest_reset)
@@ -219,6 +222,7 @@ def _handle_import_and_checks(
     chk_res = checks.quick_checks(
         ctx.order, part, ctx.worktree.path, attempt_dir, ctx.worktree.base_commit, sys.executable, ctx.options.verify_timeout,
     )
+    ctx.last_checks = chk_res
     _save_raw_records(attempt_dir, current_req, model_spec.name, reply.raw_json or reply.text, chk_res)
     if chk_res.integrity_failed:
         return StepOutcome(result=Result.INTEGRITY, stop_reason="Quick checks integrity failed"), current_req, allowed_paths
