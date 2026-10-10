@@ -1,0 +1,16 @@
+# MC: WO-1.0-02 #6
+# behaviour: a read-only test changed during a test run gives an integrity failure and nothing after it runs
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_02.py::test_FR_1_0_02_mc06_read_only_test_changed_in_quick_checks_is_integrity_failure
+diff --git a/tools/outsourcing/checks.py b/tools/outsourcing/checks.py
+index 17cc16d..a139167 100644
+--- a/tools/outsourcing/checks.py
++++ b/tools/outsourcing/checks.py
+@@ -339,7 +339,7 @@ def quick_checks(
+         cmd = [python, "-m", "pytest", *test_files, "-q", "--tb=short"]
+         t_passed, t_sum = _run_command(cmd, wt, test_log, timeout)
+ 
+-        post_ro_hashes = hash_read_only_tests(order, wt)
++        post_ro_hashes = initial_ro_hashes
+         if initial_ro_hashes != post_ro_hashes:
+             results.append(CheckResult("tests", False, "Integrity violation: read-only test files modified during test run", test_log, _find_mentioned_outputs(test_log, order.outputs), True))
+             return CheckResults(tuple(results))

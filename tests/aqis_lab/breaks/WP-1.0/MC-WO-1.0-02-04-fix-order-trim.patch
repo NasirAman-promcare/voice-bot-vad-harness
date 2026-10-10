@@ -1,0 +1,16 @@
+# MC: WO-1.0-02 #4
+# behaviour: a fix order holds at most 120 lines of trimmed output
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_02.py::test_FR_1_0_02_mc04_fix_order_trims_to_120_lines_and_lists_allowed_paths
+diff --git a/tools/outsourcing/fixorder.py b/tools/outsourcing/fixorder.py
+index ceb3f49..692135f 100644
+--- a/tools/outsourcing/fixorder.py
++++ b/tools/outsourcing/fixorder.py
+@@ -75,7 +75,7 @@ def _format_failed_checks(results: CheckResults, lines: list[str]) -> None:
+     lines.append("## Failed checks")
+ 
+     failed_results = [r for r in results.results if not r.passed]
+-    total_budget = 120
++    total_budget = 1200
+     used_budget = 0
+ 
+     for idx, r in enumerate(failed_results, start=1):

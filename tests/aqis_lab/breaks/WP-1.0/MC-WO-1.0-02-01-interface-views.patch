@@ -1,0 +1,16 @@
+# MC: WO-1.0-02 #1
+# behaviour: earlier code outputs appear in a step request as interface views, not in full
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_02.py::test_FR_1_0_02_mc01_earlier_code_outputs_are_interface_views
+diff --git a/tools/outsourcing/prompt.py b/tools/outsourcing/prompt.py
+index 169e662..ed761d4 100644
+--- a/tools/outsourcing/prompt.py
++++ b/tools/outsourcing/prompt.py
+@@ -124,7 +124,7 @@ def _add_earlier_outputs(plan: tuple[Step, ...], part: StepPart, repo_root: Path
+             text = _read_file_check_secret(repo_root, out_p)
+             sent_paths.append(out_p)
+             if out_p.endswith(".py") and not out_p.startswith("tests/"):
+-                iview = interface_view(out_p, text)
++                iview = text
+                 user_parts.append(f"=== ACCEPTED INTERFACE: {out_p} ===\n{iview}\n=== END ACCEPTED INTERFACE ===")
+             else:
+                 user_parts.append(f"=== ACCEPTED: {out_p} ===\n{text}\n=== END ACCEPTED ===")

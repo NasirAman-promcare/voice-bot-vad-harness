@@ -1,0 +1,16 @@
+# MC: WO-1.0-02 #8
+# behaviour: every Result maps to the exit code in B1
+# expect-fail: tests/aqis_lab/outsourcing/test_acceptance_wo_1_0_02.py::test_FR_1_0_02_mc08_every_result_maps_to_its_exit_code
+diff --git a/tools/outsourcing/records.py b/tools/outsourcing/records.py
+index 22f14e9..ce8273a 100644
+--- a/tools/outsourcing/records.py
++++ b/tools/outsourcing/records.py
+@@ -41,7 +41,7 @@ class Result(Enum):
+     EXHAUSTED = 8
+     INTEGRITY = 9
+     NETWORK = 10
+-    PAUSED_DAILY = 11
++    PAUSED_DAILY = 10
+     PAUSED_BUSY = 12
+     TOO_LARGE = 13
+     GIT = 14
