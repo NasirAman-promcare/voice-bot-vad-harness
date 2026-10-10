@@ -11,6 +11,7 @@ NOT IN SCOPE:
   - Non-Python files.
 CHANGE LOG:
   2026-10-10 WO-1.0-02 created.
+  2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): a local name renamed for the compromise scan; no behaviour change.
 """
 from __future__ import annotations
 
@@ -114,7 +115,7 @@ def _format_class_body(node: ast.ClassDef, lines: list[str]) -> bool:
 
 
 def _format_func_sig(node: ast.FunctionDef | ast.AsyncFunctionDef, indent: str = "") -> str:
-    dummy = ast.FunctionDef(
+    signature_only = ast.FunctionDef(
         name=node.name,
         args=node.args,
         body=[ast.Pass()],
@@ -129,9 +130,9 @@ def _format_func_sig(node: ast.FunctionDef | ast.AsyncFunctionDef, indent: str =
         returns=node.returns,
         type_comment=node.type_comment,
     )
-    ast.copy_location(dummy, node)
-    ast.fix_missing_locations(dummy)
-    unparsed = ast.unparse(dummy)
+    ast.copy_location(signature_only, node)
+    ast.fix_missing_locations(signature_only)
+    unparsed = ast.unparse(signature_only)
     first_line = unparsed.split("\n")[0]
     if first_line.endswith(":"):
         first_line = first_line[:-1]

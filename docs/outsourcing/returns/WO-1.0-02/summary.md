@@ -15,3 +15,4 @@
   - `checks.py` is 385 lines, above the 300 the order sets but within the 400-line hard limit.
   - A few broad `except Exception` handlers turn errors into failed checks. None hides an error as a pass.
   - Unit tests are thin: 11 in all.
+- **Compromise scan (found by the stop gate after the merge).** `interface.py` named a local variable `dummy`, which the scan forbids. I renamed it `signature_only`, with no change in behaviour. `python -m tools.audit.gate --base origin/main` then reported `0 findings: OK`. From now on I run the audit gate on every Jules branch before merging it: the Jules channel has none of the relay's checks.
