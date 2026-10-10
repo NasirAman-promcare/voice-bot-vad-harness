@@ -1,5 +1,5 @@
 # BLK-1.0-02 — Approval line for the spec's allowed .gitignore edit (FR-1.0-10)
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: KIT
 Raised: 2026-10-10
@@ -33,4 +33,4 @@ Exact steps:
 
 Meanwhile: everything else. The `.gitignore` line is a one-line change, made once the approval is on `main`.
 
-Owner answer:
+Owner answer: 2026-10-10, owner committed `docs/approvals/WP-1.0.md` on `main` (STATUS: APPROVED, ALLOW-EDIT: .gitignore). Claude added `.relay/` in `9c8bdbb`; `test_FR_1_0_10_gitignore_ignores_relay` passes.

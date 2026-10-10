@@ -1,5 +1,5 @@
 # BLK-1.0-03 — Full Colab GPU output of dev_bootstrap.sh --gpu (DEBT-032)
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: COMPUTE
 Raised: 2026-10-10
@@ -30,4 +30,4 @@ Exact steps:
 
 Meanwhile: all other WP-1.0 work. The DEBT-032 test (`test_FR_1_0_11_debt032_*`) is written against the expected line and stays failing until the file arrives.
 
-Owner answer:
+Owner answer: 2026-10-10, owner committed `docs/progress/WP-0.8/OC-0.8-03_bootstrap_gpu_full.txt` (`7f7dce3`), the full Colab GPU output. It holds `OK: GPU extras installed: requirements/aqis_lab/phase0-gpu.txt sha256 837342085aedf769ce4bf8de055ec0168ddc9ee3667b7ab14865592d8157b451`, the committed lock's hash, and no `ERROR:` line. `test_FR_1_0_11_debt032_full_gpu_bootstrap_output_committed` passes.
