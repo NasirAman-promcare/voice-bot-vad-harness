@@ -54,9 +54,13 @@ def test_FR_1_0_11_debt032_full_gpu_bootstrap_output_committed():
     # real SHA-256 (the earlier note quoted only the CPU lock's hash) and a zero exit code.
     assert GPU_OUTPUT.is_file(), f"{GPU_OUTPUT.relative_to(ROOT)} is missing (BLK-1.0-03)"
     text = GPU_OUTPUT.read_text(encoding="utf-8", errors="replace")
-    expected = f"OK: GPU extras installed: requirements/aqis_lab/phase0-gpu.txt sha256 {sha256(GPU_LOCK)}"
-    assert expected in text.splitlines()
-    assert re.search(r"^exit code: 0$", text, re.M)
+    lines = text.splitlines()
+    # dev_bootstrap.sh runs under `set -euo pipefail` and prints these two lines as its last statements, only after
+    # every hash-checked install succeeded; any failure prints `ERROR:` and exits 1 before them.
+    cpu = re.compile(rf"^OK: \.venv ready: Python 3\.13\.\d+, lock sha256 {sha256(CPU_LOCK)}$")
+    gpu = f"OK: GPU extras installed: requirements/aqis_lab/phase0-gpu.txt sha256 {sha256(GPU_LOCK)}"
+    assert any(cpu.match(line) for line in lines) and gpu in lines
+    assert not [line for line in lines if line.startswith("ERROR:")]
 
 
 def test_FR_1_0_11_debt033_parakeet_doc_names_the_gpu_in_file():

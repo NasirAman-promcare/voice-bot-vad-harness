@@ -71,3 +71,6 @@ pretrained_models/
 *.onnx
 __pycache__/
 *.pyc
+
+# AQIS lab outsourcing relay: worktrees, raw responses, check logs and governor state (WP-1.0 FR-1.0-10)
+.relay/
