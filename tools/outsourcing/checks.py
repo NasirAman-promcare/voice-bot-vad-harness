@@ -10,6 +10,9 @@ NOT IN SCOPE:
   - Network execution.
 CHANGE LOG:
   2026-10-10 WO-1.0-02 created.
+  2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): the read-only-tests check compares each read-only test with
+    its base-commit version (it reported a pass without comparing); a changed read-only test is an integrity
+    failure in scope or that check; kit-staging/ code is scanned with the gate's code patterns.
 """
 from __future__ import annotations
 
@@ -77,12 +80,38 @@ def _check_module_headers(paths: tuple[str, ...], wt: Path) -> tuple[bool, str]:
     return True, "Module headers ok"
 
 
+def _scan_table(rel_p: str) -> tuple[list, str] | None:
+    """The audit gate's table for a path; kit-staging/ code, which the gate does not scan, gets its code patterns."""
+    found = gate.scan_table(rel_p)
+    if found is None and rel_p.startswith("kit-staging/") and rel_p.endswith(patterns.SCANNED_SUFFIXES):
+        return patterns.CODE_PATTERNS, "C1"
+    return found
+
+
+def _compare_read_only_with_base(order: WorkOrder, wt: Path, base_commit: str) -> tuple[bool, str]:
+    """Compare each read-only test's SHA-256 in the worktree with its version at base_commit."""
+    changed: list[str] = []
+    for ro_path in order.read_only_tests:
+        proc = subprocess.run(["git", "show", f"{base_commit}:{ro_path}"], cwd=wt, capture_output=True, timeout=60)
+        if proc.returncode != 0:
+            changed.append(f"{ro_path} (not in base {base_commit}: {proc.stderr.decode('utf-8', 'replace').strip()})")
+            continue
+        current = wt / ro_path
+        if not current.is_file():
+            changed.append(f"{ro_path} (deleted)")
+        elif hashlib.sha256(current.read_bytes()).hexdigest() != hashlib.sha256(proc.stdout).hexdigest():
+            changed.append(f"{ro_path} (changed)")
+    if changed:
+        return False, f"Integrity violation: read-only tests differ from base: {', '.join(changed)}"
+    return True, f"{len(order.read_only_tests)} read-only test(s) match base {base_commit[:12]}"
+
+
 def _check_compromise_patterns(paths: tuple[str, ...], wt: Path) -> tuple[bool, str]:
     """Scan every line of python files in paths for compromise/test-integrity patterns."""
     flagged: list[str] = []
 
     for rel_p in paths:
-        scan_info = gate.scan_table(rel_p)
+        scan_info = _scan_table(rel_p)
         if scan_info is None:
             continue
         table, rule_id = scan_info
@@ -227,7 +256,9 @@ def _check_scope_and_headers(order: WorkOrder, paths: tuple[str, ...], wt: Path,
         scope_passed, scope_sum = False, f"Scope check error: {exc}"
         scope_log.write_text(scope_sum, encoding="utf-8")
 
-    results.append(CheckResult("scope", scope_passed, scope_sum, scope_log, _find_mentioned_outputs(scope_log, order.outputs), False))
+    touched_read_only = not scope_passed and any(p in scope_sum for p in order.read_only_tests)
+    results.append(CheckResult("scope", scope_passed, scope_sum, scope_log, _find_mentioned_outputs(scope_log, order.outputs),
+                               touched_read_only))
     if not scope_passed:
         return False
 
@@ -238,7 +269,8 @@ def _check_scope_and_headers(order: WorkOrder, paths: tuple[str, ...], wt: Path,
     return hdr_passed
 
 
-def _check_patterns_readonly_and_compile(order: WorkOrder, paths: tuple[str, ...], wt: Path, ld: Path, results: list[CheckResult]) -> bool:
+def _check_patterns_readonly_and_compile(order: WorkOrder, paths: tuple[str, ...], wt: Path, ld: Path, base_commit: str,
+                                         results: list[CheckResult]) -> bool:
     pat_passed, pat_sum = _check_compromise_patterns(paths, wt)
     pat_log = ld / "patterns.log"
     pat_log.write_text(pat_sum + "\n", encoding="utf-8")
@@ -246,9 +278,13 @@ def _check_patterns_readonly_and_compile(order: WorkOrder, paths: tuple[str, ...
     if not pat_passed:
         return False
 
+    ro_passed, ro_sum = _compare_read_only_with_base(order, wt, base_commit)
     ro_log = ld / "read_only_tests.log"
-    ro_log.write_text("Read-only tests hashes verified\n", encoding="utf-8")
-    results.append(CheckResult("read-only-tests", True, "Read-only tests hashes clean", ro_log, _find_mentioned_outputs(ro_log, order.outputs), False))
+    ro_log.write_text(ro_sum + "\n", encoding="utf-8")
+    results.append(CheckResult("read-only-tests", ro_passed, ro_sum, ro_log, _find_mentioned_outputs(ro_log, order.outputs),
+                               not ro_passed))
+    if not ro_passed:
+        return False
 
     cmp_passed, cmp_sum = _check_compile(paths, wt)
     cmp_log = ld / "compile.log"
@@ -268,7 +304,7 @@ def _run_static_checks(
     if not _check_scope_and_headers(order, paths, wt, ld, base_commit, results):
         return results, False
 
-    if not _check_patterns_readonly_and_compile(order, paths, wt, ld, results):
+    if not _check_patterns_readonly_and_compile(order, paths, wt, ld, base_commit, results):
         return results, False
 
     return results, True
