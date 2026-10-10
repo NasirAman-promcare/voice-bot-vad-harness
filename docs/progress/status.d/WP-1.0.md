@@ -7,4 +7,4 @@ Branch: claude/wp-1-0-operating-model-v2
 PR: none yet
 Thread model: Opus high
 Updated: 2026-10-10
-Note: wave 1 merged (WO-1.0-01 with review fixes, WO-1.0-10 with FIX-1 open); waiting on BLK-1.0-01 wave 2
+Note: waves 1-2 merged with review fixes; WO-1.0-11 (wave 3) ready for Jules (BLK-1.0-01)

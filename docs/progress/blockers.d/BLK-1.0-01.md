@@ -1,16 +1,16 @@
-# BLK-1.0-01 — Start Jules for the bootstrap orders (wave 1 done; now wave 2 and FIX-1 of WO-1.0-10)
+# BLK-1.0-01 — Start Jules for the bootstrap orders (waves 1 and 2 done; now wave 3, WO-1.0-11)
 Status: OPEN
 WP: WP-1.0
 Owner capability: EXTERNAL-AI
 Raised: 2026-10-10
 Session: https://claude.ai/code/session_01MdrFmVCBzGrRzg4n2dVGRx
 Unblocks: WP-1.0 (FR-1.0-01, FR-1.0-14; then wave 2 WO-1.0-02 and wave 3 WO-1.0-11, raised as later items of this blocker)
-Time needed: 3 minutes now (two tasks); about 1 minute for wave 3
+Time needed: about 1 minute
 Loop: none
 
-What I need: start two Jules tasks against the WP-1.0 branch: WO-1.0-02 (wave 2) and FIX-1 of WO-1.0-10. They touch disjoint files and can run at once.
+What I need: start one Jules task against the WP-1.0 branch for WO-1.0-11 (wave 3, relay orchestration).
 
-Wave 1 history: the owner started both tasks (PRs #11 and #12). Claude reviewed them and merged them into the WP branch (`1da4b3e`, `ad5f769`).
+History: wave 1 was PRs #11 and #12, merged as `1da4b3e` and `ad5f769`. Wave 2 was PR #13 (WO-1.0-02) and PR #14 (FIX-1 of WO-1.0-10), merged as `ae44745` and `7f2897b`. `python -m tools.outsourcing validate --wo docs/outsourcing/orders/WO-1.0-11.md` reports the order valid, with 5 steps.
 
 Why: FR-1.0-13 says the four bootstrap orders go through Jules or the paste channel, because the relay is what they build. Claude cannot reach Jules.
 
@@ -25,10 +25,9 @@ Options:
 
 Exact steps:
 1. Open https://jules.google.com, choose NasirAman-promcare/voice-bot-vad-harness, branch `claude/wp-1-0-operating-model-v2`.
-2. Start a task with: `Implement docs/outsourcing/orders/WO-1.0-02.md exactly as written, on branch wo/WO-1.0-02. Open the pull request against claude/wp-1-0-operating-model-v2, not main.`
-3. Start a second task with: `Apply the fix order docs/outsourcing/returns/WO-1.0-10/FIX-1.md exactly as written, on branch wo/WO-1.0-10-fix-1. Open the pull request against claude/wp-1-0-operating-model-v2, not main.`
-4. If Jules asks a question, answer only "Follow the order; if it is unclear, write the question into the pull request description and stop." Do not merge anything.
-5. When both pull requests are open, tell this session "wave 2 PRs are open". Wave 3 (WO-1.0-11) follows once both are merged.
+2. Start a task with: `Implement docs/outsourcing/orders/WO-1.0-11.md exactly as written, on branch wo/WO-1.0-11. Open the pull request against claude/wp-1-0-operating-model-v2, not main.`
+3. If Jules asks a question, answer only "Follow the order; if it is unclear, write the question into the pull request description and stop." Do not merge anything.
+4. When the pull request is open, tell this session "wave 3 PR is open".
 
 Meanwhile: I write the acceptance tests for WO-1.0-02 and WO-1.0-11 (waves 2 and 3) and WO-1.0-03 to WO-1.0-09. I also do the pre-send amendments of WO-1.0-03, -04, -07 and -09, fix DEBT-033 and DEBT-034, and add the requirement tests. When the pull requests are open, I check their scope, merge them into the WP branch and write the break recipes.
 

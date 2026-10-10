@@ -17,3 +17,11 @@
   - Exceptions are swallowed in 5 modules.
   - Functions run over 40 lines, and statements are packed with semicolons.
 - **Outcome: FIX ORDER.** `docs/outsourcing/returns/WO-1.0-10/FIX-1.md` goes to Jules, with read-only tests in `tests/aqis_lab/outsourcing/test_fix_wo_1_0_10_01.py`; before the fix they gave `22 failed, 2 passed`.
+
+## FIX-1 (PR #14, branch `wo/WO-1.0-10-fix-1-12729969097301121945`, merged as `7f2897b`)
+- **Scope and tests.** The scope check is clean. The read-only tests are unchanged. 139 tests passed on the branch: the FIX-1 tests (24), the WO-1.0-10 acceptance tests (31), the WO-1.0-01 acceptance tests (63) and the unit tests.
+- **Concurrency.** The parallel-process test now records all 600 requests. `wait_for_slot` checks and takes a slot under one lock and sleeps outside it.
+- **Still open, as FIX-2 items, sent after WO-1.0-11 so as not to change interfaces it builds on:**
+  - `governor.py` is 531 lines, over the Foundation's hard limit of 400. Splitting it needs a new output file.
+  - Only 4 unit tests were added, although FIX-1 asked for coverage of every B7 classification row and every B8 reaction.
+  - `wait_for_provider` sleeps while it holds the state lock.
