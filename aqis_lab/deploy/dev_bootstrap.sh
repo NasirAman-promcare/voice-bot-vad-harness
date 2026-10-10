@@ -109,6 +109,53 @@ else
         || fail "hash-checked install of $LOCK_REL failed (see the uv message above)."
 fi
 
+# 5. Site customization for relay module discovery when running python -m tools.outsourcing...
+SITE_DIR="$VENV/lib/python$PY/site-packages"
+if [ -d "$SITE_DIR" ]; then
+    cat << 'EOF' > "$SITE_DIR/sitecustomize.py"
+import os
+import sys
+
+if any("tools.outsourcing" in arg for arg in getattr(sys, "orig_argv", sys.argv)):
+    class ToolsLoader:
+        def __init__(self, real_loader):
+            self.real_loader = real_loader
+
+        def create_module(self, spec):
+            if hasattr(self.real_loader, "create_module"):
+                return self.real_loader.create_module(spec)
+            return None
+
+        def exec_module(self, module):
+            self.real_loader.exec_module(module)
+            if module.__name__ == "tools" and hasattr(module, "__path__"):
+                for p in sys.path:
+                    cand = os.path.join(p, "tools")
+                    if os.path.isdir(cand) and cand not in module.__path__:
+                        module.__path__.append(cand)
+
+    class ToolsMetaFinder:
+        _in = False
+        @classmethod
+        def find_spec(cls, fullname, path=None, target=None):
+            if cls._in or fullname != "tools":
+                return None
+            cls._in = True
+            try:
+                for finder in sys.meta_path:
+                    if finder is not cls and hasattr(finder, "find_spec"):
+                        spec = finder.find_spec(fullname, path, target)
+                        if spec and spec.loader:
+                            spec.loader = ToolsLoader(spec.loader)
+                            return spec
+            finally:
+                cls._in = False
+            return None
+
+    sys.meta_path.insert(0, ToolsMetaFinder)
+EOF
+fi
+
 echo "OK: .venv ready: Python $("$VENV/bin/python" -I -B -c 'import platform; print(platform.python_version())'), lock sha256 $(sha256sum "$LOCK" | cut -d' ' -f1)"
 if [ "$GPU" -eq 1 ]; then
     echo "OK: GPU extras installed: $GPU_LOCK_REL sha256 $(sha256sum "$GPU_LOCK" | cut -d' ' -f1)"

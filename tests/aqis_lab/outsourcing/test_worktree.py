@@ -21,14 +21,26 @@ import pytest
 from tools.outsourcing.worktree import WorktreeError, commit, discard_attempt, open_worktree, push, read_step_log, remove
 
 
+def git_env() -> dict[str, str]:
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env.update({
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_AUTHOR_NAME": "AQIS Fixture",
+        "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
+        "GIT_COMMITTER_NAME": "AQIS Fixture",
+        "GIT_COMMITTER_EMAIL": "fixture@example.invalid",
+    })
+    return env
+
+
 def git(repo: Path, *args: str, check: bool = True) -> str:
-    env = dict(os.environ)
     proc = subprocess.run(
         ["git", "-c", "init.defaultBranch=main", *args],
         cwd=repo,
         capture_output=True,
         text=True,
-        env=env,
+        env=git_env(),
     )
     if check:
         assert proc.returncode == 0, f"git {args} failed: {proc.stderr}"
