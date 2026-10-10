@@ -1,0 +1,209 @@
+"""Return format bundle parser and truncation checker.
+
+CAPABILITIES:
+  CAP-OUTSOURCING-005: parse RETURN_FORMAT bundle text and check truncation signs [tests: test_FR_1_0_01_mc02_missing_end_marker_fails_import, test_FR_1_0_01_mc03_truncation_sign_fails_import, test_FR_1_0_01_mc04_questions_block_stops_import_with_exit_4, test_bundle.py]
+INPUTS AND OUTPUTS: Bundle, BundleError, TruncatedBundle, parse_bundle.
+CONTRACTS: RETURN_FORMAT.md specification.
+INVARIANTS:
+  - Markers win over fenced code blocks inside file content.
+  - Any truncation sign raises TruncatedBundle.
+NOT IN SCOPE:
+  - File system writes.
+CHANGE LOG:
+  2026-10-10 WO-1.0-01 created.
+"""
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from tools.outsourcing.paths import normalise
+
+__all__ = ["BundleError", "TruncatedBundle", "Bundle", "parse_bundle"]
+
+TRUNCATION_PHRASES = [
+    "rest of the file",
+    "remains unchanged",
+    "same as before",
+    "unchanged code",
+    "existing code here",
+    "omitted for brevity",
+]
+
+
+class BundleError(Exception):
+    """Raised when a bundle is malformed or violates format rules."""
+
+
+class TruncatedBundle(BundleError):
+    """Raised when truncation signs are detected in a bundle."""
+
+
+@dataclass(frozen=True)
+class Bundle:
+    manifest: tuple[tuple[str, str, str], ...]
+    files: tuple[tuple[str, str], ...]
+    dod: tuple[tuple[str, str, str], ...]
+    questions: tuple[str, ...]
+
+
+def _check_truncation(line: str) -> None:
+    stripped = line.strip()
+    if stripped in ("...", "…", "# ...", "# …", "// ...", "// …"):
+        raise TruncatedBundle(f"Truncation sign detected: {line.strip()!r}")
+    lower = line.lower()
+    for phrase in TRUNCATION_PHRASES:
+        if phrase in lower:
+            raise TruncatedBundle(f"Truncation phrase detected ({phrase!r}): {line.strip()!r}")
+
+
+def _parse_table_rows(lines: list[str]) -> tuple[tuple[str, str, str], ...]:
+    rows: list[tuple[str, str, str]] = []
+    for line in lines:
+        s = line.strip()
+        if not s.startswith("|") or not s.endswith("|"):
+            continue
+        cells = [c.strip() for c in s[1:-1].split("|")]
+        if len(cells) < 3:
+            continue
+        if cells[0].lower() in ("path", "item") or cells[0].startswith("-"):
+            continue
+        rows.append((cells[0], cells[1], cells[2]))
+    return tuple(rows)
+
+
+def parse_bundle(text: str) -> Bundle:
+    if text.startswith("\ufeff"):
+        text = text[1:]
+
+    all_lines = text.splitlines()
+    for line in all_lines:
+        _check_truncation(line)
+
+    manifest_lines: list[str] = []
+    dod_lines: list[str] = []
+    question_lines: list[str] = []
+    file_blocks: list[tuple[str, list[str]]] = []
+
+    current_block: str | None = None
+    current_file_path: str | None = None
+    file_content_lines: list[str] = []
+
+    for line in all_lines:
+        s = line.strip()
+
+        # Marker line checks
+        if s == "=== MANIFEST ===":
+            if current_block is not None:
+                raise BundleError(f"Nested block marker === MANIFEST === inside {current_block}")
+            current_block = "MANIFEST"
+            continue
+        elif s == "=== END MANIFEST ===":
+            if current_block != "MANIFEST":
+                raise BundleError("=== END MANIFEST === marker without open MANIFEST block")
+            current_block = None
+            continue
+        elif s.startswith("=== FILE: ") and s.endswith(" ==="):
+            if current_block is not None:
+                raise BundleError(f"Nested block marker {s} inside {current_block}")
+            path_part = s[10:-4].strip()
+            if "\\" in path_part:
+                raise BundleError(f"Backslash in file path: {path_part!r}")
+            norm_p = normalise(path_part)
+            current_block = "FILE"
+            current_file_path = norm_p
+            file_content_lines = []
+            continue
+        elif s == "=== END FILE ===":
+            if current_block != "FILE":
+                raise BundleError("=== END FILE === marker without open FILE block")
+            file_blocks.append((current_file_path, file_content_lines))
+            current_block = None
+            current_file_path = None
+            continue
+        elif s == "=== DOD ===":
+            if current_block is not None:
+                raise BundleError(f"Nested block marker === DOD === inside {current_block}")
+            current_block = "DOD"
+            continue
+        elif s == "=== END DOD ===":
+            if current_block != "DOD":
+                raise BundleError("=== END DOD === marker without open DOD block")
+            current_block = None
+            continue
+        elif s == "=== QUESTIONS ===":
+            if current_block is not None:
+                raise BundleError(f"Nested block marker === QUESTIONS === inside {current_block}")
+            current_block = "QUESTIONS"
+            continue
+        elif s == "=== END QUESTIONS ===":
+            if current_block != "QUESTIONS":
+                raise BundleError("=== END QUESTIONS === marker without open QUESTIONS block")
+            current_block = None
+            continue
+
+        # Content lines
+        if current_block == "MANIFEST":
+            manifest_lines.append(line)
+        elif current_block == "DOD":
+            dod_lines.append(line)
+        elif current_block == "QUESTIONS":
+            question_lines.append(line)
+        elif current_block == "FILE":
+            file_content_lines.append(line)
+        else:
+            if s:
+                raise BundleError(f"Non-blank text outside block: {line!r}")
+
+    if current_block is not None:
+        raise BundleError(f"Unclosed block: {current_block}")
+
+    manifest_rows = _parse_table_rows(manifest_lines)
+    dod_rows = _parse_table_rows(dod_lines)
+
+    parsed_files: list[tuple[str, str]] = []
+    seen_paths: set[str] = set()
+
+    for path, raw_lines in file_blocks:
+        if path in seen_paths:
+            raise BundleError(f"Duplicate file path in bundle: {path!r}")
+        seen_paths.add(path)
+
+        # Remove single code fence wrapper if present
+        if len(raw_lines) >= 2 and raw_lines[0].strip().startswith("```") and raw_lines[-1].strip().startswith("```"):
+            raw_lines = raw_lines[1:-1]
+
+        content_str = "\n".join(raw_lines)
+        if not content_str.strip():
+            raise BundleError(f"Empty file content for {path!r}")
+
+        if not content_str.endswith("\n"):
+            content_str += "\n"
+
+        parsed_files.append((path, content_str))
+
+    # Questions parsing
+    questions: list[str] = []
+    if question_lines:
+        q_text = "\n".join(question_lines).strip()
+        if q_text:
+            questions.append(q_text)
+
+    # Manifest vs File cross checks (when no questions)
+    if not questions:
+        manifest_paths = {r[0] for r in manifest_rows}
+        file_paths = set(seen_paths)
+
+        missing_in_manifest = file_paths - manifest_paths
+        if missing_in_manifest:
+            raise BundleError(f"FILE paths missing from MANIFEST: {sorted(missing_in_manifest)}")
+
+        missing_in_files = manifest_paths - file_paths
+        if missing_in_files:
+            raise BundleError(f"MANIFEST paths missing from FILE blocks: {sorted(missing_in_files)}")
+
+    return Bundle(
+        manifest=manifest_rows,
+        files=tuple(parsed_files),
+        dod=dod_rows,
+        questions=tuple(questions),
+    )
