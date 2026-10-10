@@ -31,3 +31,11 @@
   - A failed push sets `push_ok` instead of being swallowed.
   - Final-fix rounds commit only after `full_checks` passes.
 - **Result: ACCEPTED.**
+
+## Found on the first real run (WO-1.0-04), fixed by Claude, tests first
+The tests are in `tests/aqis_lab/outsourcing/test_review_fixes_wo_1_0_11.py`.
+- **Exit 13 with nothing sent.** The step runner and the final verification passed the request's character count (297,915) to `Router.choose`, which expects tokens (about 85,000). Every model looked too small. The router now gets `prompt.estimated_input_tokens`.
+- **Fabricated checks table.** The report's checks table was derived from the result: "tests: PASS" unless the run was EXHAUSTED or INTEGRITY, so checks that never ran were reported as passed. It now lists the checks that really ran, with "none run" otherwise.
+- **Missing report figures.** Requests, retries and minutes waited were never filled in. They now come from this run's governor. The report also gives the stop reason, and for TOO_LARGE the B9 advice.
+- **Router size check.** "Size alone" was reported when the other models had been left out for other reasons. It is now reported only when every model left fails on size, and the message names each model's limit.
+- **Result.** `tests/aqis_lab/outsourcing` gave `341 passed`, and the audit gate `0 findings: OK`.

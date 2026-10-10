@@ -12,6 +12,8 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-11 created.
   2026-10-10 WO-1.0-11 FIX 1: reports on every finish, sha256 order hashing, correct governor state file and model listing error codes.
+  2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): the report's checks table, requests and retries come from the
+    checks and governor of this run (they were derived from the result, which reported checks that never ran).
 """
 from __future__ import annotations
 
@@ -34,7 +36,7 @@ from tools.outsourcing.chat import CredentialError
 from tools.outsourcing.governor import Governor
 from tools.outsourcing.limits import load_pool, next_reset
 from tools.outsourcing.records import RelayOptions, RelayOutcome, Result, StepOutcome
-from tools.outsourcing.report import render_report
+from tools.outsourcing.report import checks_table, render_report, request_facts
 from tools.outsourcing.router import Router, client_for, model_stats
 from tools.outsourcing.steplog import parse, render
 from tools.outsourcing.stepper import RunContext, run_final, run_part
@@ -238,7 +240,9 @@ def _finalize_and_report(
         "summary_path": sum_rel, "wo_id": run_ctx.order.id, "wo_path": run_ctx.options.wo,
         "total_parts": len(run_ctx.plan), "parts_done": len(accepted_records),
         "prompt_tokens": run_ctx.total_prompt_tokens, "output_tokens": run_ctx.total_output_tokens,
-        "checks_table": ["tests: FAIL"] if eff_outcome.result in (Result.EXHAUSTED, Result.INTEGRITY) else ["tests: PASS"],
+        "checks_table": checks_table(run_ctx.last_checks),
+        "stop_reason": eff_outcome.stop_reason,
+        **request_facts(run_ctx.governor),
     }
     if not push_ok:
         facts["pool_lines"] = ("Push failed: commit is local only",)

@@ -11,14 +11,17 @@ NOT IN SCOPE:
   - Direct stdout printing or CLI execution.
 CHANGE LOG:
   2026-10-10 WO-1.0-11 FIX 1 created.
+  2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): the stop reason, and for TOO_LARGE the B9 advice; checks_table
+    and request_facts build the report from the checks and governor of the run.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from tools.outsourcing.records import RelayOutcome, Result
+from tools.outsourcing.governor import Governor
+from tools.outsourcing.records import CheckResults, RelayOutcome, Result
 
-__all__ = ["render_report"]
+__all__ = ["render_report", "checks_table", "request_facts"]
 
 
 def render_report(outcome: RelayOutcome, ctx_facts: dict[str, Any] | None = None) -> list[str]:
@@ -51,6 +54,11 @@ def render_report(outcome: RelayOutcome, ctx_facts: dict[str, Any] | None = None
         for chk in checks_table[:5]:
             lines.append(f"  {chk}")
 
+    reason = facts.get("stop_reason")
+    if reason and outcome.result != Result.ACCEPTED:
+        lines.append(f"Reason: {str(reason).splitlines()[0][:200]}")
+    if outcome.result == Result.TOO_LARGE:
+        lines.append("Advice: split this step, or move context files that are only called into `interfaces`.")
     summary_path = facts.get("summary_path")
     if summary_path:
         lines.append(f"Summary: {summary_path}")
@@ -69,3 +77,24 @@ def render_report(outcome: RelayOutcome, ctx_facts: dict[str, Any] | None = None
         lines = lines[:25]
 
     return lines
+
+
+def checks_table(results: CheckResults | None) -> list[str]:
+    """One line per check that really ran in the last check round (B18); none when no check ran."""
+    if results is None or not results.results:
+        return ["none run"]
+    return [f"{r.name}: {'PASS' if r.passed else 'FAIL'}" + ("" if r.passed else f" ({r.summary[:70]})")
+            for r in results.results]
+
+
+def request_facts(governor: Governor) -> dict[str, Any]:
+    """Requests, retries and minutes waited per model, from this run's governor (B18)."""
+    models = governor.report().models
+    used = {name: rep for name, rep in models.items() if rep.requests}
+    retries: dict[str, int] = {}
+    for rep in used.values():
+        for kind, count in rep.retries.items():
+            retries[kind] = retries.get(kind, 0) + count
+    return {"requests_per_model": {name: rep.requests for name, rep in sorted(used.items())},
+            "retries_by_kind": retries,
+            "minutes_waited": sum(rep.seconds_waited for rep in used.values()) / 60.0}

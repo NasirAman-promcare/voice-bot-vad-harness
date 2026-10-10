@@ -12,6 +12,8 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-11 created.
   2026-10-10 WO-1.0-11 FIX 1: split _choose_default to follow shape rules.
+  2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): "size alone" only when every model left fails on size; the message
+    names each model's limit (B9).
 """
 from __future__ import annotations
 
@@ -158,12 +160,14 @@ class Router:
         if not all_candidates:
             raise NoEligibleModel(f"No enabled model in pool supports risk tier '{order.risk_tier}'")
 
-        qualifying, size_ruled_out = self._filter_qualifying(all_candidates, input_estimate, exclude)
+        qualifying, too_small = self._filter_qualifying(all_candidates, input_estimate, exclude)
 
         if not qualifying:
-            if size_ruled_out:
+            if too_small:
+                limits_text = ", ".join(f"{name} fits {limit}" for name, limit in too_small.items())
                 raise NoEligibleModel(
-                    f"Size alone ({input_estimate} tokens) ruled out all candidate models for risk tier '{order.risk_tier}'"
+                    f"Size alone ({input_estimate} tokens) ruled out every model left for risk tier "
+                    f"'{order.risk_tier}': {limits_text}"
                 )
             raise NoEligibleModel(f"No eligible model available for risk tier '{order.risk_tier}'")
 
@@ -178,9 +182,10 @@ class Router:
 
     def _filter_qualifying(
         self, candidates: list[ModelSpec], input_estimate: int, exclude: set[str]
-    ) -> tuple[list[ModelSpec], bool]:
+    ) -> tuple[list[ModelSpec], dict[str, int]]:
+        """Models that fit the request, and, for each model left out only by size, the input it can take."""
         qualifying: list[ModelSpec] = []
-        size_ruled_out = True
+        too_small: dict[str, int] = {}
 
         for m in candidates:
             if m.name in exclude:
@@ -189,12 +194,14 @@ class Router:
             adaptive = ms.adaptive_factor if ms else 1.0
             learned = ms.learned_limits if ms else {}
             eff = effective(self.pool, m, adaptive, learned)
+            fits = min(m.max_input_tokens, eff.input_token_ceiling)
 
-            if m.max_input_tokens >= input_estimate and eff.input_token_ceiling >= input_estimate:
+            if fits >= input_estimate:
                 qualifying.append(m)
-                size_ruled_out = False
+            else:
+                too_small[m.name] = fits
 
-        return qualifying, size_ruled_out
+        return qualifying, too_small
 
     def _filter_unexhausted(self, qualifying: list[ModelSpec]) -> list[ModelSpec]:
         unexhausted: list[ModelSpec] = []

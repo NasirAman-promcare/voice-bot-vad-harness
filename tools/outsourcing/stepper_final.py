@@ -11,6 +11,8 @@ NOT IN SCOPE:
   - CLI parsing.
 CHANGE LOG:
   2026-10-10 WO-1.0-11 FIX 1 created.
+  2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): the router gets a token estimate; the full checks are kept
+    in RunContext.last_checks for the report.
 """
 from __future__ import annotations
 
@@ -64,7 +66,7 @@ def _attempt_final_fix_turn(
 
     try:
         req_obj = prompt.final_fix_request(ctx.order, ctx.plan, ctx.worktree.path, fix_text, focus_paths=focus_paths)
-        model_spec = ctx.router.choose(ctx.order, req_obj.characters, exclude=ctx.run_exclusions)
+        model_spec = ctx.router.choose(ctx.order, prompt.estimated_input_tokens(req_obj), exclude=ctx.run_exclusions)
         client = client_for(model_spec, ctx.governor, ctx.options.timeout, ctx.options.api_base)
         reply = client.generate(req_obj.chat)
         ctx.record_reply(reply, model_spec.name, model_spec.provider.name)
@@ -96,6 +98,7 @@ def run_final(ctx: RunContext) -> StepOutcome:
         chk_res = checks.full_checks(
             ctx.order, ctx.worktree.path, attempt_dir, ctx.worktree.base_commit, py_path, ctx.options.verify_timeout
         )
+        ctx.last_checks = chk_res
 
         if chk_res.integrity_failed:
             return StepOutcome(result=Result.INTEGRITY, stop_reason="Full checks integrity failed")
