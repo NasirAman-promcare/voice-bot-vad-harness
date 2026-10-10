@@ -286,13 +286,16 @@ def test_FR_1_0_07_mc4_mc5_weakened_test_is_blocked_even_with_a_record(tmp_path:
     if case == "assertion-fell":
         text = TEST_B.replace("    assert b_fn(2) == 4\n", "")
     elif case == "skip-decorator":
-        text = TEST_B.replace("def test_b_other():", "@pytest.mark.skip(reason='later')\ndef test_b_other():") \
-            .replace("import os\n", "import os\n\nimport pytest\n", 1)
+        marker = "@pytest.mark.skip(reason='later')\n"  # audit-allow: scratch weakening the stop gate must block
+        text = TEST_B.replace("def test_b_other():", marker + "def test_b_other():")
+        text = text.replace("import os\n", "import os\n\nimport pytest\n", 1)
     elif case == "pytest-skip-call":
-        text = TEST_B.replace("    record('test_b_other')\n", "    record('test_b_other')\n    pytest.skip('later')\n") \
-            .replace("import os\n", "import os\n\nimport pytest\n", 1)
+        call = "    pytest.skip('later')\n"  # audit-allow: scratch weakening the stop gate must block
+        text = TEST_B.replace("    record('test_b_other')\n", "    record('test_b_other')\n" + call)
+        text = text.replace("import os\n", "import os\n\nimport pytest\n", 1)
     elif case == "pytestmark-skip":
-        text = TEST_B.replace("import os\n", "import os\n\nimport pytest\n\npytestmark = pytest.mark.xfail\n", 1)
+        mark = "pytestmark = pytest.mark.xfail\n"  # audit-allow: scratch weakening the stop gate must block
+        text = TEST_B.replace("import os\n", "import os\n\nimport pytest\n\n" + mark, 1)
     elif case == "deleted-function":
         text = TEST_B.split("\n\n\ndef test_b_other")[0] + "\n"
     else:

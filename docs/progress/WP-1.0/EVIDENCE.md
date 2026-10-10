@@ -48,3 +48,17 @@ Both providers' credentials work, since both listings succeeded. Two pool names 
 
 ## Test fixes
 - `test_FR_1_0_10_gitignore_ignores_relay` originally called `git check-ignore -q` with two paths. git rejects that (`fatal: --quiet is only valid with a single pathname`, exit 128), so the test failed for the wrong reason; the stop gate caught it. The test now checks that git lists both paths as ignored, and it fails for the right reason: `` `.relay/` is not ignored by .gitignore `` (BLK-1.0-02).
+
+## Acceptance tests for WO-1.0-03, -06, -07 and -09 fail first (2026-10-10)
+The commands, one per file: `.venv/bin/python -m pytest tests/aqis_lab/<file> -q --tb=line -p no:cacheprovider`.
+
+| File | Result | Reason in the output (excerpt) |
+| --- | --- | --- |
+| `index/test_acceptance_wo_1_0_03.py` | 23 failed | `.venv/bin/python: No module named tools.index` |
+| `audit_breaks/test_acceptance_wo_1_0_06.py` | 13 failed | `No module named tools.audit.breaks`; `ModuleNotFoundError: No module named 'tools.audit.mutate'` |
+| `kit/test_acceptance_wo_1_0_07.py` | 28 failed | `No such file or directory: '…/tools/index'` (the scratch repository copies it); `No such file or directory: '…/kit-staging/.claude/hooks/stop_gate.py'` |
+| `ci/test_acceptance_wo_1_0_09.py` | 40 failed | `aqis-lab-generate.yml missing`; `ModuleNotFoundError: No module named 'tools.ci'` |
+
+Each failure names the missing module or file that its work order creates. The first WO-1.0-09 run had 3 kit-parity cases passing vacuously: a missing module also exits 1. Those cases now also require the differing file's name in the output, and all 40 fail.
+
+The stop gate's fast suite (`-x`) stops at the first of these until the relay delivers the orders. The audit gate is clean: `.venv/bin/python -m tools.audit.gate --base origin/main` printed `0 findings: OK (0.6 s)`. Three scratch strings in the WO-1.0-07 test hold the skip and xfail markers that the stop gate must block. They carry `# audit-allow: scratch weakening the stop gate must block`.
