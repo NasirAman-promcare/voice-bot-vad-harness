@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from tools.outsourcing.chat import ChatRequest, Turn
+import pytest
+
+from tools.outsourcing.chat import ApiError, ChatRequest, Turn
 from tools.outsourcing.gemini_client import GeminiClient
 from tools.outsourcing.governor import Governor
 from tools.outsourcing.limits import load_pool
@@ -68,3 +70,39 @@ def test_gemini_client_generate(tmp_path):
         assert reply.finish == "STOP"
         assert reply.prompt_tokens == 10
         assert reply.output_tokens == 5
+
+
+def test_gemini_client_list_models(tmp_path):
+    pool = load_pool(ROOT / "config/aqis_lab/model_pool.json")
+    spec = pool.model("gemini-3.8-flash")
+    clock = SimClock()
+    gov = Governor(pool, tmp_path / "state.json", clock, clock.sleep)
+
+    models_body = json.dumps({
+        "models": [{"name": "models/gemini-3.8-flash"}, {"name": "models/gemini-3.8-pro"}]
+    })
+
+    server = StubModelServer([(200, {}, models_body)], count=20, clock=clock)
+    with server as (url, reqs):
+        client = GeminiClient(spec, gov, timeout=5.0, base_url=url)
+        models = client.list_models()
+        assert "gemini-3.8-flash" in models
+        assert "gemini-3.8-pro" in models
+
+
+def test_gemini_client_non_json_reply(tmp_path):
+    pool = load_pool(ROOT / "config/aqis_lab/model_pool.json")
+    spec = pool.model("gemini-3.8-flash")
+    clock = SimClock()
+    gov = Governor(pool, tmp_path / "state.json", clock, clock.sleep)
+
+    server = StubModelServer([(200, {}, "<html>html response</html>")], count=20, clock=clock)
+    with server as (url, reqs):
+        client = GeminiClient(spec, gov, timeout=5.0, base_url=url)
+        req = ChatRequest(
+            system="System prompt",
+            turns=(Turn(role="user", text="Hello"),),
+            max_output_tokens=100,
+        )
+        with pytest.raises(ApiError):
+            client.generate(req)

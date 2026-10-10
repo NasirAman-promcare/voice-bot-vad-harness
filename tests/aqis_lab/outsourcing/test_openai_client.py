@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from tools.outsourcing.chat import ChatRequest, Turn
+import pytest
+
+from tools.outsourcing.chat import ApiError, ChatRequest, Turn
 from tools.outsourcing.governor import Governor
 from tools.outsourcing.limits import load_pool
 from tools.outsourcing.openai_client import OpenAIClient
@@ -70,3 +72,39 @@ def test_openai_client_generate(tmp_path):
         assert reply.finish == "STOP"
         assert reply.prompt_tokens == 12
         assert reply.output_tokens == 6
+
+
+def test_openai_client_list_models(tmp_path):
+    pool = load_pool(ROOT / "config/aqis_lab/model_pool.json")
+    spec = pool.model("codestral-2508")
+    clock = SimClock()
+    gov = Governor(pool, tmp_path / "state.json", clock, clock.sleep)
+
+    models_body = json.dumps({
+        "data": [{"id": "codestral-2508"}, {"id": "mistral-small"}]
+    })
+
+    server = StubModelServer([(200, {}, models_body)], count=20, clock=clock)
+    with server as (url, reqs):
+        client = OpenAIClient(spec, gov, timeout=5.0, base_url=url)
+        models = client.list_models()
+        assert "codestral-2508" in models
+        assert "mistral-small" in models
+
+
+def test_openai_client_non_json_reply(tmp_path):
+    pool = load_pool(ROOT / "config/aqis_lab/model_pool.json")
+    spec = pool.model("codestral-2508")
+    clock = SimClock()
+    gov = Governor(pool, tmp_path / "state.json", clock, clock.sleep)
+
+    server = StubModelServer([(200, {}, "<html>html response</html>")], count=20, clock=clock)
+    with server as (url, reqs):
+        client = OpenAIClient(spec, gov, timeout=5.0, base_url=url)
+        req = ChatRequest(
+            system="System prompt",
+            turns=(Turn(role="user", text="Hello"),),
+            max_output_tokens=100,
+        )
+        with pytest.raises(ApiError):
+            client.generate(req)

@@ -40,7 +40,7 @@ class TokenCount:
 @dataclass(frozen=True)
 class Reply:
     text: str
-    finish: str  # STOP, MAX_TOKENS, SAFETY, RECITATION, OTHER
+    finish: str
     prompt_tokens: int
     output_tokens: int
     block_reason: str | None = None
@@ -66,7 +66,8 @@ class DailyQuotaExhausted(Exception):
         reset_karachi: datetime,
         message: str = "",
     ) -> None:
-        super().__init__(message or f"Quota exhausted for {model} ({provider}) for period {period}")
+        msg = message or f"Quota exhausted for {model} ({provider}) for period {period}"
+        super().__init__(msg)
         self.model = model
         self.provider = provider
         self.period = period
