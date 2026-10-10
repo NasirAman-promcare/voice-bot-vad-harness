@@ -72,6 +72,14 @@ Write the loop guard (PostToolUse and PreToolUse on Bash), the bash guard (PreTo
   - **Settings.** Settings v4 (B8) register `loop_guard.py post` under both `PostToolUse` and `PostToolUseFailure`, each with matcher `Bash`.
   - **Tests.** The acceptance tests send exactly these JSON shapes.
 
+- **B10** Interface details the acceptance tests rely on (added by Claude with the acceptance test, 2026-10-10):
+  - **Invocation.** The hooks run as `python3 <hook> [post|pre]`, with the event JSON on stdin and `CLAUDE_PROJECT_DIR` set to the repository root.
+  - **Blocking.** A block (B5, B7) is either exit code 2 with the message on stderr, or exit code 0 with `{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "<message>"}}`.
+    - The bash guard's message for a merge or a push to `main` names the merge gate.
+    - Its message for a shell write names the NEVER path.
+  - **Loop IDs.** A loop ID is `LOOP-` plus 8 lower-case hex characters.
+  - **No output when quiet.** When the loop guard has nothing to say, it prints nothing.
+
 ## 5. Edge cases you must handle
 - **E1** Commands chained with `&&`, `;` or `|` → each part is checked by the bash guard.
 - **E2** `git push origin claude/wp-1-3-x` → allowed.
@@ -100,7 +108,7 @@ Return QUESTIONS if the attached hooks reference does not give the PostToolUse f
 
 ## 9. Definition of Done
 - **D1** Every file in section 3 exists with the module header standard.
-- **D2** B1 to B9 and E1 to E5 are implemented; point at each.
+- **D2** B1 to B10 and E1 to E5 are implemented; point at each.
 - **D3** Tests run the hooks as subprocesses with JSON on stdin in scratch repositories.
 - **D4** `tests/aqis_lab/kit/test_acceptance_wo_1_0_08.py` passes unmodified.
 - **D5** No placeholder or swallowed error, except the loop guard's documented fail-open path.
