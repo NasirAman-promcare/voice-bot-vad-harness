@@ -4,8 +4,8 @@ id: WO-1.0-04
 
 # Ledger Fragment: WO-1.0-04
 
-Result: EXHAUSTED
-Requests: 3
-Prompt tokens: 290207
-Output tokens: 8915
-Model: codestral-2508 (mistral)
+Result: PAUSED_DAILY
+Requests: 0
+Prompt tokens: 0
+Output tokens: 0
+Model: none
