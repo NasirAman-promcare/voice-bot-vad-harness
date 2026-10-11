@@ -1,5 +1,5 @@
 # BLK-1.0-11 — model_pool.json: two pairs of models share a rank, and both GLM names are unknown to NVIDIA
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: KIT
 Raised: 2026-10-11
@@ -35,3 +35,5 @@ Exact steps:
 4. Commit to `main` and tell this session "BLK-1.0-11 answered".
 
 Meanwhile: the WO-1.0-03 and WO-1.0-04 runs started before the loader fix; they use the T1 models (Gemini 1–4, then GLM, Kimi, DeepSeek) and are not affected by the repeated ranks, which only change the order of the T2/T3 Gemini models.
+
+Owner answer: 2026-10-11 (`4976476`): the pool now holds seven models ranked 1 to 7, with corrected GLM IDs (`z-ai/glm-5.3`, `z-ai/glm-5.3-flash`). `relay --models` exits 0 with every model present.
