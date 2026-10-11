@@ -94,3 +94,8 @@ EXIT 8
   - The report hid the failing check (FIXES.md, FIX-B18-report).
 - **WO-1.0-04.** Report: `PAUSED-BUSY`, `Requests: codestral-2508: 7 | Retries: OVERLOADED: 6`, `headers: FAIL (… tools/progress/__init__.py (missing CA…)`, `Reason: Service busy`, `EXIT 12`.
 - **Next.** WO-1.0-04 resumed on codestral-2508. WO-1.0-03 rerun on codestral-2508 with `--attempts 5`.
+
+## New pool from `main` (`7155ea6`, 2026-10-11) → BLK-1.0-10
+- Mistral disabled. The NVIDIA provider is enabled with `z-ai/glm-5-3`, `z-ai/glm-5-3-flash`, `moonshotai/kimi-k3` and `deepseek-ai/deepseek-v4.1-flash`.
+- `.venv/bin/python -m tools.outsourcing.relay --models` → `Relay error: Model 'z-ai/glm-5-3' rank invalid`, exit 2. The NVIDIA entries lack `rank`, `risk_tiers`, `max_input_tokens` and `max_output_tokens`, and use `tiers` and `tpm` (WO-1.0-10 B1).
+- WO-1.0-03 and WO-1.0-04 are set back to `model: default`.

@@ -1,5 +1,5 @@
 # BLK-1.0-09 — codestral-2508 cannot pass the first step of WO-1.0-03; switch to default routing (Gemini first)?
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: DECISION
 Raised: 2026-10-11
@@ -28,3 +28,5 @@ Exact steps:
 Meanwhile: WO-1.0-04 keeps running on codestral-2508 as you asked. Its result goes into this blocker's record.
 
 Update 2026-10-11, WO-1.0-04 on codestral-2508 (resumed). Report: `EXHAUSTED`, `Parts: 0/6`, `Requests: codestral-2508: 8 | Retries: OVERLOADED: 5`, `tests: FAIL (command failed with returncode 2)`, `EXIT 8`. Attempt 1 failed the header check; attempts 2 and 3 failed `tests` with exit 2 (collection error). The report now shows the failing check (FIX-B18-report).
+
+Owner answer: 2026-10-11. The owner removed Mistral from the environment and the pool, and enabled NVIDIA NIM models instead; default routing applies (the orders are back on `model: default`). Follow-up: BLK-1.0-10.
