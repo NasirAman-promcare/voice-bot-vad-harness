@@ -1,0 +1,16 @@
+# MC: WO-1.0-11 B18 (relay-run fix)
+# behaviour: the printed report shows every check of the last round, a failure after the fifth included
+# expect-fail: tests/aqis_lab/outsourcing/test_relay_run_fixes_wo_1_0_11.py::test_FR_1_0_02_report_shows_every_check_including_a_failure_after_the_fifth
+diff --git a/tools/outsourcing/report.py b/tools/outsourcing/report.py
+index de46905..d34d960 100644
+--- a/tools/outsourcing/report.py
++++ b/tools/outsourcing/report.py
+@@ -52,7 +52,7 @@ def render_report(outcome: RelayOutcome, ctx_facts: dict[str, Any] | None = None
+     checks_table = facts.get("checks_table", ())
+     if checks_table:
+         lines.append("Checks:")
+-        for chk in checks_table:
++        for chk in checks_table[:5]:
+             lines.append(f"  {chk}")
+ 
+     reason = facts.get("stop_reason")
