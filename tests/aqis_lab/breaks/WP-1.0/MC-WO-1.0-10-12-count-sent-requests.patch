@@ -1,0 +1,17 @@
+# MC: WO-1.0-10 #3 (B5 amendment, DEC-1.0-06)
+# behaviour: every sent request counts toward the model's and provider's day, rejected ones included
+# expect-fail: tests/aqis_lab/outsourcing/test_relay_run_fixes_wo_1_0_10.py::test_FR_1_0_14_rejected_requests_count_toward_the_day
+# expect-fail: tests/aqis_lab/outsourcing/test_relay_run_fixes_wo_1_0_10.py::test_FR_1_0_14_requests_that_end_in_service_busy_still_count
+diff --git a/tools/outsourcing/governor.py b/tools/outsourcing/governor.py
+index f9ee4c6..153d207 100644
+--- a/tools/outsourcing/governor.py
++++ b/tools/outsourcing/governor.py
+@@ -199,8 +199,6 @@ class Governor:
+                     ms.requests += 1
+                     ps.requests += 1
+                     today = self._current_date_str(self.pool.model(model_name).provider)
+-                    ms.daily_counts[today] = ms.daily_counts.get(today, 0) + 1
+-                    ps.daily_counts[today] = ps.daily_counts.get(today, 0) + 1
+                     self._save_state_unlocked()
+                     return waited
+             self.sleeper(delay)

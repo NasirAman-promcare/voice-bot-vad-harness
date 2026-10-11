@@ -2,7 +2,7 @@
 id: WO-1.0-03
 wp: WP-1.0
 title: Lab Map index generator, generated registry and test-impact selection
-model: default
+model: codestral-2508
 channel: api
 attempt_budget: 3
 risk_tier: T1
