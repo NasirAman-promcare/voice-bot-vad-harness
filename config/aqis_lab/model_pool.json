@@ -152,43 +152,55 @@
     },
     "z-ai/glm-5-3": {
       "provider": "nvidia",
-      "tiers": [
+      "rank": 5,
+      "risk_tiers": [
         "T1",
         "T2",
         "T3"
       ],
       "rpm": 40,
-      "tpm": 500000
+      "tpm_input": 500000,
+      "max_input_tokens": 1048576,
+      "max_output_tokens": 128000
     },
     "z-ai/glm-5-3-flash": {
       "provider": "nvidia",
-      "tiers": [
+      "rank": 8,
+      "risk_tiers": [
         "T1",
         "T2",
         "T3"
       ],
       "rpm": 40,
-      "tpm": 500000
+      "tpm_input": 500000,
+      "max_input_tokens": 1048576,
+      "max_output_tokens": 65536
     },
     "moonshotai/kimi-k3": {
       "provider": "nvidia",
-      "tiers": [
+      "rank": 6,
+      "risk_tiers": [
         "T1",
         "T2",
         "T3"
       ],
       "rpm": 40,
-      "tpm": 500000
+      "tpm_input": 500000,
+      "max_input_tokens": 1048576,
+      "max_output_tokens": 65536
     },
     "deepseek-ai/deepseek-v4.1-flash": {
       "provider": "nvidia",
-      "tiers": [
+      "rank": 7,
+      "risk_tiers": [
         "T1",
         "T2",
         "T3"
       ],
       "rpm": 40,
-      "tpm": 500000
+      "tpm_input": 500000,
+      "max_input_tokens": 131072,
+      "max_output_tokens": 65536
     }
   }
 }
