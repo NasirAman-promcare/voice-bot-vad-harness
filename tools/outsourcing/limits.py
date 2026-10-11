@@ -11,6 +11,7 @@ NOT IN SCOPE:
   - Runtime request counting or network calls.
 CHANGE LOG:
   2026-10-10 WO-1.0-10 created.
+  2026-10-11 WP-1.0 FR-1.0-14 (Claude): a repeated model rank is refused (B1: rank is unique).
 """
 from __future__ import annotations
 
@@ -170,6 +171,9 @@ def _parse_models(models_raw: object, providers: dict[str, ProviderSpec]) -> dic
         rank = mdata.get("rank")
         if not isinstance(rank, int) or rank <= 0:
             raise LimitsError(f"Model '{mname}' rank invalid")
+        same_rank = [other.name for other in models.values() if other.rank == rank]
+        if same_rank:
+            raise LimitsError(f"Models '{same_rank[0]}' and '{mname}' share rank {rank}; ranks must be unique")
         risk_tiers_raw = mdata.get("risk_tiers")
         if not isinstance(risk_tiers_raw, list) or not risk_tiers_raw or not set(risk_tiers_raw).issubset(VALID_RISK_TIERS):
             raise LimitsError(f"Model '{mname}' risk_tiers invalid")

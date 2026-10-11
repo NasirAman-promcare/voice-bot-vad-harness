@@ -15,6 +15,7 @@ CHANGE LOG:
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import json
 from pathlib import Path
 import pytest
 
@@ -27,10 +28,13 @@ from tools.outsourcing.limits import (
 
 ROOT = Path(__file__).resolve().parents[3]
 
+# The pool these tests were written against (config/aqis_lab/model_pool.json at 5aafe78), reduced to the two models
+# they use. The real pool is owner-maintained and changes; the loader's behaviour is what these tests check.
+SCRATCH_POOL = json.loads('{"share": 2, "safety": 0.8, "providers": {"gemini": {"api": "gemini", "base_url": "https://generativelanguage.googleapis.com", "enabled": true, "tier": "free", "verified_on": "2026-10-09", "day_reset": "America/Los_Angeles", "data_use": "Free tier: Google may use prompts and responses to improve its products, and human reviewers may read them."}, "mistral": {"api": "openai", "base_url": "https://api.mistral.ai/v1", "enabled": true, "tier": "free", "verified_on": "2026-10-10", "day_reset": "UTC", "data_use": "Free (Experiment) plan: may be used for training unless \'Anonymous improvement data\' is switched off in Admin > Privacy."}}, "models": {"gemini-3.8-flash": {"provider": "gemini", "rank": 1, "risk_tiers": ["T1", "T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536}, "codestral-2508": {"provider": "mistral", "rank": 5, "risk_tiers": ["T1", "T2", "T3"], "rpm": 124, "tpm_input": 625000, "max_input_tokens": 128000, "max_output_tokens": 32768}}}')
+
 
 def test_load_pool_valid(tmp_path):
-    pool_file = ROOT / "config/aqis_lab/model_pool.json"
-    pool = load_pool(pool_file)
+    pool = load_pool(SCRATCH_POOL)
     assert pool.share >= 1
     assert 0.5 <= pool.safety <= 1.0
     assert "gemini" in pool.providers()
@@ -81,7 +85,7 @@ def test_load_pool_invalid_keys():
 
 
 def test_candidates():
-    pool = load_pool(ROOT / "config/aqis_lab/model_pool.json")
+    pool = load_pool(SCRATCH_POOL)
     c_t1 = pool.candidates("T1")
     assert len(c_t1) > 0
     ranks = [m.rank for m in c_t1]
@@ -89,7 +93,7 @@ def test_candidates():
 
 
 def test_effective_limits():
-    pool = load_pool(ROOT / "config/aqis_lab/model_pool.json")
+    pool = load_pool(SCRATCH_POOL)
     model = pool.model("gemini-3.8-flash")
     eff = effective(pool, model, adaptive_factor=1.0)
     assert eff.rpm is not None
@@ -97,7 +101,7 @@ def test_effective_limits():
 
 
 def test_next_reset():
-    pool = load_pool(ROOT / "config/aqis_lab/model_pool.json")
+    pool = load_pool(SCRATCH_POOL)
     now = datetime(2026, 10, 10, 12, 0, tzinfo=timezone.utc)
     p_spec = pool.providers()["gemini"]
     res = next_reset(pool, p_spec, now)

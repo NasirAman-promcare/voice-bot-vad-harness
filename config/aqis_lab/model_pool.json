@@ -29,7 +29,8 @@
       "verified_on": "",
       "day_reset": "UTC",
       "rpm": 40,
-      "data_use": "API trial terms: for testing and evaluation, not production; NVIDIA may use content to improve its products and models."
+      "data_use": "API trial terms: for testing and evaluation, not production; NVIDIA may use content to improve its products and models.",
+      "tpm_input": 500000
     },
     "openrouter": {
       "api": "openai",
@@ -44,35 +45,33 @@
     }
   },
   "models": {
-    "gemini-3.8-flash": {
-      "provider": "gemini",
+    "z-ai/glm-5.3": {
+      "provider": "nvidia",
       "rank": 1,
       "risk_tiers": [
         "T1",
         "T2",
         "T3"
       ],
-      "rpm": 5,
-      "tpm_input": 250000,
-      "rpd": 20,
+      "rpm": 40,
+      "tpm_input": 500000,
       "max_input_tokens": 1048576,
-      "max_output_tokens": 65536
+      "max_output_tokens": 128000
     },
-    "gemini-3.7-flash": {
-      "provider": "gemini",
+    "moonshotai/kimi-k3": {
+      "provider": "nvidia",
       "rank": 2,
       "risk_tiers": [
         "T1",
         "T2",
         "T3"
       ],
-      "rpm": 5,
-      "tpm_input": 250000,
-      "rpd": 20,
+      "rpm": 40,
+      "tpm_input": 500000,
       "max_input_tokens": 1048576,
       "max_output_tokens": 65536
     },
-    "gemini-3.6-flash": {
+    "gemini-3.8-flash": {
       "provider": "gemini",
       "rank": 3,
       "risk_tiers": [
@@ -86,97 +85,34 @@
       "max_input_tokens": 1048576,
       "max_output_tokens": 65536
     },
-    "gemini-3.5-flash": {
-      "provider": "gemini",
+    "deepseek-ai/deepseek-v4.1-flash": {
+      "provider": "nvidia",
       "rank": 4,
       "risk_tiers": [
         "T1",
         "T2",
         "T3"
       ],
-      "rpm": 5,
-      "tpm_input": 250000,
-      "rpd": 20,
-      "max_input_tokens": 1048576,
+      "rpm": 40,
+      "tpm_input": 500000,
+      "max_input_tokens": 131072,
       "max_output_tokens": 65536
     },
-    "gemini-3-flash-preview": {
+    "gemini-3.7-flash": {
       "provider": "gemini",
-      "rank": 7,
-      "risk_tiers": [
-        "T2",
-        "T3"
-      ],
-      "rpm": 5,
-      "tpm_input": 250000,
-      "rpd": 20,
-      "max_input_tokens": 1048576,
-      "max_output_tokens": 65536
-    },
-    "gemini-2.5-flash": {
-      "provider": "gemini",
-      "rank": 8,
-      "risk_tiers": [
-        "T2",
-        "T3"
-      ],
-      "rpm": 5,
-      "tpm_input": 250000,
-      "rpd": 20,
-      "max_input_tokens": 1048576,
-      "max_output_tokens": 65536
-    },
-    "gemini-3.5-flash-lite": {
-      "provider": "gemini",
-      "rank": 9,
-      "risk_tiers": [
-        "T3"
-      ],
-      "rpm": 15,
-      "tpm_input": 250000,
-      "rpd": 500,
-      "max_input_tokens": 1048576,
-      "max_output_tokens": 65536
-    },
-    "gemini-3.1-flash-lite": {
-      "provider": "gemini",
-      "rank": 10,
-      "risk_tiers": [
-        "T3"
-      ],
-      "rpm": 15,
-      "tpm_input": 250000,
-      "rpd": 500,
-      "max_input_tokens": 1048576,
-      "max_output_tokens": 65536
-    },
-    "z-ai/glm-5-3": {
-      "provider": "nvidia",
       "rank": 5,
       "risk_tiers": [
         "T1",
         "T2",
         "T3"
       ],
-      "rpm": 40,
-      "tpm_input": 500000,
-      "max_input_tokens": 1048576,
-      "max_output_tokens": 128000
-    },
-    "z-ai/glm-5-3-flash": {
-      "provider": "nvidia",
-      "rank": 8,
-      "risk_tiers": [
-        "T1",
-        "T2",
-        "T3"
-      ],
-      "rpm": 40,
-      "tpm_input": 500000,
+      "rpm": 5,
+      "tpm_input": 250000,
+      "rpd": 20,
       "max_input_tokens": 1048576,
       "max_output_tokens": 65536
     },
-    "moonshotai/kimi-k3": {
+    "z-ai/glm-5.3-flash": {
       "provider": "nvidia",
       "rank": 6,
       "risk_tiers": [
@@ -189,17 +125,18 @@
       "max_input_tokens": 1048576,
       "max_output_tokens": 65536
     },
-    "deepseek-ai/deepseek-v4.1-flash": {
-      "provider": "nvidia",
+    "gemini-3.6-flash": {
+      "provider": "gemini",
       "rank": 7,
       "risk_tiers": [
         "T1",
         "T2",
         "T3"
       ],
-      "rpm": 40,
-      "tpm_input": 500000,
-      "max_input_tokens": 131072,
+      "rpm": 5,
+      "tpm_input": 250000,
+      "rpd": 20,
+      "max_input_tokens": 1048576,
       "max_output_tokens": 65536
     }
   }

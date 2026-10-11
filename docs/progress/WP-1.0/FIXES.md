@@ -61,3 +61,15 @@
   - After the fix, all outsourcing tests: `382 passed in 75.41s`.
   - `git diff -U0`: two hunks (change log, the loop line).
   - Break recipe `MC-WO-1.0-11-14-report-whole-checks-table.patch` is caught.
+
+## FIX-B1-ranks — load_pool accepted two models with the same rank
+- **Source.** The pool on `main` (`00c8f91`, BLK-1.0-10 answer) gives rank 7 to `gemini-3-flash-preview` and `deepseek-ai/deepseek-v4.1-flash`, and rank 8 to `gemini-2.5-flash` and `z-ai/glm-5-3-flash`. WO-1.0-10 B1 says `rank` is a "unique positive integer"; `relay --models` loaded the pool anyway.
+- **Change budget.** `tools/outsourcing/limits.py`: `_parse_models` (three lines) and the change log.
+- **Evidence.**
+  - Baseline (`test_limits.py`, `test_acceptance_wo_1_0_10.py`, `test_router.py`, `test_acceptance_wo_1_0_11.py`): `65 passed`.
+  - New test `test_pool_ranks_wo_1_0_10.py` before the fix: `1 failed, 1 passed` (`DID NOT RAISE LimitsError`).
+  - After the fix, all outsourcing tests: `17 failed, 367 passed`.
+    - 15 failures are tests that load the real `config/aqis_lab/model_pool.json`: `Models 'gemini-2.5-flash' and 'z-ai/glm-5-3-flash' share rank 8`. They pass once the pool's ranks are distinct (BLK-1.0-11).
+    - 1 failure was my own WO-1.0-11 fixture putting two models on rank 1. Its helper ranks moved to 2, 3, 4 (TEST_CHANGES row; no assertion changed). After that: `15 failed, 369 passed`.
+  - The real pool, with only those two ranks changed to 11 and 12 in an in-memory copy, loads with `load_pool`.
+  - Break recipe `MC-WO-1.0-10-13-unique-ranks.patch` is caught.
