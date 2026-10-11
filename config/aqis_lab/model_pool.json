@@ -15,7 +15,7 @@
     "mistral": {
       "api": "openai",
       "base_url": "https://api.mistral.ai/v1",
-      "enabled": true,
+      "enabled": false,
       "tier": "free",
       "verified_on": "2026-10-10",
       "day_reset": "UTC",
@@ -24,7 +24,7 @@
     "nvidia": {
       "api": "openai",
       "base_url": "https://integrate.api.nvidia.com/v1",
-      "enabled": false,
+      "enabled": true,
       "tier": "free",
       "verified_on": "",
       "day_reset": "UTC",
@@ -44,16 +44,151 @@
     }
   },
   "models": {
-    "gemini-3.8-flash": {"provider": "gemini", "rank": 1, "risk_tiers": ["T1", "T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
-    "gemini-3.7-flash": {"provider": "gemini", "rank": 2, "risk_tiers": ["T1", "T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
-    "gemini-3.6-flash": {"provider": "gemini", "rank": 3, "risk_tiers": ["T1", "T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
-    "gemini-3.5-flash": {"provider": "gemini", "rank": 4, "risk_tiers": ["T1", "T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
-    "codestral-2508": {"provider": "mistral", "rank": 5, "risk_tiers": ["T1", "T2", "T3"], "rpm": 124, "tpm_input": 625000, "max_input_tokens": 128000, "max_output_tokens": 32768},
-    "mistral-large-2512": {"provider": "mistral", "rank": 6, "risk_tiers": ["T1", "T2", "T3"], "rpm": 60, "tpm_input": 250000, "max_input_tokens": 128000, "max_output_tokens": 32768},
-    "gemini-3-flash-preview": {"provider": "gemini", "rank": 7, "risk_tiers": ["T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
-    "gemini-2.5-flash": {"provider": "gemini", "rank": 8, "risk_tiers": ["T2", "T3"], "rpm": 5, "tpm_input": 250000, "rpd": 20, "max_input_tokens": 1048576, "max_output_tokens": 65536},
-    "gemini-3.5-flash-lite": {"provider": "gemini", "rank": 9, "risk_tiers": ["T3"], "rpm": 15, "tpm_input": 250000, "rpd": 500, "max_input_tokens": 1048576, "max_output_tokens": 65536},
-    "gemini-3.1-flash-lite": {"provider": "gemini", "rank": 10, "risk_tiers": ["T3"], "rpm": 15, "tpm_input": 250000, "rpd": 500, "max_input_tokens": 1048576, "max_output_tokens": 65536},
-    "ministral-14b-2512": {"provider": "mistral", "rank": 11, "risk_tiers": ["T3"], "rpm": 30, "tpm_input": 937500, "max_input_tokens": 128000, "max_output_tokens": 32768}
+    "gemini-3.8-flash": {
+      "provider": "gemini",
+      "rank": 1,
+      "risk_tiers": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "rpm": 5,
+      "tpm_input": 250000,
+      "rpd": 20,
+      "max_input_tokens": 1048576,
+      "max_output_tokens": 65536
+    },
+    "gemini-3.7-flash": {
+      "provider": "gemini",
+      "rank": 2,
+      "risk_tiers": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "rpm": 5,
+      "tpm_input": 250000,
+      "rpd": 20,
+      "max_input_tokens": 1048576,
+      "max_output_tokens": 65536
+    },
+    "gemini-3.6-flash": {
+      "provider": "gemini",
+      "rank": 3,
+      "risk_tiers": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "rpm": 5,
+      "tpm_input": 250000,
+      "rpd": 20,
+      "max_input_tokens": 1048576,
+      "max_output_tokens": 65536
+    },
+    "gemini-3.5-flash": {
+      "provider": "gemini",
+      "rank": 4,
+      "risk_tiers": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "rpm": 5,
+      "tpm_input": 250000,
+      "rpd": 20,
+      "max_input_tokens": 1048576,
+      "max_output_tokens": 65536
+    },
+    "gemini-3-flash-preview": {
+      "provider": "gemini",
+      "rank": 7,
+      "risk_tiers": [
+        "T2",
+        "T3"
+      ],
+      "rpm": 5,
+      "tpm_input": 250000,
+      "rpd": 20,
+      "max_input_tokens": 1048576,
+      "max_output_tokens": 65536
+    },
+    "gemini-2.5-flash": {
+      "provider": "gemini",
+      "rank": 8,
+      "risk_tiers": [
+        "T2",
+        "T3"
+      ],
+      "rpm": 5,
+      "tpm_input": 250000,
+      "rpd": 20,
+      "max_input_tokens": 1048576,
+      "max_output_tokens": 65536
+    },
+    "gemini-3.5-flash-lite": {
+      "provider": "gemini",
+      "rank": 9,
+      "risk_tiers": [
+        "T3"
+      ],
+      "rpm": 15,
+      "tpm_input": 250000,
+      "rpd": 500,
+      "max_input_tokens": 1048576,
+      "max_output_tokens": 65536
+    },
+    "gemini-3.1-flash-lite": {
+      "provider": "gemini",
+      "rank": 10,
+      "risk_tiers": [
+        "T3"
+      ],
+      "rpm": 15,
+      "tpm_input": 250000,
+      "rpd": 500,
+      "max_input_tokens": 1048576,
+      "max_output_tokens": 65536
+    },
+    "z-ai/glm-5-3": {
+      "provider": "nvidia",
+      "tiers": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "rpm": 40,
+      "tpm": 500000
+    },
+    "z-ai/glm-5-3-flash": {
+      "provider": "nvidia",
+      "tiers": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "rpm": 40,
+      "tpm": 500000
+    },
+    "moonshotai/kimi-k3": {
+      "provider": "nvidia",
+      "tiers": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "rpm": 40,
+      "tpm": 500000
+    },
+    "deepseek-ai/deepseek-v4.1-flash": {
+      "provider": "nvidia",
+      "tiers": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "rpm": 40,
+      "tpm": 500000
+    }
   }
 }
