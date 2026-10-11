@@ -1,0 +1,16 @@
+# MC: WO-1.0-10 B1 (pool loader fix)
+# behaviour: a pool that gives two models the same rank is refused, naming both
+# expect-fail: tests/aqis_lab/outsourcing/test_pool_ranks_wo_1_0_10.py::test_FR_1_0_14_repeated_rank_is_refused_naming_both_models
+diff --git a/tools/outsourcing/limits.py b/tools/outsourcing/limits.py
+index 493da5d..c95e2cc 100644
+--- a/tools/outsourcing/limits.py
++++ b/tools/outsourcing/limits.py
+@@ -172,8 +172,6 @@ def _parse_models(models_raw: object, providers: dict[str, ProviderSpec]) -> dic
+         if not isinstance(rank, int) or rank <= 0:
+             raise LimitsError(f"Model '{mname}' rank invalid")
+         same_rank = [other.name for other in models.values() if other.rank == rank]
+-        if same_rank:
+-            raise LimitsError(f"Models '{same_rank[0]}' and '{mname}' share rank {rank}; ranks must be unique")
+         risk_tiers_raw = mdata.get("risk_tiers")
+         if not isinstance(risk_tiers_raw, list) or not risk_tiers_raw or not set(risk_tiers_raw).issubset(VALID_RISK_TIERS):
+             raise LimitsError(f"Model '{mname}' risk_tiers invalid")

@@ -99,3 +99,6 @@ EXIT 8
 - Mistral disabled. The NVIDIA provider is enabled with `z-ai/glm-5-3`, `z-ai/glm-5-3-flash`, `moonshotai/kimi-k3` and `deepseek-ai/deepseek-v4.1-flash`.
 - `.venv/bin/python -m tools.outsourcing.relay --models` → `Relay error: Model 'z-ai/glm-5-3' rank invalid`, exit 2. The NVIDIA entries lack `rank`, `risk_tiers`, `max_input_tokens` and `max_output_tokens`, and use `tiers` and `tpm` (WO-1.0-10 B1).
 - WO-1.0-03 and WO-1.0-04 are set back to `model: default`.
+
+## Pool `00c8f91` (2026-10-11): relay --models → BLK-1.0-11
+`.venv/bin/python -m tools.outsourcing.relay --models` prints `present` for all 8 Gemini models, `moonshotai/kimi-k3` and `deepseek-ai/deepseek-v4.1-flash`, and `missing` for `z-ai/glm-5-3` and `z-ai/glm-5-3-flash`; exit 2. Ranks 7 and 8 are each used twice. WO-1.0-03 and WO-1.0-04 were launched with `model: default` and `--timeout 1200` before the loader fix (FIX-B1-ranks).
