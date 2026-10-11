@@ -50,3 +50,14 @@
   - `git diff -U0` shows hunks only in the change log, the new `_strip_block_fences` with its two patterns, and the one changed line in `parse_bundle`.
   - All six saved Codestral replies (`.relay/logs/WO-1.0-0{3,4}/step-1/attempt-*/response.raw`) now parse, four files each: for example `tools/progress/fragments.py` with 165 lines and `tools/index/headers.py` with 72.
   - Break recipes: `MC-WO-1.0-01-12-block-fences-removed.patch` (rule removed) is caught, `2 failed`. `MC-WO-1.0-01-13-block-fence-pairs-exact.patch` (a closing fence that merely starts with the opening's backticks) is caught, `1 failed`.
+
+## FIX-B18-report — the printed report showed only the first five checks
+- **Source.** WO-1.0-03 relay run on codestral-2508 (2026-10-11). The report gave `Checks:` with five PASS lines and `Reason: Quick checks failed on final attempt`. `.relay/logs/WO-1.0-03/step-1/attempt-3/checks.json` holds a sixth check, `tests False command failed with returncode 1`.
+- **Root cause.** `render_report` printed `checks_table[:5]`. WO-1.0-11 B18 asks for "the checks table"; only the whole report is capped at 25 lines.
+- **Change budget.** `tools/outsourcing/report.py`: the one line in `render_report` and the change log.
+- **Evidence.**
+  - Baseline (`test_report.py`, `test_acceptance_wo_1_0_11.py`, `test_review_fixes_wo_1_0_11.py`, `test_fix_wo_1_0_11_01.py`): `43 passed`.
+  - New test `test_relay_run_fixes_wo_1_0_11.py` before the fix: `1 failed`.
+  - After the fix, all outsourcing tests: `382 passed in 75.41s`.
+  - `git diff -U0`: two hunks (change log, the loop line).
+  - Break recipe `MC-WO-1.0-11-14-report-whole-checks-table.patch` is caught.
