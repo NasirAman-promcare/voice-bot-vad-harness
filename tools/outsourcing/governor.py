@@ -13,6 +13,8 @@ CHANGE LOG:
   2026-10-10 WO-1.0-10 created.
   2026-10-10 WP-1.0 FR-1.0-14 FIX-2 (Claude): records, state file and lock moved to governor_state.py (400-line
     limit); wait_for_provider sleeps outside the lock.
+  2026-10-11 WP-1.0 FR-1.0-14 (Claude, DEC-1.0-06): every sent request counts toward the day in wait_for_slot,
+    as the providers count it; record_result keeps tokens only.
 """
 from __future__ import annotations
 
@@ -196,6 +198,9 @@ class Governor:
                     ms.seconds_waited += waited
                     ms.requests += 1
                     ps.requests += 1
+                    today = self._current_date_str(self.pool.model(model_name).provider)
+                    ms.daily_counts[today] = ms.daily_counts.get(today, 0) + 1
+                    ps.daily_counts[today] = ps.daily_counts.get(today, 0) + 1
                     self._save_state_unlocked()
                     return waited
             self.sleeper(delay)
@@ -232,10 +237,6 @@ class Governor:
             ms.output_tokens += output_tokens
             ps.prompt_tokens += prompt_tokens
             ps.output_tokens += output_tokens
-
-            today_m = self._current_date_str(m_spec.provider)
-            ms.daily_counts[today_m] = ms.daily_counts.get(today_m, 0) + 1
-            ps.daily_counts[today_m] = ps.daily_counts.get(today_m, 0) + 1
 
             if m_spec.provider.tokens_per_month is not None:
                 month = self._current_month_str(m_spec.provider)
