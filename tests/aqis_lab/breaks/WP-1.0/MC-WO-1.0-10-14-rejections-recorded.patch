@@ -1,0 +1,13 @@
+# MC: DEC-1.0-07 (rejection records)
+# behaviour: every classified rejection is appended to rejections.jsonl with the provider's message
+# expect-fail: tests/aqis_lab/outsourcing/test_rejection_log_wo_1_0_10.py::test_FR_1_0_14_every_rejection_is_recorded_with_the_providers_message
+diff --git a/tools/outsourcing/governor_state.py b/tools/outsourcing/governor_state.py
+index 5a37ea3..ee0c0cb 100644
+--- a/tools/outsourcing/governor_state.py
++++ b/tools/outsourcing/governor_state.py
+@@ -184,4 +184,4 @@ def save_stats(state_path: Path, model_stats: dict[str, ModelStats], provider_st
+ def append_rejection(state_path: Path, record: dict) -> None:
+     """Append one rejection record as a JSON line to `rejections.jsonl` next to the state file (DEC-1.0-07)."""
+     with open(state_path.parent / "rejections.jsonl", "a", encoding="utf-8") as handle:
+-        handle.write(json.dumps(record, sort_keys=True) + "\n")
++        handle.write("")
