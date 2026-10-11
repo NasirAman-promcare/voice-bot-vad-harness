@@ -1,5 +1,5 @@
 # BLK-1.0-08 — Codestral fences each block separately, which the new outer-fence rule does not cover (my BLK-1.0-07 diagnosis was wrong)
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: DECISION
 Raised: 2026-10-11
@@ -35,3 +35,5 @@ Exact steps:
 3. Tell this session "BLK-1.0-08 answered".
 
 Meanwhile: from 07:00 UTC I could run WO-1.0-03 and WO-1.0-04 on Gemini with default routing. That goes against "Codestral primary", so I do it only if you reply "option 2". I fix the relay's daily counting, which counted only successes while Google counts every request (DEC-1.0-06).
+
+Owner answer: 2026-10-11, "option 1"; the owner added the sentence to RETURN_FORMAT.md on `main` (`5aafe78`). Implemented test first (FIXES.md, FIX-BLK-1.0-08); all six saved Codestral replies parse. WO-1.0-03 and WO-1.0-04 run on codestral-2508.

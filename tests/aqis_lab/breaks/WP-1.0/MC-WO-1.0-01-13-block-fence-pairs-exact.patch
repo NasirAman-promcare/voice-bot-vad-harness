@@ -1,0 +1,16 @@
+# MC: WO-1.0-01 #2 (B5 amendment, BLK-1.0-08)
+# behaviour: a block fence is removed only with the same backticks right after the block's END marker
+# expect-fail: tests/aqis_lab/outsourcing/test_block_fence_wo_1_0_01.py::test_FR_1_0_01_fences_not_tight_or_unmatched_stay_refused[mismatched-backticks]
+diff --git a/tools/outsourcing/bundle.py b/tools/outsourcing/bundle.py
+index 455b34a..f1f0e6e 100644
+--- a/tools/outsourcing/bundle.py
++++ b/tools/outsourcing/bundle.py
+@@ -131,7 +131,7 @@ def _strip_block_fences(lines: list[str]) -> list[str]:
+             continue
+         if END_MARKER_RE.fullmatch(s):
+             in_block = False
+-            if fence is not None and i + 1 < len(lines) and lines[i + 1].strip() == fence:
++            if fence is not None and i + 1 < len(lines) and lines[i + 1].strip().startswith(fence):
+                 drop.update((opening_at, i + 1))
+             opening_at, fence = None, None
+     return [line for i, line in enumerate(lines) if i not in drop]

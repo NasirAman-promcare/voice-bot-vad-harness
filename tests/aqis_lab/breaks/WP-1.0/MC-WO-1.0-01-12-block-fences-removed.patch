@@ -1,0 +1,17 @@
+# MC: WO-1.0-01 #2 (B5 amendment, BLK-1.0-08)
+# behaviour: a code fence wrapped tightly around a single block is removed before parsing
+# expect-fail: tests/aqis_lab/outsourcing/test_block_fence_wo_1_0_01.py::test_FR_1_0_01_fence_tight_around_each_block_is_removed[codestral-shape]
+# expect-fail: tests/aqis_lab/outsourcing/test_block_fence_wo_1_0_01.py::test_FR_1_0_01_fence_tight_around_each_block_is_removed[some-blocks-fenced]
+diff --git a/tools/outsourcing/bundle.py b/tools/outsourcing/bundle.py
+index 455b34a..9075cda 100644
+--- a/tools/outsourcing/bundle.py
++++ b/tools/outsourcing/bundle.py
+@@ -134,7 +134,7 @@ def _strip_block_fences(lines: list[str]) -> list[str]:
+             if fence is not None and i + 1 < len(lines) and lines[i + 1].strip() == fence:
+                 drop.update((opening_at, i + 1))
+             opening_at, fence = None, None
+-    return [line for i, line in enumerate(lines) if i not in drop]
++    return lines
+ 
+ 
+ def parse_bundle(text: str) -> Bundle:
