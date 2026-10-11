@@ -13,6 +13,8 @@ CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
   2026-10-10 WP-1.0 FR-1.0-01 review fix (Claude): path errors raise BundleError; manifest paths normalised;
     QUESTIONS split per numbered question.
+  2026-10-11 WP-1.0 FR-1.0-01 BLK-1.0-07 (Claude, owner option 1): one code fence wrapping the whole reply is
+    removed before parsing (RETURN_FORMAT.md); any other text outside the blocks is still refused.
 """
 from __future__ import annotations
 
@@ -94,11 +96,26 @@ def _split_questions(lines: list[str]) -> tuple[str, ...]:
     return tuple(text for text in texts if text)
 
 
+OUTER_FENCE_RE = re.compile(r"(`{3,})[A-Za-z0-9_.+-]*")
+
+
+def _strip_outer_fence(lines: list[str]) -> list[str]:
+    """Remove one code fence that wraps the whole reply (RETURN_FORMAT.md); leave anything else to the parser."""
+    filled = [i for i, line in enumerate(lines) if line.strip()]
+    if len(filled) < 2:
+        return lines
+    first, last = filled[0], filled[-1]
+    opening = OUTER_FENCE_RE.fullmatch(lines[first].strip())
+    if opening is None or lines[last].strip() != opening.group(1):
+        return lines
+    return lines[first + 1:last]
+
+
 def parse_bundle(text: str) -> Bundle:
     if text.startswith("\ufeff"):
         text = text[1:]
 
-    all_lines = text.splitlines()
+    all_lines = _strip_outer_fence(text.splitlines())
     for line in all_lines:
         _check_truncation(line)
 
