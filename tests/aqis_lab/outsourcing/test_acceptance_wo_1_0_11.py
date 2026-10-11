@@ -114,7 +114,7 @@ def model(prov: str, rank: int, tiers=("T1", "T2", "T3"), **extra) -> dict:
 
 
 def default_models() -> dict:
-    return {"g-one": model("gemini", 1), "g-two": model("gemini", 2), "m-one": model("mistral", 3)}
+    return {"g-one": model("gemini", 2), "g-two": model("gemini", 3), "m-one": model("mistral", 4)}
 
 
 def write_pool(path: Path, models: dict, enabled=("gemini", "mistral")) -> Path:

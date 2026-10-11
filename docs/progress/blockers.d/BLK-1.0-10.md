@@ -1,5 +1,5 @@
 # BLK-1.0-10 — The four NVIDIA entries in model_pool.json miss required fields, so the relay refuses the whole pool
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: KIT
 Raised: 2026-10-11
@@ -30,3 +30,5 @@ Exact steps:
 4. Commit to `main` and tell this session "BLK-1.0-10 answered". I then run `relay --models` and, if all are present, WO-1.0-03 and WO-1.0-04.
 
 Meanwhile: WO-1.0-03 and WO-1.0-04 are back on `model: default`, because codestral-2508 is no longer in the pool. Nothing else depends on the relay until they return.
+
+Owner answer: 2026-10-11 (`00c8f91`): the NVIDIA entries were rewritten with ranks 5 to 8 and their token limits. The pool loads and the NVIDIA credential works. Two follow-ups are in BLK-1.0-11: repeated ranks 7 and 8, and both GLM names missing at NVIDIA.
