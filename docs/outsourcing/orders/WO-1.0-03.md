@@ -10,8 +10,8 @@ max_output_tokens: 60000
 context:
   - docs/process/CHANGE_CONTROL.md
   - docs/process/CONTEXT_BUDGET.md
-  - docs/capabilities/REGISTRY.md
   - aqis_lab/scoring/wer.py
+interfaces:
   - tools/audit/gate.py
 outputs:
   - tools/index/__init__.py
@@ -45,7 +45,7 @@ verify:
 # WO-1.0-03 — Lab Map index generator, generated registry and test-impact selection
 
 ## 1. Context
-Claude Code wastes most of its tokens searching the repository. The lab replaces searching with a generated map built from the module header standard (`CHANGE_CONTROL.md` section 1; `aqis_lab/scoring/wer.py` and `tools/audit/gate.py` are real examples). The current `docs/capabilities/REGISTRY.md` is hand-written; from now on it is generated, and a capability may disappear only with a retirement record. CI runs the generator on `main`; branches never commit its output.
+*(Amended 2026-10-11: `docs/capabilities/REGISTRY.md` left out of `context` and `tools/audit/gate.py` moved to `interfaces`, to keep each step under the template's 30,000 input tokens. B12 pins the registry's columns and row format; the acceptance test adopts the real registry.)* Claude Code wastes most of its tokens searching the repository. The lab replaces searching with a generated map built from the module header standard (`CHANGE_CONTROL.md` section 1; `aqis_lab/scoring/wer.py` and `tools/audit/gate.py` are real examples). The current `docs/capabilities/REGISTRY.md` is hand-written; from now on it is generated, and a capability may disappear only with a retirement record. CI runs the generator on `main`; branches never commit its output.
 
 ## 2. Your job
 `python -m tools.index <build | check | impact>` scans `aqis_lab/`, `tools/` and `tests/aqis_lab/` with Python's `ast` module (never importing the scanned code) and writes small, deterministic markdown files.
