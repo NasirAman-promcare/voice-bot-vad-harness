@@ -26,3 +26,5 @@ Exact steps:
 1. Reply with "option 1", "option 2" or "option 3".
 
 Meanwhile: WO-1.0-04 keeps running on codestral-2508 as you asked. Its result goes into this blocker's record.
+
+Update 2026-10-11, WO-1.0-04 on codestral-2508 (resumed). Report: `EXHAUSTED`, `Parts: 0/6`, `Requests: codestral-2508: 8 | Retries: OVERLOADED: 5`, `tests: FAIL (command failed with returncode 2)`, `EXIT 8`. Attempt 1 failed the header check; attempts 2 and 3 failed `tests` with exit 2 (collection error). The report now shows the failing check (FIX-B18-report).
