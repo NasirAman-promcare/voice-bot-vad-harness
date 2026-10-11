@@ -15,6 +15,8 @@ CHANGE LOG:
     QUESTIONS split per numbered question.
   2026-10-11 WP-1.0 FR-1.0-01 BLK-1.0-07 (Claude, owner option 1): one code fence wrapping the whole reply is
     removed before parsing (RETURN_FORMAT.md); any other text outside the blocks is still refused.
+  2026-10-11 WP-1.0 FR-1.0-01 BLK-1.0-08 (Claude, owner option 1): a fence wrapped tightly around one block is
+    removed first, then the outer fence; unpaired fences stay and are refused.
 """
 from __future__ import annotations
 
@@ -111,11 +113,35 @@ def _strip_outer_fence(lines: list[str]) -> list[str]:
     return lines[first + 1:last]
 
 
+OPEN_MARKER_RE = re.compile(r"=== (?:MANIFEST|DOD|QUESTIONS|FILE: .*) ===")
+END_MARKER_RE = re.compile(r"=== END (?:MANIFEST|DOD|QUESTIONS|FILE) ===")
+
+
+def _strip_block_fences(lines: list[str]) -> list[str]:
+    """Remove each code fence wrapped tightly around one block (RETURN_FORMAT.md); unpaired fences stay."""
+    drop: set[int] = set()
+    in_block, opening_at, fence = False, None, None
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if not in_block:
+            if OPEN_MARKER_RE.fullmatch(s):
+                in_block = True
+                match = OUTER_FENCE_RE.fullmatch(lines[i - 1].strip()) if i > 0 and i - 1 not in drop else None
+                opening_at, fence = (i - 1, match.group(1)) if match else (None, None)
+            continue
+        if END_MARKER_RE.fullmatch(s):
+            in_block = False
+            if fence is not None and i + 1 < len(lines) and lines[i + 1].strip() == fence:
+                drop.update((opening_at, i + 1))
+            opening_at, fence = None, None
+    return [line for i, line in enumerate(lines) if i not in drop]
+
+
 def parse_bundle(text: str) -> Bundle:
     if text.startswith("\ufeff"):
         text = text[1:]
 
-    all_lines = _strip_outer_fence(text.splitlines())
+    all_lines = _strip_outer_fence(_strip_block_fences(text.splitlines()))
     for line in all_lines:
         _check_truncation(line)
 
