@@ -13,6 +13,7 @@ CHANGE LOG:
   2026-10-10 WO-1.0-11 FIX 1 created.
   2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): the stop reason, and for TOO_LARGE the B9 advice; checks_table
     and request_facts build the report from the checks and governor of the run.
+  2026-10-11 WP-1.0 FR-1.0-02 (Claude): the checks table is printed whole (B18); it was cut after five lines.
 """
 from __future__ import annotations
 
@@ -51,7 +52,7 @@ def render_report(outcome: RelayOutcome, ctx_facts: dict[str, Any] | None = None
     checks_table = facts.get("checks_table", ())
     if checks_table:
         lines.append("Checks:")
-        for chk in checks_table[:5]:
+        for chk in checks_table:
             lines.append(f"  {chk}")
 
     reason = facts.get("stop_reason")
