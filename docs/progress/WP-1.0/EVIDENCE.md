@@ -85,3 +85,12 @@ EXIT 8
 - **WO-1.0-04, run 4** (order pinned to `mistral-large-2512`). Report: `ACCESS: add or fix the mistral credential on the aqis-lab environment`, `CREDENTIAL`, `Requests: mistral-large-2512: 1 | Retries: CREDENTIAL: 1`, `EXIT 7`.
 - **`.venv/bin/python -m tools.outsourcing.relay --models`** (AT-1.0-09). Every Gemini pool model and `codestral-2508` print `present`; `ministral-14b-2512: present`; `mistral-large-2512: missing`; exit 0.
 - **WO-1.0-03, run 3** (new fix wording). Report: `EXHAUSTED`, `Requests: codestral-2508: 4, gemini-3.7-flash: 4, gemini-3.8-flash: 1 | Retries: DAILY: 2, OVERLOADED: 4`, `Reason: Bundle error: Non-blank text outside block: '```text'`, `EXIT 8`. This is the same pattern as WO-1.0-04 (BLK-1.0-06, BLK-1.0-07).
+
+## Relay runs on codestral-2508 after the fence fixes (2026-10-11)
+- **WO-1.0-03, `--timeout 1200`.** Report: `EXHAUSTED`, `Parts: 0/6`, `Requests: codestral-2508: 4 | Retries: OVERLOADED: 1`, `Reason: Quick checks failed on final attempt`, `EXIT 8`.
+  - The bundles parsed and imported.
+  - Attempt 1 failed `headers`: `tests/aqis_lab/index/__init__.py (missing CAPABILITIES:)`.
+  - Attempts 2 and 3 failed `tests`: `4 failed, 2 passed`. The model's `parse_header` returned empty capability, contract and change-log lists against its own unit tests.
+  - The report hid the failing check (FIXES.md, FIX-B18-report).
+- **WO-1.0-04.** Report: `PAUSED-BUSY`, `Requests: codestral-2508: 7 | Retries: OVERLOADED: 6`, `headers: FAIL (… tools/progress/__init__.py (missing CA…)`, `Reason: Service busy`, `EXIT 12`.
+- **Next.** WO-1.0-04 resumed on codestral-2508. WO-1.0-03 rerun on codestral-2508 with `--attempts 5`.
