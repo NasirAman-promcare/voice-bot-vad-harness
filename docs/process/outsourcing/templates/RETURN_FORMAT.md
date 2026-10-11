@@ -44,3 +44,7 @@ Your whole answer is plain text in this order. Marker lines stand alone on their
 ```
 
 Nothing else: no greetings, no summaries, no explanations outside these blocks.
+
+The relay removes one code fence that wraps the whole answer; anything else outside the blocks is refused.
+
+It also removes a code fence wrapped tightly around a single block: a fence line directly before the block’s opening marker and its closing line directly after the block’s END marker.
