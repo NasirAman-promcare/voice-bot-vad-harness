@@ -1,5 +1,5 @@
 # BLK-1.0-06 — No pool model can return a work order today: Gemini reports its daily quota used, Mistral Large is not on the key
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: ACCESS
 Raised: 2026-10-10
@@ -37,3 +37,5 @@ Meanwhile:
 - WO-1.0-03 to -09 have their acceptance tests and orders ready.
 - I keep the relay's own records correct.
 - I rerun the relay once the Gemini quotas reset.
+
+Owner answer: 2026-10-11. Gemini per-day usage on the owner's dashboard: gemini-3.6-flash 22/20, gemini-3.7-flash 21/20, gemini-3.8-flash 19/20; reset at 12:00 PKT (00:00 PT). Mistral Large: route around it and use codestral-2508 as the primary model. Resolved: the limits are real (Google also counted the rejected requests, see DEC-1.0-06), and work orders are pinned to codestral-2508 as they are sent.

@@ -1,5 +1,5 @@
 # BLK-1.0-07 — Codestral wraps every reply in one code fence, which RETURN_FORMAT and WO-1.0-01 B5 refuse
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: DECISION
 Raised: 2026-10-10
@@ -28,3 +28,5 @@ Exact steps:
 4. Tell this session "BLK-1.0-07 answered".
 
 Meanwhile: no code change until you answer; the parser stays as WO-1.0-01 specifies.
+
+Owner answer: 2026-10-11, "option 1"; the owner added the rule to RETURN_FORMAT.md on `main` (`7f3c38f`). Implemented test first in `90f71f2` (FIXES.md, FIX-BLK-1.0-07). Codestral's replies need more than this rule (BLK-1.0-08).
