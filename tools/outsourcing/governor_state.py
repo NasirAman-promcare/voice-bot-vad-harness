@@ -16,6 +16,7 @@ CHANGE LOG:
   2026-10-10 WO-1.0-10 created (records and persistence inside governor.py).
   2026-10-10 WP-1.0 FR-1.0-14 FIX-2 (Claude): moved here from governor.py, unchanged in behaviour, so that
     governor.py stays within the Foundation's 400-line limit.
+  2026-10-11 WP-1.0 FR-1.0-14 (Claude, DEC-1.0-07): append_rejection keeps each classified rejection with its message.
 """
 from __future__ import annotations
 
@@ -27,7 +28,7 @@ from pathlib import Path
 from typing import TextIO
 
 __all__ = ["FileLock", "ModelStats", "ProviderStats", "ModelReport", "ProviderReport", "GovernorReport",
-           "load_stats", "save_stats"]
+           "load_stats", "save_stats", "append_rejection"]
 
 WINDOW_SECONDS = 60.0
 
@@ -178,3 +179,9 @@ def save_stats(state_path: Path, model_stats: dict[str, ModelStats], provider_st
     scratch = state_path.parent / f"{state_path.name}.tmp"
     scratch.write_text(json.dumps(data, indent=2), encoding="utf-8")
     scratch.replace(state_path)
+
+
+def append_rejection(state_path: Path, record: dict) -> None:
+    """Append one rejection record as a JSON line to `rejections.jsonl` next to the state file (DEC-1.0-07)."""
+    with open(state_path.parent / "rejections.jsonl", "a", encoding="utf-8") as handle:
+        handle.write(json.dumps(record, sort_keys=True) + "\n")
