@@ -5,7 +5,7 @@ id: WO-1.0-03
 # Ledger Fragment: WO-1.0-03
 
 Result: EXHAUSTED
-Requests: 11
-Prompt tokens: 513925
-Output tokens: 106984
+Requests: 5
+Prompt tokens: 347372
+Output tokens: 33791
 Model: moonshotai/kimi-k3 (nvidia)
