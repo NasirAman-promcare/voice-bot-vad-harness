@@ -1,4 +1,4 @@
-# Summary: EXHAUSTED
+# Summary: ACCEPTED
 
 ## Accepted Parts
 | label | files | attempts | model | provider | tokens_in | tokens_out | seconds_waited |
