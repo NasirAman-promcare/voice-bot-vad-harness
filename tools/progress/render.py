@@ -23,6 +23,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-12 WP-1.0 WO-1.0-04 step 3 created.
   2026-10-12 WP-1.0 WO-1.0-04 (Claude, FIX-WO04-final): STATUS.md ends without a newline, like the legacy file (B11 round trip).
+  2026-10-12 WP-1.0 WO-1.0-04 (Claude, review item 9): render_owner_queue split into three section helpers; output unchanged.
 """
 from __future__ import annotations
 
@@ -250,23 +251,9 @@ def _owner_queue_order(
     return sorted(open_blockers, key=key)
 
 
-def render_owner_queue(
-    fragments: Fragments,
-    on_main: bool,
-    last_digest: str | None,
-) -> str:
-    """Render the owner queue: open blockers, new decisions, pending checks."""
-    merged_wps = {
-        record.fields.get("WP", "")
-        for record in fragments.status
-        if _status_cell(record, on_main) == "MERGED"
-    }
-    lines = ["# Owner queue", ""]
-    lines.append("Ordered by how many unmerged WPs each blocker unblocks, then by age.")
-    lines.append("")
-    lines.append("## Open blockers")
-    lines.append("")
-    ordered = _owner_queue_order(fragments.blockers, merged_wps)
+def _queue_blocker_lines(ordered: list) -> list[str]:
+    """The open-blocker section of the owner queue (B6)."""
+    lines = ["## Open blockers", ""]
     if not ordered:
         lines.append("None.")
     for record in ordered:
@@ -286,8 +273,12 @@ def render_owner_queue(
             lines.append("- Exact steps:")
             lines.extend(f"  {i}. {step}" for i, step in enumerate(steps, 1))
         lines.append("")
-    lines.append("## Decisions awaiting review")
-    lines.append("")
+    return lines
+
+
+def _queue_decision_lines(fragments: Fragments, last_digest: str | None) -> list[str]:
+    """The decisions section of the owner queue: ACTIVE records newer than the last digest (B6)."""
+    lines = ["## Decisions awaiting review", ""]
     decisions = [
         d
         for d in sorted(fragments.decisions, key=lambda r: _entry_sort_key(r.fields.get("ID", r.path.stem)))
@@ -299,18 +290,39 @@ def render_owner_queue(
         fields = record.fields
         lines.append(f"- {fields.get('ID', record.path.stem)} ({fields.get('Date', '')}): {fields.get('Question', fields.get('Title', ''))}")
     lines.append("")
-    lines.append("## Pending post-merge checks")
-    lines.append("")
+    return lines
+
+
+def _queue_check_lines(fragments: Fragments) -> list[str]:
+    """The pending post-merge checks section of the owner queue (B6)."""
+    lines = ["## Pending post-merge checks", ""]
     checks: list[str] = []
     for record in sorted(fragments.status, key=_status_sort_key):
         for line in record.free_text.splitlines():
             stripped = line.strip()
             if stripped.startswith("Pending check:"):
                 checks.append(f"- {record.fields.get('WP', '')}: {stripped[len('Pending check:'):].strip()}")
-    if not checks:
-        lines.append("None.")
-    else:
-        lines.extend(checks)
+    lines.extend(checks if checks else ["None."])
+    return lines
+
+
+def render_owner_queue(
+    fragments: Fragments,
+    on_main: bool,
+    last_digest: str | None,
+) -> str:
+    """Render the owner queue: open blockers, new decisions, pending checks."""
+    merged_wps = {
+        record.fields.get("WP", "")
+        for record in fragments.status
+        if _status_cell(record, on_main) == "MERGED"
+    }
+    lines = ["# Owner queue", ""]
+    lines.append("Ordered by how many unmerged WPs each blocker unblocks, then by age.")
+    lines.append("")
+    lines.extend(_queue_blocker_lines(_owner_queue_order(fragments.blockers, merged_wps)))
+    lines.extend(_queue_decision_lines(fragments, last_digest))
+    lines.extend(_queue_check_lines(fragments))
     return GENERATED_LINE + "\n".join(lines).rstrip("\n") + "\n"
 
 
