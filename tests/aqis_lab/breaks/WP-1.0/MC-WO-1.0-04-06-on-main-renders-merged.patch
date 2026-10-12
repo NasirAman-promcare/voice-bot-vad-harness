@@ -1,0 +1,16 @@
+# MC: WO-1.0-04 must-catch 6
+# behaviour: --on-main renders AUDIT-PASS and MERGE-READY as MERGED
+# expect-fail: tests/aqis_lab/progress/test_acceptance_wo_1_0_04.py::test_FR_1_0_04_mc06_on_main_renders_merged[AUDIT-PASS]
+diff --git a/tools/progress/render.py b/tools/progress/render.py
+index fdd57f1..60e3338 100644
+--- a/tools/progress/render.py
++++ b/tools/progress/render.py
+@@ -108,7 +108,7 @@ def _entry_sort_key(identifier: str) -> tuple[tuple[str, tuple[int, ...]], str]:
+ 
+ def _status_cell(record: StatusFragment, on_main: bool) -> str:
+     value = record.fields.get("Status", "")
+-    if on_main and value in {"AUDIT-PASS", "MERGE-READY"}:
++    if on_main and value == "MERGE-READY":
+         return "MERGED"
+     return value
+ 

@@ -1,0 +1,17 @@
+# MC: WO-1.0-04 must-catch 3
+# behaviour: migration keeps every legacy BLK and DEBT ID and its text verbatim
+# expect-fail: tests/aqis_lab/progress/test_acceptance_wo_1_0_04.py::test_FR_1_0_04_mc03_every_legacy_id_has_a_fragment_holding_its_text
+# expect-fail: tests/aqis_lab/progress/test_acceptance_wo_1_0_04.py::test_FR_1_0_04_mc03_mc07_migration_round_trip_is_byte_identical
+diff --git a/tools/progress/migrate.py b/tools/progress/migrate.py
+index 9d89f78..a611f4d 100644
+--- a/tools/progress/migrate.py
++++ b/tools/progress/migrate.py
+@@ -104,7 +104,7 @@ def _blocker_fragments(text: str) -> list[tuple[str, str]]:
+     lines = text.splitlines(keepends=True)
+     fragments: list[tuple[str, str]] = []
+     for block_id, start, end in _entry_ranges(lines):
+-        entry = "".join(lines[start:end]).rstrip("\n")
++        entry = "".join(lines[start:end - 1]).rstrip("\n")
+         status_match = _BLOCKER_STATUS.search(entry)
+         wp_match = _BLOCKER_WP.search(entry)
+         if status_match is None or wp_match is None:

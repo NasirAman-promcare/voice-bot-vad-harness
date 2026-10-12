@@ -1,0 +1,16 @@
+# MC: WO-1.0-03 must-catch 5
+# behaviour: a syntax error is reported as path:line with a non-zero exit, and the other files are still indexed
+# expect-fail: tests/aqis_lab/index/test_acceptance_wo_1_0_03.py::test_FR_1_0_03_mc5_syntax_error_is_reported_with_path_line_and_others_still_indexed
+diff --git a/tools/index/scan.py b/tools/index/scan.py
+index 40992e2..a8bb8fc 100644
+--- a/tools/index/scan.py
++++ b/tools/index/scan.py
+@@ -216,7 +216,7 @@ def _parse_module(rel: str, path: Path, module_index: dict[str, str]) -> ModuleF
+     try:
+         tree = ast.parse(source, filename=rel)
+     except SyntaxError as exc:
+-        line = exc.lineno if exc.lineno is not None else 0
++        line = 0
+         message = exc.msg if exc.msg else 'syntax error'
+         return ModuleFacts(path=rel, docstring=None,
+                            parse_error=ParseError(path=rel, line=line, message=message))

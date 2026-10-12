@@ -1,0 +1,16 @@
+# MC: WO-1.0-03 must-catch 4
+# behaviour: two builds give byte-identical output regardless of file order, locale and time zone
+# expect-fail: tests/aqis_lab/index/test_acceptance_wo_1_0_03.py::test_FR_1_0_03_mc4_output_is_byte_identical_regardless_of_file_order
+diff --git a/tools/index/render.py b/tools/index/render.py
+index 612ed39..52baf83 100644
+--- a/tools/index/render.py
++++ b/tools/index/render.py
+@@ -102,7 +102,7 @@ def render_map(facts: tuple[ModuleFacts, ...]) -> str:
+     groups: dict[str, list[_Entry]] = {}
+     for entry in entries:
+         groups.setdefault(package_of(entry.facts.path), []).append(entry)
+-    lines = [GENERATED_LINE, '',
++    lines = [GENERATED_LINE, __import__('time').strftime('Built %Y-%m-%d %H:00 local time'), '',
+              '# Lab Map', '',
+              'One line per module: path, purpose, capabilities, owning work package, public-symbol count.']
+     for package in sorted(groups):

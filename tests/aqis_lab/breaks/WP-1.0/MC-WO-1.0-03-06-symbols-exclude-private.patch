@@ -1,0 +1,16 @@
+# MC: WO-1.0-03 must-catch 6
+# behaviour: SYMBOLS lists only public names, each with path:line
+# expect-fail: tests/aqis_lab/index/test_acceptance_wo_1_0_03.py::test_FR_1_0_03_mc6_symbols_exclude_private_names_and_give_path_line
+diff --git a/tools/index/scan.py b/tools/index/scan.py
+index 40992e2..cec3dc7 100644
+--- a/tools/index/scan.py
++++ b/tools/index/scan.py
+@@ -193,7 +193,7 @@ def _public_symbols(tree: ast.Module, lines: list[str]) -> tuple[Symbol, ...]:
+     """Public classes and functions, with public methods of public classes as Class.method (B3)."""
+     symbols: list[Symbol] = []
+     for node in tree.body:
+-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not node.name.startswith('_'):
++        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not node.name.startswith('__'):
+             symbols.append(Symbol(node.name, 'function', _first_signature_line(lines, node), node.lineno))
+         elif isinstance(node, ast.ClassDef) and not node.name.startswith('_'):
+             symbols.append(Symbol(node.name, 'class', _first_signature_line(lines, node), node.lineno))

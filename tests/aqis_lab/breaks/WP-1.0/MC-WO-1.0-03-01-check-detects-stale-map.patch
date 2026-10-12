@@ -1,0 +1,16 @@
+# MC: WO-1.0-03 must-catch 1
+# behaviour: check fails when a header changed and the map was not regenerated
+# expect-fail: tests/aqis_lab/index/test_acceptance_wo_1_0_03.py::test_FR_1_0_03_mc1_check_fails_when_a_header_changed_without_regeneration
+diff --git a/tools/index/__main__.py b/tools/index/__main__.py
+index 72dfa77..ca9cd4d 100644
+--- a/tools/index/__main__.py
++++ b/tools/index/__main__.py
+@@ -181,7 +181,7 @@ def run_check(repo: Path) -> int:
+             if not committed.is_file():
+                 differing.append(rel)
+                 continue
+-            if committed.read_bytes() != (scratch / rel).read_bytes():
++            if (scratch / rel).read_bytes() != (scratch / rel).read_bytes():
+                 differing.append(rel)
+     for rel in differing:
+         print(f'differs: {rel}')

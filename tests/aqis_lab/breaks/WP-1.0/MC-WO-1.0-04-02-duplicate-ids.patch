@@ -1,0 +1,16 @@
+# MC: WO-1.0-04 must-catch 2
+# behaviour: lint rejects duplicate IDs, naming both paths
+# expect-fail: tests/aqis_lab/progress/test_acceptance_wo_1_0_04.py::test_FR_1_0_04_mc02_duplicate_ids_fail_lint_naming_both_paths
+diff --git a/tools/progress/lint.py b/tools/progress/lint.py
+index 7c23809..f9bd94b 100644
+--- a/tools/progress/lint.py
++++ b/tools/progress/lint.py
+@@ -231,7 +231,7 @@ def _lint_uniqueness(fragments: Fragments) -> list[LintIssue]:
+             fragment_id = record.fields.get(id_key) or record.path.stem
+             by_id.setdefault((kind, fragment_id), []).append(record.path)
+     for (kind, fragment_id), paths in by_id.items():
+-        if len(paths) > 1:
++        if len(paths) > 2:
+             names = ", ".join(path.as_posix() for path in sorted(paths))
+             issues.append(LintIssue("error", paths[0], f"Duplicate {kind} ID {fragment_id}: {names}"))
+     return issues

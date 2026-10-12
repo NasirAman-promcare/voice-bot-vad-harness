@@ -1,0 +1,16 @@
+# MC: WO-1.0-04 must-catch 4
+# behaviour: the owner queue orders blockers by how many unmerged WPs they unblock, then by age
+# expect-fail: tests/aqis_lab/progress/test_acceptance_wo_1_0_04.py::test_FR_1_0_04_mc04_owner_queue_orders_blockers_by_unmerged_wps
+diff --git a/tools/progress/render.py b/tools/progress/render.py
+index fdd57f1..8d96289 100644
+--- a/tools/progress/render.py
++++ b/tools/progress/render.py
+@@ -246,7 +246,7 @@ def _owner_queue_order(
+     open_blockers = [b for b in blockers if b.fields.get("Status") != "RESOLVED"]
+ 
+     def key(record: BlockerFragment) -> tuple[int, str, str]:
+-        return (-_unmerged_count(record, merged_wps), record.fields.get("Raised", "9999-12-31"), record.fields.get("ID", ""))
++        return (record.fields.get("Raised", "9999-12-31"), -_unmerged_count(record, merged_wps), record.fields.get("ID", ""))
+ 
+     return sorted(open_blockers, key=key)
+ 

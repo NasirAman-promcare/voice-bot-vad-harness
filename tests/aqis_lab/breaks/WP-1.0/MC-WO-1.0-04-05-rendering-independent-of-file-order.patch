@@ -1,0 +1,29 @@
+# MC: WO-1.0-04 must-catch 5
+# behaviour: rendering is byte-identical across runs and file order
+# expect-fail: tests/aqis_lab/progress/test_acceptance_wo_1_0_04.py::test_FR_1_0_04_mc05_rendering_is_byte_identical_across_runs_and_file_order
+diff --git a/tools/progress/fragments.py b/tools/progress/fragments.py
+index c5a2c35..bd7f64b 100644
+--- a/tools/progress/fragments.py
++++ b/tools/progress/fragments.py
+@@ -248,7 +248,7 @@ def _load_folder(repo_root: Path, folder: Path, parse) -> tuple:
+     if not base.is_dir():
+         return ()
+     records = []
+-    for path in sorted(base.rglob(f"*{_FRAGMENT_SUFFIX}")):
++    for path in sorted(base.rglob(f"*{_FRAGMENT_SUFFIX}"), key=lambda p: p.stat().st_mtime_ns):
+         raw = path.read_text(encoding="utf-8")
+         records.append(parse(path, raw))
+     return tuple(records)
+diff --git a/tools/progress/render.py b/tools/progress/render.py
+index fdd57f1..0b57737 100644
+--- a/tools/progress/render.py
++++ b/tools/progress/render.py
+@@ -246,7 +246,7 @@ def _owner_queue_order(
+     open_blockers = [b for b in blockers if b.fields.get("Status") != "RESOLVED"]
+ 
+     def key(record: BlockerFragment) -> tuple[int, str, str]:
+-        return (-_unmerged_count(record, merged_wps), record.fields.get("Raised", "9999-12-31"), record.fields.get("ID", ""))
++        return (-_unmerged_count(record, merged_wps), record.fields.get("Raised", "9999-12-31"))
+ 
+     return sorted(open_blockers, key=key)
+ 

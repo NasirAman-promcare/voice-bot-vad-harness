@@ -1,0 +1,17 @@
+# MC: WO-1.0-04 must-catch 1
+# behaviour: lint rejects a blocker without a valid capability class
+# expect-fail: tests/aqis_lab/progress/test_acceptance_wo_1_0_04.py::test_FR_1_0_04_mc01_blocker_without_valid_capability_fails_lint[unknown]
+# expect-fail: tests/aqis_lab/progress/test_acceptance_wo_1_0_04.py::test_FR_1_0_04_mc01_blocker_without_valid_capability_fails_lint[lower-case]
+diff --git a/tools/progress/lint.py b/tools/progress/lint.py
+index 7c23809..d1a284e 100644
+--- a/tools/progress/lint.py
++++ b/tools/progress/lint.py
+@@ -113,7 +113,7 @@ def _lint_blockers(records: tuple[BlockerFragment, ...], changed_only: set[Path]
+                 issues.append(
+                     LintIssue("error", record.path, "Owner capability 'legacy' is allowed only on legacy fragments")
+                 )
+-        elif capability not in _OWNER_CAPABILITIES:
++        elif not capability:
+             issues.append(
+                 LintIssue("error", record.path, "Owner capability must be one of " + ", ".join(sorted(_OWNER_CAPABILITIES)))
+             )

@@ -1,0 +1,16 @@
+# MC: WO-1.0-03 must-catch 2
+# behaviour: a capability removed from a header without a retirement record raises CapabilityRemoved
+# expect-fail: tests/aqis_lab/index/test_acceptance_wo_1_0_03.py::test_FR_1_0_03_mc2_capability_removed_without_retirement_raises
+diff --git a/tools/index/registry.py b/tools/index/registry.py
+index 642200f..a0f54c1 100644
+--- a/tools/index/registry.py
++++ b/tools/index/registry.py
+@@ -265,7 +265,7 @@ CapabilityRemoved for capabilities of the previous registry now missing everywhe
+         rows[cap_id] = _record_row(cells)
+     rows.update(_retired_rows(retirements, previous))
+ 
+-    vanished = sorted(set(previous) - set(rows))
++    vanished = sorted(set(rows) - set(previous) - set(rows))
+     if vanished:
+         raise CapabilityRemoved(vanished)
+     return Registry(tuple(rows[cap_id] for cap_id in sorted(rows)))

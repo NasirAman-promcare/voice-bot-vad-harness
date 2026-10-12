@@ -1,0 +1,17 @@
+# MC: WO-1.0-04 must-catch 7
+# behaviour: existing readers of DEBT.md see the same rows in the generated file
+# expect-fail: tests/aqis_lab/progress/test_acceptance_wo_1_0_04.py::test_FR_1_0_04_mc07_memo_readers_see_the_same_rows
+# expect-fail: tests/aqis_lab/progress/test_acceptance_wo_1_0_04.py::test_FR_1_0_04_mc03_mc07_migration_round_trip_is_byte_identical
+diff --git a/tools/progress/render.py b/tools/progress/render.py
+index fdd57f1..364e4c1 100644
+--- a/tools/progress/render.py
++++ b/tools/progress/render.py
+@@ -183,7 +183,7 @@ def render_debt(records: tuple[DebtFragment, ...], on_main: bool) -> str:
+                 (line for line in record.free_text.splitlines() if line.strip().startswith("|")),
+                 "",
+             )
+-            rows.append(row_line.strip())
++            rows.append(row_line.strip().strip("|").strip())
+         else:
+             rows.append(_render_new_debt_row(record))
+     return GENERATED_LINE + DEBT_HEADER + "\n".join(rows) + ("\n" if rows else "")

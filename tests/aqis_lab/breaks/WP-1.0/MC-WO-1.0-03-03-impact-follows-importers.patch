@@ -1,0 +1,16 @@
+# MC: WO-1.0-03 must-catch 3
+# behaviour: impact selects the tests of a changed module's importers, transitively
+# expect-fail: tests/aqis_lab/index/test_acceptance_wo_1_0_03.py::test_FR_1_0_03_mc3_impact_selects_the_tests_of_importers
+diff --git a/tools/index/impact.py b/tools/index/impact.py
+index cfa7b41..c6c9e42 100644
+--- a/tools/index/impact.py
++++ b/tools/index/impact.py
+@@ -224,7 +224,7 @@ def affected_tests(repo_root, base_ref: str) -> ImpactResult:
+     try:
+         graphs = [_reverse_graph(facts), _reverse_graph(base_facts)]
+         seeds = {rel for rel in changed if rel.endswith('.py')}
+-        affected = _closure(seeds, graphs)
++        affected = set(seeds)
+         reason = _all_reason(changed, len(affected))
+         if reason is not None:
+             return ImpactResult(True, reason, ())
