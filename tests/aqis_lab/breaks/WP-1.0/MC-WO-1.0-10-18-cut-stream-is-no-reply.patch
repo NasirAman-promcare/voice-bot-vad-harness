@@ -1,0 +1,14 @@
+# MC: BLK-1.0-14 (streamed replies)
+# behaviour: a stream cut before its finish_reason or [DONE] is retried, never returned as a reply
+# expect-fail: tests/aqis_lab/outsourcing/test_stream_wo_1_0_10.py::test_FR_1_0_14_stream_cut_before_its_finish_is_retried_as_a_transport_failure
+diff --git a/tools/outsourcing/sse.py b/tools/outsourcing/sse.py
+index 0cb4e90..8629bf0 100644
+--- a/tools/outsourcing/sse.py
++++ b/tools/outsourcing/sse.py
+@@ -89,6 +89,4 @@ def assemble(body_text: str, provider: str) -> Completion:
+             if isinstance(delta, dict) and isinstance(delta.get("content"), str):
+                 parts.append(delta["content"])
+             finish = str(choice["finish_reason"]) if choice.get("finish_reason") else finish
+-    if not done and finish is None:
+-        raise StreamCut(f"stream from {provider} ended before its finish")
+     return Completion(text="".join(parts), finish_reason=finish, usage=usage, model=model)

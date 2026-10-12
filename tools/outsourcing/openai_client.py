@@ -13,9 +13,13 @@ CHANGE LOG:
   2026-10-10 WO-1.0-10 created.
   2026-10-11 WP-1.0 FR-1.0-14 (Claude, owner's BLK-1.0-12 answer): the request carries the model's reasoning_effort,
     temperature and top_p when the pool sets them (DEC-1.0-08); the socket timeout is at least its timeout_seconds.
+  2026-10-12 WP-1.0 FR-1.0-14 (Claude, BLK-1.0-14): the request asks for a stream with usage, because the session's
+    egress path answers 502 to any reply slower than 30 seconds; an event-stream reply is assembled by `sse`, and a
+    stream cut before its end is retried as a network error. A JSON reply is parsed as before.
 """
 from __future__ import annotations
 
+import http.client
 import json
 import math
 import urllib.error
@@ -25,6 +29,7 @@ import zoneinfo
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from tools.outsourcing import sse
 from tools.outsourcing.chat import (
     ApiError, ChatRequest, CredentialError, DailyQuotaExhausted, ModelError,
     Reply, ServiceBusy, StepTooLarge, TokenCount, TransportError, Turn,
@@ -50,7 +55,8 @@ def _build_payload(spec: ModelSpec, request: ChatRequest) -> dict[str, Any]:
     for turn in request.turns:
         messages.append({"role": turn.role, "content": turn.text})
     payload: dict[str, Any] = {"model": spec.name, "messages": messages,
-                               "max_tokens": min(request.max_output_tokens, spec.max_output_tokens)}
+                               "max_tokens": min(request.max_output_tokens, spec.max_output_tokens),
+                               "stream": True, "stream_options": {"include_usage": True}}
     for key in ("reasoning_effort", "temperature", "top_p"):
         if getattr(spec, key) is not None:
             payload[key] = getattr(spec, key)
@@ -237,6 +243,18 @@ def _parse_openai_reply(
     return _parse_openai_choice_reply(parsed, c0, body_text, input_tokens, spec, governor, total_waited)
 
 
+def _parse_openai_ok(
+    done: sse.Completion | None, body_text: str, input_tokens: int, spec: ModelSpec, governor: Governor,
+    total_waited: float,
+) -> Reply:
+    if done is None:
+        return _parse_openai_reply(body_text, input_tokens, spec, governor, total_waited)
+    parsed = {"model": done.model, "choices": [{"message": {"content": done.text}, "finish_reason": done.finish_reason}]}
+    if done.usage is not None:
+        parsed["usage"] = done.usage
+    return _parse_openai_choice_reply(parsed, parsed["choices"][0], body_text, input_tokens, spec, governor, total_waited)
+
+
 class OpenAIClient:
 
     def __init__(self, spec: ModelSpec, governor: Governor, timeout: float, base_url: str | None = None) -> None:
@@ -270,9 +288,10 @@ class OpenAIClient:
             try:
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                     status, headers, body_text = resp.status, dict(resp.headers), resp.read().decode("utf-8")
+                streamed = sse.assemble(body_text, self.spec.provider.name) if status == 200 and sse.is_event_stream(headers) else None
             except urllib.error.HTTPError as e:
-                status, headers, body_text = e.code, dict(e.headers), e.read().decode("utf-8")
-            except (urllib.error.URLError, OSError) as e:
+                status, headers, body_text, streamed = e.code, dict(e.headers), e.read().decode("utf-8"), None
+            except (urllib.error.URLError, OSError, http.client.HTTPException, sse.StreamCut) as e:
                 retries["transport"] += 1
                 if retries["transport"] > 3:
                     raise TransportError(f"Transport error after retries: {e}") from e
@@ -282,7 +301,7 @@ class OpenAIClient:
             _check_learned_headers(self.spec, self.governor, headers)
 
             if status == 200:
-                return _parse_openai_reply(body_text, input_tokens, self.spec, self.governor, total_waited)
+                return _parse_openai_ok(streamed, body_text, input_tokens, self.spec, self.governor, total_waited)
 
             verdict = classify("openai", status, headers, body_text)
             self.governor.record_rejection(self.spec.name, verdict)
