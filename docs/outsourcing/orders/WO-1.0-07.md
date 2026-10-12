@@ -18,14 +18,15 @@ context:
   - .claude/hooks/stop_gate.py
   - .claude/hooks/session_context.py
   - .claude/hooks/.gitignore
-  - tools/index/__main__.py
-  - tools/progress/__main__.py
-  - tools/progress/render.py
   - docs/process/templates/FRAGMENTS.md
   - tests/aqis_lab/fixture_repo.py
   - tests/aqis_lab/test_aqis_gate_parity.py
   - tests/aqis_lab/test_aqis_gate_v2.py
   - tests/aqis_lab/test_aqis_debt_wp09.py
+interfaces:
+  - tools/index/__main__.py
+  - tools/progress/__main__.py
+  - tools/progress/render.py
 outputs:
   - kit-staging/.claude/hooks/_protected.py
   - kit-staging/.claude/hooks/guard_protected.py
