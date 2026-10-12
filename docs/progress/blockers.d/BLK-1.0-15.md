@@ -1,5 +1,5 @@
 # BLK-1.0-15 — Both pool models spend the whole output budget on reasoning and never answer a work-order step
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: KIT
 Raised: 2026-10-12
@@ -35,4 +35,4 @@ Exact steps (option 1):
 
 Meanwhile: I merge `main` into the WP branch as soon as it changes, then run `relay --models` and dry runs. The relay runs start only once BLK-1.0-14 is answered.
 
-Owner answer:
+Owner answer: 2026-10-12, pool on `main` `da75708`: kimi-k3 is rank 1 (`none`, 60000), glm-5.3-flash rank 2 (`low`, 60000). The owner also removed both `timeout_seconds`, so the socket timeout is the relay's `--timeout`. Merged into the WP branch. `relay --models` exits 0, and the WO-1.0-03 and WO-1.0-04 dry runs route to `moonshotai/kimi-k3`.

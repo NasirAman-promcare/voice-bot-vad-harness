@@ -1,5 +1,5 @@
 # BLK-1.0-14 — Replies slower than 30 seconds fail unless streamed: approve a streaming wire format (WO-1.0-10 B13)
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: DECISION
 Raised: 2026-10-12
@@ -33,4 +33,4 @@ Exact steps:
 
 Meanwhile: BLK-1.0-15 (the models' output budget) is a separate owner item. I keep the records current and prepare the WO-1.0-03 review. No relay run uses the streaming code until you answer.
 
-Owner answer:
+Owner answer: 2026-10-12, "BLK-1.0-14: option 1". Streaming is approved. WO-1.0-10 B13 is amended and DEC-1.0-09 records it.

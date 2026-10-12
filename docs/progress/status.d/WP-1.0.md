@@ -7,7 +7,7 @@ Branch: claude/wp-1-0-operating-model-v2
 PR: none yet
 Thread model: Opus high
 Updated: 2026-10-12
-Note: relay blocked by BLK-1.0-14 (DECISION: streamed replies) and BLK-1.0-15 (KIT: pool reasoning and output limits); handover below
+Note: BLK-1.0-14 and BLK-1.0-15 answered; WO-1.0-03 and WO-1.0-04 running through the relay
 
 Handover (2026-10-12, session 013CiaVYjshaAGNKoix51V7R):
 - **Done:**
