@@ -42,7 +42,10 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-12 WP-1.0 FR-1.0-03 created.
   2026-10-12 WP-1.0 FR-1.0-03 fix 1: _owning_wp renamed to public owning_wp for render.py;
-             dead parse row line and repeated deferred gate import removed."""
+             dead parse row line and repeated deferred gate import removed.
+  2026-10-12 WP-1.0 WO-1.0-03 review item 9 (Claude): build_registry and adopt_registry split into helpers under
+    40 lines; behaviour unchanged.
+"""
 from __future__ import annotations
 
 import re
@@ -251,7 +254,25 @@ Raises RegistryError for duplicates, mismatched records or bad retirements, and
 CapabilityRemoved for capabilities of the previous registry now missing everywhere."""
     headers = _collect_header_rows(facts)
     previous = previous_rows(previous_registry_text)
+    records = _read_records(records_dir)
+    retirements = _read_retirements(retired_dir)
+    _check_overlaps(headers, records, retirements)
 
+    rows: dict[str, RegistryRow] = {}
+    for cap_id, (fact, capability, header) in headers.items():
+        rows[cap_id] = _header_row(fact, capability, header)
+    for cap_id, (path, cells) in records.items():
+        rows[cap_id] = _record_row(cells)
+    rows.update(_retired_rows(retirements, previous))
+
+    vanished = sorted(set(previous) - set(rows))
+    if vanished:
+        raise CapabilityRemoved(vanished)
+    return Registry(tuple(rows[cap_id] for cap_id in sorted(rows)))
+
+
+def _read_records(records_dir: Path | None) -> dict[str, tuple[Path, tuple[str, ...]]]:
+    """Capability records by ID; the file name must match the CAP line."""
     records: dict[str, tuple[Path, tuple[str, ...]]] = {}
     for stem, (path, text) in _read_fragment(records_dir, _CAP_ID).items():
         cells = parse_record(text, path.as_posix())
@@ -259,7 +280,11 @@ CapabilityRemoved for capabilities of the previous registry now missing everywhe
             raise RegistryError(
                 f'{path.as_posix()}: file name {stem} and CAP line {cells[0]} differ')
         records[cells[0]] = (path, cells)
+    return records
 
+
+def _read_retirements(retired_dir: Path | None) -> dict[str, tuple[Path, str, str]]:
+    """Retirement records by ID; the file name must match the CAP line."""
     retirements: dict[str, tuple[Path, str, str]] = {}
     for stem, (path, text) in _read_fragment(retired_dir, _CAP_ID).items():
         cap_id, retired_in, allowed_by = parse_retirement(text, path.as_posix())
@@ -267,7 +292,11 @@ CapabilityRemoved for capabilities of the previous registry now missing everywhe
             raise RegistryError(
                 f'{path.as_posix()}: file name {stem} and CAP line {cap_id} differ')
         retirements[cap_id] = (path, retired_in, allowed_by)
+    return retirements
 
+
+def _check_overlaps(headers: dict, records: dict, retirements: dict) -> None:
+    """A capability lives in exactly one of: a header, a record, a retirement record."""
     for cap_id in sorted(set(headers) & set(records)):
         record_path = records[cap_id][0]
         raise RegistryError(
@@ -279,12 +308,10 @@ CapabilityRemoved for capabilities of the previous registry now missing everywhe
             f'{cap_id} has a retirement record at {retirements[cap_id][0].as_posix()} '
             f'but still appears in {where}')
 
-    rows: dict[str, RegistryRow] = {}
-    for cap_id, (fact, capability, header) in headers.items():
-        rows[cap_id] = _header_row(fact, capability, header)
-    for cap_id, (path, cells) in records.items():
-        rows[cap_id] = _record_row(cells)
 
+def _retired_rows(retirements: dict, previous: dict) -> dict[str, RegistryRow]:
+    """Each retired capability keeps its previous row with a RETIRED status."""
+    rows: dict[str, RegistryRow] = {}
     for cap_id in sorted(retirements):
         if cap_id not in previous:
             raise RegistryError(
@@ -295,11 +322,7 @@ CapabilityRemoved for capabilities of the previous registry now missing everywhe
             cap_id, old[1], old[2], old[3], old[4], old[5],
             escape_cell(f'RETIRED in {retired_in}; allowed by {allowed_by}'),
         ))
-
-    vanished = sorted(set(previous) - set(rows))
-    if vanished:
-        raise CapabilityRemoved(vanished)
-    return Registry(tuple(rows[cap_id] for cap_id in sorted(rows)))
+    return rows
 
 
 def adopt_registry(
@@ -328,22 +351,29 @@ on any error the returned dict is never produced and the caller writes nothing."
     planned: dict[str, str] = {}
     for _, cells in parsed:
         cap_id = _unescape(cells[0])
-        if cap_id in headers:
+        if cap_id in headers or cap_id in existing_records or cap_id in existing_retired:
             continue
-        if cap_id in existing_records or cap_id in existing_retired:
-            continue
-        status = cells[6]
-        if 'retired' in status.lower():
-            wp = _WP_TOKEN.search(_unescape(status))
-            if wp is None:
-                raise RegistryError(
-                    f'{cap_id}: retired row has no WP token in its Status cell: {_unescape(status)!r}')
-            planned[f'{RETIRED_REL}/{cap_id}.md'] = (
-                f'CAP: {cap_id}\nRetired in: {wp.group(0)}\nAllowed by: {_unescape(status)}\n')
-        else:
-            body = ''.join(f'{label}: {_unescape(cell)}\n' for label, cell in zip(RECORD_LABELS, cells))
-            planned[f'{RECORDS_REL}/{cap_id}.md'] = body
+        planned.update(_adopted_fragment(cap_id, cells))
+    _check_existing_records(existing_records, parsed)
+    return planned
 
+
+def _adopted_fragment(cap_id: str, cells: tuple[str, ...]) -> dict[str, str]:
+    """The retirement record (Status says retired) or capability record for one adopted row (B12 pin 10)."""
+    status = cells[6]
+    if 'retired' in status.lower():
+        wp = _WP_TOKEN.search(_unescape(status))
+        if wp is None:
+            raise RegistryError(
+                f'{cap_id}: retired row has no WP token in its Status cell: {_unescape(status)!r}')
+        return {f'{RETIRED_REL}/{cap_id}.md':
+                f'CAP: {cap_id}\nRetired in: {wp.group(0)}\nAllowed by: {_unescape(status)}\n'}
+    return {f'{RECORDS_REL}/{cap_id}.md':
+            ''.join(f'{label}: {_unescape(cell)}\n' for label, cell in zip(RECORD_LABELS, cells))}
+
+
+def _check_existing_records(existing_records: dict, parsed: list) -> None:
+    """An existing record whose cells differ from its registry row is an error."""
     for cap_id, (path, cells) in existing_records.items():
         for _, row_cells in parsed:
             if _unescape(row_cells[0]) == cap_id:
@@ -351,4 +381,3 @@ on any error the returned dict is never produced and the caller writes nothing."
                     raise RegistryError(
                         f'{path.as_posix()}: existing record cells differ from the registry row for {cap_id}')
                 break
-    return planned
