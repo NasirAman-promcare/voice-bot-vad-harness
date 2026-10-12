@@ -1,5 +1,5 @@
 # BLK-1.0-13 — The NVIDIA key does not reach this session; relay work continues in a new session
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: ACCESS
 Raised: 2026-10-12
@@ -31,3 +31,5 @@ Exact steps:
 4. In it, say: "Continue WP-1.0 from docs/progress/status.d/WP-1.0.md (BLK-1.0-13 answered)."
 
 Meanwhile: nothing in WP-1.0 is left that does not need the relay, except records. The next session starts from the status fragment's handover note.
+
+Owner answer: 2026-10-12. The new session (https://claude.ai/code/session_013CiaVYjshaAGNKoix51V7R) has the key injected for `integrate.api.nvidia.com`; a small chat request returns HTTP 200 with `Nvcf-Status: fulfilled`. Correction: the missing key did not explain the rejections. With the key present, the WO-1.0-03 request still gets `502 upstream request failed`, after exactly 30 seconds. Any non-streaming reply that takes more than 30 seconds fails this way, and a streamed one succeeds. The 502 carries none of NVIDIA's headers (`Nvcf-Reqid`, `Date`), so an intermediary on the session's egress path produces it, not NVIDIA. The same cause explains BLK-1.0-12's rejections. Follow-up: BLK-1.0-14 and BLK-1.0-15.
