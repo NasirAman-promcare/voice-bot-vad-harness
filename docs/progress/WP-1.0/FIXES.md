@@ -104,3 +104,38 @@
 - **Evidence.**
   - New test before the fix: `1 failed, 20 passed`. After the fix and the corrected expectation: `tests/aqis_lab/index` without `test_impact.py` and the acceptance file → `73 passed`.
   - It stays with Claude because it is a 2-line fix to accepted relay output that the relay itself cannot reach.
+
+## FIX-WO04-final — WO-1.0-04 take-over after its final verification was exhausted
+- **Source.** With all 6 parts accepted, final verification failed in every round (14, then 20 failures). On the committed branch there were 14 failures, all in the read-only `test_acceptance_wo_1_0_04.py`, from five gaps, each under 30 lines (WO review checklist: TAKE OVER). The B2/B8 clarification (`bb53dac`) had not made the fix rounds converge. The run in progress was stopped (`exit=143`) before the take-over was committed.
+- **Change budget** (`wo/WO-1.0-04` `235b84e`).
+  - `fragments.py`: new `_heading_id` and `_template_fields`, called from `_parse_blocker` and `_parse_decision`.
+  - `lint.py`: `lint` gains `spec_wps` (E4 warning); `_lint_blockers` exempts `Legacy: yes` fragments from the template checks.
+  - `migrate.py`: `_debt_fragments` takes the Status cell's leading capitals.
+  - `render.py`: `render_status` adds no final newline.
+  - `__main__.py`: `_cmd_lint` passes the WPs found under `docs/specs/`.
+  - Change logs, two corrected test expectations and one new test (TEST_CHANGES).
+- **Evidence.**
+  - `tests/aqis_lab/progress` on the branch before: `14 failed, 78 passed`. After each gap: 9, then 2 (the two relay tests expecting a final newline), then `93 passed`.
+  - Relay rerun on the committed branch: `ACCEPTED`, `Parts: 6/6`, `Requests: none`; scope, headers, patterns, read-only-tests, compile and verify-1 all `PASS`, `exit=0`.
+- **Review item 9.** `render_owner_queue` was 62 lines. It is split into `_queue_blocker_lines`, `_queue_decision_lines` and `_queue_check_lines`; the output is unchanged (`93 passed`) and no function exceeds 40 lines.
+
+## FIX-B17-ledger-row — the relay's ledger fragment was not the FRAGMENTS.md row
+- **Source.** The relay wrote `docs/outsourcing/ledger.d/WO-1.0-04.md` with YAML front matter, a `# Ledger Fragment` heading, and no `WO`, `Date`, `Model version`, `Attempts` or `Seconds` line. `python -m tools.progress lint` → `ERROR: …/ledger.d/WO-1.0-04.md: Missing required field: WO`. WO-1.0-11 B17 requires "the ledger row of `FRAGMENTS.md`".
+- **Change budget.**
+  - `tools/outsourcing/ledger.py`: `write_ledger_fragment` (keyword-only `date`, `model_versions`, `attempts`, `seconds`; FRAGMENTS.md field order with `Requests` added) and the new `run_facts`.
+  - `tools/outsourcing/relay.py`: `_write_records` passes `**ledger.run_facts(...)`; `relay.py` stays at 400 lines.
+  - Change logs.
+- **Evidence.**
+  - New `test_ledger_fragment_format_wo_1_0_11.py` before the fix: `TypeError: write_ledger_fragment() got an unexpected keyword argument 'date'` (3 tests). After: `3 passed`.
+  - First full run: `2 failed, 415 passed` (shape rules: `write_ledger_fragment` 42 lines, `relay.py` 407 lines). After tightening: `417 passed in 86.17s`.
+  - Break recipe `MC-WO-1.0-11-16-ledger-fragment-row.patch` → `KeyError: 'WO'`, caught.
+  - The relay rewrote WO-1.0-04's records in the new format. A `Note:` line adds the totals across runs, because the relay's figures cover the last run only.
+  - `python -m tools.progress lint` → exit 0.
+
+## FIX-B3-split-siblings — a split part did not see the files of its step accepted before it
+- **Source.** WO-1.0-03 step 5 was split (B13) into 5.1 `tools/index/impact.py` (accepted) and 5.2 `tests/aqis_lab/index/test_impact.py`. The 5.2 request showed only lower-numbered steps' outputs, so the model guessed `ImpactResult` twice (`AttributeError`) and returned `QUESTIONS` (`exit=4`): "please paste the current `tools/index/impact.py`". The step block's promise ("must pass with only the files above and the files you return now") cannot hold without it.
+- **Change budget.** `tools/outsourcing/prompt.py`: `_get_plan_partitions` adds the part's own step's files that come before the part's first file; the change log.
+- **Evidence.**
+  - New `test_prompt_split_parts_wo_1_0_02.py` before: `1 failed, 1 passed`. The control test (first split part and whole step show no sibling, even with a leftover file in the tree) passes before and after. After the fix: `2 passed`.
+  - All outsourcing tests: `419 passed in 92.38s`.
+  - Break recipe `MC-WO-1.0-02-17-split-part-sees-siblings.patch` → `1 failed, 1 passed`, caught.
