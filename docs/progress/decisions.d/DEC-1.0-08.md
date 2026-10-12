@@ -19,10 +19,12 @@ Why: the owner's goal is that the two NVIDIA models get their verified parameter
 
 Cannot-do check (all must be "no"):
 - Weakens, skips or deletes a test: no
-- Changes a requirement, threshold or exit criterion: no (the change follows the owner's instruction and keeps must-catch 11)
+- Changes a requirement, threshold or exit criterion: no
 - Touches a NEVER path: no
 - Adds synthetic or substitute data where real data is required: no
 - Widens network, credentials or security permissions: no
 - Spends money or starts a paid service or trial: no
+
+Cannot-do note: on requirements, the change follows the owner's instruction and keeps must-catch 11.
 
 Reversal: replace the forwarding loop in `openai_client._build_payload` with the owner's defaults, after the owner approves changing must-catch 11's test.

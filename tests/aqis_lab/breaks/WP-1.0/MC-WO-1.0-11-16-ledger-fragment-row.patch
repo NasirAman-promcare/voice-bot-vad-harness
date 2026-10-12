@@ -1,0 +1,16 @@
+# MC: FIX-B17-ledger-row (WO-1.0-11 B17)
+# behaviour: the relay's ledger fragment is the FRAGMENTS.md row that tools.progress reads and lints
+# expect-fail: tests/aqis_lab/outsourcing/test_ledger_fragment_format_wo_1_0_11.py::test_FR_1_0_02_fix_ledger_fragment_passes_progress_lint
+diff --git a/tools/outsourcing/ledger.py b/tools/outsourcing/ledger.py
+index d3715f6..8dcbb56 100644
+--- a/tools/outsourcing/ledger.py
++++ b/tools/outsourcing/ledger.py
+@@ -157,7 +157,7 @@ def write_ledger_fragment(
+ 
+     versions = ", ".join(dict.fromkeys(v for v in model_versions if v)) or "not reported"
+     lines = [
+-        f"WO: {wo_id}",
++        f"id: {wo_id}",
+         f"Date: {date}",
+         f"Model: {models_str}",
+         f"Model version: {versions}",

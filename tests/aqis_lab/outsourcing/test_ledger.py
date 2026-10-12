@@ -51,6 +51,7 @@ def test_write_summary_and_ledger(tmp_path: Path):
         total_prompt_tokens=100,
         total_output_tokens=50,
         models_used=(("g-one", "gemini"),),
+        date="2026-10-10", model_versions=("v1",), attempts=1, seconds=1,  # Claude, 2026-10-12: FIX-B17-ledger-row
     )
     assert led_path.exists()
     led_text = led_path.read_text(encoding="utf-8")
