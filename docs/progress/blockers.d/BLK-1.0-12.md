@@ -1,5 +1,5 @@
 # BLK-1.0-12 — Every NVIDIA chat request fails with "upstream request failed", although the model list answers
-Status: OPEN
+Status: RESOLVED
 WP: WP-1.0
 Owner capability: ACCESS
 Raised: 2026-10-11
@@ -30,3 +30,5 @@ Exact steps:
 4. Reply with the two outputs (the body and the `HTTP` line) and the credits.
 
 Meanwhile: once the Gemini quotas reset at 07:00 UTC, I run WO-1.0-03 and WO-1.0-04 on the Gemini models with default routing, unless you say otherwise.
+
+Owner answer: 2026-10-11. The owner's live tests found the cause: the NIM gateway rejects unsupported sampling values, and GLM-5.3-Flash's default maximum reasoning outlasts the gateway's 15-minute limit. The pool (`dbfba0e`) now holds z-ai/glm-5.3-flash and moonshotai/kimi-k3 with explicit parameters. The client forwards them (DEC-1.0-08), and `relay --models` exits 0.

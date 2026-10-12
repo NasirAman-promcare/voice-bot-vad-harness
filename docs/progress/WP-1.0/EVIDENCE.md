@@ -113,3 +113,14 @@ EXIT 8
 - **Order trimmed.** WO-1.0-03 now runs about 23k tokens per step (`relay --dry-run`: `~23002 tokens -> z-ai/glm-5.3`), with the registry left out and `tools/audit/gate.py` moved to `interfaces`. This brings it back within the template's 30,000-token step limit, which my order had broken.
 - **WO-1.0-03, run h** (~23k tokens). Same report, `EXIT 12`. Again 24 rejections, all `upstream request failed`.
 - **Session proxy.** `curl -sS "$HTTPS_PROXY/__agentproxy/status"` → `recentRelayFailures []`.
+
+## Owner's BLK-1.0-12 answer: final pool `dbfba0e` and model parameters (2026-10-11)
+- **Pool.** z-ai/glm-5.3-flash (rank 1) and moonshotai/kimi-k3 (rank 2), both on NVIDIA, each with `reasoning_effort`, `temperature`, `top_p` and `timeout_seconds`. Gemini, Mistral and OpenRouter are disabled.
+- **Model parameters (DEC-1.0-08).** `test_model_params_wo_1_0_10.py` before the change: `15 failed, 4 passed`.
+- **Stale tests.** After the change: `9 failed, 397 passed`.
+  - 8 failures were tests reading Gemini models from the real pool. They now use the scratch pool, or the pool's best-ranked enabled model (TEST_CHANGES).
+  - 1 failure was must-catch 11, which fails if a temperature is sent by default. That led to DEC-1.0-08: no defaults.
+- **Final suite.** `.venv/bin/python -m pytest tests/aqis_lab/outsourcing -q -m "not slow and not gpu and not colab and not oracle and not network"` → `406 passed in 81.96s`.
+- **Break recipes.** `MC-WO-1.0-10-15-model-parameters-forwarded.patch` and `MC-WO-1.0-10-16-model-timeout-floor.patch` are both caught.
+- **`relay --models`.** `z-ai/glm-5.3-flash: present`, `moonshotai/kimi-k3: present`, exit 0.
+- **Dry runs.** WO-1.0-03 `~23002 tokens -> z-ai/glm-5.3-flash`; WO-1.0-04, trimmed, `~44265 tokens -> z-ai/glm-5.3-flash`.
