@@ -141,3 +141,15 @@ EXIT 8
 - **Streaming client, test first (pending BLK-1.0-14).** `test_stream_wo_1_0_10.py` before the change: `7 failed` (`ApiError: unexpected API response: Expecting value`). After it: `7 passed`. The first build broke the module size checks (`openai_client` 408 lines > 400; `_parse_openai_stream` 54 lines, `generate` 42 lines > 40). The stream parsing moved to `tools/outsourcing/sse.py`. Then `.venv/bin/python -m pytest tests/aqis_lab/outsourcing -q --tb=short -m "not slow and not gpu and not colab and not oracle and not network"` → `413 passed in 77.02s`.
 - **Break recipes.** `MC-WO-1.0-10-17-stream-text-without-reasoning.patch` → `AssertionError: assert 'I should thi....Hello, wörld' == 'Hello, wörld'`. `MC-WO-1.0-10-18-cut-stream-is-no-reply.patch` → `AssertionError: assert 'half an ans' == 'Hello, wörld'`. Both are caught.
 - **Output limits accepted by NVIDIA.** A streamed `"Reply with the word OK."` with `max_tokens` 60000 and 131072 → `200` for both glm-5.3-flash and kimi-k3.
+
+## The models spend their output budget on reasoning → BLK-1.0-15 (2026-10-12)
+All runs stream the WO-1.0-03 step-1 request as the relay builds it (about 21,700 prompt tokens), with `stream_options.include_usage`:
+- **kimi-k3, pool values** (`reasoning_effort high`, `temperature 1.0`, `top_p 0.95`, `max_tokens 16384`): `200 2.189899s first, 928.259708s total`. Content 0 characters, reasoning 65,119 characters, finish `length`. Usage: `{'prompt_tokens': 21750, 'completion_tokens': 16384, …, 'completion_tokens_details': {'reasoning_tokens': 16384}}`.
+- **glm-5.3-flash, `reasoning_effort medium`, `max_tokens 60000`**: `200 1.891690s first, 1976.575706s total`. Content 0, reasoning 232,108 characters, finish `length`. Usage: `completion_tokens 60000`, `reasoning_tokens 60000`. The last reasoning chunks are code (`… is not None:\n            return wp.group(0`): the model drafts the files inside its reasoning and never reaches the answer.
+- **Small-prompt probes** ("Write a Python function fib(n) …", `max_tokens 4000`): every setting finishes with `stop` and an answer.
+  - glm: `high` 8 reasoning tokens; `low` 0; `none` 1,269; `chat_template_kwargs.enable_thinking false` 723.
+  - kimi: `high` 15; `low` 8; `none` 0 (no reasoning field); `chat_template_kwargs.thinking false` 0.
+  - So the limit is specific to long work-order prompts, and kimi's thinking can be switched off with `reasoning_effort "none"`.
+- **glm-5.3-flash, `reasoning_effort low`, `max_tokens 60000`**: `200 4.040652s first, 232.334846s total`. Finish `stop`. Usage: `completion_tokens 8028`, `reasoning_tokens 653`. Content 29,090 characters, assembled by `sse.assemble`. It starts with a `text` fence and `=== MANIFEST ===`, and ends with commentary (`… I'll incorporate that correction into the final returned file.`).
+- **kimi-k3, `reasoning_effort none`, `max_tokens 60000`**: `200 2.537366s first, 249.584353s total`. Finish `stop`. Usage: `completion_tokens 5257`, no reasoning. Content 18,890 characters, from `=== MANIFEST ===` to `=== END DOD ===`.
+- **Output limits.** A streamed `"Reply with the word OK."` with `max_tokens` 60000 or 131072 → `200` for both models.
