@@ -1,11 +1,9 @@
-# Summary: QUESTIONS
+# Summary: EXHAUSTED
 
 ## Accepted Parts
 | label | files | attempts | model | provider | tokens_in | tokens_out | seconds_waited |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | tools/progress/__init__.py, tests/aqis_lab/progress/__init__.py, tools/progress/fragments.py, tests/aqis_lab/progress/test_fragments.py | 1 | moonshotai/kimi-k3 | nvidia | 43964 | 5233 | 0.0 |
-
-## Questions
-The acceptance test expects a blocker whose `## BLK-…` file contains `Owner capability: legacy` to fail lint, but the work order (B12, B8) says `Owner capability: legacy` is allowed for migrated fragments and `migrate` writes exactly that. Which rule holds?
-The acceptance test expects a decision fragment whose `Choice` line is `Choice: 1. A` to pass lint, but the decision template in `DECISION.md` shows `Choice: <option number and one-line summary>` on a labelled line, and the fragment parser treats `Choice: 1. A` as a labelled line, not free text. Should the parser treat `Choice`, `Why`, and `Reversal` as labelled lines?
+| 2 | tools/progress/lint.py, tests/aqis_lab/progress/test_lint.py | 4 | moonshotai/kimi-k3 | nvidia | 71243 | 2242 | 0.0 |
+| 3 | tools/progress/render.py, tests/aqis_lab/progress/test_render.py | 1 | moonshotai/kimi-k3 | nvidia | 49726 | 7770 | 0.0 |
 
