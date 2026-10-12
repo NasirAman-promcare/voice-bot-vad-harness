@@ -45,7 +45,7 @@
     }
   },
   "models": {
-    "z-ai/glm-5.3-flash": {
+    "moonshotai/kimi-k3": {
       "provider": "nvidia",
       "rank": 1,
       "risk_tiers": [
@@ -56,13 +56,12 @@
       "rpm": 40,
       "tpm_input": 500000,
       "max_input_tokens": 1048576,
-      "max_output_tokens": 16384,
-      "reasoning_effort": "high",
-      "temperature": 0.5,
-      "top_p": 1.0,
-      "timeout_seconds": 180
+      "max_output_tokens": 60000,
+      "reasoning_effort": "none",
+      "temperature": 1.0,
+      "top_p": 0.95
     },
-    "moonshotai/kimi-k3": {
+    "z-ai/glm-5.3-flash": {
       "provider": "nvidia",
       "rank": 2,
       "risk_tiers": [
@@ -73,11 +72,10 @@
       "rpm": 40,
       "tpm_input": 500000,
       "max_input_tokens": 1048576,
-      "max_output_tokens": 16384,
-      "reasoning_effort": "high",
-      "temperature": 1.0,
-      "top_p": 0.95,
-      "timeout_seconds": 360
+      "max_output_tokens": 60000,
+      "reasoning_effort": "low",
+      "temperature": 0.5,
+      "top_p": 1.0
     }
   }
 }
