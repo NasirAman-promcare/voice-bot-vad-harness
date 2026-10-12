@@ -1,0 +1,17 @@
+# MC: DEC-1.0-08 (model request parameters)
+# behaviour: the OpenAI-compatible request carries the model's reasoning_effort, temperature and top_p from the pool
+# expect-fail: tests/aqis_lab/outsourcing/test_model_params_wo_1_0_10.py::test_FR_1_0_14_openai_request_carries_the_models_parameters
+diff --git a/tools/outsourcing/openai_client.py b/tools/outsourcing/openai_client.py
+index af0e700..1884ae4 100644
+--- a/tools/outsourcing/openai_client.py
++++ b/tools/outsourcing/openai_client.py
+@@ -51,9 +51,6 @@ def _build_payload(spec: ModelSpec, request: ChatRequest) -> dict[str, Any]:
+         messages.append({"role": turn.role, "content": turn.text})
+     payload: dict[str, Any] = {"model": spec.name, "messages": messages,
+                                "max_tokens": min(request.max_output_tokens, spec.max_output_tokens)}
+-    for key in ("reasoning_effort", "temperature", "top_p"):
+-        if getattr(spec, key) is not None:
+-            payload[key] = getattr(spec, key)
+     return payload
+ 
+ 

@@ -17,13 +17,6 @@ context:
   - docs/progress/STATUS.md
   - docs/progress/BLOCKERS.md
   - docs/progress/DEBT.md
-  - tests/aqis_lab/aqis_memo_testutil.py
-  - tests/aqis_lab/test_aqis_phase0_memo.py
-  - tests/aqis_lab/test_aqis_debt_wp06.py
-  - tests/aqis_lab/test_aqis_debt_wp07.py
-  - tests/aqis_lab/test_aqis_debt_wp08.py
-  - tests/aqis_lab/test_aqis_debt_wp09.py
-  - tests/aqis_lab/test_aqis_gate_parity.py
 outputs:
   - tools/progress/__init__.py
   - tools/progress/__main__.py
@@ -58,6 +51,7 @@ verify:
 **Before sending (Claude):** add to `context` every test file found by `rg -l "STATUS.md|BLOCKERS.md|DEBT.md" tests/aqis_lab`; B11 depends on them. *(Done 2026-10-10: seven files.)*
 
 ## 1. Context
+*(Amended 2026-10-11: seven existing test files left out of `context` to cut each step from about 85,000 to about 45,000 input tokens. Must-catch 7 is enforced by the acceptance test: the byte-identical round trip, and `aqis_memo_testutil.debt_rows` run against the generated `DEBT.md`. The legacy `STATUS.md`, `BLOCKERS.md` and `DEBT.md` stay in `context`, because the migration must reproduce them exactly.)*
 Parallel work packages used to collide on shared tables (`STATUS.md`, `BLOCKERS.md`, `DEBT.md`). From now on each item is one fragment file (formats in `FRAGMENTS.md`, `BLOCKER.md`, `DECISION.md`), and the tables plus an owner queue are generated on `main` only. The three legacy files in your context must be migrated without losing a word or an ID.
 
 ## 2. Your job

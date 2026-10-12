@@ -12,6 +12,8 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-10 created.
   2026-10-11 WP-1.0 FR-1.0-14 (Claude): a repeated model rank is refused (B1: rank is unique).
+  2026-10-11 WP-1.0 FR-1.0-14 (Claude, owner's BLK-1.0-12 answer): optional per-model reasoning_effort, temperature,
+    top_p and timeout_seconds.
 """
 from __future__ import annotations
 
@@ -57,6 +59,10 @@ class ModelSpec:
     rpm: int | None = None
     tpm_input: int | None = None
     rpd: int | None = None
+    reasoning_effort: str | None = None
+    temperature: float | None = None
+    top_p: float | None = None
+    timeout_seconds: int | None = None
 
 
 @dataclass(frozen=True)
@@ -190,8 +196,24 @@ def _parse_models(models_raw: object, providers: dict[str, ProviderSpec]) -> dic
             rpm=mdata.get("rpm"),
             tpm_input=mdata.get("tpm_input"),
             rpd=mdata.get("rpd"),
+            **_request_parameters(mname, mdata),
         )
     return models
+
+
+def _request_parameters(mname: str, mdata: dict) -> dict:
+    """The optional per-model request parameters (BLK-1.0-12): validated, or a LimitsError naming the field."""
+    effort, temp, top_p, timeout = (mdata.get(k) for k in ("reasoning_effort", "temperature", "top_p", "timeout_seconds"))
+    if effort is not None and (not isinstance(effort, str) or not effort.strip()):
+        raise LimitsError(f"Model '{mname}' reasoning_effort must be a non-empty string")
+    if temp is not None and (isinstance(temp, bool) or not isinstance(temp, (int, float)) or not 0 <= temp <= 2):
+        raise LimitsError(f"Model '{mname}' temperature must be a number from 0 to 2")
+    if top_p is not None and (isinstance(top_p, bool) or not isinstance(top_p, (int, float)) or not 0 < top_p <= 1):
+        raise LimitsError(f"Model '{mname}' top_p must be a number above 0 and at most 1")
+    if timeout is not None and (isinstance(timeout, bool) or not isinstance(timeout, int) or timeout <= 0):
+        raise LimitsError(f"Model '{mname}' timeout_seconds must be a positive integer")
+    return {"reasoning_effort": effort, "temperature": None if temp is None else float(temp),
+            "top_p": None if top_p is None else float(top_p), "timeout_seconds": timeout}
 
 
 def load_pool(path_or_dict: str | Path | dict) -> Pool:

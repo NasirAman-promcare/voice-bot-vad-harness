@@ -243,13 +243,16 @@ def test_FR_1_0_14_mc01_provider_rps_spacing_always_holds(tmp_path):
 
 
 def test_FR_1_0_14_mc01_effective_rpm_from_the_real_pool_file(tmp_path):
-    # gemini-3.8-flash: rpm 5, safety 0.8, share 2 -> floor(5 x 0.8 x 1.0 / 2) = 2 requests a minute.
+    # The real pool's best-ranked enabled model: its lower per-minute request limit (model or provider) x safety
+    # / share, rounded down, is the most requests in any 60 seconds (B2).
     data = json.loads((ROOT / "config/aqis_lab/model_pool.json").read_text(encoding="utf-8"))
-    name = "gemini-3.8-flash"
-    expected = max(1, math.floor(data["models"][name]["rpm"] * data["safety"] / data["share"]))
+    enabled = [n for n, m in data["models"].items() if data["providers"][m["provider"]]["enabled"]]
+    name = min(enabled, key=lambda n: data["models"][n]["rank"])
+    rpms = [r for r in (data["models"][name].get("rpm"), data["providers"][data["models"][name]["provider"]].get("rpm")) if r]
+    expected = max(1, math.floor(min(rpms) * data["safety"] / data["share"]))
     clock = SimClock()
     _, gov = governor_for(ROOT / "config/aqis_lab/model_pool.json", tmp_path / "s.json", clock)
-    starts = run_slots(gov, clock, name, 6)
+    starts = run_slots(gov, clock, name, expected + 4)
     assert window_max(starts) == expected
 
 
