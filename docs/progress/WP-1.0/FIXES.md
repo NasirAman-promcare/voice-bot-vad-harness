@@ -88,3 +88,19 @@
   - `git diff -U0 40dba44 57a2afe -- tools/outsourcing/openai_client.py`: eight hunks: change log, two imports, `_build_payload`, new `_parse_openai_ok`, and three in `generate` (the `streamed` line, the `except` lines, the final call).
   - Break recipes MC-WO-1.0-10-17 and -18 are caught.
   - `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-1.0`: 27 findings, all F3/F4 close-out coverage (requirement IDs not yet in EVIDENCE or not yet in test names); none on the changed files.
+
+## FIX-B14-earlier-files — an accepted part did not commit the earlier outputs its fix turns changed
+- **Source.** WO-1.0-03 step 4 (`401a471`). Attempt 2's fix turn rewrote `tools/index/registry.py`, an earlier output the fix order allowed (B12): it made `_owning_wp` public as `owning_wp` for `render.py`. Attempt 3 re-sent only `test_render.py`; `15 passed`, and the part was accepted. The commit held only `render.py`, `test_render.py` and `steps.md`. The next run's `open_worktree` discarded the uncommitted `registry.py`, so `test_render.py` failed to import (`ImportError: cannot import name 'owning_wp' from 'tools.index.registry'`). WO-1.0-11 B12 and B14 require the earlier file to be recorded under the part and committed with it.
+- **Change budget.** `tools/outsourcing/stepper.py`: new `_accepted_paths` (`git status` of the order's outputs, intersected with outputs accepted earlier); `_handle_import_and_checks` hashes `_accepted_paths(ctx, part)` instead of `part.paths`; two imports; the change log.
+- **Evidence.**
+  - New test `test_relay_earlier_files_wo_1_0_11.py` before the fix: `AssertionError: assert 'lab_demo/alpha.py' in ['docs/outsourcing/returns/WO-9.9-03/steps.md', 'lab_demo/beta.py', 'tests/aqis_lab/demo/test_beta.py']`. After: `1 passed`.
+  - All outsourcing tests: `414 passed in 79.69s`.
+  - Break recipe `MC-WO-1.0-11-15-earlier-files-committed.patch` is caught (the same assertion).
+- **Branch repair.** `wo/WO-1.0-03` `a08cac8` restores the `registry.py` from step 4's attempt-2 bundle, byte for byte (read with `sse.assemble` and `bundle.parse_bundle` from `.relay/logs/WO-1.0-03/step-4/attempt-2/response.raw`).
+
+## FIX-WO03-absolute-from — `scan` dropped absolute `from a.b import c` imports (WO-1.0-03 step 2 output)
+- **Source.** WO-1.0-03 step 5 was exhausted twice (3 then 5 attempts), with the same 7 failures in `test_impact.py`. A probe on the test's scratch repository: `tests/aqis_lab/test_scr_alpha.py imports: ()` for `from aqis_lab.pkg.alpha import alpha_fn`. `scan._resolve_import` prefixed the importer's own folder even when `level == 0`. Step 5 could not fix it: under B12, the fix order allows only earlier files that a failing log names, and no log named `scan.py`.
+- **Change budget.** `tools/index/scan.py` (on `wo/WO-1.0-03`): `_resolve_import` gains `else: base_parts = []` (2 lines); the change log. `tests/aqis_lab/index/test_scan.py`: one new test, and one corrected expected value (TEST_CHANGES).
+- **Evidence.**
+  - New test before the fix: `1 failed, 20 passed`. After the fix and the corrected expectation: `tests/aqis_lab/index` without `test_impact.py` and the acceptance file → `73 passed`.
+  - It stays with Claude because it is a 2-line fix to accepted relay output that the relay itself cannot reach.

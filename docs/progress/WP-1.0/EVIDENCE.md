@@ -169,3 +169,8 @@ All runs stream the WO-1.0-03 step-1 request as the relay builds it (about 21,70
 - **WO-1.0-04, run 4 (`--attempts 5`).** `EXHAUSTED`, `Parts: 3/6`, `Requests: moonshotai/kimi-k3: 10`, `Tokens: in 609579, out 29597`, `exit=8`. Steps 2 and 3 accepted (`97e2afc`, `2d0bb8e` on `wo/WO-1.0-04`).
   - Step 4: the model's `ids.py` hands out the lowest unused number, while its own `test_B9_highest_number_wins_over_sort_order` expects `BLK-2.1-11` after `-09` and `-10`: `AssertionError: assert 'BLK-2.1-01' == 'BLK-2.1-11'` on attempts 2 to 4. Attempt 5's answer was prose (`Bundle error: Non-blank text outside block: 'I cannot reproduce this failure …'`).
   - B9 says only "next free". I clarified it as the highest number in use plus one, so IDs are never reused; that is consistent with `test_FR_1_0_04_mc02_new_id_takes_the_next_free_number`.
+- **WO-1.0-03, run 1 (attempt budget 3).** `EXHAUSTED`, `Parts: 4/6`, `Requests: moonshotai/kimi-k3: 11`, `Tokens: in 513925, out 106984`, `exit=8`. Steps 1 to 4 accepted (`e484bb4`, `d770a51`, `86af8d0`, `401a471` on `wo/WO-1.0-03`).
+  - Step 5, attempt 1: finish `stop`, 45,298 output tokens, `TruncatedBundle Truncation sign detected: '...'`.
+  - Attempt 2: `BundleError Non-blank text outside block`.
+  - Attempt 3: the bundle parses; `4 failed, 16 passed` in the model's own `test_impact.py` (import-based selection printed `path::name` in place of `tests/aqis_lab/test_alpha.py`, against the order's format item 14).
+- **WO-1.0-03, run 2.** Changed strategy: `--attempts 5`.

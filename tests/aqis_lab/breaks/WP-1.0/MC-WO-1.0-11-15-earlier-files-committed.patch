@@ -1,0 +1,16 @@
+# MC: FIX-B14-earlier-files (WO-1.0-11 B12, B14)
+# behaviour: an accepted part's commit and step-log row hold every earlier output its fix turns changed
+# expect-fail: tests/aqis_lab/outsourcing/test_relay_earlier_files_wo_1_0_11.py::test_FR_1_0_02_fix_earlier_file_changed_by_a_fix_turn_is_committed_with_the_part
+diff --git a/tools/outsourcing/stepper.py b/tools/outsourcing/stepper.py
+index 871ab4a..26a21a5 100644
+--- a/tools/outsourcing/stepper.py
++++ b/tools/outsourcing/stepper.py
+@@ -244,7 +244,7 @@ def _handle_import_and_checks(
+     if chk_res.integrity_failed:
+         return StepOutcome(result=Result.INTEGRITY, stop_reason="Quick checks integrity failed"), current_req, allowed_paths
+     if chk_res.passed:
+-        hashes = tuple((p, _hash_file(ctx.worktree.path / p)) for p in _accepted_paths(ctx, part))
++        hashes = tuple((p, _hash_file(ctx.worktree.path / p)) for p in part.paths)
+         rec = StepRecord(
+             label=part.label, files=hashes, attempts=attempts_used, model=model_spec.name,
+             provider=model_spec.provider.name, model_version=reply.model_version,

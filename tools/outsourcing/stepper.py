@@ -14,10 +14,13 @@ CHANGE LOG:
   2026-10-10 WO-1.0-11 FIX 1: split functions, re-export run_final from stepper_final, and track reply token totals.
   2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): the router gets a token estimate, not the character count;
     RunContext keeps the last check results for the report.
+  2026-10-12 WP-1.0 FR-1.0-02 fix (Claude, FIX-B14-earlier-files): an accepted part records and commits every order
+    output its attempts changed, not only its own files (B12, B14).
 """
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import zoneinfo
 from dataclasses import dataclass, field
@@ -36,7 +39,7 @@ from tools.outsourcing.router import NoEligibleModel, PoolExhausted, Router, cli
 from tools.outsourcing.steplog import StepLog
 from tools.outsourcing.stepper_final import run_final
 from tools.outsourcing.workorder import WorkOrder
-from tools.outsourcing.worktree import Worktree
+from tools.outsourcing.worktree import Worktree, WorktreeError
 
 __all__ = ["RunContext", "run_part", "run_final"]
 
@@ -206,6 +209,20 @@ def run_part(ctx: RunContext, part: StepPart) -> StepOutcome:
             return outcome
 
 
+def _accepted_paths(ctx: RunContext, part: StepPart) -> tuple[str, ...]:
+    """The part's files, then every earlier output (accepted before) its attempts changed in the worktree (B12, B14)."""
+    proc = subprocess.run(
+        ["git", "status", "--porcelain=v1", "-z", "--no-renames", "--untracked-files=all", "--", *ctx.order.outputs],
+        cwd=ctx.worktree.path, capture_output=True, text=True,
+    )
+    if proc.returncode != 0:
+        raise WorktreeError(f"git status failed in {ctx.worktree.path}: {proc.stderr.strip()}")
+    changed = {entry[3:] for entry in proc.stdout.split("\0") if len(entry) > 3}
+    earlier = {path for acc in ctx.step_log.accepted for path, _ in acc.files}
+    extra = sorted(p for p in (changed & earlier) - set(part.paths) if (ctx.worktree.path / p).is_file())
+    return tuple(part.paths) + tuple(extra)
+
+
 def _handle_import_and_checks(
     ctx: RunContext, part: StepPart, model_spec: Any, reply: Any, b_obj: Any,
     attempts_used: int, max_attempts: int, allowed_paths: tuple[str, ...], current_req: Request, attempt_dir: Path
@@ -227,7 +244,7 @@ def _handle_import_and_checks(
     if chk_res.integrity_failed:
         return StepOutcome(result=Result.INTEGRITY, stop_reason="Quick checks integrity failed"), current_req, allowed_paths
     if chk_res.passed:
-        hashes = tuple((p, _hash_file(ctx.worktree.path / p)) for p in part.paths)
+        hashes = tuple((p, _hash_file(ctx.worktree.path / p)) for p in _accepted_paths(ctx, part))
         rec = StepRecord(
             label=part.label, files=hashes, attempts=attempts_used, model=model_spec.name,
             provider=model_spec.provider.name, model_version=reply.model_version,
