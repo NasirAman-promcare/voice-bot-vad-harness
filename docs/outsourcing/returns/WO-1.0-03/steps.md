@@ -18,6 +18,7 @@
 | 1 | tools/index/__init__.py=5334b3439456beaa00b1b962aa3c4bcd89b423ab9dd1534ff420768dca5e0826;tests/aqis_lab/index/__init__.py=f76a430fa5d9856abc07525949fabb3bc7051ad2eb3d7365920fd9f6b94db5e3;tools/index/headers.py=1fcad7f9f9372fb3c66ccf4441fc0517e5144854a2f610fc3a9610681f96a369;tests/aqis_lab/index/test_headers.py=da87f5324e5183c75a53a11d4f6adbb1c8df99cef3a1689fc2f978b7a1887e40 | 2 | moonshotai/kimi-k3 | nvidia | moonshotai/kimi-k3 | 30409 | 1896 | 0.0 |
 | 2 | tools/index/scan.py=5a5fd8c19b43aa7c45fb37f344da8b757795a38eb5547ecc074b8fba615b2645;tests/aqis_lab/index/test_scan.py=9abfb845ba4878dff873dfb069f9dd543458709ed56335ecff3b37cc26fc8db5 | 2 | moonshotai/kimi-k3 | nvidia | moonshotai/kimi-k3 | 37173 | 3395 | 0.0 |
 | 3 | tools/index/registry.py=a92a9af2fa7014a9ee0a6a22ce35471a61ed2866b1e12e9eef9e3c5f8352205d;tests/aqis_lab/index/test_registry.py=32e1d31e669f49cfab155946e46bf3c2ca81e09d85ac97f33592b9233809d96a | 1 | moonshotai/kimi-k3 | nvidia | moonshotai/kimi-k3 | 28363 | 10046 | 0.0 |
+| 4 | tools/index/render.py=a26ff5fae002d50b714f617bed5d85d55faa0519c3c79f34c11a57b2d714ac70;tests/aqis_lab/index/test_render.py=cab675f30c3db44a1da5a073e214dae54a0c0235a0b73ef0cfb6e24b0649c241 | 3 | moonshotai/kimi-k3 | nvidia | moonshotai/kimi-k3 | 67830 | 3618 | 0.0 |
 
 ## Switches
 | time_utc | label | from_model | to_model | reason |
