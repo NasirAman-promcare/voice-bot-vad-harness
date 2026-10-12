@@ -6,6 +6,6 @@ id: WO-1.0-04
 
 Result: EXHAUSTED
 Requests: 3
-Prompt tokens: 159166
-Output tokens: 13604
-Model: z-ai/glm-5.3-flash (nvidia)
+Prompt tokens: 153673
+Output tokens: 9494
+Model: moonshotai/kimi-k3 (nvidia)
