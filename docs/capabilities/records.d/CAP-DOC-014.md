@@ -1,0 +1,7 @@
+CAP: CAP-DOC-014
+Module: `docs/recording/CONSENT_FORM.md`
+Functions: sections why, what, storage, access, retention, withdrawal, contact; consent block
+What it does: One-page plain-English consent form for campaign A: every FR-0.8-01 section in order; the retention period and the contact are owner blanks (`[OWNER DECIDES: …]`) with no value beside them; the owner's facts (access, services, purpose, age 18 or older, withdrawal within 30 days, signed form kept offline) in their own sections exactly as `docs/approvals/WP-0.8.md` words them, with nothing changed or added (WP-0.8-F01, F02, F03); the whole consent block holds only its intro line, the 4 unticked tick boxes built from the approval (any list marker counts as a tick box) and the Name, Signature and Date lines (WP-0.8-F09); consent block with tick boxes, name, signature, date and a `ca-c` consent reference (D2); at most 450 words, short sentences, no legal jargon
+Tests: `test_FR_0_8_01_consent_form_has_every_required_section`, `test_FR_0_8_01_retention_is_an_owner_blank_with_no_value`, `test_FR_0_8_01_contact_is_an_owner_blank`, `test_FR_0_8_01_blank_check_detects_a_filled_in_value`, `test_FR_0_8_01_fits_one_page_word_budget`, `test_FR_0_8_01_plain_english_sentences_and_no_legal_jargon`, `test_FR_0_8_01_consent_block_has_signature_date_and_consent_reference`, `test_FR_0_8_01_owner_facts_appear_as_given`, `test_FR_0_8_01_owner_fact_check_rejects_changed_window_and_additions`
+Introduced by: WP-0.8 FR-0.8-01
+Status: ACTIVE

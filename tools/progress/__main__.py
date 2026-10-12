@@ -1,7 +1,20 @@
 """Command line for tools.progress: build, check, lint, migrate and new-id.
 
 CAPABILITIES:
-  CAP-PROGRESS-009: command line for the progress tooling [tests: test_acceptance_wo_1_0_04]
+  CAP-PROGRESS-009: command line for the progress tooling
+    [tests: test_FR_1_0_04_mc03_mc07_migration_round_trip_is_byte_identical,
+    test_FR_1_0_04_mc03_dry_run_lists_every_legacy_id,
+    test_FR_1_0_04_mc03_every_legacy_id_has_a_fragment_holding_its_text,
+    test_FR_1_0_04_mc03_migration_refuses_when_a_target_exists, test_FR_1_0_04_mc07_memo_readers_see_the_same_rows,
+    test_FR_1_0_04_mc01_blocker_without_valid_capability_fails_lint, test_FR_1_0_04_mc01_valid_blocker_passes_lint,
+    test_FR_1_0_04_mc01_blocker_with_more_than_seven_steps_fails_lint,
+    test_FR_1_0_04_mc02_id_differing_from_file_name_fails_lint,
+    test_FR_1_0_04_mc02_duplicate_ids_fail_lint_naming_both_paths,
+    test_FR_1_0_04_mc02_new_id_takes_the_next_free_number,
+    test_FR_1_0_04_mc04_owner_queue_orders_blockers_by_unmerged_wps,
+    test_FR_1_0_04_mc05_rendering_is_byte_identical_across_runs_and_file_order,
+    test_FR_1_0_04_mc06_on_main_renders_merged, test_FR_1_0_04_check_fails_when_a_table_is_stale,
+    test_FR_1_0_04_status_for_a_wp_without_spec_is_a_warning]
 INPUTS AND OUTPUTS: argv and the repository root (from git rev-parse --show-toplevel);
   writes generated tables on build, prints reports on lint/migrate/new-id, sets the exit code.
 CONTRACTS: fragment formats v1 (docs/process/templates/FRAGMENTS.md, BLOCKER.md, DECISION.md);
@@ -16,6 +29,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-12 WP-1.0 WO-1.0-04 step 6 created.
   2026-10-12 WP-1.0 WO-1.0-04 (Claude, FIX-WO04-final): lint passes the WPs with a spec under docs/specs/ (E4 warning).
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not a file (gate E3).
 """
 
 from __future__ import annotations

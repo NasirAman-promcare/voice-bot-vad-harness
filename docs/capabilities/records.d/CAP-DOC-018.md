@@ -1,0 +1,7 @@
+CAP: CAP-DOC-018
+Module: `docs/decisions/TARGETS_OPTIONS.md`
+Functions: how the owner decides; harm rate, practical margin, timing budget, gate escalation limit
+What it does: Options for the four FR-0.8-05 targets: each section quotes its blueprint target, gives 2 or 3 options (`HR-`, `PM-`, `TB-`, `GE-`) with what each gives and costs and a citation of a heading that exists in `docs/specs/sources/`; each decision line is the owner blank `[OWNER DECIDES: <target> option]` and nothing picks or ranks an option; the harm-rate counts out of the Build Plan's 500 rated turns are exact binomial thresholds; the `DECISION:` line format for `docs/approvals/WP-0.8.md` is documented; the owner's `DECISION:` lines in `docs/approvals/WP-0.8.md` each name one existing option of each target, plus a retention line
+Tests: `test_FR_0_8_05_four_targets_each_with_2_or_3_options`, `test_FR_0_8_05_every_option_has_trade_offs_and_a_citation`, `test_FR_0_8_05_citations_name_sections_of_the_committed_blueprint`, `test_FR_0_8_05_document_does_not_choose`, `test_FR_0_8_05_choice_check_detects_a_filled_decision`, `test_FR_0_8_05_decision_record_format_is_documented`, `test_FR_0_8_05_harm_rate_counts_recomputed`, `test_FR_0_8_05_owner_decisions_name_existing_options`, `test_FR_0_8_05_option_ids_only_in_option_column_and_decision_block`, `test_FR_0_8_05_option_id_check_detects_a_choice_in_other_words`
+Introduced by: WP-0.8 FR-0.8-05
+Status: ACTIVE
