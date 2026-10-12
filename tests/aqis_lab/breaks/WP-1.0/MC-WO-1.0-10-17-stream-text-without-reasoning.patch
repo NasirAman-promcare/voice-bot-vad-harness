@@ -1,0 +1,18 @@
+# MC: BLK-1.0-14 (streamed replies)
+# behaviour: a streamed reply's text is its delta.content only; reasoning chunks are never output
+# expect-fail: tests/aqis_lab/outsourcing/test_stream_wo_1_0_10.py::test_FR_1_0_14_stream_reply_joins_content_without_reasoning
+diff --git a/tools/outsourcing/sse.py b/tools/outsourcing/sse.py
+index 0cb4e90..92fc544 100644
+--- a/tools/outsourcing/sse.py
++++ b/tools/outsourcing/sse.py
+@@ -86,8 +86,8 @@ def assemble(body_text: str, provider: str) -> Completion:
+             if not isinstance(choice, dict) or choice.get("index", 0) != 0:
+                 continue
+             delta = choice.get("delta")
+-            if isinstance(delta, dict) and isinstance(delta.get("content"), str):
+-                parts.append(delta["content"])
++            if isinstance(delta, dict):
++                parts.append(delta.get("content") or delta.get("reasoning_content") or "")
+             finish = str(choice["finish_reason"]) if choice.get("finish_reason") else finish
+     if not done and finish is None:
+         raise StreamCut(f"stream from {provider} ended before its finish")
