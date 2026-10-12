@@ -20,10 +20,12 @@ Why: it is the only route within the session's limits. Token counts still come f
 
 Cannot-do check (all must be "no"):
 - Weakens, skips or deletes a test: no
-- Changes a requirement, threshold or exit criterion: no (the owner approved the B13 amendment)
+- Changes a requirement, threshold or exit criterion: no
 - Touches a NEVER path: no
 - Adds synthetic or substitute data where real data is required: no
 - Widens network, credentials or security permissions: no
 - Spends money or starts a paid service or trial: no
+
+Cannot-do note: on requirements, the owner approved the B13 amendment.
 
 Reversal: revert `57a2afe`'s changes to `openai_client.py` and the B13 amendment; `sse.py` and its tests go with them.

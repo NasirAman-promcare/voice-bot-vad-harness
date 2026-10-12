@@ -16,10 +16,12 @@ Why: section 2's intent is pacing under the provider's limits, and the provider'
 
 Cannot-do check (all must be "no"):
 - Weakens, skips or deletes a test: no
-- Changes a requirement, threshold or exit criterion: no (the limits are unchanged; the count now matches how they are applied)
+- Changes a requirement, threshold or exit criterion: no
 - Touches a NEVER path: no
 - Adds synthetic or substitute data where real data is required: no
 - Widens network, credentials or security permissions: no
 - Spends money or starts a paid service or trial: no
+
+Cannot-do note: on requirements, the limits are unchanged; the count now matches how they are applied.
 
 Reversal: move the two daily-count lines from `wait_for_slot` back into `record_result`.
