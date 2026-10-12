@@ -41,7 +41,9 @@ CHANGE LOG:
              module's importers, not its imports; capability tests come from non-test modules.
   2026-10-12 WP-1.0 FR-1.0-03 fix 4: a test file that imported a deleted module is selected
              from the merge-base graph directly: the import cannot resolve, so the file cannot
-             be collected, whatever its new content says."""
+             be collected, whatever its new content says.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude, DEC-1.0-10): a changed or new test file is selected itself.
+"""
 from __future__ import annotations
 
 import os
@@ -231,6 +233,7 @@ def affected_tests(repo_root, base_ref: str) -> ImpactResult:
             if _is_test_file(fact.path) and any(module in affected for module in fact.imports):
                 selected_files.add(fact.path)
         selected_files |= _broken_importers(deleted, graphs[1], facts)
+        selected_files |= {fact.path for fact in facts if _is_test_file(fact.path) and fact.path in affected}  # DEC-1.0-10
         wanted = _capability_tests(facts, affected)
         node_ids: set[str] = set()
         for fact in facts:

@@ -73,6 +73,7 @@ verify:
 - **B9** A file that fails to parse is reported as `path:line: message`; the other files are still indexed; the command exits non-zero.
 - **B10** `check` builds into a scratch folder and exits 1 if any generated file differs from the committed one, naming the files; exit 0 otherwise.
 - **B11** `impact --base REF`: changed files since the merge base → affected modules (the changed modules plus their importers, transitively, inside the repository) → tests: test files that import any affected module, plus tests named for capability tests listed in the affected modules' headers. Print one pytest argument per line. Print `all` with a reason when the change touches `conftest.py`, `requirements/`, `pyproject.toml`, `pytest.ini`, any file under `tests/aqis_lab/` helpers without a test prefix, or more than 25 modules, or when the base ref is missing after one fetch.
+  - **B11 clarification (2026-10-12, Claude, DEC-1.0-10, after the order was accepted).** A test file that is itself in the affected set (changed or new) is selected as its path, like a test file that imports an affected module.
 
 - **B12** Pins (amended by Claude after BLK-1.0-05, option 1; the acceptance test checks each):
   1. **Roots.** The command works on the git top-level of the current directory. Every path it prints or writes is repository-relative with `/` separators; nothing depends on the absolute location.
