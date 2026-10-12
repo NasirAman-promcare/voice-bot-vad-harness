@@ -11,6 +11,8 @@ NOT IN SCOPE:
   - Local state persistence (handled by governor).
 CHANGE LOG:
   2026-10-10 WO-1.0-10 created.
+  2026-10-11 WP-1.0 FR-1.0-14 (Claude, owner's BLK-1.0-12 answer): the request carries the model's reasoning_effort,
+    temperature and top_p when the pool sets them (DEC-1.0-08); the socket timeout is at least its timeout_seconds.
 """
 from __future__ import annotations
 
@@ -47,7 +49,12 @@ def _build_payload(spec: ModelSpec, request: ChatRequest) -> dict[str, Any]:
         messages.append({"role": "system", "content": request.system})
     for turn in request.turns:
         messages.append({"role": turn.role, "content": turn.text})
-    return {"model": spec.name, "messages": messages, "max_tokens": min(request.max_output_tokens, spec.max_output_tokens)}
+    payload: dict[str, Any] = {"model": spec.name, "messages": messages,
+                               "max_tokens": min(request.max_output_tokens, spec.max_output_tokens)}
+    for key in ("reasoning_effort", "temperature", "top_p"):
+        if getattr(spec, key) is not None:
+            payload[key] = getattr(spec, key)
+    return payload
 
 
 def _check_learned_headers(spec: ModelSpec, governor: Governor, headers: dict[str, str]) -> None:
@@ -235,7 +242,7 @@ class OpenAIClient:
     def __init__(self, spec: ModelSpec, governor: Governor, timeout: float, base_url: str | None = None) -> None:
         self.spec = spec
         self.governor = governor
-        self.timeout = timeout
+        self.timeout = max(timeout, spec.timeout_seconds or 0)
         self.base_url = (base_url or spec.provider.base_url).rstrip("/")
 
     def count_tokens(self, request: ChatRequest) -> TokenCount:

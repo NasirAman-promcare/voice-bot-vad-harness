@@ -1,0 +1,16 @@
+# MC: DEC-1.0-08 (model timeout)
+# behaviour: the client's socket timeout is at least the model's timeout_seconds
+# expect-fail: tests/aqis_lab/outsourcing/test_model_params_wo_1_0_10.py::test_FR_1_0_14_socket_timeout_is_at_least_the_models[300-360-360-openai]
+diff --git a/tools/outsourcing/openai_client.py b/tools/outsourcing/openai_client.py
+index af0e700..29912da 100644
+--- a/tools/outsourcing/openai_client.py
++++ b/tools/outsourcing/openai_client.py
+@@ -242,7 +242,7 @@ class OpenAIClient:
+     def __init__(self, spec: ModelSpec, governor: Governor, timeout: float, base_url: str | None = None) -> None:
+         self.spec = spec
+         self.governor = governor
+-        self.timeout = max(timeout, spec.timeout_seconds or 0)
++        self.timeout = timeout
+         self.base_url = (base_url or spec.provider.base_url).rstrip("/")
+ 
+     def count_tokens(self, request: ChatRequest) -> TokenCount:

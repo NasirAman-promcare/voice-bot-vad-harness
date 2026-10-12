@@ -11,6 +11,7 @@ NOT IN SCOPE:
   - Local state persistence (handled by governor).
 CHANGE LOG:
   2026-10-10 WO-1.0-10 created.
+  2026-10-11 WP-1.0 FR-1.0-14 (Claude): the socket timeout is at least the model's timeout_seconds.
 """
 from __future__ import annotations
 
@@ -215,7 +216,7 @@ class GeminiClient:
     def __init__(self, spec: ModelSpec, governor: Governor, timeout: float, base_url: str | None = None) -> None:
         self.spec = spec
         self.governor = governor
-        self.timeout = timeout
+        self.timeout = max(timeout, spec.timeout_seconds or 0)
         self.base_url = (base_url or spec.provider.base_url).rstrip("/")
 
     def count_tokens(self, request: ChatRequest) -> TokenCount:

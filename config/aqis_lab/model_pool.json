@@ -3,14 +3,25 @@
   "share": 2,
   "safety": 0.8,
   "providers": {
+    "nvidia": {
+      "api": "openai",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "enabled": true,
+      "tier": "free",
+      "verified_on": "2026-10-12",
+      "day_reset": "UTC",
+      "rpm": 40,
+      "tpm_input": 500000,
+      "data_use": "NVIDIA Inception Developer API"
+    },
     "gemini": {
       "api": "gemini",
       "base_url": "https://generativelanguage.googleapis.com",
-      "enabled": true,
+      "enabled": false,
       "tier": "free",
       "verified_on": "2026-10-09",
       "day_reset": "America/Los_Angeles",
-      "data_use": "Free tier: Google may use prompts and responses to improve its products, and human reviewers may read them."
+      "data_use": "Free tier quota exhausted (stuck at 22/20 RPD)."
     },
     "mistral": {
       "api": "openai",
@@ -19,18 +30,7 @@
       "tier": "free",
       "verified_on": "2026-10-10",
       "day_reset": "UTC",
-      "data_use": "Free (Experiment) plan: may be used for training unless 'Anonymous improvement data' is switched off in Admin > Privacy."
-    },
-    "nvidia": {
-      "api": "openai",
-      "base_url": "https://integrate.api.nvidia.com/v1",
-      "enabled": true,
-      "tier": "free",
-      "verified_on": "",
-      "day_reset": "UTC",
-      "rpm": 40,
-      "data_use": "API trial terms: for testing and evaluation, not production; NVIDIA may use content to improve its products and models.",
-      "tpm_input": 500000
+      "data_use": "Disabled: Codestral hallucinated unbuilt modules; Large is paywalled (HTTP 403)."
     },
     "openrouter": {
       "api": "openai",
@@ -41,11 +41,11 @@
       "day_reset": "UTC",
       "rpm": 20,
       "rpd": 50,
-      "data_use": "Free models: some upstream hosts log prompts or train on them."
+      "data_use": "Disabled."
     }
   },
   "models": {
-    "z-ai/glm-5.3": {
+    "z-ai/glm-5.3-flash": {
       "provider": "nvidia",
       "rank": 1,
       "risk_tiers": [
@@ -56,7 +56,11 @@
       "rpm": 40,
       "tpm_input": 500000,
       "max_input_tokens": 1048576,
-      "max_output_tokens": 128000
+      "max_output_tokens": 16384,
+      "reasoning_effort": "high",
+      "temperature": 0.5,
+      "top_p": 1.0,
+      "timeout_seconds": 180
     },
     "moonshotai/kimi-k3": {
       "provider": "nvidia",
@@ -69,75 +73,11 @@
       "rpm": 40,
       "tpm_input": 500000,
       "max_input_tokens": 1048576,
-      "max_output_tokens": 65536
-    },
-    "gemini-3.8-flash": {
-      "provider": "gemini",
-      "rank": 3,
-      "risk_tiers": [
-        "T1",
-        "T2",
-        "T3"
-      ],
-      "rpm": 5,
-      "tpm_input": 250000,
-      "rpd": 20,
-      "max_input_tokens": 1048576,
-      "max_output_tokens": 65536
-    },
-    "deepseek-ai/deepseek-v4.1-flash": {
-      "provider": "nvidia",
-      "rank": 4,
-      "risk_tiers": [
-        "T1",
-        "T2",
-        "T3"
-      ],
-      "rpm": 40,
-      "tpm_input": 500000,
-      "max_input_tokens": 131072,
-      "max_output_tokens": 65536
-    },
-    "gemini-3.7-flash": {
-      "provider": "gemini",
-      "rank": 5,
-      "risk_tiers": [
-        "T1",
-        "T2",
-        "T3"
-      ],
-      "rpm": 5,
-      "tpm_input": 250000,
-      "rpd": 20,
-      "max_input_tokens": 1048576,
-      "max_output_tokens": 65536
-    },
-    "z-ai/glm-5.3-flash": {
-      "provider": "nvidia",
-      "rank": 6,
-      "risk_tiers": [
-        "T1",
-        "T2",
-        "T3"
-      ],
-      "rpm": 40,
-      "tpm_input": 500000,
-      "max_input_tokens": 1048576,
-      "max_output_tokens": 65536
-    },
-    "gemini-3.6-flash": {
-      "provider": "gemini",
-      "rank": 7,
-      "risk_tiers": [
-        "T1",
-        "T2",
-        "T3"
-      ],
-      "rpm": 5,
-      "tpm_input": 250000,
-      "rpd": 20,
-      "max_input_tokens": 1048576,
-      "max_output_tokens": 65536
+      "max_output_tokens": 16384,
+      "reasoning_effort": "high",
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "timeout_seconds": 360
     }
   }
 }

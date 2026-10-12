@@ -15,6 +15,7 @@ CHANGE LOG:
     limit); wait_for_provider sleeps outside the lock.
   2026-10-11 WP-1.0 FR-1.0-14 (Claude, DEC-1.0-06): every sent request counts toward the day in wait_for_slot,
     as the providers count it; record_result keeps tokens only.
+  2026-10-11 WP-1.0 FR-1.0-14 (Claude, DEC-1.0-07): record_rejection appends each rejection to rejections.jsonl.
 """
 from __future__ import annotations
 
@@ -28,7 +29,7 @@ from tools.outsourcing.limits import (
     EffectiveLimits, ModelSpec, Pool, ProviderSpec, _la_offset, _resolve_tz, effective, monthly_reset, next_reset,
 )
 from tools.outsourcing.governor_state import (
-    FileLock, GovernorReport, ModelReport, ModelStats, ProviderReport, ProviderStats, load_stats, save_stats,
+    FileLock, GovernorReport, ModelReport, ModelStats, ProviderReport, ProviderStats, append_rejection, load_stats, save_stats,
 )
 from tools.outsourcing.quota import QuotaVerdict
 
@@ -289,6 +290,10 @@ class Governor:
             self._load_state_unlocked()
             self._record_rejection_unlocked(model_name, verdict)
             self._save_state_unlocked()
+            append_rejection(self.state_path, {
+                "utc": datetime.fromtimestamp(self.clock(), tz=timezone.utc).isoformat(), "model": model_name,
+                "provider": self.pool.model(model_name).provider.name, "kind": verdict.kind, "scope": verdict.scope,
+                "message": verdict.message})
 
     def _remaining_today_unlocked(self, model_name: str) -> int | None:
         m_spec = self.pool.model(model_name)
