@@ -124,3 +124,10 @@ EXIT 8
 - **Break recipes.** `MC-WO-1.0-10-15-model-parameters-forwarded.patch` and `MC-WO-1.0-10-16-model-timeout-floor.patch` are both caught.
 - **`relay --models`.** `z-ai/glm-5.3-flash: present`, `moonshotai/kimi-k3: present`, exit 0.
 - **Dry runs.** WO-1.0-03 `~23002 tokens -> z-ai/glm-5.3-flash`; WO-1.0-04, trimmed, `~44265 tokens -> z-ai/glm-5.3-flash`.
+
+## NVIDIA key not injected in this session → BLK-1.0-13 (2026-10-12)
+- **WO-1.0-04 on the final pool.** `PAUSED-BUSY`, `Requests: moonshotai/kimi-k3: 18 | Retries: OVERLOADED: 18`, `EXIT 12`.
+- **`.relay/rejections.jsonl`.** 34 records (18 kimi-k3 and 16 glm-5.3-flash), all `upstream request failed`, seconds apart (for example 10:25:18, 10:25:27 and 10:27:02 UTC).
+- **Request bodies.** Rebuilt from the pool with `_build_payload`: glm `{'max_tokens': 16384, 'reasoning_effort': 'high', 'temperature': 0.5, 'top_p': 1.0}`, kimi `{'max_tokens': 16384, 'reasoning_effort': 'high', 'temperature': 1.0, 'top_p': 0.95}`.
+- **Environment.** `env | cut -d= -f1 | grep -i -E "nvidia|nim|ngc"` returns nothing. This session's proxy-injected hosts, fixed at session start, are `api.mistral.ai`, `generativelanguage.googleapis.com` and `huggingface.co`.
+- **WO-1.0-03 run.** Stopped.
