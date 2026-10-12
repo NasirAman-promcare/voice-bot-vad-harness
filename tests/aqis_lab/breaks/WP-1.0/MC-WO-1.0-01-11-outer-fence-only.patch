@@ -5,10 +5,10 @@
 # expect-fail: tests/aqis_lab/outsourcing/test_outer_fence_wo_1_0_01.py::test_FR_1_0_01_other_text_or_fences_outside_the_blocks_stay_refused[closing-only]
 # expect-fail: tests/aqis_lab/outsourcing/test_outer_fence_wo_1_0_01.py::test_FR_1_0_01_other_text_or_fences_outside_the_blocks_stay_refused[mismatched-backticks]
 diff --git a/tools/outsourcing/bundle.py b/tools/outsourcing/bundle.py
-index 0aad482..a230e70 100644
+index 31bbab2..677cfdc 100644
 --- a/tools/outsourcing/bundle.py
 +++ b/tools/outsourcing/bundle.py
-@@ -106,9 +106,7 @@ def _strip_outer_fence(lines: list[str]) -> list[str]:
+@@ -112,9 +112,7 @@ def _strip_outer_fence(lines: list[str]) -> list[str]:
          return lines
      first, last = filled[0], filled[-1]
      opening = OUTER_FENCE_RE.fullmatch(lines[first].strip())
@@ -18,4 +18,4 @@ index 0aad482..a230e70 100644
 +    return [line for line in lines if not OUTER_FENCE_RE.fullmatch(line.strip())]
  
  
- def parse_bundle(text: str) -> Bundle:
+ OPEN_MARKER_RE = re.compile(r"=== (?:MANIFEST|DOD|QUESTIONS|FILE: .*) ===")
