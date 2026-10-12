@@ -11,6 +11,8 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-02 created.
   2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): estimated_input_tokens, the router's input estimate in tokens.
+  2026-10-12 WP-1.0 FR-1.0-02 fix (Claude, FIX-B3-split-siblings): a split part also sees its step's files that come
+    before it, accepted as earlier split parts.
 """
 from __future__ import annotations
 
@@ -113,6 +115,9 @@ def _get_plan_partitions(plan: tuple[Step, ...], part: StepPart) -> tuple[list[s
             earlier_outputs.extend(s.paths)
         elif part_step_num is not None and s.number > part_step_num:
             later_outputs.extend(s.paths)
+        elif part_step_num is not None:
+            first = min(s.paths.index(p) for p in part.paths if p in s.paths)
+            earlier_outputs.extend(s.paths[:first])  # split parts before this one were accepted (WO-1.0-11 B13)
     return earlier_outputs, later_outputs
 
 
