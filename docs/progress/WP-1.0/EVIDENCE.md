@@ -174,3 +174,10 @@ All runs stream the WO-1.0-03 step-1 request as the relay builds it (about 21,70
   - Attempt 2: `BundleError Non-blank text outside block`.
   - Attempt 3: the bundle parses; `4 failed, 16 passed` in the model's own `test_impact.py` (import-based selection printed `path::name` in place of `tests/aqis_lab/test_alpha.py`, against the order's format item 14).
 - **WO-1.0-03, run 2.** Changed strategy: `--attempts 5`.
+- **WO-1.0-04, run 5 (`--attempts 5`, after the B9 clarification).** `EXHAUSTED`, `Parts: 6/6`, `Requests: moonshotai/kimi-k3: 11`, `Tokens: in 693876, out 79878`. Final verification (`verify-1`, the progress tests) failed in all 5 rounds. On the branch as committed: `14 failed, 78 passed`, every failure in `test_acceptance_wo_1_0_04.py`:
+  - 6× `Missing required field: ID` for blockers following `BLOCKER.md`, which carry the ID in their heading;
+  - the migration refused `DEBT-025`, whose Status cell is `OPEN, moved to WP-4.5 (…)`;
+  - the E4 warning was missing;
+  - in the fix rounds, `duplicate labelled line 'WP'` inside migrated legacy text.
+  - B2/B8 clarification added to the order.
+- **WO-1.0-03, run 3** started after the repair (`a08cac8`) and FIX-B14-earlier-files.

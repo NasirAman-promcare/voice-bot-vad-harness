@@ -1,0 +1,16 @@
+# MC: FIX-B3-split-siblings (WO-1.0-02 B3 item 4, WO-1.0-11 B13)
+# behaviour: a split part's request shows the files of its step that were accepted as earlier split parts
+# expect-fail: tests/aqis_lab/outsourcing/test_prompt_split_parts_wo_1_0_02.py::test_FR_1_0_02_fix_split_part_sees_the_step_files_accepted_before_it
+diff --git a/tools/outsourcing/prompt.py b/tools/outsourcing/prompt.py
+index 41dfc92..f4d95e5 100644
+--- a/tools/outsourcing/prompt.py
++++ b/tools/outsourcing/prompt.py
+@@ -117,7 +117,7 @@ def _get_plan_partitions(plan: tuple[Step, ...], part: StepPart) -> tuple[list[s
+             later_outputs.extend(s.paths)
+         elif part_step_num is not None:
+             first = min(s.paths.index(p) for p in part.paths if p in s.paths)
+-            earlier_outputs.extend(s.paths[:first])  # split parts before this one were accepted (WO-1.0-11 B13)
++            earlier_outputs.extend(())  # split parts before this one were accepted (WO-1.0-11 B13)
+     return earlier_outputs, later_outputs
+ 
+ 

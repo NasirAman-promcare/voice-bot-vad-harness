@@ -26,8 +26,8 @@ Options:
 2. **Same reasoning values, ranks unchanged (GLM first).** This also works. GLM's single answer failed the bundle parser, so each step would probably need fix turns.
 3. **Keep `high` and raise the output limit only.** I do not recommend it: at `medium` and 60,000 tokens GLM still never answered, and one step took 33 minutes.
 
-Exact steps (option 1):
-1. On GitHub, open `config/aqis_lab/model_pool.json` on `main` and click the pencil (Edit).
+Exact steps:
+1. For option 1: on GitHub, open `config/aqis_lab/model_pool.json` on `main` and click the pencil (Edit).
 2. In `"moonshotai/kimi-k3"`, set `"rank": 1`, `"max_output_tokens": 60000`, `"reasoning_effort": "none"`.
 3. In `"z-ai/glm-5.3-flash"`, set `"rank": 2`, `"max_output_tokens": 60000`, `"reasoning_effort": "low"`.
 4. Leave temperature, top_p and timeout_seconds as they are. Commit to `main`.
