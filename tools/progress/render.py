@@ -22,6 +22,7 @@ NOT IN SCOPE:
   - Parsing, linting, ID allocation and migration (separate modules).
 CHANGE LOG:
   2026-10-12 WP-1.0 WO-1.0-04 step 3 created.
+  2026-10-12 WP-1.0 WO-1.0-04 (Claude, FIX-WO04-final): STATUS.md ends without a newline, like the legacy file (B11 round trip).
 """
 from __future__ import annotations
 
@@ -127,7 +128,7 @@ def render_status(records: tuple[StatusFragment, ...], on_main: bool) -> str:
             updated=fields.get("Updated", ""),
         )
         rows.append(row)
-    return GENERATED_LINE + STATUS_HEADER + "\n".join(rows) + ("\n" if rows else "")
+    return GENERATED_LINE + STATUS_HEADER + "\n".join(rows)  # the legacy STATUS.md ends without a newline (B11)
 
 
 def _blocker_sort_key(record: BlockerFragment) -> tuple[tuple[str, tuple[int, ...]], str]:

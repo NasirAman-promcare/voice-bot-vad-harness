@@ -21,6 +21,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-12 WP-1.0 WO-1.0-04 step 5 created.
   2026-10-12 WP-1.0 WO-1.0-04 fix 1: restructured the entry-heading match so no type-check suppression is needed.
+  2026-10-12 WP-1.0 WO-1.0-04 (Claude, FIX-WO04-final): a legacy Status cell's first word is its leading capitals (`OPEN, moved…` → OPEN).
 """
 from __future__ import annotations
 
@@ -126,7 +127,8 @@ def _debt_fragments(text: str) -> list[tuple[str, str]]:
             continue
         cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
         debt_id, status_cell, target_wp = cells[0], cells[6], cells[5]
-        status = status_cell.split()[0] if status_cell else ""
+        leading = re.match(r"[A-Z]+", status_cell)
+        status = leading.group(0) if leading else ""
         if status not in ("OPEN", "CLOSED"):
             raise MigrationError(
                 f"{DEBT_PATH.as_posix()}: row {debt_id} has a Status cell that starts with neither OPEN nor "

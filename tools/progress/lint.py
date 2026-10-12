@@ -16,7 +16,9 @@ INVARIANTS:
 NOT IN SCOPE:
   - Rendering, migration and ID allocation (separate modules).
 CHANGE LOG:
-  2026-10-12 WP-1.0 WO-1.0-04 step 2 created."""
+  2026-10-12 WP-1.0 WO-1.0-04 step 2 created.
+  2026-10-12 WP-1.0 WO-1.0-04 (Claude, FIX-WO04-final): migrated legacy blockers skip the new template checks; `spec_wps` gives the E4 warning.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -58,9 +60,17 @@ class LintIssue:
     message: str
 
 
-def lint(fragments: Fragments, changed_only_paths: set[Path] | None = None) -> list[LintIssue]:
-    """Validate fragments and return lint issues in a deterministic order."""
+def lint(
+    fragments: Fragments, changed_only_paths: set[Path] | None = None, spec_wps: set[str] | None = None
+) -> list[LintIssue]:
+    """Validate fragments and return lint issues in a deterministic order.
+
+    With spec_wps (the WPs that have a spec), a status fragment for any other WP is a warning (E4)."""
     issues: list[LintIssue] = []
+    for record in fragments.status if spec_wps is not None else ():
+        wp = record.fields.get("WP", "")
+        if wp and wp not in spec_wps and _include(record.path, changed_only_paths):
+            issues.append(LintIssue("warning", record.path, f"{wp} has no spec under docs/specs/"))
     issues.extend(_lint_status(fragments.status, changed_only_paths))
     issues.extend(_lint_blockers(fragments.blockers, changed_only_paths))
     issues.extend(_lint_debt(fragments.debt, changed_only_paths))
@@ -110,13 +120,10 @@ def _lint_blockers(records: tuple[BlockerFragment, ...], changed_only: set[Path]
         status = record.fields.get("Status", "")
         if status and status not in _BLOCKER_STATUS:
             issues.append(LintIssue("error", record.path, "Status must be OPEN or RESOLVED"))
-        if not record.fields.get("Time needed"):
-            issues.append(LintIssue("error", record.path, "Missing required field: Time needed"))
-        if not record.fields.get("Meanwhile"):
-            issues.append(LintIssue("error", record.path, "Missing required field: Meanwhile"))
-        if not record.fields.get("Unblocks"):
-            issues.append(LintIssue("error", record.path, "Missing required field: Unblocks"))
-        if len(record.steps) < 1 or len(record.steps) > 7:
+        for field in () if legacy else ("Time needed", "Meanwhile", "Unblocks"):
+            if not record.fields.get(field):
+                issues.append(LintIssue("error", record.path, f"Missing required field: {field}"))
+        if not legacy and not 1 <= len(record.steps) <= 7:
             issues.append(LintIssue("error", record.path, "Exact steps must number 1 to at most 7"))
         issues.extend(_lint_id("BLK", record.path, record.fields, legacy))
     return issues

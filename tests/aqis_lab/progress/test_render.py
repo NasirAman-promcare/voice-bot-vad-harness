@@ -157,8 +157,8 @@ def test_B11_status_table_keeps_legacy_layout() -> None:
     text = render_status(records, on_main=True)
     assert text == GENERATED_LINE + STATUS_HEADER + (
         "| WP-0.0 | Title WP-0.0 | MERGED | claude/hopeful-noether-yinc4e, "
-        "PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/1 | 2026-09-27 |\n"
-    )
+        "PR https://github.com/NasirAman-promcare/voice-bot-vad-harness/pull/1 | 2026-09-27 |"
+    )  # Claude, 2026-10-12: like the legacy STATUS.md, the table ends without a newline (B11 round trip)
 
 
 def test_B11_blocker_entry_keeps_verbatim_text() -> None:

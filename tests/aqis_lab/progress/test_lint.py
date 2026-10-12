@@ -191,6 +191,14 @@ def test_B2_legacy_debt_status_agrees_with_row() -> None:
     assert any("agree" in issue.message for issue in issues)
 
 
+def test_E4_status_without_spec_is_a_warning_when_specs_are_known() -> None:
+    # Claude, 2026-10-12 (FIX-WO04-final): lint warns, without an error, for a WP that has no spec.
+    record = StatusFragment(Path("docs/progress/status.d/WP-7.7.md"), {"WP": "WP-7.7", "Status": "IN-BUILD"}, "")
+    issues = lint(_fragments(status=(record,)), spec_wps={"WP-2.1"})
+    assert [(i.severity, i.message) for i in issues] == [("warning", "WP-7.7 has no spec under docs/specs/")]
+    assert lint(_fragments(status=(record,)), spec_wps={"WP-7.7"}) == []
+
+
 def test_E4_unknown_wp_status_is_a_warning() -> None:
     record = _status(path="docs/progress/status.d/WP-7.7.md")
     fragments = _fragments(status=(record,))

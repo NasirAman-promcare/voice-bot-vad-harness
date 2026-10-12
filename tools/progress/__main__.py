@@ -14,7 +14,9 @@ INVARIANTS:
 NOT IN SCOPE:
   - Parsing, linting, rendering, ID allocation and migration logic (separate modules).
 CHANGE LOG:
-  2026-10-12 WP-1.0 WO-1.0-04 step 6 created."""
+  2026-10-12 WP-1.0 WO-1.0-04 step 6 created.
+  2026-10-12 WP-1.0 WO-1.0-04 (Claude, FIX-WO04-final): lint passes the WPs with a spec under docs/specs/ (E4 warning).
+"""
 
 from __future__ import annotations
 
@@ -158,7 +160,9 @@ def _cmd_lint(args: argparse.Namespace) -> int:
     changed = None
     if args.changed_from is not None:
         changed = _changed_paths(repo_root, args.changed_from)
-    issues = lint_module.lint(fragments, changed_only_paths=changed)
+    specs = repo_root / "docs" / "specs"
+    spec_wps = {m.group(1) for p in specs.rglob("WP-*.md") if (m := re.match(r"(WP-\d+\.\d+)", p.name))}
+    issues = lint_module.lint(fragments, changed_only_paths=changed, spec_wps=spec_wps)
     errors = 0
     for issue in issues:
         print(f"{issue.severity.upper()}: {issue.path}: {issue.message}")

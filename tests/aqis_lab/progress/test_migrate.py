@@ -244,8 +244,8 @@ def test_B11_round_trip_renders_legacy_files_byte_for_byte(tmp_path: Path) -> No
         "| WP-0.0 | Guardrails and audit tooling | MERGED | claude/hopeful-noether-yinc4e, "
         "PR https://github.com/x/y/pull/1 | 2026-09-27 |\n"
         "| WP-0.9 | Phase 0 review | MERGED | claude/great-heisenberg-h85gm9, "
-        "PR https://github.com/x/y/pull/10 | 2026-10-08 |\n"
-    )
+        "PR https://github.com/x/y/pull/10 | 2026-10-08 |"
+    )  # Claude, 2026-10-12: like the legacy STATUS.md, the table ends without a newline (B11 round trip)
     blockers_text = tables[Path("docs/progress/BLOCKERS.md")]
     assert "## BLK-001 — first blocker\nSTATUS: RESOLVED\n" in blockers_text
     assert "**Owner answer:**\n" in blockers_text or blockers_text.rstrip("\n").endswith("**Owner answer:**")

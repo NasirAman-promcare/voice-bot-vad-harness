@@ -19,6 +19,7 @@ NOT IN SCOPE:
   - Lint rules, rendering, ID allocation and migration (separate modules).
 CHANGE LOG:
   2026-10-12 WP-1.0 WO-1.0-04 step 1 created.
+  2026-10-12 WP-1.0 WO-1.0-04 (Claude, FIX-WO04-final): a blocker's or decision's ID comes from its `# <ID> — <title>` heading; template labels after the first block are read (B2 clarification).
 """
 from __future__ import annotations
 
@@ -155,6 +156,30 @@ def _find_label(lines: list[str], label: str) -> int | None:
     return None
 
 
+def _heading_id(lines: list[str]) -> str | None:
+    """The `<ID>` of a first line `# <ID> — <title>` (BLOCKER.md, DECISION.md), or None."""
+    if not lines or not lines[0].startswith("# "):
+        return None
+    head = lines[0][2:].split(" — ", 1)[0].strip()
+    return head or None
+
+
+_BLOCKER_LABELS = ("What I need", "Why", "What I tried", "Options", "Exact steps", "Meanwhile", "Owner answer")
+_DECISION_LABELS = ("Spec basis", "Question", "Options", "Choice", "Why", "Reversal")
+
+
+def _template_fields(fields: dict[str, str], lines: list[str], start: int, labels: tuple[str, ...]) -> None:
+    """Template labels after the first block (B2): the value on the line, else the lines up to the next label."""
+    if fields.get("Legacy") == "yes":
+        return
+    found: list[tuple[str, int]] = [(line.partition(":")[0].strip(), i) for i, line in enumerate(lines)
+                                    if i >= start and line.partition(":")[0].strip() in labels and ":" in line]
+    for n, (label, i) in enumerate(found):
+        end = found[n + 1][1] if n + 1 < len(found) else len(lines)
+        value = lines[i].partition(":")[2].strip() or " ".join(x.strip() for x in lines[i + 1:end] if x.strip())
+        fields.setdefault(label, value)
+
+
 def _parse_status(path: Path, raw: str) -> StatusFragment:
     lines = _split_lines(raw)
     fields, index = _parse_key_value(path, lines, 0)
@@ -179,6 +204,9 @@ def _parse_blocker(path: Path, raw: str) -> BlockerFragment:
     fields, index = _parse_key_value(path, lines, start)
     if "Status" not in fields:
         raise FragmentError(path, start + 1, "blocker is missing its Status line")
+    if "ID" not in fields and _heading_id(lines):
+        fields["ID"] = _heading_id(lines)
+    _template_fields(fields, lines, index, _BLOCKER_LABELS)
     steps_label = _find_label(lines, "Exact steps:")
     steps: tuple[str, ...] = ()
     if steps_label is not None:
@@ -192,6 +220,9 @@ def _parse_decision(path: Path, raw: str) -> DecisionFragment:
     fields, index = _parse_key_value(path, lines, start)
     if "Status" not in fields:
         raise FragmentError(path, start + 1, "decision is missing its Status line")
+    if "ID" not in fields and _heading_id(lines):
+        fields["ID"] = _heading_id(lines)
+    _template_fields(fields, lines, index, _DECISION_LABELS)
     options: tuple[str, ...] = ()
     options_label = _find_label(lines, "Options:")
     if options_label is not None:
