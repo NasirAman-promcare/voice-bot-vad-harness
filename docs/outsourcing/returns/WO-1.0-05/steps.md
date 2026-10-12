@@ -10,6 +10,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | tools/autonomy/__init__.py=862195fd8501255e67a0121d72c7570245490964bdf28be87e8351209a381d51;tests/aqis_lab/autonomy/__init__.py=a9b3e7e3ed1ca0c412a241a28d702c5d7d4942fee83bacd9843edb86123c5661;tests/aqis_lab/autonomy/stand_in_gh.py=27dab5bddebfb2cbda2401f3b4407bc8ac91dc3eb19ec354f36d09326fa39cef | 3 | moonshotai/kimi-k3 | nvidia | moonshotai/kimi-k3 | 22934 | 3196 | 0.0 |
 | 2 | tools/autonomy/github.py=a626757e52c0c3a554391c2f817aee4d63d8ebff4e59092d503e9ee086a41aed;tests/aqis_lab/autonomy/test_github.py=7b277b296ae837523b55af1dfc1ab786170623c95aad44d1cd4afd8cf9475ff7 | 3 | moonshotai/kimi-k3 | nvidia | moonshotai/kimi-k3 | 34722 | 1513 | 0.0 |
+| 3 | tools/autonomy/facts.py=20590b28c2fd1647dde49e327444568218dddc5d10be706f49139ba545536d13;tests/aqis_lab/autonomy/test_facts.py=4f8f9c09429cb4395c6b24c8713ab777492cb91897b46c013a794f38736aa503 | 2 | moonshotai/kimi-k3 | nvidia | moonshotai/kimi-k3 | 40350 | 4678 | 0.0 |
 
 ## Switches
 | time_utc | label | from_model | to_model | reason |
