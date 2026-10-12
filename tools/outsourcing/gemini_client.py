@@ -1,7 +1,8 @@
 """Gemini API client with rate governor integration.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-GEMINI-CLIENT: Gemini model client with token counting, content generation, and model listing. [tests: test_gemini_client, test_acceptance_wo_1_0_10]
+  CAP-OUTSOURCING-GEMINI-CLIENT: Gemini model client with token counting, content generation, and model listing.
+    [tests: test_gemini_client_generate, test_gemini_client_list_models, test_gemini_client_non_json_reply]
 INPUTS AND OUTPUTS:
   Accepts ChatRequest; returns TokenCount or Reply; raises chat exceptions.
 CONTRACTS: none.
@@ -12,6 +13,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-10 created.
   2026-10-11 WP-1.0 FR-1.0-14 (Claude): the socket timeout is at least the model's timeout_seconds.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

@@ -1,7 +1,10 @@
 """Step log parser and renderer for relay execution resuming.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-STEPLOG: Parse and render relay step logs [tests: test_steplog.py, test_acceptance_wo_1_0_02.py]
+  CAP-OUTSOURCING-STEPLOG: Parse and render relay step logs
+    [tests: test_empty_log_roundtrip, test_malformed_log_raises,
+    test_FR_1_0_02_mc07_step_log_round_trips_byte_for_byte, test_FR_1_0_02_mc07_malformed_step_log_raises,
+    test_FR_1_0_02_mc07_next_part_resumes_and_reduces_a_partial_step]
 INPUTS AND OUTPUTS: Markdown log string in, StepLog out; StepLog in, Markdown log string out.
 CONTRACTS: none.
 INVARIANTS:
@@ -11,6 +14,7 @@ NOT IN SCOPE:
   - I/O or network execution.
 CHANGE LOG:
   2026-10-10 WO-1.0-02 created.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

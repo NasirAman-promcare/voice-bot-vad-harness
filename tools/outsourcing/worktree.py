@@ -1,7 +1,23 @@
 """Git worktree and branch operations for relay execution.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-WORKTREE: Git worktree management, branch creation, commit/push, and attempt cleanup. [tests: test_worktree.py, test_acceptance_wo_1_0_11.py]
+  CAP-OUTSOURCING-WORKTREE: Git worktree management, branch creation, commit/push, attempt cleanup, and the
+    per-order run lock.
+    [tests: test_open_and_commit_worktree, test_discard_attempt,
+    test_FR_1_0_02_mc01_mc08_mc11_accepted_run_end_to_end,
+    test_FR_1_0_02_mc02_t1_order_never_goes_to_a_model_without_t1,
+    test_FR_1_0_02_mc02_pinned_model_without_the_tier_exits_2,
+    test_FR_1_0_02_mc03_daily_quota_switches_without_using_an_attempt,
+    test_FR_1_0_02_mc03_pool_exhausted_pauses_then_resumes_at_the_same_part,
+    test_FR_1_0_02_mc05_credential_error_moves_to_other_provider_with_access_line,
+    test_FR_1_0_02_mc05_no_provider_left_exits_7, test_FR_1_0_02_mc06_questions_exit_4_keeps_earlier_parts,
+    test_FR_1_0_02_mc07_read_only_test_changed_exits_9_and_commits_nothing,
+    test_FR_1_0_02_mc09_cut_off_two_file_part_is_split_per_file, test_FR_1_0_02_mc09_cut_off_one_file_part_exits_5,
+    test_FR_1_0_02_mc10_rerun_after_failed_attempt_discards_and_continues,
+    test_FR_1_0_02_mc10_step_log_of_another_wp_branch_exits_2_before_any_merge,
+    test_FR_1_0_14_mc12_models_reports_a_missing_model_and_exits_2, test_FR_1_0_14_models_all_present_exits_0,
+    test_FR_1_0_14_mc13_too_large_for_one_model_goes_to_one_that_fits, test_FR_1_0_14_mc13_no_model_fits_exits_13,
+    test_FR_1_0_02_dry_run_measures_and_sends_nothing, test_FR_1_0_14_status_reports_resets_and_sends_nothing]
 INPUTS AND OUTPUTS: Accepts root path, wo_id, wp_branch; manages .relay/wt/<WO> worktree and git commands.
 CONTRACTS: none.
 INVARIANTS:
@@ -12,9 +28,13 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-11 created.
   2026-10-10 WO-1.0-11 FIX 1: split open_worktree to follow shape rules; no-op commit when clean.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
+  2026-10-12 WP-1.0 FR-1.0-02 (Claude): OrderLock moved here unchanged from relay.py (was _FileLock), so relay.py
+    stays within 400 lines with its header's test names.
 """
 from __future__ import annotations
 
+import fcntl
 import os
 import shutil
 import subprocess
@@ -33,7 +53,37 @@ __all__ = [
     "commit",
     "push",
     "remove",
+    "OrderLock",
 ]
+
+
+class OrderLock:
+    """Exclusive, non-blocking lock so only one relay runs an order at a time (moved from relay.py)."""
+
+    def __init__(self, lock_path: Path) -> None:
+        self.lock_path = lock_path
+        self._fd: Any = None
+
+    def acquire(self) -> bool:
+        self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            self._fd = open(self.lock_path, "a+")
+            fcntl.flock(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return True
+        except (OSError, IOError):
+            if self._fd:
+                self._fd.close()
+                self._fd = None
+            return False
+
+    def release(self) -> None:
+        if self._fd:
+            try:
+                fcntl.flock(self._fd, fcntl.LOCK_UN)
+                self._fd.close()
+            except (OSError, IOError):
+                self._fd = None
+            self._fd = None
 
 
 class WorktreeError(Exception):

@@ -1,7 +1,12 @@
 """Scope checker verifying branch changes against work order allowed paths.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-007: check branch changes against allowed outputs and logs [tests: test_FR_1_0_01_mc05_scope_reports_extra_file_and_deletion, test_FR_1_0_01_mc05_scope_counts_uncommitted_and_untracked_changes, test_FR_1_0_01_scope_passes_outputs_and_record_files, test_FR_1_0_01_mc08_missing_base_ref_is_never_no_changes, test_scope.py]
+  CAP-OUTSOURCING-007: check branch changes against allowed outputs and logs
+    [tests: test_FR_1_0_01_mc05_scope_reports_extra_file_and_deletion,
+    test_FR_1_0_01_mc05_scope_counts_uncommitted_and_untracked_changes,
+    test_FR_1_0_01_scope_passes_outputs_and_record_files, test_FR_1_0_01_mc08_missing_base_ref_is_never_no_changes,
+    test_FR_1_0_01_scope_clean_branch, test_FR_1_0_01_scope_detects_violations,
+    test_FR_1_0_01_scope_missing_base_raises_error]
 INPUTS AND OUTPUTS: ScopeError, ScopeReport, check_scope.
 CONTRACTS: CHANGE_CONTROL.md change budget rules.
 INVARIANTS:
@@ -12,6 +17,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
   2026-10-10 WP-1.0 FR-1.0-01 review fix (Claude): the fetch result is kept in the missing-base error.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

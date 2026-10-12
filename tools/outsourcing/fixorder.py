@@ -1,7 +1,10 @@
 """Fix order builder and log trimmer.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-FIXORDER: Format fix order text following FIX_ORDER.md [tests: test_fixorder.py, test_acceptance_wo_1_0_02.py]
+  CAP-OUTSOURCING-FIXORDER: Format fix order text following FIX_ORDER.md
+    [tests: test_trim_log_short, test_trim_log_long,
+    test_FR_1_0_02_mc04_fix_order_trims_to_120_lines_and_lists_allowed_paths,
+    test_FR_1_0_02_mc04_trim_log_keeps_first_20_and_last_40, test_FR_1_0_02_mc04_stop_reason_fix_order]
 INPUTS AND OUTPUTS: WorkOrder, CheckResults/stop_reason, fix_number, allowed_paths in; string fix order out.
 CONTRACTS: none.
 INVARIANTS:
@@ -12,6 +15,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-02 created.
   2026-10-10 WP-1.0 FR-1.0-02 (Claude, DEC-1.0-05): bundle errors and refused imports get their own fix reason.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

@@ -1,7 +1,8 @@
 """Interface view generator for Python source files.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-INTERFACE: Generate interface views of Python files [tests: test_interface.py, test_acceptance_wo_1_0_02.py]
+  CAP-OUTSOURCING-INTERFACE: Generate interface views of Python files
+    [tests: test_clean_interface_view, test_unparseable_python_file]
 INPUTS AND OUTPUTS: Python code string or path in, string interface view out.
 CONTRACTS: none.
 INVARIANTS:
@@ -12,6 +13,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-02 created.
   2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): a local name renamed for the compromise scan; no behaviour change.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

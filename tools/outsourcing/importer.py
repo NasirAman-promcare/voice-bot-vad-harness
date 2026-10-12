@@ -1,7 +1,12 @@
 """Bundle importer writing parsed files to disk atomically.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-006: write bundle files atomically with mode and expected checks [tests: test_FR_1_0_01_valid_bundle_imports_every_file_exactly, test_FR_1_0_01_mc01_path_outside_outputs_fails_import_and_writes_nothing, test_FR_1_0_01_mc01_read_only_test_in_bundle_is_refused_and_unchanged, test_FR_1_0_01_mc01_path_outside_expected_fails_fix_import, test_importer.py]
+  CAP-OUTSOURCING-006: write bundle files atomically with mode and expected checks
+    [tests: test_FR_1_0_01_valid_bundle_imports_every_file_exactly,
+    test_FR_1_0_01_mc01_path_outside_outputs_fails_import_and_writes_nothing,
+    test_FR_1_0_01_mc01_read_only_test_in_bundle_is_refused_and_unchanged,
+    test_FR_1_0_01_mc01_path_outside_expected_fails_fix_import, test_FR_1_0_01_import_first_mode,
+    test_FR_1_0_01_import_fix_mode, test_FR_1_0_01_questions_refused, test_FR_1_0_01_existing_directory_refused]
 INPUTS AND OUTPUTS: ImportedFile, ImportReport, QuestionsReturned, ImportRefused, import_bundle.
 CONTRACTS: RETURN_FORMAT.md specification.
 INVARIANTS:
@@ -11,6 +16,7 @@ NOT IN SCOPE:
   - Git commit operations.
 CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

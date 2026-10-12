@@ -1,7 +1,9 @@
 """CLI entry point for AQIS lab outsourcing subcommands.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-009: command-line interface for validate, import, scope and pack [tests: test_FR_1_0_01_cli_import_succeeds_with_exit_0, test_cli.py]
+  CAP-OUTSOURCING-009: command-line interface for validate, import, scope and pack
+    [tests: test_FR_1_0_01_cli_import_succeeds_with_exit_0, test_FR_1_0_01_cli_validate, test_FR_1_0_01_cli_import,
+    test_FR_1_0_01_cli_scope, test_FR_1_0_01_cli_pack]
 INPUTS AND OUTPUTS: main(argv) -> int.
 CONTRACTS: CLI interface with exit codes 0 to 6.
 INVARIANTS:
@@ -13,6 +15,7 @@ CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
   2026-10-10 WP-1.0 FR-1.0-01 review fix (Claude): a git failure is reported (RepositoryError, exit 2) instead of
     falling back to the current directory; an unreadable bundle exits 3; PackTooLarge and read errors exit 2.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

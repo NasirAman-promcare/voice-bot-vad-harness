@@ -1,7 +1,21 @@
 """Relay orchestration command line interface and execution loop.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-RELAY: Main entry point for running relay work orders, dry-runs, status checks, and model checks. [tests: test_relay.py, test_acceptance_wo_1_0_11.py]
+  CAP-OUTSOURCING-RELAY: Main entry point for running relay work orders, dry-runs, status checks, and model checks.
+    [tests: test_relay_main_help, test_FR_1_0_02_mc01_mc08_mc11_accepted_run_end_to_end,
+    test_FR_1_0_02_mc02_t1_order_never_goes_to_a_model_without_t1,
+    test_FR_1_0_02_mc02_pinned_model_without_the_tier_exits_2,
+    test_FR_1_0_02_mc03_daily_quota_switches_without_using_an_attempt,
+    test_FR_1_0_02_mc03_pool_exhausted_pauses_then_resumes_at_the_same_part,
+    test_FR_1_0_02_mc05_credential_error_moves_to_other_provider_with_access_line,
+    test_FR_1_0_02_mc05_no_provider_left_exits_7, test_FR_1_0_02_mc06_questions_exit_4_keeps_earlier_parts,
+    test_FR_1_0_02_mc07_read_only_test_changed_exits_9_and_commits_nothing,
+    test_FR_1_0_02_mc09_cut_off_two_file_part_is_split_per_file, test_FR_1_0_02_mc09_cut_off_one_file_part_exits_5,
+    test_FR_1_0_02_mc10_rerun_after_failed_attempt_discards_and_continues,
+    test_FR_1_0_02_mc10_step_log_of_another_wp_branch_exits_2_before_any_merge,
+    test_FR_1_0_14_mc12_models_reports_a_missing_model_and_exits_2, test_FR_1_0_14_models_all_present_exits_0,
+    test_FR_1_0_14_mc13_too_large_for_one_model_goes_to_one_that_fits, test_FR_1_0_14_mc13_no_model_fits_exits_13,
+    test_FR_1_0_02_dry_run_measures_and_sends_nothing, test_FR_1_0_14_status_reports_resets_and_sends_nothing]
 INPUTS AND OUTPUTS: Command line flags/options in; executes relay run, outputs status/reports and returns exit code.
 CONTRACTS: none.
 INVARIANTS:
@@ -15,11 +29,12 @@ CHANGE LOG:
   2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): the report's checks table, requests and retries come from the
     checks and governor of this run (they were derived from the result, which reported checks that never ran).
   2026-10-12 WP-1.0 FR-1.0-02 fix (Claude, FIX-B17-ledger-row): the ledger fragment gets the run's facts.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files; _FileLock moved to worktree.py
+    as OrderLock, unchanged.
 """
 from __future__ import annotations
 
 import argparse
-import fcntl
 import hashlib
 import math
 import os
@@ -42,7 +57,7 @@ from tools.outsourcing.router import Router, client_for, model_stats
 from tools.outsourcing.steplog import parse, render
 from tools.outsourcing.stepper import RunContext, run_final, run_part
 from tools.outsourcing.workorder import load_work_order, plan_steps
-from tools.outsourcing.worktree import WorktreeError, commit, open_worktree, push, read_step_log, remove
+from tools.outsourcing.worktree import OrderLock, WorktreeError, commit, open_worktree, push, read_step_log, remove
 
 __all__ = ["run", "main"]
 
@@ -50,33 +65,6 @@ __all__ = ["run", "main"]
 def _get_repo_root() -> Path:
     proc = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=True)
     return Path(proc.stdout.strip())
-
-
-class _FileLock:
-    def __init__(self, lock_path: Path) -> None:
-        self.lock_path = lock_path
-        self._fd: Any = None
-
-    def acquire(self) -> bool:
-        self.lock_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            self._fd = open(self.lock_path, "a+")
-            fcntl.flock(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return True
-        except (OSError, IOError):
-            if self._fd:
-                self._fd.close()
-                self._fd = None
-            return False
-
-    def release(self) -> None:
-        if self._fd:
-            try:
-                fcntl.flock(self._fd, fcntl.LOCK_UN)
-                self._fd.close()
-            except (OSError, IOError):
-                self._fd = None
-            self._fd = None
 
 
 def _parse_args(argv: list[str]) -> RelayOptions:
@@ -288,7 +276,7 @@ def _execute_run_loop(run_ctx: RunContext, accepted_records: list[records.StepRe
     return ret_outcome
 
 
-def _check_branch_and_lock(order: Any, main_root: Path) -> tuple[str, _FileLock]:
+def _check_branch_and_lock(order: Any, main_root: Path) -> tuple[str, OrderLock]:
     proc = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=main_root, capture_output=True, text=True)
     curr_branch = proc.stdout.strip()
     if not curr_branch.startswith("claude/wp-"):
@@ -296,7 +284,7 @@ def _check_branch_and_lock(order: Any, main_root: Path) -> tuple[str, _FileLock]
         print(msg)
         raise workorder.WorkOrderError(msg)
 
-    lock = _FileLock(main_root / ".relay" / "locks" / f"{order.id}.lock")
+    lock = OrderLock(main_root / ".relay" / "locks" / f"{order.id}.lock")
     if not lock.acquire():
         msg = f"another relay is running this order ({order.id})"
         print(msg)
@@ -331,12 +319,12 @@ def _setup_run_context(
     )
 
 
-def _init_run_context(options: RelayOptions, main_root: Path, wo_path: Path) -> tuple[RunContext | None, RelayOutcome | None, _FileLock]:
+def _init_run_context(options: RelayOptions, main_root: Path, wo_path: Path) -> tuple[RunContext | None, RelayOutcome | None, OrderLock]:
     order = load_work_order(wo_path, main_root)
     if order.channel != "api":
         msg = f"Channel {order.channel!r} not supported"
         print(msg)
-        return None, RelayOutcome(result=Result.INVALID, stop_reason=msg), _FileLock(main_root / ".relay" / "locks" / f"{order.id}.lock")
+        return None, RelayOutcome(result=Result.INVALID, stop_reason=msg), OrderLock(main_root / ".relay" / "locks" / f"{order.id}.lock")
 
     pool = load_pool(Path(options.pool) if Path(options.pool).is_absolute() else main_root / options.pool)
     curr_branch, lock = _check_branch_and_lock(order, main_root)

@@ -1,7 +1,9 @@
 """Sliding-window pacing, adaptive rate limits, persisted state, and reporting.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-GOVERNOR: Pacing, adaptive factor, state persistence, and report generation. [tests: test_governor, test_acceptance_wo_1_0_10]
+  CAP-OUTSOURCING-GOVERNOR: Pacing, adaptive factor, state persistence, and report generation.
+    [tests: test_governor_pacing, test_governor_record_result_and_report, test_governor_rejection_and_adaptive,
+    test_governor_corrupt_state, test_FR_1_0_14_mc03_gemini_daily_rejection_stops_at_once_with_resets]
 INPUTS AND OUTPUTS:
   Paces request slots, updates counts and learned limits, persists state, generates GovernorReport.
 CONTRACTS: none.
@@ -16,6 +18,7 @@ CHANGE LOG:
   2026-10-11 WP-1.0 FR-1.0-14 (Claude, DEC-1.0-06): every sent request counts toward the day in wait_for_slot,
     as the providers count it; record_result keeps tokens only.
   2026-10-11 WP-1.0 FR-1.0-14 (Claude, DEC-1.0-07): record_rejection appends each rejection to rejections.jsonl.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

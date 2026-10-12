@@ -1,7 +1,11 @@
 """Request builder for relay model requests.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-PROMPT: Build provider-neutral requests sent to model [tests: test_prompt.py, test_acceptance_wo_1_0_02.py]
+  CAP-OUTSOURCING-PROMPT: Build provider-neutral requests sent to model
+    [tests: test_secret_in_request_raises, test_FR_1_0_02_mc01_missing_earlier_output_is_listed_not_sent,
+    test_FR_1_0_02_mc02_secret_file_raises_naming_it,
+    test_FR_1_0_02_fix_split_part_sees_the_step_files_accepted_before_it,
+    test_FR_1_0_02_fix_first_split_part_and_whole_step_show_no_sibling]
 INPUTS AND OUTPUTS: WorkOrder, plan, step part, worktree root in; Request or string out.
 CONTRACTS: none.
 INVARIANTS:
@@ -13,6 +17,7 @@ CHANGE LOG:
   2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): estimated_input_tokens, the router's input estimate in tokens.
   2026-10-12 WP-1.0 FR-1.0-02 fix (Claude, FIX-B3-split-siblings): a split part also sees its step's files that come
     before it, accepted as earlier split parts.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

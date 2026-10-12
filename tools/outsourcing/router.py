@@ -1,7 +1,25 @@
 """Model router, stats collector, and client factory.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-ROUTER: Choose model based on risk tier, token limits, governor delays, and first-pass performance stats. [tests: test_router.py, test_acceptance_wo_1_0_11.py]
+  CAP-OUTSOURCING-ROUTER: Choose model based on risk tier, token limits, governor delays, and first-pass performance stats.
+    [tests: test_model_stats_empty_and_unreadable, test_router_pinned_model_valid,
+    test_router_pinned_model_not_eligible, test_router_default_size_ruled_out, test_client_for_factory,
+    test_FR_1_0_02_mc01_mc08_mc11_accepted_run_end_to_end,
+    test_FR_1_0_02_mc02_t1_order_never_goes_to_a_model_without_t1,
+    test_FR_1_0_02_mc02_pinned_model_without_the_tier_exits_2,
+    test_FR_1_0_02_mc02_router_skips_models_without_the_tier,
+    test_FR_1_0_02_mc03_daily_quota_switches_without_using_an_attempt,
+    test_FR_1_0_02_mc03_pool_exhausted_pauses_then_resumes_at_the_same_part,
+    test_FR_1_0_02_mc04_low_first_pass_model_is_chosen_after_all_others,
+    test_FR_1_0_02_mc05_credential_error_moves_to_other_provider_with_access_line,
+    test_FR_1_0_02_mc05_no_provider_left_exits_7, test_FR_1_0_02_mc06_questions_exit_4_keeps_earlier_parts,
+    test_FR_1_0_02_mc07_read_only_test_changed_exits_9_and_commits_nothing,
+    test_FR_1_0_02_mc09_cut_off_two_file_part_is_split_per_file, test_FR_1_0_02_mc09_cut_off_one_file_part_exits_5,
+    test_FR_1_0_02_mc10_rerun_after_failed_attempt_discards_and_continues,
+    test_FR_1_0_02_mc10_step_log_of_another_wp_branch_exits_2_before_any_merge,
+    test_FR_1_0_14_mc12_models_reports_a_missing_model_and_exits_2, test_FR_1_0_14_models_all_present_exits_0,
+    test_FR_1_0_14_mc13_too_large_for_one_model_goes_to_one_that_fits, test_FR_1_0_14_mc13_no_model_fits_exits_13,
+    test_FR_1_0_02_dry_run_measures_and_sends_nothing, test_FR_1_0_14_status_reports_resets_and_sends_nothing]
 INPUTS AND OUTPUTS: Accepts work order, input token estimate, and exclusions; returns ModelSpec or builds client.
 CONTRACTS: none.
 INVARIANTS:
@@ -14,6 +32,7 @@ CHANGE LOG:
   2026-10-10 WO-1.0-11 FIX 1: split _choose_default to follow shape rules.
   2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): "size alone" only when every model left fails on size; the message
     names each model's limit (B9).
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

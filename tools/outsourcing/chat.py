@@ -1,7 +1,20 @@
 """Provider-neutral request and reply records and exceptions.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-CHAT: Provider-neutral records and exceptions for model clients. [tests: test_limits, test_acceptance_wo_1_0_10]
+  CAP-OUTSOURCING-CHAT: Provider-neutral records and exceptions for model clients.
+    [tests: test_load_pool_valid, test_load_pool_disabled_provider, test_load_pool_invalid_keys, test_candidates,
+    test_effective_limits, test_next_reset, test_FR_1_0_14_mc03_gemini_daily_rejection_stops_at_once_with_resets,
+    test_FR_1_0_14_mc03_provider_scope_daily_marks_every_model_of_the_provider,
+    test_FR_1_0_14_mc03_monthly_rejection_marks_provider_until_next_month,
+    test_FR_1_0_14_mc04_six_minute_rejections_raise_service_busy,
+    test_FR_1_0_14_mc05_overload_backs_off_exponentially_then_service_busy,
+    test_FR_1_0_14_mc06_over_max_input_tokens_is_not_sent_gemini,
+    test_FR_1_0_14_mc06_over_whole_minute_allowance_is_not_sent,
+    test_FR_1_0_14_mc06_openai_estimate_over_limit_is_not_sent,
+    test_FR_1_0_14_mc06_minute_token_rejection_above_server_limit_is_not_retried,
+    test_FR_1_0_14_mc09_quota_value_zero_raises_model_error_without_retry,
+    test_FR_1_0_14_mc09_http_402_raises_model_error_without_retry,
+    test_FR_1_0_14_mc10_credential_and_unclassified_errors_are_not_retried]
 INPUTS AND OUTPUTS:
   Turns, requests, token counts, replies, and client exceptions.
 CONTRACTS: none.
@@ -11,6 +24,7 @@ NOT IN SCOPE:
   - Transport or protocol specific details.
 CHANGE LOG:
   2026-10-10 WO-1.0-10 created.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

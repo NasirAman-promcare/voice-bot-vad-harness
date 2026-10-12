@@ -1,7 +1,9 @@
 """Load and validate model pool configuration, effective limits, and resets.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-LIMITS: Model pool specification loading and limit calculations. [tests: test_limits, test_acceptance_wo_1_0_10]
+  CAP-OUTSOURCING-LIMITS: Model pool specification loading and limit calculations.
+    [tests: test_load_pool_valid, test_load_pool_disabled_provider, test_load_pool_invalid_keys, test_candidates,
+    test_effective_limits, test_next_reset]
 INPUTS AND OUTPUTS:
   Loads config JSON and provides Pool, ProviderSpec, ModelSpec, effective limits, and next reset times.
 CONTRACTS: none.
@@ -14,6 +16,7 @@ CHANGE LOG:
   2026-10-11 WP-1.0 FR-1.0-14 (Claude): a repeated model rank is refused (B1: rank is unique).
   2026-10-11 WP-1.0 FR-1.0-14 (Claude, owner's BLK-1.0-12 answer): optional per-model reasoning_effort, temperature,
     top_p and timeout_seconds.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

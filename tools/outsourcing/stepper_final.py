@@ -1,7 +1,22 @@
 """Final verifier and fix runner for relay execution.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-STEPPER-FINAL: Final verification and fix rounds for relay execution. [tests: test_stepper.py, test_acceptance_wo_1_0_11.py]
+  CAP-OUTSOURCING-STEPPER-FINAL: Final verification and fix rounds for relay execution.
+    [tests: test_stepper_context_setup, test_FR_1_0_02_mc01_mc08_mc11_accepted_run_end_to_end,
+    test_FR_1_0_02_mc02_t1_order_never_goes_to_a_model_without_t1,
+    test_FR_1_0_02_mc02_pinned_model_without_the_tier_exits_2,
+    test_FR_1_0_02_mc03_daily_quota_switches_without_using_an_attempt,
+    test_FR_1_0_02_mc03_pool_exhausted_pauses_then_resumes_at_the_same_part,
+    test_FR_1_0_02_mc05_credential_error_moves_to_other_provider_with_access_line,
+    test_FR_1_0_02_mc05_no_provider_left_exits_7, test_FR_1_0_02_mc06_questions_exit_4_keeps_earlier_parts,
+    test_FR_1_0_02_mc07_read_only_test_changed_exits_9_and_commits_nothing,
+    test_FR_1_0_02_mc09_cut_off_two_file_part_is_split_per_file, test_FR_1_0_02_mc09_cut_off_one_file_part_exits_5,
+    test_FR_1_0_02_mc10_rerun_after_failed_attempt_discards_and_continues,
+    test_FR_1_0_02_mc10_step_log_of_another_wp_branch_exits_2_before_any_merge,
+    test_FR_1_0_14_mc12_models_reports_a_missing_model_and_exits_2, test_FR_1_0_14_models_all_present_exits_0,
+    test_FR_1_0_14_mc13_too_large_for_one_model_goes_to_one_that_fits, test_FR_1_0_14_mc13_no_model_fits_exits_13,
+    test_FR_1_0_02_dry_run_measures_and_sends_nothing, test_FR_1_0_14_status_reports_resets_and_sends_nothing,
+    test_FR_1_0_02_fix_questions_in_a_final_fix_round_finish_with_exit_4]
 INPUTS AND OUTPUTS: Accepts RunContext; runs full checks and fix turns; returns StepOutcome.
 CONTRACTS: none.
 INVARIANTS:
@@ -15,6 +30,7 @@ CHANGE LOG:
     in RunContext.last_checks for the report.
   2026-10-12 WP-1.0 FR-1.0-02 fix (Claude, FIX-B15-final-questions): a QUESTIONS answer in a final fix round finishes
     the run with QUESTIONS and a step-log stop, imports nothing (B15); it used to crash on QuestionsReturned.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

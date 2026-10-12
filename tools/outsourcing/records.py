@@ -1,7 +1,11 @@
 """Shared records and exit codes for relay runs.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-RECORDS: Shared records and exit codes for relay runs [tests: test_records.py, test_acceptance_wo_1_0_02.py]
+  CAP-OUTSOURCING-RECORDS: Shared records and exit codes for relay runs
+    [tests: test_result_codes_and_display_names, test_check_results_properties, test_records_instantiation,
+    test_FR_1_0_02_mc04_fix_order_trims_to_120_lines_and_lists_allowed_paths,
+    test_FR_1_0_02_mc04_stop_reason_fix_order, test_FR_1_0_02_mc07_next_part_resumes_and_reduces_a_partial_step,
+    test_FR_1_0_02_mc08_every_result_maps_to_its_exit_code]
 INPUTS AND OUTPUTS: Relay options, step parts, requests, check results, step records, outcomes, and exit codes.
 CONTRACTS: none.
 INVARIANTS:
@@ -10,6 +14,7 @@ NOT IN SCOPE:
   - Network transport or process execution.
 CHANGE LOG:
   2026-10-10 WO-1.0-02 created.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

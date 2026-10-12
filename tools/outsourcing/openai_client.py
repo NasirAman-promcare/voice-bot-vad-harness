@@ -1,7 +1,14 @@
 """OpenAI-compatible chat completions API client with rate governor integration.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-OPENAI-CLIENT: OpenAI-compatible model client with token counting, content generation, and model listing. [tests: test_openai_client, test_acceptance_wo_1_0_10]
+  CAP-OUTSOURCING-OPENAI-CLIENT: OpenAI-compatible model client with token counting, content generation, and model listing.
+    [tests: test_openai_client_generate, test_openai_client_list_models, test_openai_client_non_json_reply,
+    test_FR_1_0_14_stream_request_asks_for_a_stream_with_usage,
+    test_FR_1_0_14_stream_reply_joins_content_without_reasoning,
+    test_FR_1_0_14_stream_length_finish_maps_to_max_tokens, test_FR_1_0_14_stream_without_usage_is_estimated,
+    test_FR_1_0_14_stream_error_event_is_never_a_reply,
+    test_FR_1_0_14_stream_cut_before_its_finish_is_retried_as_a_transport_failure,
+    test_FR_1_0_14_stream_cut_every_time_raises_transport_error]
 INPUTS AND OUTPUTS:
   Accepts ChatRequest; returns TokenCount or Reply; raises chat exceptions.
 CONTRACTS: none.
@@ -16,6 +23,7 @@ CHANGE LOG:
   2026-10-12 WP-1.0 FR-1.0-14 (Claude, BLK-1.0-14): the request asks for a stream with usage, because the session's
     egress path answers 502 to any reply slower than 30 seconds; an event-stream reply is assembled by `sse`, and a
     stream cut before its end is retried as a network error. A JSON reply is parsed as before.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

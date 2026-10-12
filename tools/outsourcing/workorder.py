@@ -1,7 +1,12 @@
 """Work order file parser and step planner.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-004: parse and validate work order front matter and step plan [tests: test_FR_1_0_01_valid_order_loads_with_its_fields, test_FR_1_0_01_mc07_output_under_never_or_guarded_path_is_invalid, test_FR_1_0_01_mc09_valid_step_plan_is_numbered_in_order, test_FR_1_0_01_mc09_bad_step_plan_is_invalid, test_FR_1_0_01_mc09_more_than_three_outputs_without_steps_is_invalid, test_workorder.py]
+  CAP-OUTSOURCING-004: parse and validate work order front matter and step plan
+    [tests: test_FR_1_0_01_valid_order_loads_with_its_fields,
+    test_FR_1_0_01_mc07_output_under_never_or_guarded_path_is_invalid,
+    test_FR_1_0_01_mc09_valid_step_plan_is_numbered_in_order, test_FR_1_0_01_mc09_bad_step_plan_is_invalid,
+    test_FR_1_0_01_mc09_more_than_three_outputs_without_steps_is_invalid, test_FR_1_0_01_load_valid_work_order,
+    test_FR_1_0_01_invalid_front_matter_errors, test_FR_1_0_01_step_plan_valid_and_invalid]
 INPUTS AND OUTPUTS: WorkOrder, Step, WorkOrderError, load_work_order, plan_steps.
 CONTRACTS: WORK_ORDER.md specification.
 INVARIANTS:
@@ -12,6 +17,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
   2026-10-10 WP-1.0 FR-1.0-01 review fix (Claude): an invalid path raises WorkOrderError naming its place.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

@@ -1,7 +1,10 @@
 """Secret detection for file paths and file content.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-003: detect secrets in file paths and content [tests: test_FR_1_0_01_mc10_every_outsourcing_module_is_secret_clean, test_FR_1_0_01_mc10_secret_shapes_are_flagged, test_FR_1_0_01_mc10_bare_prefixes_are_clean, test_secrets.py]
+  CAP-OUTSOURCING-003: detect secrets in file paths and content
+    [tests: test_FR_1_0_01_mc10_every_outsourcing_module_is_secret_clean,
+    test_FR_1_0_01_mc10_secret_shapes_are_flagged, test_FR_1_0_01_mc10_bare_prefixes_are_clean,
+    test_FR_1_0_01_secret_path_detection, test_FR_1_0_01_secret_content_detection, test_FR_1_0_01_clean_content]
 INPUTS AND OUTPUTS: secret_reasons(path, text) -> list[str].
 CONTRACTS: none.
 INVARIANTS:
@@ -11,6 +14,7 @@ NOT IN SCOPE:
   - Masking or removing secrets.
 CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

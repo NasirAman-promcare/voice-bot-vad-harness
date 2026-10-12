@@ -1,7 +1,10 @@
 """Return format bundle parser and truncation checker.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-005: parse RETURN_FORMAT bundle text and check truncation signs [tests: test_FR_1_0_01_mc02_missing_end_marker_fails_import, test_FR_1_0_01_mc03_truncation_sign_fails_import, test_FR_1_0_01_mc04_questions_block_stops_import_with_exit_4, test_bundle.py]
+  CAP-OUTSOURCING-005: parse RETURN_FORMAT bundle text and check truncation signs
+    [tests: test_FR_1_0_01_mc02_missing_end_marker_fails_import, test_FR_1_0_01_mc03_truncation_sign_fails_import,
+    test_FR_1_0_01_mc04_questions_block_stops_import_with_exit_4, test_FR_1_0_01_parse_valid_bundle,
+    test_FR_1_0_01_truncation_raises_truncated_bundle, test_FR_1_0_01_invalid_bundle_syntax_raises_bundle_error]
 INPUTS AND OUTPUTS: Bundle, BundleError, TruncatedBundle, parse_bundle.
 CONTRACTS: RETURN_FORMAT.md specification.
 INVARIANTS:
@@ -17,6 +20,7 @@ CHANGE LOG:
     removed before parsing (RETURN_FORMAT.md); any other text outside the blocks is still refused.
   2026-10-11 WP-1.0 FR-1.0-01 BLK-1.0-08 (Claude, owner option 1): a fence wrapped tightly around one block is
     removed first, then the outer fence; unpaired fences stay and are refused.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

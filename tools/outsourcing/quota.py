@@ -1,7 +1,9 @@
 """Classify HTTP error responses for Gemini and OpenAI API shapes.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-QUOTA: Rejection classification for Gemini and OpenAI responses. [tests: test_quota, test_acceptance_wo_1_0_10]
+  CAP-OUTSOURCING-QUOTA: Rejection classification for Gemini and OpenAI responses.
+    [tests: test_classify_gemini_quota_failure, test_classify_gemini_zero_quota,
+    test_classify_openai_daily_and_monthly, test_classify_common_errors, test_non_json_429]
 INPUTS AND OUTPUTS:
   Accepts API shape, HTTP status, headers, and body text; returns QuotaVerdict.
 CONTRACTS: none.
@@ -11,6 +13,7 @@ NOT IN SCOPE:
   - Network execution or retry sleeping.
 CHANGE LOG:
   2026-10-10 WO-1.0-10 created.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

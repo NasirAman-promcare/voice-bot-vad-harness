@@ -1,7 +1,10 @@
 """Paste pack builder assembling context and templates into a single file.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-008: assemble work order context into a single paste pack [tests: test_FR_1_0_01_mc06_pack_refuses_env_file, test_FR_1_0_01_mc06_pack_refuses_private_key_content, test_FR_1_0_01_pack_of_clean_order_holds_every_part_in_order, test_pack.py]
+  CAP-OUTSOURCING-008: assemble work order context into a single paste pack
+    [tests: test_FR_1_0_01_mc06_pack_refuses_env_file, test_FR_1_0_01_mc06_pack_refuses_private_key_content,
+    test_FR_1_0_01_pack_of_clean_order_holds_every_part_in_order, test_FR_1_0_01_pack_assembly_clean,
+    test_FR_1_0_01_pack_refuses_secret]
 INPUTS AND OUTPUTS: Pack, SecretRefused, PackTooLarge, build_pack.
 CONTRACTS: RETURN_FORMAT.md and WORK_ORDER.md specifications.
 INVARIANTS:
@@ -12,6 +15,7 @@ NOT IN SCOPE:
 CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
   2026-10-10 WP-1.0 FR-1.0-01 review fix (Claude): read failures raise OSError, never SecretRefused.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

@@ -1,7 +1,9 @@
 """Path normalisation and classification against protected paths.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-002: normalise and classify repository-relative paths [tests: test_FR_1_0_01_mc07_classify_follows_protected_paths, test_paths.py]
+  CAP-OUTSOURCING-002: normalise and classify repository-relative paths
+    [tests: test_FR_1_0_01_mc07_classify_follows_protected_paths, test_FR_1_0_01_normalise_valid_paths,
+    test_FR_1_0_01_normalise_invalid_paths, test_FR_1_0_01_classify_sections]
 INPUTS AND OUTPUTS: normalise(path) -> str, classify(path, repo_root) -> "NEVER" | "GUARDED" | "LAB-OWNED" | "FREE".
 CONTRACTS: PROTECTED_PATHS.txt rules.
 INVARIANTS:
@@ -10,6 +12,7 @@ NOT IN SCOPE:
   - Modifying PROTECTED_PATHS.txt.
 CHANGE LOG:
   2026-10-10 WO-1.0-01 created.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

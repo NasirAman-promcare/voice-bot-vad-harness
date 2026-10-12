@@ -1,7 +1,9 @@
 """Check runner for relay step verification.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-CHECKS: Run checks and collect results for relay runs [tests: test_checks.py, test_acceptance_wo_1_0_02.py]
+  CAP-OUTSOURCING-CHECKS: Run checks and collect results for relay runs
+    [tests: test_hash_read_only_tests, test_FR_1_0_02_mc06_integrity_failure_in_verify_stops_later_commands,
+    test_FR_1_0_02_full_checks_pass_on_clean_outputs]
 INPUTS AND OUTPUTS: WorkOrder, step part / outputs, worktree path, log dir, base commit, python, timeout in; CheckResults or hash dict out.
 CONTRACTS: none.
 INVARIANTS:
@@ -14,6 +16,7 @@ CHANGE LOG:
     its base-commit version (it reported a pass without comparing); a changed read-only test is an integrity
     failure in scope or that check; kit-staging/ code is scanned with the gate's code patterns; check commands run
     with PYTHONDONTWRITEBYTECODE=1 so a stale bytecode cache can never stand in for a changed file.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 

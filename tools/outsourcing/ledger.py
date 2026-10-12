@@ -1,7 +1,24 @@
 """Summary and ledger fragment writer for relay execution runs.
 
 CAPABILITIES:
-  CAP-OUTSOURCING-LEDGER: Write summary.md and ledger fragment for relay outcomes. [tests: test_ledger.py, test_acceptance_wo_1_0_11.py]
+  CAP-OUTSOURCING-LEDGER: Write summary.md and ledger fragment for relay outcomes.
+    [tests: test_write_summary_and_ledger, test_FR_1_0_02_mc01_mc08_mc11_accepted_run_end_to_end,
+    test_FR_1_0_02_mc02_t1_order_never_goes_to_a_model_without_t1,
+    test_FR_1_0_02_mc02_pinned_model_without_the_tier_exits_2,
+    test_FR_1_0_02_mc03_daily_quota_switches_without_using_an_attempt,
+    test_FR_1_0_02_mc03_pool_exhausted_pauses_then_resumes_at_the_same_part,
+    test_FR_1_0_02_mc05_credential_error_moves_to_other_provider_with_access_line,
+    test_FR_1_0_02_mc05_no_provider_left_exits_7, test_FR_1_0_02_mc06_questions_exit_4_keeps_earlier_parts,
+    test_FR_1_0_02_mc07_read_only_test_changed_exits_9_and_commits_nothing,
+    test_FR_1_0_02_mc09_cut_off_two_file_part_is_split_per_file, test_FR_1_0_02_mc09_cut_off_one_file_part_exits_5,
+    test_FR_1_0_02_mc10_rerun_after_failed_attempt_discards_and_continues,
+    test_FR_1_0_02_mc10_step_log_of_another_wp_branch_exits_2_before_any_merge,
+    test_FR_1_0_14_mc12_models_reports_a_missing_model_and_exits_2, test_FR_1_0_14_models_all_present_exits_0,
+    test_FR_1_0_14_mc13_too_large_for_one_model_goes_to_one_that_fits, test_FR_1_0_14_mc13_no_model_fits_exits_13,
+    test_FR_1_0_02_dry_run_measures_and_sends_nothing, test_FR_1_0_14_status_reports_resets_and_sends_nothing,
+    test_FR_1_0_02_fix_ledger_fragment_is_the_fragments_md_row,
+    test_FR_1_0_02_fix_ledger_fragment_passes_progress_lint,
+    test_FR_1_0_02_fix_ledger_without_a_model_version_says_so]
 INPUTS AND OUTPUTS: Accepts summary path/ledger path and RelayOutcome/RunContext/GovernorReport; formats and writes Markdown.
 CONTRACTS: FRAGMENTS.md B17 format for ledger fragments.
 INVARIANTS:
@@ -14,6 +31,7 @@ CHANGE LOG:
   2026-10-10 WO-1.0-11 FIX 1: split write_summary and support B24 reply token counts.
   2026-10-12 WP-1.0 FR-1.0-02 fix (Claude, FIX-B17-ledger-row): the ledger fragment is the FRAGMENTS.md row (WO, Date,
     Model, Model version, Attempts, Requests, tokens, Result, Seconds) that tools.progress reads and lints.
+  2026-10-12 WP-1.0 FR-1.0-03 (Claude): [tests: …] names test functions, not files (gate E3, Lab Map).
 """
 from __future__ import annotations
 
