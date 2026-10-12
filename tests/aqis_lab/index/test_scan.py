@@ -154,7 +154,20 @@ def test_FR_1_0_03_absolute_imports_resolve_to_repository_modules(repo: Path) ->
     write(repo, 'tools/uses.py', DOC.format(name='uses') +
            'import aqis_lab.pkg.alpha\nimport aqis_lab.pkg.alpha as other\nfrom aqis_lab.pkg import alpha\n')
     facts = facts_by_path(scan(repo))
-    assert facts['tools/uses.py'].imports == ('aqis_lab/pkg/alpha.py',)
+    # Claude, 2026-10-12 (FIX-WO03-absolute-from): `from aqis_lab.pkg import alpha` also imports the package itself;
+    # the old expectation ('aqis_lab/pkg/alpha.py' alone) held only while absolute from-imports were dropped.
+    assert facts['tools/uses.py'].imports == ('aqis_lab/pkg/__init__.py', 'aqis_lab/pkg/alpha.py')
+
+
+def test_FR_1_0_03_absolute_from_imports_resolve_from_the_repository_root(repo: Path) -> None:
+    # Claude, 2026-10-12 (FIX-WO03-absolute-from): `from a.b import c` is absolute; the importer's folder never prefixes it.
+    write(repo, 'aqis_lab/pkg/__init__.py', DOC.format(name='pkg'))
+    write(repo, 'aqis_lab/pkg/alpha.py', DOC.format(name='alpha'))
+    write(repo, 'aqis_lab/gamma.py', DOC.format(name='gamma'))
+    write(repo, 'tests/aqis_lab/test_uses.py', DOC.format(name='test_uses') +
+          'from aqis_lab.pkg.alpha import alpha_fn\nfrom aqis_lab import gamma\n')
+    facts = facts_by_path(scan(repo))
+    assert facts['tests/aqis_lab/test_uses.py'].imports == ('aqis_lab/gamma.py', 'aqis_lab/pkg/alpha.py')
 
 
 def test_FR_1_0_03_reexports_are_listed_by_name(repo: Path) -> None:

@@ -26,7 +26,9 @@ INVARIANTS:
 NOT IN SCOPE:
   - Header parsing (headers.py), registry (registry.py), rendering (render.py), impact (impact.py).
 CHANGE LOG:
-  2026-10-12 WP-1.0 FR-1.0-03 created."""
+  2026-10-12 WP-1.0 FR-1.0-03 created.
+  2026-10-12 WP-1.0 WO-1.0-03 (Claude, FIX-WO03-absolute-from): an absolute `from a.b import c` resolves from
+    the repository root; the importer's folder no longer prefixes it."""
 from __future__ import annotations
 
 import ast
@@ -143,6 +145,8 @@ def _resolve_import(module_index: dict[str, str], from_rel: str, node: ast.Impor
         base_parts = base_parts[:-1]
     if node.level:
         base_parts = base_parts[: len(base_parts) - (node.level - 1)]
+    else:
+        base_parts = []
     root_parts = base_parts + (node.module.split('.') if node.module else [])
     resolved: set[str] = set()
     root_name = '.'.join(root_parts)

@@ -5,7 +5,8 @@ CAPABILITIES:
   seven-line records under docs/capabilities/records.d/ and retirements under
   docs/capabilities/retired.d/ into one Registry, comparing against the previous committed
   registry so a capability that vanishes without a retirement record raises CapabilityRemoved;
-  adopt_registry() migrates a hand-written registry into records and retirements
+  adopt_registry() migrates a hand-written registry into records and retirements;
+  owning_wp() derives the owning work package of a header per B12 pin 5
   [tests: test_FR_1_0_03_header_capabilities_become_active_rows,
   test_FR_1_0_03_rows_are_sorted_by_capability_id,
   test_FR_1_0_03_a_capability_in_two_modules_is_an_error_naming_both,
@@ -39,13 +40,16 @@ INVARIANTS:
 NOT IN SCOPE:
   - Scanning (scan.py), rendering the markdown (render.py), the command line (__main__.py).
 CHANGE LOG:
-  2026-10-12 WP-1.0 FR-1.0-03 created."""
+  2026-10-12 WP-1.0 FR-1.0-03 created.
+  2026-10-12 WP-1.0 FR-1.0-03 fix 1: _owning_wp renamed to public owning_wp for render.py;
+             dead parse row line and repeated deferred gate import removed."""
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from tools.audit.gate import parse_registry as gate_parse_registry
 from tools.index.headers import Capability, Header, parse_header
 from tools.index.scan import ModuleFacts, is_registry_source
 
@@ -61,6 +65,7 @@ __all__ = [
     'parse_record',
     'parse_retirement',
     'previous_rows',
+    'owning_wp',
 ]
 
 RECORD_LABELS = ('CAP', 'Module', 'Functions', 'What it does', 'Tests', 'Introduced by', 'Status')
@@ -70,11 +75,8 @@ RECORDS_REL = 'docs/capabilities/records.d'
 RETIRED_REL = 'docs/capabilities/retired.d'
 
 _CAP_ID = re.compile(r'^CAP-[A-Z0-9-]+$')
-_CAP_START = re.compile(r'^\s+(CAP-[A-Z0-9-]+):\s*(.*)$')
 _WP_TOKEN = re.compile(r'WP-\d+\.\d+')
 _WO_TOKEN = re.compile(r'WO-(\d+\.\d+)-\d+')
-_TESTS_BRACKET = re.compile(r'\[tests:[^\]]*\]')
-_SECTION_HEAD = re.compile(r'^[A-Z][A-Z ]+:')
 
 
 class RegistryError(Exception):
@@ -156,8 +158,7 @@ def previous_rows(text: str | None) -> dict[str, tuple[str, ...]]:
     """{cap_id: seven cells, unescaped} parsed from the previous committed registry via the gate."""
     if text is None or not text.strip():
         return {}
-    from tools.audit.gate import parse_registry  # deferred: keep module import side-effect light
-    rows, problems = parse_registry(text)
+    rows, problems = gate_parse_registry(text)
     if problems:
         detail = '; '.join(f'line {line}: {problem}' for line, problem in problems)
         raise RegistryError(f'previous registry is malformed: {detail}')
@@ -180,7 +181,7 @@ def _read_fragment(folder: Path | None, stem_pattern: re.Pattern[str]) -> dict[s
     return found
 
 
-def _owning_wp(header: Header) -> str:
+def owning_wp(header: Header) -> str:
     """The owning WP per B12 pin 5: first WP token of the first change-log entry, else its WO, else a marker."""
     if not header.change_log:
         return 'NO CHANGE LOG'
@@ -213,12 +214,12 @@ def _header_row(facts: ModuleFacts, capability: Capability, header: Header) -> R
         _functions_cell(facts),
         escape_cell(capability.description),
         _tests_cell(capability.tests),
-        _owning_wp(header),
+        owning_wp(header),
         'ACTIVE',
     ))
 
 
-def _record_row(cells: tuple[str, ...], path: str) -> RegistryRow:
+def _record_row(cells: tuple[str, ...]) -> RegistryRow:
     return RegistryRow(tuple(escape_cell(cell) if '|' in cell else cell for cell in cells))
 
 
@@ -282,7 +283,7 @@ CapabilityRemoved for capabilities of the previous registry now missing everywhe
     for cap_id, (fact, capability, header) in headers.items():
         rows[cap_id] = _header_row(fact, capability, header)
     for cap_id, (path, cells) in records.items():
-        rows[cap_id] = _record_row(cells, path.as_posix())
+        rows[cap_id] = _record_row(cells)
 
     for cap_id in sorted(retirements):
         if cap_id not in previous:
@@ -301,14 +302,6 @@ CapabilityRemoved for capabilities of the previous registry now missing everywhe
     return Registry(tuple(rows[cap_id] for cap_id in sorted(rows)))
 
 
-def _parse_row_line(line: str) -> list[str] | None:
-    """Cells of one registry table line (stripped), or None when the line is not a table row."""
-    stripped = line.strip()
-    if not stripped.startswith('|') or not stripped.endswith('|'):
-        return None
-    return [cell.strip() for cell in stripped[1:-1].split('|')]
-
-
 def adopt_registry(
     facts: tuple[ModuleFacts, ...],
     registry_text: str,
@@ -322,10 +315,7 @@ become retirement records; every other row becomes a capability record verbatim.
 fragments are never rewritten; one whose cells differ is an error. Every check runs first:
 on any error the returned dict is never produced and the caller writes nothing."""
     headers = _collect_header_rows(facts)
-    rows, problems = parse_registry(registry_text) if False else (None, None)
-    # parse with the gate, as pin 10 requires
-    from tools.audit.gate import parse_registry
-    parsed, problems = parse_registry(registry_text)
+    parsed, problems = gate_parse_registry(registry_text)
     if problems:
         detail = '; '.join(f'line {line}: {problem}' for line, problem in problems)
         raise RegistryError(f'cannot adopt a malformed registry: {detail}')
