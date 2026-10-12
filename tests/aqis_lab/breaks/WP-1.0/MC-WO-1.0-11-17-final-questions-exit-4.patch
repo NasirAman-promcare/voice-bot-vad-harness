@@ -1,0 +1,16 @@
+# MC: FIX-B15-final-questions (WO-1.0-11 B15, B16)
+# behaviour: a QUESTIONS answer in a final fix round finishes the run with QUESTIONS (exit 4) and records, never a crash
+# expect-fail: tests/aqis_lab/outsourcing/test_relay_final_questions_wo_1_0_11.py::test_FR_1_0_02_fix_questions_in_a_final_fix_round_finish_with_exit_4
+diff --git a/tools/outsourcing/stepper_final.py b/tools/outsourcing/stepper_final.py
+index 206582f..0ed8b7e 100644
+--- a/tools/outsourcing/stepper_final.py
++++ b/tools/outsourcing/stepper_final.py
+@@ -91,8 +91,6 @@ def _attempt_final_fix_turn(
+ 
+     try:
+         b_obj = bundle.parse_bundle(reply.text)
+-        if b_obj.questions:
+-            raise _FinalQuestions(b_obj.questions)
+         imp_rep = importer.import_bundle(b_obj, ctx.order, ctx.worktree.path, mode="fix", expected=set(ctx.order.outputs))
+         written = tuple(f.path for f in imp_rep.files)
+         return True, model_spec.name, "" if written else "no files written"

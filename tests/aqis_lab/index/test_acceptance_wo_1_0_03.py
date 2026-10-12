@@ -253,8 +253,9 @@ def test_FR_1_0_03_mc1_check_fails_when_a_header_changed_without_regeneration(re
 def test_FR_1_0_03_mc2_capability_removed_without_retirement_raises(repo: Path) -> None:
     built(repo)
     commit(repo, "index")
+    # header() indents each capability item by two more spaces, so the continuation line has six (corrected 2026-10-12).
     without = ALPHA.replace("  CAP-SCR-001: doubles a number for the scratch lab [tests: test_FR_9_1_01_alpha_works,\n"
-                            "    test_FR_9_1_02_alpha_listed_capability]\n", "  none.\n")
+                            "      test_FR_9_1_02_alpha_listed_capability]\n", "  none.\n")
     assert without != ALPHA
     write(repo, "aqis_lab/pkg/alpha.py", without)
     registry_before = read(repo, "docs/capabilities/REGISTRY.md")
