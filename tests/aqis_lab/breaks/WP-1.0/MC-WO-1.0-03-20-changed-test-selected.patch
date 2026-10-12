@@ -1,0 +1,15 @@
+# MC: DEC-1.0-10 (WO-1.0-03 B11 clarification)
+# behaviour: impact selects a changed or new test file itself
+# expect-fail: tests/aqis_lab/index/test_impact_changed_tests.py::test_FR_1_0_03_a_changed_test_file_selects_itself
+diff --git a/tools/index/impact.py b/tools/index/impact.py
+index cfa7b41..0420963 100644
+--- a/tools/index/impact.py
++++ b/tools/index/impact.py
+@@ -233,7 +233,6 @@ def affected_tests(repo_root, base_ref: str) -> ImpactResult:
+             if _is_test_file(fact.path) and any(module in affected for module in fact.imports):
+                 selected_files.add(fact.path)
+         selected_files |= _broken_importers(deleted, graphs[1], facts)
+-        selected_files |= {fact.path for fact in facts if _is_test_file(fact.path) and fact.path in affected}  # DEC-1.0-10
+         wanted = _capability_tests(facts, affected)
+         node_ids: set[str] = set()
+         for fact in facts:
