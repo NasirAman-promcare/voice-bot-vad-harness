@@ -14,6 +14,7 @@ CHANGE LOG:
   2026-10-10 WO-1.0-11 FIX 1: reports on every finish, sha256 order hashing, correct governor state file and model listing error codes.
   2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): the report's checks table, requests and retries come from the
     checks and governor of this run (they were derived from the result, which reported checks that never ran).
+  2026-10-12 WP-1.0 FR-1.0-02 fix (Claude, FIX-B17-ledger-row): the ledger fragment gets the run's facts.
 """
 from __future__ import annotations
 
@@ -200,14 +201,13 @@ def _write_records(
     sum_rel = f"docs/outsourcing/returns/{run_ctx.order.id}/summary.md"
     sum_path = run_ctx.worktree.path / sum_rel
     led_rel = f"docs/outsourcing/ledger.d/{run_ctx.order.id}.md"
-    led_path = run_ctx.worktree.path / led_rel
     step_rel = f"docs/outsourcing/returns/{run_ctx.order.id}/steps.md"
 
     ledger.write_summary(sum_path, outcome)
     models_used = tuple(run_ctx.all_models_used) or tuple((a.model, a.provider) for a in accepted_records)
     ledger.write_ledger_fragment(
-        led_path, run_ctx.order.id, outcome, run_ctx.total_requests,
-        run_ctx.total_prompt_tokens, run_ctx.total_output_tokens, models_used
+        run_ctx.worktree.path / led_rel, run_ctx.order.id, outcome, run_ctx.total_requests, run_ctx.total_prompt_tokens,
+        run_ctx.total_output_tokens, models_used, **ledger.run_facts(accepted_records, run_ctx.step_log, run_ctx.clock()),
     )
 
     push_ok = True
