@@ -13,11 +13,14 @@ CHANGE LOG:
   2026-10-10 WO-1.0-11 FIX 1 created.
   2026-10-10 WP-1.0 FR-1.0-02 review fix (Claude): the router gets a token estimate; the full checks are kept
     in RunContext.last_checks for the report.
+  2026-10-12 WP-1.0 FR-1.0-02 fix (Claude, FIX-B15-final-questions): a QUESTIONS answer in a final fix round finishes
+    the run with QUESTIONS and a step-log stop, imports nothing (B15); it used to crash on QuestionsReturned.
 """
 from __future__ import annotations
 
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -53,6 +56,14 @@ def _get_status_uncommitted(wt_path: Path, outputs: tuple[str, ...]) -> tuple[st
     return tuple(paths)
 
 
+class _FinalQuestions(Exception):
+    """A final fix round answered with a QUESTIONS block (B15)."""
+
+    def __init__(self, questions: tuple[str, ...]) -> None:
+        super().__init__("final fix round returned questions")
+        self.questions = questions
+
+
 def _attempt_final_fix_turn(
     ctx: RunContext, chk_res: Any, attempts_used: int, attempt_dir: Path
 ) -> tuple[bool, str, str]:
@@ -80,6 +91,8 @@ def _attempt_final_fix_turn(
 
     try:
         b_obj = bundle.parse_bundle(reply.text)
+        if b_obj.questions:
+            raise _FinalQuestions(b_obj.questions)
         imp_rep = importer.import_bundle(b_obj, ctx.order, ctx.worktree.path, mode="fix", expected=set(ctx.order.outputs))
         written = tuple(f.path for f in imp_rep.files)
         return True, model_spec.name, "" if written else "no files written"
@@ -121,7 +134,11 @@ def run_final(ctx: RunContext) -> StepOutcome:
             failing = [f"{r.name}: {r.summary}" for r in chk_res.results if not r.passed]
             return StepOutcome(result=Result.EXHAUSTED, stop_reason="; ".join(failing))
 
-        ok, model_used, err_msg = _attempt_final_fix_turn(ctx, chk_res, attempts_used, attempt_dir)
+        try:
+            ok, model_used, err_msg = _attempt_final_fix_turn(ctx, chk_res, attempts_used, attempt_dir)
+        except _FinalQuestions as exc:
+            ctx.step_log = ctx.step_log.record_stop(datetime.fromtimestamp(ctx.clock(), tz=timezone.utc), "QUESTIONS")
+            return StepOutcome(result=Result.QUESTIONS, stop_reason="\n".join(exc.questions))
         if model_used:
             last_model = model_used
 
