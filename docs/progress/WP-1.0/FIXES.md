@@ -73,3 +73,18 @@
     - 1 failure was my own WO-1.0-11 fixture putting two models on rank 1. Its helper ranks moved to 2, 3, 4 (TEST_CHANGES row; no assertion changed). After that: `15 failed, 369 passed`.
   - The real pool, with only those two ranks changed to 11 and 12 in an in-memory copy, loads with `load_pool`.
   - Break recipe `MC-WO-1.0-10-13-unique-ranks.patch` is caught.
+
+## FIX-B13-stream — non-streaming replies slower than 30 seconds fail on the session's egress path (BLK-1.0-14, pending the owner)
+- **Source.** On 2026-10-12, with the key injected, WO-1.0-03 got `502 upstream request failed` after 30.5 s. A streamed request with the same body succeeded (EVIDENCE.md, "Key injected; the 30-second limit found").
+- **Change budget.**
+  - `tools/outsourcing/openai_client.py`: `_build_payload` (the two stream fields), `generate` (assemble an event stream inside the read; `http.client.HTTPException` and `sse.StreamCut` join the network-error retry), the new `_parse_openai_ok` (dispatches to the existing `_parse_openai_reply` or `_parse_openai_choice_reply`), two imports, and the change log.
+  - New module `tools/outsourcing/sse.py`: `StreamCut`, `Completion`, `is_event_stream`, `events`, `assemble`.
+  - New test file `tests/aqis_lab/outsourcing/test_stream_wo_1_0_10.py`. No existing test changed.
+- **Why Claude and not a work order.** It is about 100 lines across a contract Claude designed, and the relay cannot send any work order until it exists.
+- **Evidence.**
+  - Before: `7 failed` (`ApiError: unexpected API response: Expecting value`).
+  - First build: `2 failed, 411 passed`. Module and function size checks: `openai_client` was 408 lines (limit 400); `_parse_openai_stream` was 54 and `generate` 42 (limit 40). The parsing moved into `sse.py`, and the dispatch into `_parse_openai_ok`.
+  - After: `413 passed in 77.02s`.
+  - `git diff -U0 40dba44 57a2afe -- tools/outsourcing/openai_client.py`: eight hunks: change log, two imports, `_build_payload`, new `_parse_openai_ok`, and three in `generate` (the `streamed` line, the `except` lines, the final call).
+  - Break recipes MC-WO-1.0-10-17 and -18 are caught.
+  - `.venv/bin/python -m tools.audit.gate --base origin/main --wp WP-1.0`: 27 findings, all F3/F4 close-out coverage (requirement IDs not yet in EVIDENCE or not yet in test names); none on the changed files.

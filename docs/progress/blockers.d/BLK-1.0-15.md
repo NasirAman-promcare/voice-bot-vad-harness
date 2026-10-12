@@ -16,13 +16,14 @@ What I tried (WO-1.0-03 step 1 as the relay builds it, about 21,700 prompt token
 - **kimi-k3 with the pool values** (`high`, `max_tokens 16384`): 928 s, finish `length`, `reasoning_tokens 16384`, content 0.
 - **glm-5.3-flash with the pool values** (`high`, 16384): 555 s, finish `length`, content 0.
 - **glm-5.3-flash, `medium`, 60000**: 1,977 s, finish `length`, `reasoning_tokens 60000`, content 0. The last reasoning chunks are code.
-- **glm-5.3-flash, `low`, 60000**: 232 s, finish `stop`, 653 reasoning and 8,028 output tokens. It returned a bundle, but commentary follows the last block.
-- **kimi-k3, `none`, 60000**: 250 s, finish `stop`, no reasoning, 5,257 output tokens. It returned a complete bundle ending in `=== END DOD ===`.
+- **glm-5.3-flash, `low`, 60000**: 232 s, finish `stop`, 653 reasoning and 8,028 output tokens. The relay's `bundle.parse_bundle` refuses its reply: `BundleError: Nested block marker === FILE: tests/aqis_lab/index/__init__.py === inside FILE`.
+- **kimi-k3, `none`, 60000**: 250 s, finish `stop`, no reasoning, 5,257 output tokens. `parse_bundle` accepts it: 4 manifest rows, 4 files, ending in `=== END DOD ===`.
+- **Dry run of the change asked below**, on a scratch copy of the pool: `relay --models --pool <copy>` → both `present`, exit 0. `relay --dry-run` routes every step of WO-1.0-03 (~23k tokens) and WO-1.0-04 (~44k) to `moonshotai/kimi-k3`.
 - **NVIDIA's limit**: `max_tokens` 60000 and 131072 are both accepted for both models.
 
 Options:
-1. **Kimi first with reasoning off, GLM second at `low`, both with 60,000 output tokens (recommended).** These are the only settings that gave a finished answer to a real step. Kimi's bundle was the cleaner of the two. 60,000 matches the order's own `max_output_tokens`.
-2. **Same reasoning values, ranks unchanged (GLM first).** This also works. GLM's single bundle had trailing commentary, which may cost a fix turn per step.
+1. **Kimi first with reasoning off, GLM second at `low`, both with 60,000 output tokens (recommended).** These are the only settings that gave a finished answer to a real step, and only Kimi's answer passed the relay's bundle parser. One sample per model, so GLM stays as the fallback. 60,000 matches the order's own `max_output_tokens`.
+2. **Same reasoning values, ranks unchanged (GLM first).** This also works. GLM's single answer failed the bundle parser, so each step would probably need fix turns.
 3. **Keep `high` and raise the output limit only.** I do not recommend it: at `medium` and 60,000 tokens GLM still never answered, and one step took 33 minutes.
 
 Exact steps (option 1):
