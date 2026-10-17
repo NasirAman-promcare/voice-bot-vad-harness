@@ -1,0 +1,17 @@
+# AQIS lab, Sprint 1 (WP-1.1), GPU stack for the NeMo models. The lock is s1-nemo.txt.
+#
+# Regenerate the lock from the repository root with uv 0.8.17 after editing this file or phase0.txt:
+#   uv pip compile requirements/aqis_lab/s1-nemo.in -c requirements/aqis_lab/phase0.txt --python-version 3.13 --python-platform x86_64-manylinux_2_28 --generate-hashes --output-file requirements/aqis_lab/s1-nemo.txt
+# Pass the same command as --custom-compile-command so the lock header records it, and update the line below to the
+# SHA-256 of the phase0.txt it was compiled against.
+# compiled-against: requirements/aqis_lab/phase0.txt sha256 87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef
+#
+# Own virtual environment on Colab. NeMo 3.0.0 as in the phase 0 GPU lock: Parakeet TDT v2 and Parakeet Unified (ASR) and
+# Canary-Qwen (SpeechLM2, SALM.generate with audios and audio_lens).
+# What the runner imports besides the stack: numpy, pyarrow, pyyaml (the config), soundfile (wav files for NeMo).
+numpy
+pyarrow
+pyyaml
+soundfile
+huggingface_hub
+nemo-toolkit[asr,speechlm2]==3.0.0

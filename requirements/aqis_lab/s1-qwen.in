@@ -1,0 +1,17 @@
+# AQIS lab, Sprint 1 (WP-1.1), GPU stack for Qwen3-ASR. The lock is s1-qwen.txt.
+#
+# Regenerate the lock from the repository root with uv 0.8.17 after editing this file or phase0.txt:
+#   uv pip compile requirements/aqis_lab/s1-qwen.in -c requirements/aqis_lab/phase0.txt --python-version 3.13 --python-platform x86_64-manylinux_2_28 --generate-hashes --output-file requirements/aqis_lab/s1-qwen.txt
+# Pass the same command as --custom-compile-command so the lock header records it, and update the line below to the
+# SHA-256 of the phase0.txt it was compiled against.
+# compiled-against: requirements/aqis_lab/phase0.txt sha256 87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef
+#
+# Own virtual environment on Colab. qwen-asr 0.0.6 on its transformers backend (the card recommends Python 3.12; this lock
+# is compiled for Colab's Python 3.13 first, and a uv venv with Python 3.12 is the fallback if it fails).
+# What the runner imports besides the stack: numpy, pyarrow, pyyaml (the config), soundfile (wav files for NeMo).
+numpy
+pyarrow
+pyyaml
+soundfile
+huggingface_hub
+qwen-asr==0.0.6

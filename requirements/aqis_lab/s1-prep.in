@@ -1,0 +1,14 @@
+# AQIS lab, Sprint 1 (WP-1.1), CPU prep and report packages. The lock is s1-prep.txt.
+#
+# Regenerate the lock from the repository root with uv 0.8.17 after editing this file or phase0.txt:
+#   uv pip compile requirements/aqis_lab/s1-prep.in -c requirements/aqis_lab/phase0.txt --python-version 3.13 --python-platform x86_64-manylinux_2_28 --generate-hashes --output-file requirements/aqis_lab/s1-prep.txt
+# Pass the same command as --custom-compile-command so the lock header records it, and update the line below to the
+# SHA-256 of the phase0.txt it was compiled against.
+# compiled-against: requirements/aqis_lab/phase0.txt sha256 87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef
+#
+# Installed on top of the phase 0 lock on a CPU runtime: uv pip install --require-hashes -r requirements/aqis_lab/s1-prep.txt.
+# huggingface_hub reads the datasets (its HfFileSystem), soxr resamples to 16 kHz, matplotlib draws the weakness map.
+# Decoding uses soundfile, which the phase 0 lock already pins; Eka's m4a files use Colab's ffmpeg.
+huggingface_hub
+soxr
+matplotlib
