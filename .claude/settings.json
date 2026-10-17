@@ -1,5 +1,4 @@
 {
-  "advisorModel": "opus",
   "permissions": {
     "deny": [
       "Edit(/CLAUDE.md)",
