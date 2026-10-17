@@ -50,4 +50,10 @@ The first full run failed `test_NFR_0_0_03_imports_are_stdlib_or_pinned` and `te
 ```
 $ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-1.1
 ```
-(output pasted below after the final commit)
+```
+aqis-audit-gate: base origin/main (merge-base 33616e0a69cf), head 6340daeec96e, approvals origin/main 33616e0a69cf, wp WP-1.1
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (1.0 s)
+```
