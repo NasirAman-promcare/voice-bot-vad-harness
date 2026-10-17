@@ -1,0 +1,25 @@
+# AQIS lab, Sprint 1 (WP-1.1), GPU stack for the Hugging Face transformers models. The lock is s1-hf.txt.
+#
+# Regenerate the lock from the repository root with uv 0.8.17 after editing this file or phase0.txt:
+#   uv pip compile requirements/aqis_lab/s1-hf.in -c requirements/aqis_lab/phase0.txt --python-version 3.13 --python-platform x86_64-manylinux_2_28 --generate-hashes --output-file requirements/aqis_lab/s1-hf.txt
+# Pass the same command as --custom-compile-command so the lock header records it, and update the line below to the
+# SHA-256 of the phase0.txt it was compiled against.
+# compiled-against: requirements/aqis_lab/phase0.txt sha256 87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef
+#
+# Own virtual environment on Colab (uv venv, then uv pip sync --require-hashes). Whisper large-v3 and turbo, Granite Speech 4.1,
+# Cohere Transcribe (transformers>=5.4.0, class CohereAsrForConditionalGeneration) and Voxtral Realtime (transformers>=5.2.0,
+# mistral-common[audio]) from the Hugging Face cards, checked on 17 Oct 2026.
+# What the runner imports besides the stack: numpy, pyarrow, pyyaml (the config), soundfile (wav files for NeMo).
+numpy
+pyarrow
+pyyaml
+soundfile
+huggingface_hub
+torch
+torchaudio
+transformers>=5.4.0
+accelerate
+sentencepiece
+protobuf
+librosa
+mistral-common[audio]

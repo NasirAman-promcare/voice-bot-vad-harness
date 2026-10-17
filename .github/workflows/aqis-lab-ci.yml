@@ -3,7 +3,8 @@
 #   lab: builds .venv exactly as developers do (Colab Python from docs/environment/colab_probe.txt,
 #        hash-checked requirements/aqis_lab/phase0.txt), runs the fast lab suite and the audit gate
 #        (with --wp from the pull request title on pull requests). It installs rclone from the Ubuntu archive
-#        first, because the WP-0.6 sync tests run the real rclone (owner decision, WP-0.6 question 5).
+#        first, because the WP-0.6 sync tests run the real rclone (owner decision, WP-0.6 question 5). It also installs
+#        libopus0 (WP-1.1), because the WebRTC condition tests of the Sprint 1 benchmark run the real libopus.
 #   harness-regression: provisions the existing harness (aqis_lab/deploy/harness_provision.sh), runs its tests
 #        and fails when a test that passed in docs/baselines/harness_tests_baseline.md no longer passes.
 #   lab-network: builds .venv the same way and runs the lab tests marked only `network` (Vosk model download,
@@ -43,6 +44,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends rclone
           rclone version
+
+      - name: Install libopus0 (WP-1.1 WebRTC condition tests run the real libopus)
+        run: sudo apt-get install -y --no-install-recommends libopus0
 
       - name: Fast lab test suite
         run: .venv/bin/python -m pytest tests/aqis_lab -q -m "not slow and not gpu and not colab and not oracle and not network"
