@@ -1,109 +1,328 @@
-# Sprint 1 (WP-1.1) speech-to-text benchmark: the one config every `python -m aqis_lab.bench` action reads.
-# Starting values are Appendix A of docs/specs/sprints/WP-1.1-S1-asr-benchmark.md. Additions to it, each explained:
-#   - sources.*.clean: reference-cleaning rules per source (brief section 2). Regexes are case-insensitive; a tag that
-#     no rule covers stops `prep` with the list of those tags, so no tag is ever silently scored.
-#   - sources.eka_medical.entity_categories / ignored_entity_categories: which entity categories count (drug, finding,
-#     test) and which are known and left out; a category in neither list stops `prep`.
-#   - slices.us_phone.balance_roles / digits_first: the HarperValleyBank selection rule (half caller, half agent turns,
-#     digit-bearing turns first up to half the slice).
-#   - models.*.licence: the licence column of brief section 4, printed in the scorecard.
-# Model revisions are resolved at the first run and kept in AQIS_LAB/s1/revisions.json, so a model never changes
-# revision part-way through a sprint.
 schema: s1-v1
 seed: 20261019
-normaliser: main                    # aqis_lab.scoring MAIN variant
-bootstrap: {resamples: 1000, unit: speaker, ci: 0.95}
-utterance: {min_s: 1.0, max_s: 30.0, min_ref_words: 3}
-
-sources:                            # prep records the resolved revision of each
+normaliser: main
+bootstrap:
+  resamples: 1000
+  unit: speaker
+  ci: 0.95
+utterance:
+  min_s: 1.0
+  max_s: 30.0
+  min_ref_words: 3
+sources:
   edacc:
     hf: edinburghcstr/edacc
-    splits: [test, validation]
+    splits:
+    - test
+    - validation
     licence: CC-BY-SA-4.0
-    clean:                                  # tags counted in the real data on 17 Oct 2026: see docs/progress/WP-1.1/PLAN.md
-      strip: {laugh: "<laugh>", dtmf: "<dtmf>", breath: "<breath>", cough: "<cough>", lipsmack: "<lipsmack>",
-              click: "<click>", ring: "<ring>"}
-      drop_if: {overlap: "<overlap>", foreign: "<foreign>", no_speech: "<no-speech>", unintelligible: "<unintelligible>|<unk>",
-                ignore_segment: "IGNORE_TIME_SEGMENT_IN_SCORING"}
+    clean:
+      strip:
+        laugh: <laugh>
+        dtmf: <dtmf>
+        breath: <breath>
+        cough: <cough>
+        lipsmack: <lipsmack>
+        click: <click>
+        ring: <ring>
+      drop_if:
+        overlap: <overlap>
+        foreign: <foreign>
+        no_speech: <no-speech>
+        unintelligible: <unintelligible>|<unk>
+        ignore_segment: IGNORE_TIME_SEGMENT_IN_SCORING
   svarah:
     hf: ai4bharat/Svarah
-    splits: [test]
+    splits:
+    - test
     licence: CC-BY-4.0
     gated: true
-    clean: {strip: {}, drop_if: {}}
+    clean:
+      strip: {}
+      drop_if: {}
   eka_medical:
     hf: ekacare/eka-medical-asr-evaluation-dataset
     config: en
-    splits: [test]
+    splits:
+    - test
     licence: MIT
-    entity_categories: [drugs, clinical_findings, diagnostics]      # drug, finding and test of the brief
-    ignored_entity_categories: [advices, misc_medical]
-    clean: {strip: {}, drop_if: {}}
+    entity_categories:
+    - drugs
+    - clinical_findings
+    - diagnostics
+    ignored_entity_categories:
+    - advices
+    - misc_medical
+    clean:
+      strip: {}
+      drop_if: {}
   earnings22:
     hf: distil-whisper/earnings22
     config: chunked
-    splits: [test]
+    splits:
+    - test
     licence: CC-BY-SA-4.0
     clean:
-      strip: {cough: "<cough>", laugh: "<laugh>", silence: "<silence>", affirmative: "<affirmative>",
-              clear_throat: "<clear_throat>"}
-      drop_if: {inaudible: "<inaudible>", crosstalk: "<crosstalk>", unk: "<unk>", foreign: "<foreign>"}
+      strip:
+        cough: <cough>
+        laugh: <laugh>
+        silence: <silence>
+        affirmative: <affirmative>
+        clear_throat: <clear_throat>
+      drop_if:
+        inaudible: <inaudible>
+        crosstalk: <crosstalk>
+        unk: <unk>
+        foreign: <foreign>
   harper_valley_bank:
     git: https://github.com/cricketclub/gridspace-stanford-harper-valley
     licence: CC-BY-4.0
-    drop_if: ["<unk>", "[unintelligible]"]
-    strip: ["[baby]", "[cough]", "[dogs]", "[kids]", "[laughter]", "[music]", "[noise]", "[ringing]"]
-  librispeech-test-other: {registry: librispeech-test-other}   # python -m aqis_lab registry fetch
-  musan: {registry: musan}
-
+    clean:
+      drop_if:
+        unk: <unk>
+        unintelligible: \[unintelligible\]
+      strip:
+        baby: \[baby\]
+        cough: \[cough\]
+        dogs: \[dogs\]
+        kids: \[kids\]
+        laughter: \[laughter\]
+        music: \[music\]
+        noise: \[noise\]
+        ringing: \[ringing\]
+  librispeech-test-other:
+    registry: librispeech-test-other
+  musan:
+    registry: musan
 slices:
-  us_conv:   {source: edacc, l1: ["Mainstream US English"], n: 300}
-  sa_conv:   {source: edacc, l1: [Hindi, Urdu, Sinhalese, "Indian English"], n: 300}
-  sa_india:  {source: svarah, n: 400, stratify: {read: 100, spontaneous: 150, everyday: 150}}
-  medical:   {source: eka_medical, n: 300, require_entities: true}
-  numbers:   {source: earnings22, n: 200, min_digit_tokens: 2, max_s: 20.0, min_s: 3.0}
-  us_phone:  {source: harper_valley_bank, n: 300, native_rate_hz: 8000, conditions: [native],
-              balance_roles: true, digits_first: true}
-  anchor:    {source: librispeech-test-other, n: 500, conditions: [clean, phone]}
-  nonspeech: {source: musan, n: 100, mix: {noise: 60, music: 20, silence: 20}, level_dbfs: [-35, -15],
-              length_s: [3, 8], conditions: [clean, phone, webrtc]}
-
+  us_conv:
+    source: edacc
+    l1:
+    - Mainstream US English
+    n: 300
+  sa_conv:
+    source: edacc
+    l1:
+    - Hindi
+    - Urdu
+    - Sinhalese
+    - Indian English
+    n: 300
+  sa_india:
+    source: svarah
+    n: 400
+    stratify:
+      read: 100
+      spontaneous: 150
+      everyday: 150
+  medical:
+    source: eka_medical
+    n: 300
+    require_entities: true
+  numbers:
+    source: earnings22
+    n: 200
+    min_digit_tokens: 2
+    max_s: 20.0
+    min_s: 3.0
+  us_phone:
+    source: harper_valley_bank
+    n: 300
+    native_rate_hz: 8000
+    conditions:
+    - native
+    balance_roles: true
+    digits_first: true
+  anchor:
+    source: librispeech-test-other
+    n: 500
+    conditions:
+    - clean
+    - phone
+  nonspeech:
+    source: musan
+    n: 100
+    mix:
+      noise: 60
+      music: 20
+      silence: 20
+    level_dbfs:
+    - -35
+    - -15
+    length_s:
+    - 3
+    - 8
+    conditions:
+    - clean
+    - phone
+    - webrtc
 conditions:
   clean: {}
-  noise_10: {noise: musan-noise, snr_db: 10}
-  noise_0: {noise: musan-noise, snr_db: 0}
-  phone: {channel: g711_mulaw, band_hz: [300, 3400], fir_taps: 511, kaiser_beta: 8.0}
-  phone_noise_10: {noise: musan-noise, snr_db: 10, channel: g711_mulaw}   # channel settings as in phone
-  webrtc: {channel: opus, bitrate_bps: 16000, frame_ms: 20, fec: true, loss: 0.02}
-  webrtc_noise_10: {noise: musan-noise, snr_db: 10, channel: opus}        # channel settings as in webrtc
-  native: {}                                                              # us_phone only: real 8 kHz audio, upsampled
-default_conditions: [clean, noise_10, noise_0, phone, phone_noise_10, webrtc, webrtc_noise_10]
-target_conditions: [phone, phone_noise_10, webrtc, webrtc_noise_10, native]
-caller_slices: [us_conv, sa_conv, sa_india, medical, numbers, us_phone]
-
+  noise_10:
+    noise: musan-noise
+    snr_db: 10
+  noise_0:
+    noise: musan-noise
+    snr_db: 0
+  phone:
+    channel: g711_mulaw
+    band_hz:
+    - 300
+    - 3400
+    fir_taps: 511
+    kaiser_beta: 8.0
+  phone_noise_10:
+    noise: musan-noise
+    snr_db: 10
+    channel: g711_mulaw
+  webrtc:
+    channel: opus
+    bitrate_bps: 16000
+    frame_ms: 20
+    fec: true
+    loss: 0.02
+  webrtc_noise_10:
+    noise: musan-noise
+    snr_db: 10
+    channel: opus
+  native: {}
+default_conditions:
+- clean
+- noise_10
+- noise_0
+- phone
+- phone_noise_10
+- webrtc
+- webrtc_noise_10
+target_conditions:
+- phone
+- phone_noise_10
+- webrtc
+- webrtc_noise_10
+- native
+caller_slices:
+- us_conv
+- sa_conv
+- sa_india
+- medical
+- numbers
+- us_phone
 models:
-  whisper-large-v3:       {hf: openai/whisper-large-v3, stack: hf, role: heavy, licence: "MIT", batch: 16, dtype: bf16, language: en}
-  whisper-large-v3-turbo: {hf: openai/whisper-large-v3-turbo, stack: hf, role: live, licence: "MIT", batch: 32, dtype: bf16, language: en}
-  parakeet-tdt-0.6b-v2:   {hf: nvidia/parakeet-tdt-0.6b-v2, stack: nemo, role: live, licence: "CC BY 4.0", batch: 64}
-  parakeet-unified-0.6b:  {hf: nvidia/parakeet-unified-en-0.6b, stack: nemo, role: live, licence: "NVIDIA Open Model License", batch: 64, mode: offline}
-  canary-qwen-2.5b:       {hf: nvidia/canary-qwen-2.5b, stack: nemo, role: heavy, licence: "CC BY 4.0", batch: 32,
-                           prompt: "Transcribe the following: {audio}"}
-  granite-speech-4.1-2b:  {hf: ibm-granite/granite-speech-4.1-2b, stack: hf, role: heavy, licence: "Apache 2.0", batch: 16, dtype: bf16,
-                           prompt: "<|audio|>transcribe the speech with proper punctuation and capitalization."}
-  cohere-transcribe-2b:   {hf: CohereLabs/cohere-transcribe-03-2026, stack: hf, role: heavy, licence: "Apache 2.0 (gated)", batch: 32, dtype: bf16,
-                           language: en, gated: true}
-  qwen3-asr-1.7b:         {hf: Qwen/Qwen3-ASR-1.7B, stack: qwen, role: heavy, licence: "Apache 2.0", batch: 32, dtype: bf16, language: English}
-  voxtral-realtime-4b:    {hf: mistralai/Voxtral-Mini-4B-Realtime-2602, stack: hf, role: live, licence: "Apache 2.0", batch: 16, dtype: bf16,
-                           delay_ms: 480}
+  whisper-large-v3:
+    hf: openai/whisper-large-v3
+    stack: hf
+    role: heavy
+    licence: MIT
+    batch: 16
+    dtype: bf16
+    language: en
+  whisper-large-v3-turbo:
+    hf: openai/whisper-large-v3-turbo
+    stack: hf
+    role: live
+    licence: MIT
+    batch: 32
+    dtype: bf16
+    language: en
+  parakeet-tdt-0.6b-v2:
+    hf: nvidia/parakeet-tdt-0.6b-v2
+    stack: nemo
+    role: live
+    licence: CC BY 4.0
+    batch: 64
+  parakeet-unified-0.6b:
+    hf: nvidia/parakeet-unified-en-0.6b
+    stack: nemo
+    role: live
+    licence: NVIDIA Open Model License
+    batch: 64
+    mode: offline
+  canary-qwen-2.5b:
+    hf: nvidia/canary-qwen-2.5b
+    stack: nemo
+    role: heavy
+    licence: CC BY 4.0
+    batch: 32
+    prompt: 'Transcribe the following: {audio}'
+  granite-speech-4.1-2b:
+    hf: ibm-granite/granite-speech-4.1-2b
+    stack: hf
+    role: heavy
+    licence: Apache 2.0
+    batch: 16
+    dtype: bf16
+    prompt: <|audio|>transcribe the speech with proper punctuation and capitalization.
+  cohere-transcribe-2b:
+    hf: CohereLabs/cohere-transcribe-03-2026
+    stack: hf
+    role: heavy
+    licence: Apache 2.0 (gated)
+    batch: 32
+    dtype: bf16
+    language: en
+    gated: true
+  qwen3-asr-1.7b:
+    hf: Qwen/Qwen3-ASR-1.7B
+    stack: qwen
+    role: heavy
+    licence: Apache 2.0
+    batch: 32
+    dtype: bf16
+    language: English
+  voxtral-realtime-4b:
+    hf: mistralai/Voxtral-Mini-4B-Realtime-2602
+    stack: hf
+    role: live
+    licence: Apache 2.0
+    batch: 16
+    dtype: bf16
+    delay_ms: 480
 optional_models:
-  granite-speech-4.1-2b-nar: {hf: ibm-granite/granite-speech-4.1-2b-nar, stack: hf, role: live}
-  qwen3-asr-0.6b:            {hf: Qwen/Qwen3-ASR-0.6B, stack: qwen, role: live}
-
+  granite-speech-4.1-2b-nar:
+    hf: ibm-granite/granite-speech-4.1-2b-nar
+    stack: hf
+    role: live
+  qwen3-asr-0.6b:
+    hf: Qwen/Qwen3-ASR-0.6B
+    stack: qwen
+    role: live
 stages:
-  smoke: {per_slice: 3, conditions: [clean, phone, webrtc]}
-  anchor: {slices: [anchor], models: [parakeet-tdt-0.6b-v2, canary-qwen-2.5b, cohere-transcribe-2b]}
-  pilot: {per_slice: 100, conditions: [clean, phone, webrtc]}
+  smoke:
+    per_slice: 3
+    conditions:
+    - clean
+    - phone
+    - webrtc
+  anchor:
+    slices:
+    - anchor
+    models:
+    - parakeet-tdt-0.6b-v2
+    - canary-qwen-2.5b
+    - cohere-transcribe-2b
+  pilot:
+    per_slice: 100
+    conditions:
+    - clean
+    - phone
+    - webrtc
   full: {}
-speed: {clips: 50, length_s: [3, 8], warmup: 3, batch: 1, from_slices: [us_conv, sa_conv], condition: clean}
-anchor_published_test_other_wer: {parakeet-tdt-0.6b-v2: 3.19, canary-qwen-2.5b: 3.10, cohere-transcribe-2b: 2.37}
-gpu: {default: NVIDIA L4, t4_ok_stacks: [nemo]}
+speed:
+  clips: 50
+  length_s:
+  - 3
+  - 8
+  warmup: 3
+  batch: 1
+  from_slices:
+  - us_conv
+  - sa_conv
+  condition: clean
+anchor_published_test_other_wer:
+  parakeet-tdt-0.6b-v2: 3.19
+  canary-qwen-2.5b: 3.1
+  cohere-transcribe-2b: 2.37
+gpu:
+  default: NVIDIA L4
+  t4_ok_stacks:
+  - nemo
