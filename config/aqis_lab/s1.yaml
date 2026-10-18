@@ -51,7 +51,8 @@ sources:                            # prep records the resolved revision of each
   harper_valley_bank:
     git: https://github.com/cricketclub/gridspace-stanford-harper-valley
     licence: CC-BY-4.0
-    clean: {strip: {}, drop_if: {}}
+    drop_if: ["<unk>", "[unintelligible]"]
+    strip: ["[baby]", "[cough]", "[dogs]", "[kids]", "[laughter]", "[music]", "[noise]", "[ringing]"]
   librispeech-test-other: {registry: librispeech-test-other}   # python -m aqis_lab registry fetch
   musan: {registry: musan}
 
