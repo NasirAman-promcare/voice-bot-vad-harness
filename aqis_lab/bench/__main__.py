@@ -53,7 +53,7 @@ def main(argv=None):
                 return 2
             from aqis_lab import platform as lp
             from aqis_lab.bench import run
-            gpu = lp.machine_block()["gpu_type"]
+            gpu = lp.machine_block().get("gpu_type") or lp.machine_block().get("gpu") or lp.machine_block().get("gpu_name") or "unknown_gpu"
             if not gpu:
                 print("ERROR: no GPU found; smoke, run and speed need a GPU runtime", file=sys.stderr)
                 return 2
