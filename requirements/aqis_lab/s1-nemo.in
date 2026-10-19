@@ -15,3 +15,8 @@ pyyaml
 soundfile
 huggingface_hub
 nemo-toolkit[asr,speechlm2]==3.0.0
+# torchao 0.15 and later import torch.nn.functional names (ScalingType, SwizzleType, scaled_grouped_mm) that torch 2.9.1, the
+# version NeMo 3.0.0 pins, does not have, and transformers 5.x then imports torchao when it is 0.15 or newer, which
+# broke `import nemo.collections.speechlm2.models` (Canary-Qwen) on the Colab smoke run of 19 Oct 2026. Below 0.15
+# transformers leaves torchao alone (TORCHAO_MIN_VERSION) and 0.14.x is built for torch 2.9; nothing here quantizes.
+torchao<0.15
