@@ -215,6 +215,7 @@ def _update_model_info(out_dir, name, info):
 def _load(cfg, name, out_dir, dtype, log):
     from aqis_lab.bench import models
     revision = revision_for(name, cfg.models[name]["hf"], out_dir)
+    log(f"{name}: loading revision {revision[:10]} (a first load downloads the weights, several GB for the larger models)")
     started = time.perf_counter()
     model = models.load(name, cfg.models[name], revision, dtype)
     log(f"{name}: loaded revision {revision[:10]} in {time.perf_counter() - started:.0f} s (dtype {model.dtype})")
@@ -244,6 +245,10 @@ def run_model(cfg, name, stage, out_dir, work_dir, repo_root, gpu, dtype=None, s
         todo = missing_ids(path, required)
         if not todo:
             log(f"{slice_name}/{condition}: complete ({len(required)} utterances), skipped")
+            if stage == "smoke":
+                refs = {r["utt_id"]: r["ref_clean"] for r in read_cell(src, ["utt_id", "ref_clean"])}
+                shown.append((slice_name, condition, [(refs[r["utt_id"]], r["hyp"]) for r in read_preds(path)
+                                                      if r["utt_id"] in refs]))
             continue
         if model is None:
             model, revision = _load(cfg, name, out_dir, dtype, log)
@@ -289,17 +294,30 @@ def run_model(cfg, name, stage, out_dir, work_dir, repo_root, gpu, dtype=None, s
     return failures
 
 
+def _words(text):
+    return {w for w in "".join(c.lower() if c.isalnum() else " " for c in text).split()}
+
+
 def smoke_check(name, shown, log=print):
-    """Print hypotheses beside references; return the failures: empty clean-speech output or identical output."""
+    """Print hypotheses beside references; return the failures (empty clean-speech output, or two clips with different
+    references and the same output). A clean clip that shares under a third of its reference words with the output gets a
+    WARNING line: the audio may not belong to its reference."""
     failures = []
     for slice_name, condition, pairs in shown:
         speech = [(ref, hyp) for ref, hyp in pairs if ref]
+        where = f"{slice_name}/{condition}"
         for ref, hyp in pairs:
-            log(f"  [{slice_name}/{condition}] REF: {ref[:90]!r}\n  {'':{len(slice_name) + len(condition) + 4}}HYP: {hyp[:90]!r}")
+            log(f"  [{where}] REF: {ref[:90]!r}\n  {'':{len(where) + 3}}HYP: {hyp[:90]!r}")
+            if condition == "clean" and ref and len(_words(ref) & _words(hyp)) < len(_words(ref)) / 3:
+                log(f"  WARNING [{where}]: under a third of the reference words appear in the output; check that this "
+                    f"clip's audio matches its reference")
         if condition == "clean" and any(not hyp.strip() for _, hyp in speech):
             failures.append(f"{name}: empty output for a speech clip in {slice_name}/clean")
-        if len(speech) >= 2 and len({ref for ref, _ in speech}) >= 2 and len({hyp for _, hyp in speech}) == 1:
-            failures.append(f"{name}: identical output for different speech clips in {slice_name}/{condition}")
+        by_hyp = {}
+        for ref, hyp in speech:
+            by_hyp.setdefault(hyp, set()).add(ref)
+        if any(len(refs) > 1 for refs in by_hyp.values()):
+            failures.append(f"{name}: identical output for clips with different references in {where}")
     return failures
 
 
