@@ -4413,10 +4413,12 @@ torch==2.9.1 \
     #   pytorch-lightning
     #   torchdata
     #   torchmetrics
-torchao==0.18.0 \
-    --hash=sha256:5c2b4485341bf28b7fed2c4fc95b9f298e209f41685350f067de85527a05585e \
-    --hash=sha256:6540b148e40ba81cbd4de86392225a076a1591146e9cebb099b3b234ba9feebe
-    # via nemo-automodel
+torchao==0.14.1 \
+    --hash=sha256:50f68db5e41952e88daa383fc2f358541e617654f388f508d5c7580c3bee9447 \
+    --hash=sha256:c9896e14531817bc2ca6847b3fe71c42592ab80a43628b36668b2d6d6713fb5b
+    # via
+    #   -r requirements/aqis_lab/s1-nemo.in
+    #   nemo-automodel
 torchdata==0.11.0 \
     --hash=sha256:52b940fbbe0e00fb21cabddf528449d1bec5bfb0d0823b7487b15f951658ee33
     # via nemo-automodel

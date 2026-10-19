@@ -62,11 +62,11 @@ def ensure_validation_ds(model, omegaconf=None):
 
 
 def add_torchao_symbols(functional):
-    """Compatibility shim for torch < 2.11: add the two names transformers' torchao quantizer imports.
+    """Guard for torch < 2.11: add two names that torchao 0.15+ imports from torch.nn.functional.
 
-    Importing nemo.collections.speechlm2.models reaches transformers.quantizers.quantizer_torchao, whose prototype
-    workflows import ScalingType and scaled_grouped_mm from torch.nn.functional; torch 2.9.1 has neither. Nothing here
-    is quantized, so the names only have to exist. Returns the names that were added."""
+    The fix is the lock: s1-nemo.in pins torchao<0.15, so transformers never imports torchao (the second
+    missing name, SwizzleType, showed on the 19 Oct 2026 Colab run that a name-by-name shim cannot keep up). This
+    stays as a guard for the two names it covers; nothing here is quantized. Returns the names that were added."""
     added = []
     if not hasattr(functional, "ScalingType"):
         functional.ScalingType = type("ScalingType", (), {})
