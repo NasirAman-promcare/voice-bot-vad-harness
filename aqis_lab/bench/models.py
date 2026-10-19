@@ -49,6 +49,34 @@ def _torch_dtype(name):
     return {"bf16": torch.bfloat16, "fp16": torch.float16, "fp32": torch.float32}[name]
 
 
+def ensure_validation_ds(model, omegaconf=None):
+    """Give a NeMo model an empty validation_ds when its config has none.
+
+    EncDecRNNTBPEModel.transcribe reads cfg.validation_ds (rnnt_bpe_models.py) and crashes with
+    "'NoneType' object has no attribute 'get'" when it is None, as in nvidia/parakeet-unified-en-0.6b."""
+    cfg = getattr(model, "cfg", None)
+    if cfg is not None and getattr(cfg, "validation_ds", None) is None:
+        omegaconf = omegaconf or lib("omegaconf")
+        with omegaconf.open_dict(cfg):
+            cfg.validation_ds = omegaconf.OmegaConf.create({})
+
+
+def add_torchao_symbols(functional):
+    """Compatibility shim for torch < 2.11: add the two names transformers' torchao quantizer imports.
+
+    Importing nemo.collections.speechlm2.models reaches transformers.quantizers.quantizer_torchao, whose prototype
+    workflows import ScalingType and scaled_grouped_mm from torch.nn.functional; torch 2.9.1 has neither. Nothing here
+    is quantized, so the names only have to exist. Returns the names that were added."""
+    added = []
+    if not hasattr(functional, "ScalingType"):
+        functional.ScalingType = type("ScalingType", (), {})
+        added.append("ScalingType")
+    if not hasattr(functional, "scaled_grouped_mm"):
+        functional.scaled_grouped_mm = None
+        added.append("scaled_grouped_mm")
+    return added
+
+
 class Transcriber:
     """Base class: subclasses set self.model (or self.module) and implement prepare/run."""
 
@@ -234,6 +262,7 @@ class NemoAsr(Transcriber):
         if len(files) != 1:
             raise ModelError(f"{cfg['hf']}@{revision[:10]} holds {len(files)} .nemo files, expected one")
         self.model = nemo_asr.models.ASRModel.restore_from(str(files[0])).to("cuda").eval()
+        ensure_validation_ds(self.model)
         self.batch = cfg["batch"]
         self.scratch = Path(tempfile.mkdtemp(prefix="s1_nemo_"))
         self.torch = lib("torch")
@@ -269,6 +298,7 @@ class NemoSalm(Transcriber):
     decoding = "SALM.generate, the card's prompt, greedy (generate defaults), max_new_tokens 256"
 
     def __init__(self, name, cfg, revision, dtype):
+        add_torchao_symbols(lib("torch.nn.functional"))
         salm = lib("nemo.collections.speechlm2.models").SALM
         logging.getLogger("nemo_logger").setLevel(logging.ERROR)
         self.dtype = dtype or cfg.get("dtype", "bf16")

@@ -57,3 +57,12 @@ Exempted files (ALLOW-PATTERNS-IN): 0
 Findings: 0
 0 findings: OK (1.0 s)
 ```
+
+## Fixes after the first Colab runs (branch `s1/asr-bench`, from `main` at `caae9f6`)
+New tests are in `tests/aqis_lab/test_s1_fixes.py`.
+- **Parakeet Unified crash** (`'NoneType' object has no attribute 'get'` at `rnnt_bpe_models.py:540`): `NemoAsr` now gives the model an empty `cfg.validation_ds` when it is None (`ensure_validation_ds`, tested on a minimal config object because omegaconf comes with NeMo and is not installed here).
+- **Canary-Qwen import error** (`scaled_grouped_mm`, `ScalingType` missing from torch 2.9.1): `NemoSalm` adds the two names to `torch.nn.functional` before importing `nemo.collections.speechlm2.models` (`add_torchao_symbols`, a compatibility shim; nothing is quantized). **Not verified**: it needs the Colab NeMo stack. If Canary-Qwen still does not load cleanly without recompiling C++ extensions, the brief's rule applies (drop it and record the reason here); no drop is recorded yet.
+- **GPU name**: the machine block's key is `gpu`, not `gpu_type`, which caused the KeyError. `__main__` reads `gpu` (then `gpu_type`, `gpu_name`) and stops with an error when none is found, instead of writing `unknown_gpu` into result rows (every prediction row must record the GPU).
+- **Earnings-22 duplicate IDs**: `segment_id` repeats across calls. IDs are now `earnings22-<row index in the split>` (the published chunk number stays in `meta`). `check_data_rows` and the source loaders now refuse repeated utterance IDs. Data prepared before this fix must be rebuilt: delete `AQIS_LAB/s1/data/numbers/` (and any `preds/*/numbers__*`) before the next prep.
+- **HarperValleyBank cleaning rules**: already on `main` (`dd33022`); `\[baby\]` etc. are plain YAML scalars, so the backslash is single and the regexes work. Tests now check each tag is stripped and `[unintelligible]` and `<unk>` drop the turn.
+- **Notebook**: cell 4 streams each action's output live (`Popen`, `PYTHONUNBUFFERED=1`, `PYTHONPATH`, `MPLBACKEND=Agg`); cell 5 frees the runtime only when setup worked and every action exited 0.
