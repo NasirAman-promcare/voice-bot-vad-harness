@@ -132,7 +132,18 @@ class Cleaner:
 
 
 # ---- prepared rows -------------------------------------------------------------------------------------------
+def check_unique_ids(ids, where):
+    seen, repeated = set(), []
+    for ident in ids:
+        if ident in seen and ident not in repeated:
+            repeated.append(ident)
+        seen.add(ident)
+    if repeated:
+        raise DataError(f"{where}: utterance IDs repeat ({len(repeated)}), for example {', '.join(repeated[:3])}")
+
+
 def check_data_rows(rows):
+    check_unique_ids([r.get("utt_id") for r in rows], "data rows")
     for row in rows:
         missing = [c for c in DATA_COLUMNS if c not in row]
         if missing:
@@ -297,6 +308,7 @@ class HfParquetSource:
             utt["meta"]["_loc"] = list(loc)
             items.append(utt)
         cleaner.require_no_unknown_tags(self.name)
+        check_unique_ids([x["utt_id"] for x in items], self.name)
         return items, {**cleaner.report(), **dict(extra)}
 
 
@@ -377,9 +389,11 @@ class Earnings22Source(HfParquetSource):
     def row_to_utt(self, split, index, row):
         if not row["transcription"]:
             return None
-        return {"utt_id": f"earnings22-{row['segment_id']}", "source": self.name, "licence": self.licence,
+        # segment_id repeats across calls, so the row's place in the split makes the ID unique
+        return {"utt_id": f"earnings22-{index:05d}", "source": self.name, "licence": self.licence,
                 "duration_s": float(row["end_ts"]) - float(row["start_ts"]), "ref_text": row["transcription"],
-                "speaker": row["file_id"], "cluster": row["file_id"], "meta": {"file_id": row["file_id"]}}
+                "speaker": row["file_id"], "cluster": row["file_id"],
+                "meta": {"file_id": row["file_id"], "segment_id": row["segment_id"]}}
 
 
 HF_SOURCES = {"edacc": EdaccSource, "svarah": SvarahSource, "eka_medical": EkaSource, "earnings22": Earnings22Source}
@@ -435,6 +449,7 @@ class HvbSource:
                               "meta": {"role": role, "sid": sid, "task_type": tasks[0].get("task_type"),
                                        "_loc": [sid, role, int(seg["offset_ms"]), int(seg["duration_ms"])]}})
         cleaner.require_no_unknown_tags(self.name)
+        check_unique_ids([x["utt_id"] for x in items], self.name)
         return items, {**cleaner.report(), **dict(skipped)}
 
     def fetch_audio(self, locs):
