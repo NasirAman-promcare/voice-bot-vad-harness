@@ -39,7 +39,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from aqis_lab.packs.mix import mix_clip
+from aqis_lab.packs.mix import mix_clip, RenderError
 
 SR = 16000
 CHANNEL_CONDITION = {"g711_mulaw": "phone", "opus": "webrtc"}   # the condition that holds each channel's settings
@@ -231,10 +231,20 @@ def render_condition(name, conditions, speech, seed, utt_id, noise):
     if "noise" in cond:
         draw = noise_draw(seed, utt_id, {clip: len(samples) for clip, samples in noise.items()}, len(audio))
         segment = noise[draw.clip_id][draw.offset:draw.offset + len(audio)]
-        mixed = mix_clip(audio, segment, cond["snr_db"])
-        audio = mixed.samples
-        info.update(noise_clip=draw.clip_id, noise_offset=draw.offset, snr_db=cond["snr_db"],
-                    achieved_snr_db=mixed.achieved_snr_db, peak_limited=mixed.peak_limited)
+        try:
+            mixed = mix_clip(audio, segment, cond["snr_db"])
+            audio = mixed.samples
+            info.update(noise_clip=draw.clip_id, noise_offset=draw.offset, snr_db=cond["snr_db"],
+                        achieved_snr_db=mixed.achieved_snr_db, peak_limited=mixed.peak_limited)
+        except RenderError:
+            # Digital silence clip: when speech RMS == 0, the audio is pure background noise at target SNR level
+            nominal_speech_rms = 3276.0  # -20 dBFS nominal speech
+            target_noise_rms = nominal_speech_rms / (10.0 ** (cond["snr_db"] / 20.0))
+            seg_f = segment.astype(np.float64)
+            seg_rms = np.sqrt(np.mean(seg_f ** 2))
+            audio = np.clip(np.round(seg_f * (target_noise_rms / seg_rms)), -32768, 32767).astype(np.int16) if seg_rms > 0 else segment
+            info.update(noise_clip=draw.clip_id, noise_offset=draw.offset, snr_db=cond["snr_db"],
+                        achieved_snr_db=float("-inf"), peak_limited=False)
     channel = cond.get("channel")
     if channel == "g711_mulaw":
         settings = _channel_settings(conditions, channel)
