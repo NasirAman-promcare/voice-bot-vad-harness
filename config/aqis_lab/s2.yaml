@@ -1,0 +1,118 @@
+# Sprint 2 (WP-1.2) live-stack benchmark. Starts from Appendix A of docs/specs/sprints/WP-1.2-S2-live-stack.md; every addition
+# and change is listed in docs/progress/WP-1.2/PLAN.md. The loader (aqis_lab/live/config.py) refuses unknown or missing keys.
+schema: s2-v1
+seed: 20261026
+
+s1:
+  config: config/aqis_lab/s1.yaml        # the conditions are the Sprint 1 conditions; prep reads Sprint 1 data from its output folder
+
+conditions:                              # per component: the Sprint 1 conditions each is run under (first one is the smoke condition)
+  vad: [native, phone, webrtc, noise_10, noise_0]
+  turn: [native, phone]
+  stream: [phone, webrtc]
+  emotion: [clean, phone, webrtc, noise_10]
+
+scoring:
+  bootstrap:
+    resamples: 1000
+    ci: 0.95
+  collars_ms: [0, 50]                    # samples this close to a reference boundary are left out of FAR and MDR (50 ms is the primary)
+  primary_collar_ms: 50
+  vad_reference_merge_gap_ms: 200        # word timings closer than this make one speech segment; equals turn_end.min_pause_ms
+  det_thresholds: [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]
+  gates:                                 # brief sections 4 and 7
+    far_max: 0.02
+    mdr_max: 0.01
+    onset_p50_ms_max: 40
+    fir_max: 0.03
+    endpoint_p50_ms_max: 300
+    chunk_latency_ms_max: 250
+    frustration_recall_phone_min: 0.70   # section 7, item 5
+    frustration_recall_target: 0.75      # section 4, item 4
+
+data:
+  emotion:
+    hf: confit/cremad-parquet
+    revision: 5a54051429170cc5b484cd7f715dfcb5fdf12195
+    splits: [train, validation, test]
+    per_class: 300
+    licence: ODbL-1.0 (CREMA-D, github.com/CheyneyComputerScience/CREMA-D; the Hugging Face card gives no licence)
+  turn:
+    n_per_role: 150
+    min_words: 6
+    licence: CC-BY-4.0
+
+vad:
+  silero_v5:
+    repo: snakers4/silero-vad
+    ref: 6478567951ae5c9979ad7b234185b5515f4be7a1     # tag v5.1.2
+    file: src/silero_vad/data/silero_vad.onnx
+    model_version: v5
+    threshold: 0.5
+    min_speech_ms: 64
+    min_silence_ms: 100
+  silero_v4:
+    repo: snakers4/silero-vad
+    ref: 915dd3d639b8333a52e001af095f87c5b7f1e0ac     # tag v4.0
+    file: files/silero_vad.onnx
+    model_version: v4
+    threshold: 0.5
+  firered_vad:
+    hf: FireRedTeam/FireRedVAD
+    revision: 7990aaccc6b7aec1e527743bd30201f2c4a03b8c
+    threshold: 0.4
+  webrtc_vad:
+    modes: [1, 2, 3]
+  ten_vad:
+    package: ten-vad
+    supported_arch: [x86_64]
+    hop_size_ms: 16
+    threshold: 0.5
+
+turn_end:
+  vad: silero_v5                         # the VAD whose speech offsets start the silence timers
+  min_pause_ms: 200                      # a gap between words this long is a pause the bot must not interrupt
+  trail_ms: 1500                         # audio kept after a turn's last word; a turn whose speaker talks again sooner is left out
+  fixed_thresholds_ms: [300, 500, 700, 1000]
+  predictive:
+    smart_turn:
+      hf: pipecat-ai/smart-turn-v3
+      revision: f766f81d3cfdf7737ac64aad813d91bbfd56bf93
+      file: smart-turn-v3.2-cpu.onnx
+      threshold: 0.5
+      min_silence_ms: 192                # multiples of the 32 ms Silero frame
+      query_every_ms: 96
+      max_wait_ms: 800
+
+stt_streaming:
+  model: parakeet-tdt-0.6b-v2
+  variants:
+    parakeet_tdt_v2_int8:
+      hf: istupakov/parakeet-tdt-0.6b-v2-onnx
+      revision: 0bbb45a3365852604aef28b538a8f066f4ccaa85
+      onnx_asr_name: nemo-parakeet-tdt-0.6b-v2
+      quantization: int8
+    parakeet_tdt_v2_fp32:
+      hf: istupakov/parakeet-tdt-0.6b-v2-onnx
+      revision: 0bbb45a3365852604aef28b538a8f066f4ccaa85
+      onnx_asr_name: nemo-parakeet-tdt-0.6b-v2
+      quantization: null
+  chunk_sizes_ms: [160, 320, 640]
+  window_ms: 4000                        # the trailing audio re-read at every chunk
+  threads: 1
+  utterances: 200
+  target_rtf_max: 0.35
+  target_chunk_latency_ms: 250
+
+emotion:
+  emotion2vec_seed:
+    hf: emotion2vec/emotion2vec_plus_seed          # the brief names FunASR/emotion2vec_plus_seed, which does not exist on Hugging Face
+    revision: 7be9a30d52bdc793cc24e6f7d25358d6648927c1
+  emotion2vec_base:
+    hf: emotion2vec/emotion2vec_plus_base
+    revision: b318240bfe67db81a8c572ecb37ce9c3759b81c9
+  wav2vec2_er:
+    hf: superb/wav2vec2-base-superb-er
+    revision: 441a7599c3b22107314dcbd9166621c5c83f2cc5
+  acoustic_baseline:
+    folds: 5
