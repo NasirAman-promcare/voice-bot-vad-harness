@@ -1,0 +1,10 @@
+model,role,target WER [95% CI],clean WER,accent gap,phone cost,WebRTC cost,number acc.,medical recall,halluc. rate,RTFx,p50 ms,licence,status
+qwen3-asr-1.7b,heavy,"16.55% [15.23, 17.92]",10.24%,1.171,1.146,1.043,85.2%,74.2%,98.7%,61.3,847,Apache 2.0,complete
+parakeet-unified-0.6b,live,"18.06% [16.70, 19.51]",11.81%,1.271,1.124,1.022,84.5%,68.7%,0.0%,352.6,180,NVIDIA Open Model License,complete
+parakeet-tdt-0.6b-v2,live,"18.27% [16.94, 19.63]",11.71%,1.205,1.178,1.026,82.2%,68.4%,2.0%,515.1,113,CC BY 4.0,complete
+cohere-transcribe-2b,heavy,"18.30% [16.98, 19.74]",12.57%,1.172,1.096,1.001,84.4%,71.9%,11.3%,216.7,228,Apache 2.0 (gated),complete
+canary-qwen-2.5b,heavy,"18.59% [17.19, 20.14]",10.89%,1.190,1.277,1.048,84.7%,72.2%,34.7%,42.8,1041,CC BY 4.0,complete
+whisper-large-v3,heavy,"19.15% [17.75, 20.61]",12.14%,1.163,1.191,1.033,86.5%,73.9%,91.7%,52.6,507,MIT,complete
+whisper-large-v3-turbo,live,"22.07% [19.28, 25.96]",12.74%,1.261,1.324,1.005,86.2%,71.6%,79.3%,86.1,150,MIT,complete
+granite-speech-4.1-2b,heavy,"22.52% [20.56, 24.41]",12.78%,1.173,1.411,1.054,85.8%,70.5%,89.3%,45.1,754,Apache 2.0,complete
+voxtral-realtime-4b,live,"30.42% [28.36, 32.74]",20.59%,1.496,1.315,1.047,78.2%,56.8%,0.0%,1.0,5409,Apache 2.0,complete

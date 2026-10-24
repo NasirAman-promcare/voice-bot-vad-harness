@@ -1,0 +1,10 @@
+model,params,peak_gpu_mem_mib,rtfx_batched,latency_p50_ms,latency_p95_ms,dtype,gpu
+whisper-large-v3,1543490560,7089,52.6,507,865,bf16,NVIDIA L4
+whisper-large-v3-turbo,808878080,3053,86.1,150,230,bf16,NVIDIA L4
+parakeet-tdt-0.6b-v2,617825926,8686,515.1,113,120,bf16,NVIDIA L4
+parakeet-unified-0.6b,618265089,8569,352.6,180,233,bf16,NVIDIA L4
+canary-qwen-2.5b,2559348736,16594,42.8,1041,1937,bf16,NVIDIA L4
+granite-speech-4.1-2b,2313141596,5715,45.1,754,1379,bf16,NVIDIA L4
+cohere-transcribe-2b,2065647872,6944,216.7,228,324,bf16,NVIDIA L4
+qwen3-asr-1.7b,2038052480,9223,61.3,847,1554,bf16,NVIDIA L4
+voxtral-realtime-4b,4429679360,8700,1.0,5409,7106,bf16,NVIDIA L4

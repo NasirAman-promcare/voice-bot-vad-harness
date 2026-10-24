@@ -1,0 +1,22 @@
+{
+  "canary-qwen-2.5b": {
+    "delta_points": -0.33,
+    "measured": 2.77,
+    "published": 3.1,
+    "within_tolerance": true
+  },
+  "cohere-transcribe-2b": {
+    "delta_points": -0.22,
+    "measured": 2.15,
+    "published": 2.37,
+    "within_tolerance": true
+  },
+  "parakeet-tdt-0.6b-v2": {
+    "delta_points": -0.13,
+    "measured": 3.06,
+    "phone_over_clean": 1.232,
+    "phone_ratio_in_range": true,
+    "published": 3.19,
+    "within_tolerance": true
+  }
+}

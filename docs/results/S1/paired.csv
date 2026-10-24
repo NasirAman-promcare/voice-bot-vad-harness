@@ -1,0 +1,7 @@
+model_a,model_b,wer_a_minus_wer_b,ci_lo,ci_hi,verdict
+qwen3-asr-1.7b,parakeet-unified-0.6b,-0.0151,-0.0192,-0.0115,A beats B
+qwen3-asr-1.7b,parakeet-tdt-0.6b-v2,-0.0171,-0.0205,-0.0140,A beats B
+qwen3-asr-1.7b,cohere-transcribe-2b,-0.0175,-0.0224,-0.0130,A beats B
+parakeet-unified-0.6b,parakeet-tdt-0.6b-v2,-0.0021,-0.0049,0.0011,too close to call
+parakeet-unified-0.6b,cohere-transcribe-2b,-0.0024,-0.0071,0.0020,too close to call
+parakeet-tdt-0.6b-v2,cohere-transcribe-2b,-0.0004,-0.0048,0.0039,too close to call
