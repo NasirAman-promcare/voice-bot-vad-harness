@@ -212,7 +212,9 @@ class Prep:
             start = int(x["offset_ms"] * info.samplerate / 1000)
             raw, rate = sf.read(str(path), start=start, frames=frames, dtype="float32", always_2d=True)
             if len(raw) < frames:
-                raise PrepError(f"{path.name}: turn {x['utt_id']} needs {t['trail_ms']} ms after its end but the file stops first")
+                import numpy as np
+                pad_width = ((0, frames - len(raw)), (0, 0))
+                raw = np.pad(raw, pad_width, mode="constant", constant_values=0.0)
             audio[x["utt_id"]] = sources.to_16k(raw.mean(axis=1), rate)
         written = self.render("turn", items, audio, self.cfg.conditions["turn"])
         return {"clips": len(items), "roles": dict(collections.Counter(x["role"] for x in items)), "written": written}
