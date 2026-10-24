@@ -1,0 +1,38 @@
+# AQIS lab, Sprint 2 (WP-1.2), live-stack packages: VAD, turn end, CPU streaming speech-to-text and emotion. The lock is s2-live.txt.
+#
+# Regenerate the lock from the repository root with uv 0.8.17 after editing this file or phase0.txt:
+#   uv pip compile requirements/aqis_lab/s2-live.in -c requirements/aqis_lab/phase0.txt --universal --python-version 3.13 --generate-hashes --output-file requirements/aqis_lab/s2-live.txt
+# Pass the same command as --custom-compile-command so the lock header records it, and update the line below to the
+# SHA-256 of the phase0.txt it was compiled against.
+# compiled-against: requirements/aqis_lab/phase0.txt sha256 87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef
+#
+# One universal lock for both machines: the Oracle Arm VM (aarch64) runs the vad, turn and stream stages, and Colab (x86_64)
+# runs the emotion stage; FunASR (emotion2vec+) pulls packages that build from source (crcmod, antlr4), and TEN VAD has no
+# aarch64 build, so both carry a platform marker and the Arm VM installs neither.
+# Install on top of the phase 0 lock: uv pip install --require-hashes --build-constraints requirements/aqis_lab/phase0.txt -r requirements/aqis_lab/s2-live.txt.
+# Five packages have no wheel and build from source with the phase 0 pins as build constraints: textgrid (pure Python, every
+# machine) and, on x86_64 only, antlr4-python3-runtime, jieba, oss2 and crcmod (a C extension: Colab has a compiler).
+# Checked here: uv pip install --dry-run --only-binary :all: with those five allowed to build resolves for aarch64 and x86_64.
+#   onnxruntime       Silero VADs, Smart Turn and the Parakeet ONNX models
+#   onnx-asr          Parakeet TDT v2 INT8 and FP32 on CPU
+#   huggingface_hub   pinned downloads of model files and CREMA-D
+#   transformers      the wav2vec2 emotion model and the Smart Turn feature extractor
+#   torch, funasr     emotion2vec+ (FunASR) and the wav2vec2 model
+#   fireredvad        FireRedVAD streaming VAD
+#   ten-vad           TEN VAD (x86_64 only)
+#   soxr, matplotlib  resampling and the report plots
+onnxruntime
+onnx-asr
+huggingface_hub
+transformers
+torch
+funasr ; platform_machine == "x86_64"
+fireredvad
+ten-vad ; platform_machine == "x86_64"
+soxr
+matplotlib
+webrtcvad-wheels
+pyyaml
+pyarrow
+soundfile
+numpy
