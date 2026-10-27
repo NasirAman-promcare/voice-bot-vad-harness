@@ -1,6 +1,6 @@
 # Sprint 2 scorecard (WP-1.2)
 
-Config hash `4d174e88`, seed 20261026. Intervals are 95% cluster bootstrap intervals (1000 resamples). Rates are totals over totals. VAD rows use a 50 ms collar around each reference boundary; the 0 ms rows are in vad.csv.
+Config hash `7a75f314`, seed 20261026. Intervals are 95% cluster bootstrap intervals (1000 resamples). Rates are totals over totals. VAD rows use a 50 ms collar around each reference boundary; the 0 ms rows are in vad.csv.
 
 ## VAD
 
@@ -23,6 +23,11 @@ Gates: FAR < 2.00%, MDR < 1.00%, onset p50 <= 40 ms.
 | silero_v5 | noise_10 | 3.49% [2.28%, 5.03%] | 24.36% [20.55%, 28.03%] | 1.29% | 128 | 416 | 143 | 11.97% | 0.0090 | FAIL |
 | silero_v5 | phone | 2.12% [1.45%, 3.05%] | 33.90% [29.59%, 38.19%] | 0.31% | 160 | 896 | 108 | 16.21% | 0.0091 | FAIL |
 | silero_v5 | webrtc | 3.07% [1.98%, 4.45%] | 25.22% [21.36%, 28.95%] | 1.02% | 114 | 576 | 126 | 11.97% | 0.0090 | FAIL |
+| ten_vad | native | 10.90% [7.28%, 14.63%] | 26.58% [22.52%, 30.67%] | 9.58% | 128 | 400 | 90 | 12.97% | 0.0154 | FAIL |
+| ten_vad | noise_0 | 16.25% [12.27%, 20.85%] | 26.22% [21.83%, 30.30%] | 13.96% | 112 | 430 | 174 | 11.47% | 0.0147 | FAIL |
+| ten_vad | noise_10 | 15.65% [11.76%, 20.21%] | 22.32% [18.32%, 26.00%] | 13.49% | 96 | 260 | 148 | 11.22% | 0.0144 | FAIL |
+| ten_vad | phone | 15.12% [10.39%, 20.11%] | 24.47% [20.32%, 28.31%] | 13.81% | 106 | 358 | 100 | 10.97% | 0.0157 | FAIL |
+| ten_vad | webrtc | 12.03% [8.02%, 16.08%] | 25.66% [21.62%, 29.52%] | 10.70% | 118 | 360 | 91 | 12.47% | 0.0137 | FAIL |
 | webrtc_vad_mode1 | native | 67.17% [59.80%, 74.23%] | 17.21% [13.74%, 20.48%] | 67.19% | 10 | 60 | 0 | 2.74% | 0.0006 | FAIL |
 | webrtc_vad_mode1 | noise_0 | 88.89% [85.32%, 91.85%] | 10.00% [7.80%, 12.29%] | 89.14% | 10 | 40 | 0 | 0.50% | 0.0006 | FAIL |
 | webrtc_vad_mode1 | noise_10 | 83.36% [79.43%, 87.18%] | 12.84% [10.09%, 15.55%] | 83.92% | 10 | 60 | 0 | 0.50% | 0.0006 | FAIL |
