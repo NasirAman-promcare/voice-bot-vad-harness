@@ -29,6 +29,7 @@ cascade:
   confidence:                            # GPU pass of parakeet-tdt-0.6b-v2 that saves per-turn token confidences
     confidence_method: max_prob
     entropy_method: entropy
+    batch_size: 16                       # turns per NeMo batch; 64 (the Sprint 1 size) with frame confidences ran a 22 GB L4 out of memory
 
 prompt:
   models: [granite-speech-4.1-2b, qwen3-asr-1.7b]
