@@ -9,7 +9,7 @@ bash aqis_lab/deploy/oracle_setup.sh
 uv venv --clear --python 3.13 ~/venv-live
 uv pip sync --python ~/venv-live/bin/python --require-hashes --build-constraints requirements/aqis_lab/phase0.txt requirements/aqis_lab/s2-live.txt
 ```
-The lock installs `textgrid` from source (pure Python); FunASR and TEN VAD are skipped on aarch64 by design, so `ten_vad` and the emotion models are not run here.
+The lock installs `textgrid` from source (pure Python); FunASR and TEN VAD are skipped on aarch64 by design, so `ten_vad` and the emotion models are not run here. TEN VAD runs on Colab (x86_64) with `STAGE = "vad"` of the notebook.
 
 ## 2. Pull the test sets from Drive
 The Colab `prep` stage must have finished. This copies only, and writes nothing to Drive:

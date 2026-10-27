@@ -42,3 +42,20 @@ Exempted files (ALLOW-PATTERNS-IN): 0
 Findings: 0
 0 findings: OK (0.9 s)
 ```
+
+## Follow-up: TEN VAD on Colab x86_64 (branch `s2/ten-vad-x86`, 27 Oct 2026)
+Tests first: `tests/aqis_lab/test_s2_ten_vad_x86.py` (commit `ccbcce8`, amended once to move a test out of the already merged `test_s2_config.py`, which the gate rightly refused to let me edit). Before the code they gave `7 failed` (no `ten_vad` smoothing in `s2.yaml`, no `stages.ten_vad_library`, no `vad` stage in the notebook); one expected list in my smoothing test was wrong and was corrected in the test (the smoother starts on the 4th speech frame and stops on the 7th silent frame).
+```
+$ .venv/bin/python -m pytest tests/aqis_lab -q --tb=short -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider
+2276 passed, 57 deselected in 335.68s (0:05:35)
+```
+Two earlier full runs had one failure, `test_FR_0_2_04_cli_worker_start_failure_exits_2_with_rerun_hint` (`BlockingIOError: [Errno 11] Resource temporarily unavailable` starting `.venv/bin/python`). Both ran while a second full suite was running in the same container. The test passes alone and in the clean full run above; I take it as a process-limit error from the two concurrent runs, not a code fault.
+What the new tests prove: TEN VAD and Silero v5 have the same `min_speech_ms` and `min_silence_ms` in `s2.yaml`; at a 16 ms hop the smoother needs 4 speech frames to start and 7 silent frames to stop; `libten_vad.so` is found inside the installed `ten_vad` package (and a package without it is an error); `TEN_VAD_LIB_PATH` is set from it unless the owner set one; the notebook's `vad` stage runs `--models ten_vad` only, installs `libc++1` after `apt-get update` and before the run, refuses a non-x86_64 machine, needs no GPU, and every notebook cell compiles.
+Not verified: the TEN VAD run itself and the `apt-get` step (they need Colab x86_64). The wheel listing showed `libten_vad.so` for Linux x64 only.
+```
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-1.2
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.8 s)
+```
