@@ -42,3 +42,14 @@ Exempted files (ALLOW-PATTERNS-IN): 0
 Findings: 0
 0 findings: OK (1.0 s)
 ```
+
+## Follow-up: token confidences without running out of GPU memory (branch `s3/confidence-memory`)
+Tests first: `tests/aqis_lab/test_s3_confidence.py` (commit before the fix, `7 failed` against the merged code: no `configure`, `confidences_for_cell`, `cell_done`, `require_coverage`, and no `confidence.batch_size`). The fakes stand in for NeMo, torch and omegaconf; the real NeMo run is the owner's Colab run, whose log gave the evidence for the fix (OOM after the first file, alignment warning, decoding set up per batch).
+```
+$ .venv/bin/python -m pytest tests/aqis_lab -q --tb=short -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider
+2391 passed, 59 deselected in 361.63s (0:06:01)
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-1.3
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.7 s)
+```
