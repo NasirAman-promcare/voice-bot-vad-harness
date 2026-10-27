@@ -35,3 +35,10 @@ $ .venv/bin/python -m pytest tests/aqis_lab -q --tb=short -m "not slow and not g
 `test_s3_simulate.py` runs the real `simulate.run` over generated Sprint 1 data and prediction files (scored by the Sprint 1 scorer), `test_s3_report.py` the real fine-tuning and prompt scorecards over generated prediction files. A scratch run with matplotlib installed outside `.venv` also built `tradeoff.png`, `scorecard.md`, `decision_inputs.md` and `s3_report.zip` from them.
 
 ## Audit gate
+```
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-1.3
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (1.0 s)
+```
