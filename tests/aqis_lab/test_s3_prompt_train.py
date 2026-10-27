@@ -122,3 +122,10 @@ def test_s3_confidence_summary_is_the_mean_and_minimum_of_token_confidences():
 
 def test_s3_a_turn_without_tokens_has_no_confidence_and_is_not_invented():
     assert confidence.summarise([]) == {"confidence": None, "min_confidence": None, "tokens": 0}
+
+
+def test_s3_numbers_hint_prompts_keep_the_card_prompt_and_add_the_hint():
+    hint = "Spoken numbers are written as digits."
+    assert prompt_bias.granite_hint_prompt(hint) == (
+        "<|audio|>transcribe the speech with proper punctuation and capitalization. Spoken numbers are written as digits.")
+    assert prompt_bias.qwen_hint_context(hint) == hint

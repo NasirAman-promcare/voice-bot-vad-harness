@@ -1,0 +1,62 @@
+# Sprint 3 (WP-1.3) cascade routing and targeted fine-tuning. Values come from the brief
+# (docs/specs/sprints/WP-1.3-S3-cascade-finetune.md); the keys the stages need beyond it are explained in
+# docs/progress/WP-1.3/PLAN.md. The loader (aqis_lab/cascade/config.py) refuses unknown or missing keys.
+schema: s3-v1
+seed: 20261102
+
+s1:
+  config: config/aqis_lab/s1.yaml        # models, conditions, slices, target set and entity categories are the Sprint 1 ones
+  s2_config: config/aqis_lab/s2.yaml     # the Silero v5 settings used for the non-speech ratio
+
+cascade:
+  stage1: parakeet-tdt-0.6b-v2
+  heavy: [qwen3-asr-1.7b, cohere-transcribe-2b]
+  target_wer_max: 0.12                   # brief section 2A: target WER <= 12.00% on the 6,300 target turns ...
+  escalation_max: 0.35                   # ... with at most 35% of turns sent to the heavy model
+  rates: [0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+  folds: 5                               # speaker-cluster folds for the trained gate (scores are always out of fold)
+  min_gain_errors: 1                     # a turn "needs the heavy model" when it saves at least this many word errors
+  policies: [random, duration, words_per_s, digits, channel, nonspeech, confidence, entropy, hybrid]
+  channel_risk: {phone: 1.0, webrtc: 0.5, wideband: 0.0}
+  hybrid_features: [duration_s, words_per_s, digit_tokens, is_phone, is_webrtc, nonspeech_ratio, confidence]
+  hybrid: {l2: 0.01, iterations: 500}
+  cost:                                  # docs/results/S1/speed.csv: batched RTFx and batch-1 p50 latency on one L4
+    live_rtfx: 515.1                     # parakeet-tdt-0.6b-v2
+    heavy:
+      qwen3-asr-1.7b: {rtfx: 61.3, latency_p50_ms: 847}
+      cohere-transcribe-2b: {rtfx: 216.7, latency_p50_ms: 228}
+  nonspeech: {vad: silero_v5}            # the share of 32 ms frames Silero v5 calls non-speech, from the Sprint 1 audio
+  confidence:                            # GPU pass of parakeet-tdt-0.6b-v2 that saves per-turn token confidences
+    confidence_method: max_prob
+    entropy_method: entropy
+
+prompt:
+  models: [granite-speech-4.1-2b, qwen3-asr-1.7b]
+  slices: [medical, numbers]
+  conditions: [clean, phone, noise_10]
+  terms: {category: drugs, max_terms: 150, max_chars: 1500}   # drug names from Eka turns of speakers outside the evaluated slice
+  numbers_hint: Spoken numbers, such as member IDs, amounts and dates, are written as digits.
+
+train:
+  base: qwen3-asr-1.7b
+  source: eka_medical                    # Eka has a test split only; training uses its speakers outside the evaluated `medical` slice
+  max_train_utts: 2000
+  val_fraction: 0.1                      # of the training speakers, for early stopping
+  condition_mix: {clean: 0.4, phone: 0.4, noise_10: 0.2}
+  lora:
+    r: 16
+    alpha: 32
+    dropout: 0.05
+    target_modules: '.*thinker\.model\.layers\.\d+\.(self_attn\.(q|k|v|o)_proj|mlp\.(gate|up|down)_proj)'
+  optim: {lr: 0.0002, epochs: 3, batch_size: 8, grad_acc: 4, warmup_ratio: 0.03, max_audio_s: 30}
+  early_stopping: {patience: 3, eval_steps: 25, min_delta: 0.001}
+
+eval:
+  slices: {medical: [clean, phone], us_conv: [clean, phone], numbers: [clean, phone]}
+  category: drugs
+  drug_recall_min: 0.75                  # brief section 2C: drug recall >= 75% on medical, clean and phone
+  us_conv_wer_increase_max: 0.005        # and us_conv WER up by at most 0.5% absolute
+
+bootstrap:
+  resamples: 1000
+  ci: 0.95

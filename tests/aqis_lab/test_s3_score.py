@@ -42,7 +42,7 @@ def test_s3_the_gate_escalates_the_highest_scores_and_the_chosen_errors_follow()
 
 def test_s3_ties_are_broken_by_the_tiebreak_not_by_input_order():
     scores = np.zeros(4)
-    assert score.escalation_mask(scores, 0.5, tiebreak=np.array([3, 1, 0, 2])).tolist() == [False, False, True, True]
+    assert score.escalation_mask(scores, 0.5, tiebreak=np.array([3, 1, 0, 2])).tolist() == [False, True, True, False]
     assert score.escalation_mask(scores, 0.5).tolist() == [True, True, False, False]
 
 

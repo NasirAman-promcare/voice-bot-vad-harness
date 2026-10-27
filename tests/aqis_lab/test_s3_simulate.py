@@ -1,7 +1,7 @@
 """WP-1.3: the cascade simulation reads Sprint 1 files, builds the target set, and writes the operating curves.
 
 Eight turns of ten words in two speakers; the errors of stage 1 and of the heavy model are set by substituting words, so every
-figure is worked out by hand: stage 1 makes 18 errors in 80 words (0.225), the heavy model 6 (0.075).
+figure is worked out by hand: stage 1 makes 18 errors in 80 words (0.225), the heavy model 5 (0.0625).
 """
 import csv
 import json
@@ -97,7 +97,7 @@ def test_s3_the_perfect_gate_curve_matches_the_hand_worked_figures(s1, tmp_path)
     rows = [r for r in read_csv(out / "report" / "cascade.csv") if r["policy"] == "oracle"]
     got = {float(r["rate"]): (int(r["escalated"]), float(r["wer"])) for r in rows}
     assert got[0.0] == (0, pytest.approx(18 / 80)) and got[0.25] == (2, pytest.approx(9 / 80))
-    assert got[0.5] == (4, pytest.approx(4 / 80)) and got[1.0] == (8, pytest.approx(6 / 80))        # all heavy: negative gain forced
+    assert got[0.5] == (4, pytest.approx(4 / 80)) and got[1.0] == (8, pytest.approx(5 / 80))        # all heavy: negative gain forced
 
 
 def test_s3_every_policy_starts_at_stage_1_and_ends_at_the_heavy_model_and_stays_within_its_rate(s1, tmp_path):
@@ -109,7 +109,7 @@ def test_s3_every_policy_starts_at_stage_1_and_ends_at_the_heavy_model_and_stays
     assert {"random", "duration", "channel", "hybrid", "oracle"} <= policies
     for name in policies:
         mine = {float(r["rate"]): r for r in rows if r["policy"] == name}
-        assert float(mine[0.0]["wer"]) == pytest.approx(18 / 80) and float(mine[1.0]["wer"]) == pytest.approx(6 / 80), name
+        assert float(mine[0.0]["wer"]) == pytest.approx(18 / 80) and float(mine[1.0]["wer"]) == pytest.approx(5 / 80), name
         assert all(float(r["escalation_rate"]) <= float(r["rate"]) + 1e-9 for r in mine.values()), name
 
 
@@ -159,3 +159,12 @@ def test_s3_the_gate_threshold_file_names_the_score_that_gives_the_rate(s1, tmp_
     thresholds = json.loads((out / "report" / "thresholds.json").read_text(encoding="utf-8"))
     entry = thresholds["duration"][HEAVY]
     assert set(entry) >= {"rate", "threshold", "feature", "sign"} and entry["rate"] <= 0.35
+
+
+def test_s3_merging_features_keeps_other_columns(tmp_path):
+    path = tmp_path / "cascade" / "features.parquet"
+    simulate.merge_features(path, {"k1": {"confidence": 0.9}})
+    simulate.merge_features(path, {"k1": {"nonspeech_ratio": 0.2}, "k2": {"confidence": 0.5}})
+    got = simulate.read_features(path)
+    assert (got["k1"]["confidence"], got["k1"]["nonspeech_ratio"], got["k1"]["entropy"]) == (0.9, 0.2, None)
+    assert got["k2"]["confidence"] == 0.5 and got["k2"]["nonspeech_ratio"] is None

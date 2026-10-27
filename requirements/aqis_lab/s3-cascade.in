@@ -1,0 +1,21 @@
+# AQIS lab, Sprint 3 (WP-1.3), CPU packages for the cascade simulation, the non-speech feature and the report. The lock is s3-cascade.txt.
+#
+# Regenerate the lock from the repository root with uv 0.8.17 after editing this file or phase0.txt:
+#   uv pip compile requirements/aqis_lab/s3-cascade.in -c requirements/aqis_lab/phase0.txt --python-version 3.13 --python-platform x86_64-manylinux_2_28 --generate-hashes --output-file requirements/aqis_lab/s3-cascade.txt
+# Pass the same command as --custom-compile-command so the lock header records it, and update the line below to the
+# SHA-256 of the phase0.txt it was compiled against.
+# compiled-against: requirements/aqis_lab/phase0.txt sha256 87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef
+#
+# Installed on top of the phase 0 lock on a CPU runtime: uv pip install --require-hashes --build-constraints requirements/aqis_lab/phase0.txt -r requirements/aqis_lab/s3-cascade.txt.
+#   onnxruntime       Silero v5, for the non-speech ratio of each turn (aqis_lab/live is reused)
+#   huggingface_hub   the Eka metadata (training-speaker split) and the pinned Silero file
+#   soxr, matplotlib  resampling in the Sprint 1 sources, and the trade-off plot
+# The prompt stage reuses the Sprint 1 locks (s1-hf for Granite, s1-qwen for Qwen3-ASR); the train and eval stages use s3-train.txt.
+onnxruntime
+huggingface_hub
+soxr
+matplotlib
+numpy
+pyarrow
+pyyaml
+soundfile

@@ -125,3 +125,48 @@ def test_s3_locks_agree_with_the_phase_0_pins_they_share():
         for package in ("numpy", "pyarrow", "pyyaml", "soundfile"):
             if package in got:
                 assert got[package] == phase0[package], (name, package)
+
+
+# ---- notebook and light environments ----------------------------------------------------------------------------------
+NOTEBOOK = REPO / "notebooks" / "aqis_lab" / "s3_cascade_finetune.ipynb"
+
+
+def test_s3_notebook_has_every_stage_and_all_its_cells_compile():
+    import json
+    cells = [("".join(c["source"])) for c in json.loads(NOTEBOOK.read_text(encoding="utf-8"))["cells"] if c["cell_type"] == "code"]
+    text = "\n".join(cells)
+    assert 'STAGES = ("cascade", "confidence", "prompt", "prepare", "train", "eval", "report")' in text
+    for source in cells:
+        compile(source, "cell", "exec")
+    assert "runtime.unassign()" in cells[-1] and "all(rc == 0" in cells[-1]
+
+
+def test_s3_gpu_actions_import_no_scorer():
+    """confidence, prompt, train and eval run in GPU environments without the scoring packages (whisper-normalizer, jiwer)."""
+    import subprocess
+    import sys
+    code = ("import sys\nfrom aqis_lab.cascade import confidence, features, prompt_bias, train_data, train_lora, __main__\n"
+            "bad = [m for m in sys.modules if m.split('.')[0] in ('whisper_normalizer', 'jiwer', 'aqis_lab') and "
+            "m in ('aqis_lab.scoring', 'aqis_lab.scoring.normalise', 'aqis_lab.scoring.wer', 'aqis_lab.bench.score', 'aqis_lab.bench.report', "
+            "'aqis_lab.cascade.simulate', 'aqis_lab.cascade.report', 'aqis_lab.cascade.gate')]\n"
+            "print(bad)\nsys.exit(1 if bad else 0)\n")
+    proc = subprocess.run([sys.executable, "-c", code], cwd=REPO, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+SOURCE_BUILDS = {"s3-cascade": (), "s3-train": ("sox",)}                     # packages with no wheel; they build from source
+
+
+@pytest.mark.network
+@pytest.mark.parametrize("name", ["s3-cascade", "s3-train"])
+def test_s3_locks_resolve_to_installable_builds_for_colab(name):
+    """Colab is x86_64: every pin has a wheel there, except the packages named above."""
+    import shutil
+    import subprocess
+    uv = shutil.which("uv")
+    assert uv, "uv is needed to resolve the lock"
+    command = [uv, "pip", "install", "--dry-run", "--require-hashes", "--no-deps", "--only-binary", ":all:",
+               *[arg for package in SOURCE_BUILDS[name] for arg in ("--no-binary", package)],
+               "--python-platform", "x86_64-manylinux_2_28", "--python-version", "3.13", "-r", str(LOCK_DIR / f"{name}.txt")]
+    proc = subprocess.run(command, capture_output=True, text=True, timeout=900)
+    assert proc.returncode == 0, proc.stderr[-2000:]

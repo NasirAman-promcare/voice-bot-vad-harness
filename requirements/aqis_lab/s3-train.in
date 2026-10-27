@@ -1,0 +1,20 @@
+# AQIS lab, Sprint 3 (WP-1.3), GPU stack for the QLoRA pilot on Qwen3-ASR 1.7B and its evaluation. The lock is s3-train.txt.
+#
+# Regenerate the lock from the repository root with uv 0.8.17 after editing this file, phase0.txt or s1-qwen.txt:
+#   uv pip compile requirements/aqis_lab/s3-train.in -c requirements/aqis_lab/phase0.txt -c requirements/aqis_lab/s1-qwen.txt --python-version 3.13 --python-platform x86_64-manylinux_2_28 --generate-hashes --output-file requirements/aqis_lab/s3-train.txt
+# Pass the same command as --custom-compile-command so the lock header records it, and update the line below to the
+# SHA-256 of the phase0.txt it was compiled against.
+# compiled-against: requirements/aqis_lab/phase0.txt sha256 87a1cc34c6d41388cf8ce1e415f95f61c3b24a7bc45b69a828a957c1813fdcef
+#
+# Own virtual environment on Colab. The Sprint 1 Qwen3-ASR pins (qwen-asr 0.0.6, transformers 4.57.6, torch, accelerate) are kept
+# as constraints, so training and evaluation run on the stack that produced the Sprint 1 baseline. peft adds LoRA, bitsandbytes the
+# 4-bit NF4 base. The runner also imports numpy, pyarrow, pyyaml (config and files), soundfile (wav files) and huggingface_hub.
+# sox has no wheel and builds from source with the phase 0 pins as build constraints, as in the Sprint 1 Qwen lock.
+qwen-asr==0.0.6
+peft
+bitsandbytes
+numpy
+pyarrow
+pyyaml
+soundfile
+huggingface_hub
