@@ -24,6 +24,7 @@ CHANGE LOG:
 """
 import hashlib
 import importlib.metadata
+import importlib.util
 import json
 import os
 import time
@@ -155,6 +156,23 @@ def vad_names(cfg, arch):
     return names
 
 
+def ten_vad_library():
+    """Path of libten_vad.so inside the installed ten-vad package (Linux x86_64 only), which the harness adapter cannot find alone."""
+    spec = importlib.util.find_spec("ten_vad")
+    if spec is None or not spec.origin:
+        raise StageError("the ten-vad package is not installed (it has no build for this machine's architecture, or the s2-live lock was not installed)")
+    path = Path(spec.origin).parent / "lib" / "Linux" / "x64" / "libten_vad.so"
+    if not path.is_file():
+        raise StageError(f"the ten-vad package holds no libten_vad.so for Linux x86_64 at {path}")
+    return path
+
+
+def export_ten_vad_library():
+    """Point the harness's TEN VAD adapter at the package's library unless the environment already names one."""
+    if "TEN_VAD_LIB_PATH" not in os.environ:
+        os.environ["TEN_VAD_LIB_PATH"] = str(ten_vad_library())
+
+
 def make_vad(run, name):
     """(adapter, smoother or None, revision) for a configured VAD name."""
     cfg = run.cfg
@@ -171,6 +189,7 @@ def make_vad(run, name):
         adapter = vad.HarnessVAD(name, "firered_vad", model_dir=str(root / "Stream-VAD"), speech_threshold=spec["threshold"])
         revision = f"{spec['hf']}@{spec['revision']}"
     elif base == "ten_vad":
+        export_ten_vad_library()
         adapter = vad.HarnessVAD(name, "ten_vad", hop_size=int(spec["hop_size_ms"] * SR / 1000), threshold=spec["threshold"])
         revision = f"{spec['package']}=={importlib.metadata.version(spec['package'])}"
     else:

@@ -68,6 +68,8 @@ vad:
     supported_arch: [x86_64]
     hop_size_ms: 16
     threshold: 0.5
+    min_speech_ms: 64                    # the same smoothing in milliseconds as silero_v5 (4 and 7 frames of 16 ms)
+    min_silence_ms: 100
 
 turn_end:
   vad: silero_v5                         # the VAD whose speech offsets start the silence timers
