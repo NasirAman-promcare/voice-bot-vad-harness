@@ -1,0 +1,44 @@
+# EVIDENCE: WP-1.3 S3 Cascade and Fine-Tuning
+
+Environment: cloud VM (Ubuntu 24.04, x86_64), `.venv` Python 3.13.16 from `requirements/aqis_lab/phase0.txt`, uv 0.8.17, branch `s3/cascade-finetune`, base `origin/main` at `de85e84`.
+
+## Ruler tests were written first and failed
+Tests copied onto a clean checkout of `origin/main` (no `aqis_lab/cascade`), commit `555bd64` holds them:
+```
+$ .venv/bin/python -m pytest tests/aqis_lab/test_s3_*.py -q -p no:cacheprovider
+ERROR tests/aqis_lab/test_s3_score.py
+ERROR tests/aqis_lab/test_s3_simulate.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 6 errors during collection !!!!!!!!!!!!!!!!!!!!
+6 errors in 0.44s
+```
+Three test-data slips were corrected in the tests, not in the code, after the first run: the tie-break example expected the wrong two turns (the two lowest tiebreak values are turns 2 and 1), the heavy model's errors in the simulation example sum to 5, not 6 (so the all-heavy WER is 5/80), and column positions in the report-row assertions. `test_s3_report.py` and the notebook, light-import and lock-resolution tests were added after the modules existed.
+
+## Ruler tests now
+```
+$ .venv/bin/python -m pytest tests/aqis_lab/test_s3_*.py -q -p no:cacheprovider -m "not network"
+108 passed, 2 deselected in 2.60s
+$ .venv/bin/python -m pytest tests/aqis_lab/test_s3_config.py -q -p no:cacheprovider -m network
+2 passed, 35 deselected in 0.51s
+```
+What they fix, with values worked out by hand: pooled WER and the mean of slice WERs; `floor(rate x turns)` escalation (29 of 100 at 0.29); the perfect-gate curve of a six-turn example (15, 10, 7 and 8 errors at 0, 1/6, 2/6 and all); GPU-second saving (1 - 1.4/2.0 = 0.3); out-of-fold scores that never come from a model that saw the row's speaker; thresholds that never split a tie; a simulation over synthetic Sprint 1 files (18 errors in 80 words for stage 1, 5 for the heavy model, perfect gate 9/80 at rate 0.25 and 4/80 at 0.5); speaker-disjoint training and validation sets; r 16 / alpha 32 LoRA settings and a target pattern that matches the text layers and not the audio tower; and the drug-recall and us_conv gates at exactly their limits.
+
+## Fast suite
+```
+$ .venv/bin/python -m pytest tests/aqis_lab -q --tb=short -m "not slow and not gpu and not colab and not oracle and not network" -p no:cacheprovider
+2384 passed, 59 deselected in 317.34s (0:05:17)
+```
+
+## Locks
+`uv pip compile ... -c requirements/aqis_lab/phase0.txt --python-version 3.13 --python-platform x86_64-manylinux_2_28 --generate-hashes` (uv 0.8.17) exits 0 for `s3-cascade` and, with `-c requirements/aqis_lab/s1-qwen.txt` as well, for `s3-train` (torch 2.14.1, transformers 4.57.6, qwen-asr 0.0.6 and accelerate 1.12.0 as in Sprint 1; peft 0.21.2, bitsandbytes 0.50.2 added). `uv pip install --dry-run --require-hashes --only-binary :all:` resolves wheels for every pin of `s3-cascade`, and for `s3-train` except `sox`, which builds from source as in the Sprint 1 Qwen lock. Nothing was installed (torch and the models are GBs).
+
+## Synthetic end-to-end checks
+`test_s3_simulate.py` runs the real `simulate.run` over generated Sprint 1 data and prediction files (scored by the Sprint 1 scorer), `test_s3_report.py` the real fine-tuning and prompt scorecards over generated prediction files. A scratch run with matplotlib installed outside `.venv` also built `tradeoff.png`, `scorecard.md`, `decision_inputs.md` and `s3_report.zip` from them.
+
+## Audit gate
+```
+$ .venv/bin/python -m tools.audit.gate --base origin/main --wp WP-1.3
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (1.0 s)
+```
