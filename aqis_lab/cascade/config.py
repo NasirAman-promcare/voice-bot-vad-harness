@@ -116,6 +116,8 @@ def _validate(raw, s1):
         if name not in FEATURES:
             raise ConfigError(f"cascade.hybrid_features: unknown feature {name!r} (one of {', '.join(FEATURES)})")
     _require(cas["cost"], {"live_rtfx", "heavy"}, "cascade.cost")
+    _require(cas["confidence"], {"confidence_method", "entropy_method", "batch_size"}, "cascade.confidence")
+    _positive_int(cas["confidence"]["batch_size"], "cascade.confidence.batch_size")
 
     pr = raw["prompt"]
     _no_extra(pr, PROMPT_KEYS, "prompt")
