@@ -1,10 +1,10 @@
 {
   "channel": "ok",
-  "confidence": "unavailable: confidence is missing for 46 of 6300 turns; run `python -m aqis_lab.cascade confidence` or `cascade --nonspeech` to produce it",
+  "confidence": "ok (46 turns with no stage 1 words scored as least confident)",
   "digits": "ok",
   "duration": "ok",
-  "entropy": "unavailable: entropy is missing for 46 of 6300 turns; run `python -m aqis_lab.cascade confidence` or `cascade --nonspeech` to produce it",
-  "hybrid": "ok (duration_s, words_per_s, digit_tokens, is_phone, is_webrtc, nonspeech_ratio)",
+  "entropy": "ok (46 turns with no stage 1 words scored as least confident)",
+  "hybrid": "ok (duration_s, words_per_s, digit_tokens, is_phone, is_webrtc, nonspeech_ratio, confidence; 46 turns with no stage 1 words scored as least confident)",
   "nonspeech": "ok",
   "oracle": "ok",
   "random": "ok",

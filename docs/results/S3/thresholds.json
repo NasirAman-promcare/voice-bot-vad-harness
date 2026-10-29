@@ -13,6 +13,20 @@
       "threshold": Infinity
     }
   },
+  "confidence": {
+    "cohere-transcribe-2b": {
+      "feature": "confidence",
+      "rate": 0.35,
+      "sign": -1,
+      "threshold": -0.9660061270418302
+    },
+    "qwen3-asr-1.7b": {
+      "feature": "confidence",
+      "rate": 0.35,
+      "sign": -1,
+      "threshold": -0.9660061270418302
+    }
+  },
   "digits": {
     "cohere-transcribe-2b": {
       "feature": "digit_tokens",
@@ -41,18 +55,32 @@
       "threshold": 9.4000625
     }
   },
+  "entropy": {
+    "cohere-transcribe-2b": {
+      "feature": "entropy",
+      "rate": 0.35,
+      "sign": -1,
+      "threshold": -0.17969459271642307
+    },
+    "qwen3-asr-1.7b": {
+      "feature": "entropy",
+      "rate": 0.35,
+      "sign": -1,
+      "threshold": -0.17969459271642307
+    }
+  },
   "hybrid": {
     "cohere-transcribe-2b": {
       "feature": "hybrid",
       "rate": 0.35,
       "sign": 1,
-      "threshold": 0.2908842256514462
+      "threshold": 0.2868610751219863
     },
     "qwen3-asr-1.7b": {
       "feature": "hybrid",
       "rate": 0.35,
       "sign": 1,
-      "threshold": 0.35223398634290637
+      "threshold": 0.3494037618186906
     }
   },
   "nonspeech": {
