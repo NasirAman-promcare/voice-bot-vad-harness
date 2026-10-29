@@ -53,3 +53,17 @@ Exempted files (ALLOW-PATTERNS-IN): 0
 Findings: 0
 0 findings: OK (0.7 s)
 ```
+
+## Closeout: the four Colab fixes on main (29 Oct 2026)
+Tests first: `tests/aqis_lab/test_s3_closeout.py`, committed before the fixes; against the merged code 9 of its 11 tests failed (the 2 that passed pin behaviour that must not change: evaluated speakers are still left out whole when enough others remain, and too few speakers overall is still an error).
+```
+$ .venv/bin/python -m pytest tests/aqis_lab -q --tb=short -m "not slow and not gpu and not colab and not oracle and not network"
+2402 passed, 59 deselected in 442.85s (0:07:22)
+$ .venv/bin/python -m tools.audit.gate --base origin/main
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.7 s)
+```
+The ten existing S3 test files were not edited. The two existing tests that touch the changed functions (`test_s3_split_with_too_few_speakers_for_a_validation_set_is_an_error`, `test_s3_decoding_keeps_confidences_but_not_alignments`) still pass unchanged.
+Not checked here: the real NeMo, Qwen3-ASR/PEFT and Eka runs, which happened on Colab. WP-1.3 status: complete, with the gate outcomes stated in `PLAN.md`.
