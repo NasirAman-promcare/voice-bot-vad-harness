@@ -17,6 +17,13 @@ CAPABILITIES:
     test_s3_cost_and_latency_columns_use_the_config_figures, test_s3_the_gate_threshold_file_names_the_score_that_gives_the_rate]
   CAP-S3-042: compute_nonspeech() runs Silero v5 over the target turns' audio on the CPU and saves each turn's share of non-speech
     frames; merge_features() keeps the other feature columns [tests: test_s3_merging_features_keeps_other_columns]
+  CAP-S3-043: impute_no_word_turns() scores a turn for which stage 1 produced no words as least confident (confidence and entropy 0.0), so
+    that such turns do not disable the confidence, entropy and hybrid policies; a turn with words and no score is left alone and keeps the
+    policy unavailable; nothing imputed is written to the feature file, and policies.json counts the turns [tests:
+    test_s3_only_turns_with_no_stage_1_words_are_scored_as_least_confident,
+    test_s3_a_silent_turn_no_longer_disables_the_confidence_policies, test_s3_the_silent_turn_is_escalated_first_and_the_numbers_follow,
+    test_s3_nothing_imputed_is_written_to_the_feature_file,
+    test_s3_a_turn_with_words_and_no_confidence_still_makes_the_policy_unavailable]
 INPUTS AND OUTPUTS: s3 and s1 configs, the Sprint 1 output folder; CSV and JSON files under <out>/report; SimulateError.
 CONTRACTS: brief section 2A; the target set is the one of docs/results/S1/oracle.csv (6,300 turns), pooled WER.
 INVARIANTS:
@@ -136,7 +143,8 @@ def feature_rows(ts, stored):
     rows = []
     for i, key in enumerate(ts.keys):
         base = gate.hyp_features(ts.hyp[i], float(ts.audio_s[i]))
-        row = {"key": key, "duration_s": float(ts.audio_s[i]), "words_per_s": base["words_per_s"], "digit_tokens": base["digit_tokens"],
+        row = {"key": key, "duration_s": float(ts.audio_s[i]), "words": base["words"], "words_per_s": base["words_per_s"],
+               "digit_tokens": base["digit_tokens"],
                "is_phone": float(ts.channel[i] == "phone"), "is_webrtc": float(ts.channel[i] == "webrtc"), "channel": ts.channel[i]}
         for name in OPTIONAL_FEATURES:
             row[name] = stored.get(key, {}).get(name)
@@ -144,11 +152,38 @@ def feature_rows(ts, stored):
     return rows
 
 
+def impute_no_word_turns(rows):
+    """Score a turn for which stage 1 produced no words as least confident (0.0) where its confidence or entropy score is missing.
+
+    Such a turn has no tokens to take a confidence of, and is the least trustworthy turn there is. The entropy feature is an
+    entropy-based confidence (higher = more confident), so 0.0 is maximum entropy. A turn that has words but no score is not touched:
+    that is a failure of the extraction and keeps the policy unavailable. Returns the number of turns changed; the feature file is
+    never written with these values."""
+    changed = 0
+    for row in rows:
+        if row.get("words", 1) != 0:
+            continue
+        filled = False
+        for name in ("confidence", "entropy"):
+            if row.get(name) is None:
+                row[name] = 0.0
+                filled = True
+        if filled:
+            row["imputed"] = True
+            changed += 1
+    return changed
+
+
 def _missing(rows, name):
     return sum(1 for r in rows if r.get(name) is None)
 
 
 # ---- policies ---------------------------------------------------------------------------------------------------
+def _imputed_note(rows):
+    n = sum(1 for r in rows if r.get("imputed"))
+    return f"{n} turn{'s' if n != 1 else ''} with no stage 1 words scored as least confident" if n else ""
+
+
 def policy_scores(cfg, ts, rows, heavy, status):
     """{policy: scores} for the policies that can run; fills `status` with the reason for the ones that cannot."""
     c = cfg.cascade
@@ -169,7 +204,8 @@ def policy_scores(cfg, ts, rows, heavy, status):
                                 f"run `python -m aqis_lab.cascade confidence` or `cascade --nonspeech` to produce it")
                 continue
             out[name] = gate.single_feature_scores(rows, feature, sign)
-            status[name] = "ok"
+            note = _imputed_note(rows) if feature in ("confidence", "entropy") else ""
+            status[name] = f"ok ({note})" if note else "ok"
         elif name == "hybrid":
             names = [f for f in c["hybrid_features"] if not _missing(rows, f)]
             if not names:
@@ -183,7 +219,8 @@ def policy_scores(cfg, ts, rows, heavy, status):
             except gate.GateError as exc:
                 status[name] = f"unavailable: {exc}"
                 continue
-            status[name] = f"ok ({', '.join(names)})"
+            note = _imputed_note(rows) if any(f in ("confidence", "entropy") for f in names) else ""
+            status[name] = f"ok ({', '.join(names)}{'; ' + note if note else ''})"
     out["oracle"] = score.oracle_scores(e1, eh).astype(float)
     return out
 
@@ -211,6 +248,9 @@ def run(cfg, s1_cfg, s1_dir, out_dir, log=print):
     rep = Path(out_dir) / "report"
     ts = load_target_set(s1_cfg, s1_dir, c["stage1"], c["heavy"])
     rows = feature_rows(ts, read_features(Path(out_dir).joinpath(*FEATURE_FILE)))
+    n_imputed = impute_no_word_turns(rows)
+    if n_imputed:
+        log(f"{n_imputed} turns with no stage 1 words are scored as least confident (confidence and entropy 0.0)")
     tie = gate.tiebreak(ts.keys, cfg.seed)
     log(f"target set: {len(ts.keys)} turns, {int(ts.words.sum())} reference words, {ts.left_out} left out")
     table, headline, thresholds, status = [], [], {}, {}
