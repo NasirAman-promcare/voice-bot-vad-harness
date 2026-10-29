@@ -67,3 +67,16 @@ Findings: 0
 ```
 The ten existing S3 test files were not edited. The two existing tests that touch the changed functions (`test_s3_split_with_too_few_speakers_for_a_validation_set_is_an_error`, `test_s3_decoding_keeps_confidences_but_not_alignments`) still pass unchanged.
 Not checked here: the real NeMo, Qwen3-ASR/PEFT and Eka runs, which happened on Colab. WP-1.3 status: complete, with the gate outcomes stated in `PLAN.md`.
+
+## Follow-up: word-less stage 1 turns and DECISION.md corrections (30 Oct 2026)
+Tests first: `tests/aqis_lab/test_s3_zero_tokens.py` (committed before the fix; 4 of 5 failed against the merged code, the fifth, that nothing imputed is written to the feature file, already held). They check that only word-less turns are filled, that the confidence policies become available with the count in `policies.json`, that the filled turn is escalated first with hand-worked errors (22 - 9 - 4 = 9 of 80 words at a 25% rate), and that a turn with words and no confidence still makes the policy unavailable. The ten existing S3 test files were not edited.
+```
+$ .venv/bin/python -m pytest tests/aqis_lab -q --tb=short -m "not slow and not gpu and not colab and not oracle and not network"
+2407 passed, 59 deselected in 538.66s (0:08:58)
+$ .venv/bin/python -m tools.audit.gate --base origin/main
+Exempted lines (# audit-allow): 0
+Exempted files (ALLOW-PATTERNS-IN): 0
+Findings: 0
+0 findings: OK (0.8 s)
+```
+`docs/results/S3/DECISION.md`: each added figure was read from the committed files (oracle difference -3.73 points, CI -4.10 to -3.36; `channel` against stage 1 -0.76, CI -0.97 to -0.57; medical-phone WER 9.96% to 11.52%; 11 of 12 biased cells "too close to call"; GPU saving 0.536535 rounds to 53.7%). Not checked here: the rerun itself (it needs the Sprint 1 files on Drive and the `confidence` features), so the cascade section stays marked as open in the decision.
