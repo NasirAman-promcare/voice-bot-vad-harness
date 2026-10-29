@@ -1,0 +1,25 @@
+model,slice,condition,variant,n,wer,wer_lo,wer_hi,drug_found,drug_total,drug_recall,number_hits,number_total,number_accuracy,wer_change,verdict
+granite-speech-4.1-2b,medical,clean,none,300,0.1103,0.0869,0.1404,152,309,0.4919,323,362,0.8923,,
+granite-speech-4.1-2b,medical,clean,biased,300,0.1094,0.0859,0.1397,154,309,0.4984,323,362,0.8923,-0.0010,too close to call
+granite-speech-4.1-2b,medical,phone,none,300,0.1389,0.1063,0.1947,143,309,0.4628,312,362,0.8619,,
+granite-speech-4.1-2b,medical,phone,biased,300,0.1513,0.1133,0.2082,140,309,0.4531,316,362,0.8729,0.0123,too close to call
+granite-speech-4.1-2b,medical,noise_10,none,300,0.1285,0.1023,0.1640,140,309,0.4531,307,362,0.8481,,
+granite-speech-4.1-2b,medical,noise_10,biased,300,0.1292,0.1024,0.1649,141,309,0.4563,308,362,0.8508,0.0007,too close to call
+granite-speech-4.1-2b,numbers,clean,none,200,0.0904,0.0724,0.1100,,,,488,536,0.9104,,
+granite-speech-4.1-2b,numbers,clean,biased,200,0.0902,0.0727,0.1092,,,,487,536,0.9086,-0.0002,too close to call
+granite-speech-4.1-2b,numbers,phone,none,200,0.1297,0.0837,0.2237,,,,487,536,0.9086,,
+granite-speech-4.1-2b,numbers,phone,biased,200,0.1396,0.0872,0.2103,,,,482,536,0.8993,0.0099,too close to call
+granite-speech-4.1-2b,numbers,noise_10,none,200,0.1272,0.0801,0.2223,,,,484,536,0.9030,,
+granite-speech-4.1-2b,numbers,noise_10,biased,200,0.1210,0.0813,0.1933,,,,480,536,0.8955,-0.0062,too close to call
+qwen3-asr-1.7b,medical,clean,none,300,0.0832,0.0665,0.1037,177,309,0.5728,346,362,0.9558,,
+qwen3-asr-1.7b,medical,clean,biased,300,0.0827,0.0660,0.1029,177,309,0.5728,345,362,0.9530,-0.0005,too close to call
+qwen3-asr-1.7b,medical,phone,none,300,0.0997,0.0825,0.1197,162,309,0.5243,340,362,0.9392,,
+qwen3-asr-1.7b,medical,phone,biased,300,0.0996,0.0824,0.1199,161,309,0.5210,339,362,0.9365,-0.0001,too close to call
+qwen3-asr-1.7b,medical,noise_10,none,300,0.0973,0.0791,0.1207,165,309,0.5340,342,362,0.9448,,
+qwen3-asr-1.7b,medical,noise_10,biased,300,0.0955,0.0783,0.1174,164,309,0.5307,342,362,0.9448,-0.0018,A beats B
+qwen3-asr-1.7b,numbers,clean,none,200,0.1185,0.1023,0.1376,,,,456,536,0.8507,,
+qwen3-asr-1.7b,numbers,clean,biased,200,0.1199,0.1040,0.1382,,,,456,536,0.8507,0.0014,too close to call
+qwen3-asr-1.7b,numbers,phone,none,200,0.1222,0.1061,0.1404,,,,454,536,0.8470,,
+qwen3-asr-1.7b,numbers,phone,biased,200,0.1251,0.1086,0.1433,,,,454,536,0.8470,0.0029,too close to call
+qwen3-asr-1.7b,numbers,noise_10,none,200,0.1342,0.1161,0.1552,,,,454,536,0.8470,,
+qwen3-asr-1.7b,numbers,noise_10,biased,200,0.1354,0.1175,0.1555,,,,457,536,0.8526,0.0012,too close to call

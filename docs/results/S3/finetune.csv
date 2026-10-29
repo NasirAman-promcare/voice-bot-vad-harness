@@ -1,0 +1,13 @@
+slice,condition,variant,n,wer,wer_lo,wer_hi,drug_found,drug_total,drug_recall,number_hits,number_total,number_accuracy,wer_change,verdict
+medical,clean,base,300,0.0827,0.0660,0.1029,177,309,0.5728,345,362,0.9530,,
+medical,clean,lora,300,0.0729,0.0557,0.0975,197,309,0.6375,353,362,0.9751,-0.0098,too close to call
+medical,phone,base,300,0.0996,0.0824,0.1199,161,309,0.5210,339,362,0.9365,,
+medical,phone,lora,300,0.1152,0.0740,0.1697,179,309,0.5793,352,362,0.9724,0.0157,too close to call
+us_conv,clean,base,300,0.1106,0.0893,0.1314,,,,61,72,0.8472,,
+us_conv,clean,lora,300,0.1319,0.1086,0.1536,,,,60,72,0.8333,0.0213,B beats A
+us_conv,phone,base,300,0.1282,0.1019,0.1561,,,,61,72,0.8472,,
+us_conv,phone,lora,300,0.1551,0.1226,0.1871,,,,60,72,0.8333,0.0268,B beats A
+numbers,clean,base,200,0.1181,0.1015,0.1368,,,,456,536,0.8507,,
+numbers,clean,lora,200,0.1352,0.1171,0.1551,,,,456,536,0.8507,0.0172,B beats A
+numbers,phone,base,200,0.1224,0.1059,0.1410,,,,452,536,0.8433,,
+numbers,phone,lora,200,0.1400,0.1210,0.1607,,,,452,536,0.8433,0.0176,B beats A

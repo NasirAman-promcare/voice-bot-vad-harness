@@ -1,0 +1,86 @@
+{
+  "channel": {
+    "cohere-transcribe-2b": {
+      "feature": "channel",
+      "rate": 0.35,
+      "sign": 1,
+      "threshold": Infinity
+    },
+    "qwen3-asr-1.7b": {
+      "feature": "channel",
+      "rate": 0.35,
+      "sign": 1,
+      "threshold": Infinity
+    }
+  },
+  "digits": {
+    "cohere-transcribe-2b": {
+      "feature": "digit_tokens",
+      "rate": 0.35,
+      "sign": 1,
+      "threshold": 1.0
+    },
+    "qwen3-asr-1.7b": {
+      "feature": "digit_tokens",
+      "rate": 0.35,
+      "sign": 1,
+      "threshold": 1.0
+    }
+  },
+  "duration": {
+    "cohere-transcribe-2b": {
+      "feature": "duration_s",
+      "rate": 0.35,
+      "sign": 1,
+      "threshold": 9.4000625
+    },
+    "qwen3-asr-1.7b": {
+      "feature": "duration_s",
+      "rate": 0.35,
+      "sign": 1,
+      "threshold": 9.4000625
+    }
+  },
+  "hybrid": {
+    "cohere-transcribe-2b": {
+      "feature": "hybrid",
+      "rate": 0.35,
+      "sign": 1,
+      "threshold": 0.2908842256514462
+    },
+    "qwen3-asr-1.7b": {
+      "feature": "hybrid",
+      "rate": 0.35,
+      "sign": 1,
+      "threshold": 0.35223398634290637
+    }
+  },
+  "nonspeech": {
+    "cohere-transcribe-2b": {
+      "feature": "nonspeech_ratio",
+      "rate": 0.35,
+      "sign": 1,
+      "threshold": 0.20669291338582674
+    },
+    "qwen3-asr-1.7b": {
+      "feature": "nonspeech_ratio",
+      "rate": 0.35,
+      "sign": 1,
+      "threshold": 0.20669291338582674
+    }
+  },
+  "words_per_s": {
+    "cohere-transcribe-2b": {
+      "feature": "words_per_s",
+      "rate": 0.35,
+      "sign": -1,
+      "threshold": -2.1466785181209853
+    },
+    "qwen3-asr-1.7b": {
+      "feature": "words_per_s",
+      "rate": 0.35,
+      "sign": -1,
+      "threshold": -2.1466785181209853
+    }
+  }
+}

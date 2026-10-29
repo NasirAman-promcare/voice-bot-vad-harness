@@ -1,0 +1,14 @@
+{
+  "best_two_heavy_oracle_wer": 0.1106329240125621,
+  "config_hash": "4ac9f21307c3e6cc9f01a873b33131bd081c002621db13eaa571e1981c8fbb67",
+  "heavy_wer": {
+    "cohere-transcribe-2b": 0.15028829697080473,
+    "qwen3-asr-1.7b": 0.1332397268240807
+  },
+  "left_out": 0,
+  "operating_rate": 0.35,
+  "stage1_mean_slice_wer": 0.18265094665583673,
+  "stage1_wer": 0.1501553646499726,
+  "turns": 6300,
+  "words": 120362
+}
