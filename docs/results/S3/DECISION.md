@@ -3,7 +3,7 @@
 **Date:** 29 October 2026  
 **Status:** Approved by Owner & Reviewer  
 **Commit:** `bf7c7db` | **Config Hash:** `4ac9f213`  
-**Dataset:** 6,300 evaluated turns, 3,000 prompt-biased turns, 1,600 evaluated fine-tuning turns (3,200 total transcriptions across base and LoRA)  
+**Dataset:** 6,300 evaluated turns, 1,500 prompt-biased turns (3,000 total transcriptions across both models), 1,600 evaluated fine-tuning turns (3,200 total transcriptions across base and LoRA)  
 
 ---
 
@@ -34,7 +34,7 @@
 * **Oracle Bound (35% Escalation):** **$11.28\%$ Target WER** [95% CI: 10.9%, 11.6%].
 * **Best Practical Policy (`channel` at 35%):** **$14.25\%$ Target WER**, saving 53.6% GPU compute with 296 ms added latency.
 
-### B. Prompt Biasing vs. Unbiased Baseline (3,000 Turns)
+### B. Prompt Biasing vs. Unbiased Baseline (1,500 prompt-biased turns; 3,000 total transcriptions across both models)
 * **Granite Speech 4.1 2B:**
   * Clean Medical Drug Recall: $49.19\%$ → $49.84\%$ (+0.65%, p > 0.05).
   * Telephone Medical Drug Recall: $46.28\%$ → $45.31\%$ (-0.97%, p > 0.05).
