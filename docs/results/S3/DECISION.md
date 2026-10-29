@@ -3,7 +3,7 @@
 **Date:** 29 October 2026  
 **Status:** Approved by Owner & Reviewer  
 **Commit:** `bf7c7db` | **Config Hash:** `4ac9f213`  
-**Dataset:** 6,300 evaluated turns, 3,000 prompt-biased turns, 3,200 fine-tuning validation turns  
+**Dataset:** 6,300 evaluated turns, 3,000 prompt-biased turns, 1,600 evaluated fine-tuning turns (3,200 total transcriptions across base and LoRA)  
 
 ---
 
@@ -21,7 +21,7 @@
    * **Decision:** Omit context prompt lists from ASR inference to save prompt token latency.
 
 3. **Clinical LoRA Fine-Tuning: REJECTED (DECISIVE NO-GO)**
-   * **Finding:** 4-bit QLoRA fine-tuning on medical terms delivered a modest recall gain ($52.1\% 	o 57.9\%$ on phone audio), but caused **severe catastrophic forgetting (+2.1% to +2.7% absolute WER degradation)** across everyday conversational English (`us_conv`).
+   * **Finding:** 4-bit QLoRA fine-tuning on medical terms delivered a modest recall gain ($52.1\%$ → $57.9\%$ on phone audio), but caused **severe catastrophic forgetting (+2.1% to +2.7% absolute WER degradation)** across everyday conversational English (`us_conv`).
    * **Decision:** Deploy the **pre-trained base model (`qwen3-asr-1.7b`)**. The base model's general linguistic stability far outweighs the narrow domain gain.
 
 ---
@@ -36,23 +36,22 @@
 
 ### B. Prompt Biasing vs. Unbiased Baseline (3,000 Turns)
 * **Granite Speech 4.1 2B:**
-  * Clean Medical Drug Recall: $49.19\% 	o 49.84\%$ (+0.65%, p > 0.05).
-  * Telephone Medical Drug Recall: $46.28\% 	o 45.31\%$ (-0.97%, p > 0.05).
+  * Clean Medical Drug Recall: $49.19\%$ → $49.84\%$ (+0.65%, p > 0.05).
+  * Telephone Medical Drug Recall: $46.28\%$ → $45.31\%$ (-0.97%, p > 0.05).
 * **Qwen3-ASR 1.7B:**
-  * Clean Medical Drug Recall: $57.28\% 	o 57.28\%$ (Unchanged).
-  * Telephone Medical Drug Recall: $52.43\% 	o 52.10\%$ (Unchanged).
+  * Clean Medical Drug Recall: $57.28\%$ → $57.28\%$ (Unchanged).
+  * Telephone Medical Drug Recall: $52.43\%$ → $52.10\%$ (Unchanged).
   * Numbers Accuracy: Unchanged at $85.1\%$ (Clean) and $84.7\%$ (Phone).
 
-### C. LoRA Fine-Tuning Pilot
+### C. LoRA Fine-Tuning Pilot (1,600 evaluated turns; 3,200 total transcriptions across base and LoRA)
 
 * **Methodological Rigor Note (Speaker Overlap):**
   * In `eka_medical`, all available doctor annotators contributed to the 300-turn evaluation set. As a result, the training set draws from the same pool of speakers (utterance-disjoint, but not speaker-disjoint).
   * This is an *easier* learning setting than evaluating on completely unseen speakers. Despite this advantage, fine-tuning failed to hit the 75% recall target and catastrophically degraded general English by > 2.0% WER. This decisively confirms the pre-trained base model as the only production-viable choice.
- (3,200 Evaluation Turns)
-* **Drug Recall (Medical Phone):** $52.10\% 	o 57.93\%$ (Failed target $\ge 75.0\%$).
-* **General Conversational Degradation (`us_conv/phone`):** $12.82\% 	o 15.51\%$ (+2.68% WER regression).
-* **General Conversational Degradation (`us_conv/clean`):** $11.06\% 	o 13.19\%$ (+2.13% WER regression).
-* **Numbers Degradation (`numbers/phone`):** $12.24\% 	o 14.00\%$ (+1.76% WER regression).
+* **Drug Recall (Medical Phone):** $52.10\%$ → $57.93\%$ (Failed target $\ge 75.0\%$).
+* **General Conversational Degradation (`us_conv/phone`):** $12.82\%$ → $15.51\%$ (+2.68% WER regression).
+* **General Conversational Degradation (`us_conv/clean`):** $11.06\%$ → $13.19\%$ (+2.13% WER regression).
+* **Numbers Degradation (`numbers/phone`):** $12.24\%$ → $14.00\%$ (+1.76% WER regression).
 
 ---
 
