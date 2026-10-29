@@ -43,7 +43,12 @@
   * Telephone Medical Drug Recall: $52.43\% 	o 52.10\%$ (Unchanged).
   * Numbers Accuracy: Unchanged at $85.1\%$ (Clean) and $84.7\%$ (Phone).
 
-### C. LoRA Fine-Tuning Pilot (3,200 Evaluation Turns)
+### C. LoRA Fine-Tuning Pilot
+
+* **Methodological Rigor Note (Speaker Overlap):**
+  * In `eka_medical`, all available doctor annotators contributed to the 300-turn evaluation set. As a result, the training set draws from the same pool of speakers (utterance-disjoint, but not speaker-disjoint).
+  * This is an *easier* learning setting than evaluating on completely unseen speakers. Despite this advantage, fine-tuning failed to hit the 75% recall target and catastrophically degraded general English by > 2.0% WER. This decisively confirms the pre-trained base model as the only production-viable choice.
+ (3,200 Evaluation Turns)
 * **Drug Recall (Medical Phone):** $52.10\% 	o 57.93\%$ (Failed target $\ge 75.0\%$).
 * **General Conversational Degradation (`us_conv/phone`):** $12.82\% 	o 15.51\%$ (+2.68% WER regression).
 * **General Conversational Degradation (`us_conv/clean`):** $11.06\% 	o 13.19\%$ (+2.13% WER regression).
@@ -55,7 +60,7 @@
 
 | Component | Champion Model | Runtime Host | Operational Role |
 |---|---|---|---|
-| **VAD** | `silero_v5` | Host CPU (Oracle Arm) | Frame size 160ms; suppresses background room noise (0.31% FAR on silence). |
+| **VAD** | `silero_v5` | Host CPU (Oracle Arm) | Frame size 32 ms (512 samples at 16 kHz); suppresses background room noise (0.31% FAR on silence). |
 | **Turn Endpoint** | `fixed_1000` | Host CPU (Oracle Arm) | 1,000 ms silence post-VAD offset; ensures < 3.0% false interruption rate. |
 | **Emotion Transfer**| `emotion2vec_seed` | Host CPU (Oracle Arm) | 20M params; triggers human agent transfer if anger confidence > 0.75. |
 | **Live Streaming** | `parakeet-tdt-0.6b-v2` | GPU Worker (NVIDIA L4) | Streams partial transcripts during speech to drive conversational fillers. |
