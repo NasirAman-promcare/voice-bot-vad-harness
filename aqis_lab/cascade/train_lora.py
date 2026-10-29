@@ -11,7 +11,9 @@ CAPABILITIES:
     test_s3_early_stopping_watches_the_validation_loss_and_restores_the_best_checkpoint]
   CAP-S3-071: train() loads the base model in 4 bit, wraps its language-model layers in LoRA, trains on train.jsonl with the Hugging Face
     Trainer (the collator, label masking and forward patch of Qwen's own finetuning/qwen3_asr_sft.py), stops early on the
-    validation loss and saves the adapter; evaluate() transcribes the evaluation slices with the base model and with the merged
+    validation loss and saves the adapter (patch_input_embeddings gives the outer model the embedding accessors PEFT's k-bit preparation
+    needs) [tests: test_s3_the_outer_model_delegates_input_embeddings_to_its_thinker,
+    test_s3_patching_twice_is_harmless_and_a_model_without_a_thinker_is_refused, test_s3_training_calls_the_shim_before_the_k_bit_preparation]; evaluate() transcribes the evaluation slices with the base model and with the merged
     adapter into prediction files [no unit test: they need the model, bitsandbytes and a GPU; the Colab smoke run checks them]
 INPUTS AND OUTPUTS: s3 and s1 configs, train.jsonl and val.jsonl from train_data.prepare(); an adapter folder and prediction parquet
   files out; TrainError.
@@ -81,6 +83,25 @@ def _patch_outer_forward(model):
     cls._forward_patched = True
 
 
+def patch_input_embeddings(model):
+    """PEFT's k-bit preparation calls get/set_input_embeddings on the outer model, which has none: they go to its `thinker`."""
+    cls = model.__class__
+    if getattr(cls, "_embeddings_patched", False):
+        return
+    thinker = getattr(model, "thinker", None)
+    if thinker is None or not hasattr(thinker, "get_input_embeddings"):
+        raise TrainError("the Qwen3-ASR model has no `.thinker.get_input_embeddings`; its code differs from the one this script was written for")
+
+    def get_input_embeddings(self):
+        return self.thinker.get_input_embeddings()
+
+    def set_input_embeddings(self, value):
+        self.thinker.set_input_embeddings(value)
+    cls.get_input_embeddings = get_input_embeddings
+    cls.set_input_embeddings = set_input_embeddings
+    cls._embeddings_patched = True
+
+
 def _collator(processor, sample_rate=16000):
     soundfile = lib("soundfile")
 
@@ -131,6 +152,7 @@ def train(cfg, s1_cfg, s1_dir, out_dir, repo_root, log=print, smoke=False):
     wrapper = qwen_asr.Qwen3ASRModel.from_pretrained(folder, dtype=torch.bfloat16, device_map={"": 0}, quantization_config=bnb)
     model, processor = wrapper.model, wrapper.processor
     _patch_outer_forward(model)
+    patch_input_embeddings(model)
     model.generation_config = transformers.GenerationConfig.from_model_config(model.config)
     model = peft.prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
     targets = require_targets([name for name, _ in model.named_modules()], t["lora"]["target_modules"])

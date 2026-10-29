@@ -8,16 +8,22 @@ CAPABILITIES:
     test_s3_split_is_deterministic_and_independent_of_input_order,
     test_s3_split_with_too_few_speakers_for_a_validation_set_is_an_error,
     test_s3_augmentation_choice_is_stable_and_follows_the_mix,
-    test_s3_training_target_has_the_language_prefix_qwen_was_trained_with]
+    test_s3_training_target_has_the_language_prefix_qwen_was_trained_with,
+    test_s3_when_every_speaker_was_evaluated_only_the_evaluated_turns_are_left_out,
+    test_s3_the_fallback_says_that_training_speakers_overlap_the_evaluated_ones,
+    test_s3_with_enough_speakers_left_the_evaluated_speakers_are_still_excluded_whole,
+    test_s3_the_fallback_still_needs_enough_speakers_overall]
   CAP-S3-061: eval_exclusions() reads the evaluated medical slice's speakers and turns from the Sprint 1 data files; eka_candidates() reads
     Eka through the Sprint 1 source; prepare() writes train.jsonl, val.jsonl, the wav files and manifest.json (counts, and how many
     evaluated drug names also occur in training) [no unit test: it reads Eka and MUSAN, which the cloud session never downloads; the
-    Colab prepare step runs it]
+    Colab prepare step runs it; where the wav files go is checked in test_s3_training_wav_files_are_written_under_the_output_folder_not_scratch]
 INPUTS AND OUTPUTS: s3 and s1 configs, the Sprint 1 output folder; jsonl, wav and manifest files out; TrainDataError.
 CONTRACTS: brief section 2C. Eka has a test split only (3,619 English turns), so "the Eka training split" is the part of Eka that is
   speaker-disjoint from the 300-turn `medical` evaluation slice.
 INVARIANTS:
-  - No training or validation speaker appears in the evaluated medical slice, and no evaluated turn is trained on.
+  - No evaluated turn is trained on. Evaluated speakers are left out whole while at least MIN_SPEAKERS others remain; for Eka (whose
+    evaluated turns came from every speaker) they are not, the manifest notes say "speakers overlap", and a gain measured that way
+    includes speaker adaptation.
   - The overlap of evaluated drug names with training drug names is measured and written to the manifest, not hidden.
 NOT IN SCOPE:
   - Training (aqis_lab/cascade/train_lora.py).
@@ -49,14 +55,24 @@ def _hash(seed, text):
 
 
 def split_train(items, eval_clusters, eval_utt_ids, val_fraction, seed):
+    """Training and validation turns that are not evaluated turns, split by speaker.
+
+    Evaluated speakers are left out whole when enough other speakers remain. When fewer than MIN_SPEAKERS remain (Eka's evaluated
+    turns were drawn from every speaker), only the evaluated turns are left out, and the notes say that speakers overlap."""
     usable = [x for x in items if x["cluster"] not in eval_clusters and x["utt_id"] not in eval_utt_ids]
+    notes = []
+    if len({x["cluster"] for x in usable}) < MIN_SPEAKERS:
+        usable = [x for x in items if x["utt_id"] not in eval_utt_ids]
+        overlap = len({x["cluster"] for x in usable} & set(eval_clusters))
+        notes.append(f"fallback: fewer than {MIN_SPEAKERS} speakers are outside the evaluated slice, so only the evaluated turns are "
+                     f"left out; {overlap} training speakers also appear in the evaluated slice (speakers overlap)")
     clusters = sorted({x["cluster"] for x in usable}, key=lambda c: (_hash(seed, c), c))
     if len(clusters) < MIN_SPEAKERS:
-        raise TrainDataError(f"training needs at least {MIN_SPEAKERS} speakers outside the evaluated slice, there are {len(clusters)}")
+        raise TrainDataError(f"training needs at least {MIN_SPEAKERS} speakers outside the evaluated turns, there are {len(clusters)}")
     n_val = max(1, round(val_fraction * len(clusters)))
     val_clusters = set(clusters[:n_val])
     return Split([x for x in usable if x["cluster"] not in val_clusters], [x for x in usable if x["cluster"] in val_clusters],
-                 [f"split: {len(clusters)} speakers, {len(val_clusters)} for validation, {len(items) - len(usable)} turns left out "
+                 [*notes, f"split: {len(clusters)} speakers, {len(val_clusters)} for validation, {len(items) - len(usable)} turns left out "
                   f"as evaluated or from evaluated speakers"])
 
 
@@ -112,7 +128,7 @@ def prepare(cfg, s1_cfg, s1_dir, out_dir, work_dir, repo_root, log=print):
     handle = prep.open_source("eka_medical")
     audio = handle.fetch_audio([tuple(x["meta"]["_loc"]) for x in train + val])
     noise = prep.noise_pool() if any("noise" in s1_cfg.conditions[c] for c in t["condition_mix"]) else {}
-    folder = Path(work_dir) / "s3_train"
+    folder = Path(out_dir) / "train" / "audio"               # beside train.jsonl on Drive, so a dropped session keeps it
     out = {"train": [], "val": []}
     for name, group in (("train", train), ("val", val)):
         for x in group:

@@ -52,13 +52,19 @@ def configure(model, method, omegaconf=None):
     on the second file. Token confidence needs the frame confidences, which are kept, and nothing else."""
     omegaconf = omegaconf or lib("omegaconf")
     decoding = model.cfg.decoding
+    settings = {"preserve_frame_confidence": True, "preserve_token_confidence": True, "exclude_blank": True, "aggregation": "mean"}
     with omegaconf.open_dict(decoding):
         decoding.preserve_alignments = False
-        decoding.confidence_cfg.preserve_frame_confidence = True
-        decoding.confidence_cfg.preserve_token_confidence = True
-        decoding.confidence_cfg.exclude_blank = True
-        decoding.confidence_cfg.aggregation = "mean"
-        decoding.confidence_cfg.method_cfg.name = method
+        current = getattr(decoding, "confidence_cfg", None)
+        if current is None:                                  # the model's config has none: assign it whole, not key by key
+            decoding.confidence_cfg = {**settings, "method_cfg": {"name": method}}
+        else:
+            for key, value in settings.items():
+                setattr(current, key, value)
+            if getattr(current, "method_cfg", None) is None:
+                current.method_cfg = {"name": method}
+            else:
+                current.method_cfg.name = method
     model.change_decoding_strategy(decoding)
 
 
